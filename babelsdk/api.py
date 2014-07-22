@@ -37,14 +37,14 @@ class ApiOperation(object):
 
     def __init__(self,
                  name,
-                 endpoint,
+                 path,
                  doc,
                  request_segmentation,
                  response_segmentation,
                  error_data_type):
         """
         :param str name: Friendly name of the endpoint.
-        :param str endpoint: Request path.
+        :param str path: Request path.
         :param str doc: Description of the endpoint.
         :param Segmentation request_segmentation: The segmentation of the
             request.
@@ -54,7 +54,7 @@ class ApiOperation(object):
         """
 
         self.name = name
-        self.endpoint = endpoint
+        self.path = path
         self.doc = doc
         self.request_segmentation = request_segmentation
         self.response_segmentation = response_segmentation

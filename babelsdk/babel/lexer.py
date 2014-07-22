@@ -92,6 +92,7 @@ class BabelLexer(object):
        'COLON',
        'ID',
        'KEYWORD',
+       'PATH',
     )
 
     # Tokens related to free text
@@ -175,6 +176,10 @@ class BabelLexer(object):
             return token
         else:
             return token
+
+    def t_PATH(self, token):
+        r'\/[/a-zA-Z0-9_-]*'
+        return token
 
     def t_DOUBLE_COLON(self, token):
         r'::'

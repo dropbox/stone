@@ -5,8 +5,9 @@ import ply.yacc as yacc
 from babelsdk.babel.lexer import BabelLexer
 
 class BabelOpDef(object):
-    def __init__(self, name):
+    def __init__(self, name, path=None):
         self.name = name
+        self.path = path
         self.request_segmentation = []
         self.response_segmentation = []
         self.error_data_type_name = None
@@ -213,7 +214,7 @@ class BabelParser(object):
             raise ValueError('Keyword must be struct or union')
         p[0] = BabelTypeDef(p[1], p[2])
         if p[6]:
-            p[0].set_doc(p[6].strip())
+            p[0].set_doc(self._normalize_docstring(p[6]))
         p[0].set_fields(p[7])
         if p[8]:
             for label, example in p[8]:
@@ -227,7 +228,7 @@ class BabelParser(object):
             raise ValueError('Keyword must be extends')
         p[0] = BabelTypeDef(p[1], p[2], extends=p[4])
         if p[8]:
-            p[0].set_doc(p[8].strip())
+            p[0].set_doc(self._normalize_docstring(p[8]))
         if p[9] is not None:
             p[0].set_fields(p[9])
         if p[10] is not None:
@@ -238,11 +239,22 @@ class BabelParser(object):
         """opdef : OP ID COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT DEDENT
                  | OP ID COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT ERROR COLON NEWLINE INDENT ID NEWLINE DEDENT DEDENT"""
         p[0] = BabelOpDef(p[2])
-        p[0].set_doc(p[6])
+        p[0].set_doc(self._normalize_docstring(p[6]))
         p[0].set_request_segmentation(p[11])
         p[0].set_response_segmentation(p[17])
         if len(p) > 20:
             p[0].set_error_data_type_name(p[23])
+
+    def p_statement_opdef_with_path(self, p):
+        """opdef : OP ID PATH COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT DEDENT
+                 | OP ID PATH COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT ERROR COLON NEWLINE INDENT ID NEWLINE DEDENT DEDENT"""
+
+        p[0] = BabelOpDef(p[2], p[3])
+        p[0].set_doc(self._normalize_docstring(p[7]))
+        p[0].set_request_segmentation(p[12])
+        p[0].set_response_segmentation(p[18])
+        if len(p) > 21:
+            p[0].set_error_data_type_name(p[24])
 
     def p_statement_add_doc(self, p):
         """docsection : KEYWORD DOUBLE_COLON docstring DEDENT
@@ -252,8 +264,13 @@ class BabelParser(object):
                 raise Exception('Wrong keyword in doc section...')
             # Convert a lone newline to a space, and two consecutive newlines
             # to a single newline.
-            lines = p[3].strip().split('\n\n')
-            p[0] = '\n'.join([line.replace('\n', ' ') for line in lines])
+            p[0] = p[3]
+
+    def _normalize_docstring(self, docstring):
+        """We convert double newlines to single newlines, and single newlines
+        to a single whitespace."""
+        lines = docstring.strip().split('\n\n')
+        return '\n'.join([line.replace('\n', ' ') for line in lines]).strip()
 
     def p_statement_docstring_create(self, p):
         'docstring : LINE'
@@ -306,13 +323,13 @@ class BabelParser(object):
             p[0] = BabelField(p[1], p[2], p[4], True)
 
         if has_docstring:
-            p[0].set_doc(p2[-2].strip())
+            p[0].set_doc(self._normalize_docstring(p2[-2]))
 
     def p_statement_field_symbol(self, p):
         'field : ID DOUBLE_COLON docstring DEDENT'
         p[0] = BabelSymbol(p[1])
         if p[3]:
-            p[0].set_doc(p[3].strip())
+            p[0].set_doc(self._normalize_docstring(p[3]))
 
     def p_statement_example(self, p):
         'example : KEYWORD ID COLON NEWLINE INDENT example_field_list DEDENT'
