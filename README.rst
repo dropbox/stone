@@ -1,0 +1,364 @@
+****************
+BabelSDK
+****************
+
+Define an API once in Babel. Use templates to define how the Babel definition
+maps to any programming language. Compile from Babel to all target languages.
+
+Babel makes no assumptions about the RPC layer being used to make API requests
+and return responses. Babel does make some assumptions about the data types
+present in the target programming language, as well as the data serialization
+format. It's assumed that there is a capacity for representing dictionaries
+(unordered String Keys -> Value), lists, numeric types, and unicode. It's also
+assumed that an endpoint can have a static definition of its request type and
+response type.
+
+Getting Started
+===============
+
+Compile babels and apply them to a documentation template::
+
+   $ python -m babelsdk.cli example/api/v2_files.babel example/api/v2_users.babel example/template/docs
+
+View generated documentation::
+
+   $ google-chrome build/docs/docs.html 
+
+Defining a Babel
+================
+
+Babel files (.babel extension) must begin with a namespace declaration:
+
+   namespace users
+
+This is the namespace for all the operations and data types in the Babel file. It helps us seperate
+different namespaces like "files", "users", "datastores", and "photos".
+
+Following the namespace should be struct, union, or op declarations.
+
+Struct
+------
+
+A struct is a type made up of other types::
+
+   struct QuotaInfo:
+       doc::
+           The space quota info for a user.
+
+       quota UInt64::
+           The user's total quota allocation (bytes).
+       normal UInt64::
+           The user's used quota outside of shared folders (bytes).
+       shared UInt64::
+           The user's used quota in shared folders (bytes).
+
+       example default:
+           quota=1000000
+           normal=1000
+           shared=500
+
+A struct must (TODO: change to optional) define a documentation string by declaring "doc::".
+The double colon indicates that text that is free of keywords and other Babel semantics follows.
+Documentation mode is terminated only by a line that is on the same indent as the original
+"doc::" string.
+
+After the documentation is a list of fields. Fields are formatted with the field name
+first followed by the field type. To provide documentation for a field, use "::", otherwise
+end the line with the field type.
+
+Finally, examples can be declared. An example is declared by using the "example" keyword followed
+by a label for the example. By convention, "default" should be used as the label name for an
+example that can be considered a good representation of the general case for the type.
+
+Types can also be composed of other types::
+
+   struct Team:
+       doc::
+           Information relevant to a team.
+
+       name Unicode::
+           The name of the team.
+
+       example default:
+           name="Acme, Inc."
+
+   struct AccountInfo:
+       doc::
+           Information for a user's account.
+
+       display_name Unicode::
+           The full name of a user.
+       quota QuotaInfo::
+           The user's quota.
+       is_paired Boolean::
+           Whether the user has a personal and business account.
+       team Team nullable::
+           If this paired account is a member of a team.
+
+       example default:
+           display_name="Jon Snow"
+           is_paired=true
+
+       example unpaired:
+           display_name="Jon Snow"
+           is_paired=false
+           team=null
+
+
+Note in the example above that the `AccountInfo.team` field  was marked as "nullable". By default,
+fields do not accept `null` as a valid value.
+
+A struct can also inherit from another struct using the "extends" keyword::
+
+    struct EntryInfo:
+        doc::
+            A file or folder entry.
+
+        id Unicode(max_length=40)::
+            A unique identifier for the file.
+        id_rev UInt64::
+            A unique identifier for the current revision of a file. This field is
+            the same rev as elsewhere in the API and can be used to detect changes
+            and avoid conflicts.
+        path Unicode::
+            Path to file or folder.
+        modified DbxDate nullable::
+            The last time the file was modified on Dropbox, in the standard date
+            format (null for root folder).
+        is_deleted Boolean::
+            Whether the given entry is deleted.
+
+    struct FileInfo extends EntryInfo:
+        doc::
+            Describes a file.
+
+        size UInt64::
+            File size in bytes.
+        mime_type Unicode nullable::
+            The Internet media type determined by the file extension.
+        media_info MediaInfo::
+            Information specific to photo and video media.
+
+        example default:
+            id="xyz123"
+            id_rev=2
+            path="/Photos/flower.jpg"
+            size=1234
+            mime_type="image/jpg"
+            modified="Sat, 28 Jun 2014 18:23:21"
+            is_deleted=false
+
+Union
+-----
+
+A union in Babel is a tagged union. In its field declarations, a tag name is followed by
+a data type::
+
+   struct PhotoInfo:
+       doc::
+           Photo-specific information derived from EXIF data.
+
+       time_taken DbxDate::
+           When the photo was taken.
+       lat_long List(data_type=Float) nullable::
+           The GPS coordinates where the photo was taken.
+
+       example default:
+           time_taken="Sat, 28 Jun 2014 18:23:21"
+           lat_long=null
+
+   struct VideoInfo:
+       doc::
+           Video-specific information derived from EXIF data.
+
+       time_taken DbxDate::
+           When the photo was taken.
+       lat_long List(data_type=Float) nullable::
+           The GPS coordinates where the photo was taken.
+       duration Float::
+           Length of video in milliseconds.
+
+       example default:
+           time_taken="Sat, 28 Jun 2014 18:23:21"
+           lat_long=null
+           duration=3
+
+   union MediaInfo:
+       doc::
+           Media specific information.
+
+       photo PhotoInfo
+       video VideoInfo
+
+Tags that do not map to a type can be declared. An example follows::
+
+    struct UpdateParentRev:
+        doc::
+            On a write conflict, overwrite the existing file if the parent rev matches.
+
+        parent_rev Unicode::
+            The revision to be updated.
+        auto_rename Boolean::
+            Whether the new file should be renamed on a conflict.
+
+        example default:
+            parent_rev="abc123"
+            auto_rename=false
+
+    union WriteConflictPolicy:
+        doc::
+            Policy for managing write conflicts.
+
+        reject::
+            On a write conflict, reject the new file.
+        overwrite::
+            On a write conflict, overwrite the existing file.
+        rename::
+            On a write conflict, rename the new file with a numerical suffix.
+        update_if_matching_parent_rev UpdateParentRev::
+            On a write conflict, overwrite the existing file.
+
+
+Primitives
+----------
+
+These types exist without having to be declared:
+
+   * Integers: Int32, Int64, UInt32, UInt64
+   * Float, Double
+   * Unicode
+   * Boolean
+   * Date
+   * List
+
+Alias
+-----
+
+Sometimes we prefer to use an alias, rather than re-declaring a type over and over again.
+For example, the Dropbox API uses a special date format. We can create an alias called
+DbxDate, which sets this format, and can be used in struct and union definitions::
+
+   alias DbxDate = Date(format="%a, %d %b %Y %H:%M:%S")
+
+   struct Example:
+       doc::
+           An example.
+
+       created DbxDate
+
+Operations
+----------
+
+Operations map to your API endpoints. You specify a list of data types for the request,
+and a list of data types for the response::
+
+    struct AccountInfoRequest:
+        doc::
+            Input to request.
+
+        account_id Unicode::
+            A user's account identifier. Use "me" to get information for the
+            current account.
+
+    op Info:
+        doc::
+            Get user account information.
+
+        request:
+            in AccountInfoRequest
+
+        response:
+            info AccountInfo
+
+
+Each "segment" of a request or response has a name ("in" and "info" above). It is recommended
+that this name be used as the name of the accessor in generated SDKs.
+
+The following is an example of an endpoint with two request segments::
+
+
+    struct FileUploadRequest:
+        doc::
+            Stub.
+
+        path Unicode::
+            The full path to the file you want to write to. It should not point to a folder.
+        write_conflict_policy WriteConflictPolicy::
+            Action to take if a file already exists at the specified path.
+
+        example default:
+            path="Documents/plan.docx"
+
+    op Upload:
+        doc::
+            Upload a file to dropbox.
+
+        request:
+            in FileUploadRequest
+            file Binary
+
+        response:
+            info FileInfo
+
+
+Defining a Babel Template
+=========================
+
+A Babel template is a file used to auto generate code for a target language. A template
+must satisfy the following conditions:
+
+   1. The filename must have '.babelt' as its inner extension. For example, files.babelt.py
+
+       * This makes it easy to search for a file (especially in an IDE), since the prefix is still "files".
+       * IDEs that use the outer extension to determine syntax highlighting can still rely on the outer extension.
+
+   2. The first line of the file must include `babelsdk(jinja2)`.
+
+       * You'll want to make the first line a comment in the target language.
+
+          * `# babelsdk(jinja2)` for Python
+          * `<!-- babelsdk(jinja2) -->` for HTML
+
+       * jinja2 is currently the only available generator. But, this allows for a pluggable
+         architecture for templating engines.
+
+Jinja2 Templating
+-----------------
+
+You'll want to familiarize yourself with templating in jinja2 <http://jinja.pocoo.org/docs/>. Your
+template will have access to the `api` variable, which maps to the `babelsdk.api.Api` object. From
+this object, you can access all the defined namespaces, data types, and operations. See the Python
+object definition for more information.
+
+You also have access to filters to help tailor the Api Definition to the target language. For
+example, you can use "{{ variable }}|class" to convert the variable to the standard format for
+a class (capitalized words). Other available filters include:
+
+   * class
+   * method
+   * type
+   * pprint (Pretty print)
+
+These filters are tailored per language.
+
+Target SDKs
+===========
+
+   * Python
+   * Ruby
+   * Java
+   * PHP
+   * Objective-C
+
+Other Targets
+=============
+
+   * Web Docs
+   * Server Input Validation
+   * Server Output Validation
+
+General Rules
+=============
+
+   * Clients must accept new fields (ie. fields unknown to it), and ignore them.
+   * Server should be flexible on missing inputs (backwards compatibility), but strict on what goes out.

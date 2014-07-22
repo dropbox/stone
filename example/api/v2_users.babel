@@ -1,0 +1,69 @@
+namespace users
+
+include v2_common
+
+struct QuotaInfo:
+    doc::
+        The space quota info for a user.
+
+    quota UInt64::
+        The user's total quota allocation (bytes).
+    normal UInt64::
+        The user's used quota outside of shared folders (bytes).
+    shared UInt64::
+        The user's used quota in shared folders (bytes).
+
+    example default:
+        quota=1000000
+        normal=1000
+        shared=500
+
+struct Team:
+    doc::
+        Information relevant to a team.
+
+    name String::
+        The name of the team.
+
+    example default:
+        name="Acme, Inc."
+
+struct AccountInfo:
+    doc::
+        Information for a user's account.
+
+    display_name String::
+        The full name of a user.
+    quota QuotaInfo::
+        The user's quota.
+    is_paired Boolean::
+        Whether the user has a personal and business account.
+    team Team nullable::
+        If this paired account is a member of a team.
+
+    example default:
+        display_name="Jon Snow"
+        is_paired=true
+
+    example unpaired:
+        display_name="Jon Snow"
+        is_paired=false
+        team=null
+
+struct AccountInfoRequest:
+    doc::
+        Stub.
+
+    account_id String::
+        A user's account identifier. Use "me" to get information for the
+        current account.
+
+op Info:
+    doc::
+        Get user account information.
+
+    request:
+        info AccountInfoRequest
+
+    response:
+        info AccountInfo

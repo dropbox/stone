@@ -1,0 +1,4 @@
+
+alias Rev = String
+
+alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S")

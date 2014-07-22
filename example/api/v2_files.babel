@@ -1,0 +1,343 @@
+namespace files
+
+include v2_common
+
+struct PhotoInfo:
+    doc::
+        Photo-specific information derived from EXIF data.
+
+    time_taken DbxTimestamp::
+        When the photo was taken.
+    lat_long List(data_type=Float) nullable::
+        The GPS coordinates where the photo was taken.
+
+    example default:
+        time_taken="Sat, 28 Jun 2014 18:23:21"
+        lat_long=null
+
+struct VideoInfo:
+    doc::
+        Video-specific information derived from EXIF data.
+
+    time_taken DbxTimestamp::
+        When the photo was taken.
+    lat_long List(data_type=Float) nullable::
+        The GPS coordinates where the photo was taken.
+    duration Float::
+        Length of video in milliseconds.
+
+    example default:
+        time_taken="Sat, 28 Jun 2014 18:23:21"
+        lat_long=null
+        duration=3
+
+union MediaInfo:
+    doc::
+        Media specific information.
+
+    audio::
+        Audio file.
+    photo PhotoInfo
+    video VideoInfo
+
+struct SharedFolder:
+    doc::
+        Blah.
+
+    id String
+
+
+struct EntryInfo:
+    doc::
+        A file or folder entry.
+
+    id String(max_length=40)::
+        A unique identifier for the file.
+    id_rev UInt64::
+        A unique identifier for the current revision of a file. This field is
+        the same rev as elsewhere in the API and can be used to detect changes
+        and avoid conflicts.
+    path String::
+        Path to file or folder.
+    shared_folder SharedFolder nullable::
+        If this a shared folder, information about it.
+    modified DbxTimestamp nullable::
+        The last time the file was modified on Dropbox, in the standard Timestamp
+        format (null for root folder).
+    is_deleted Boolean::
+        Whether the given entry is deleted.
+
+struct FileInfo extends EntryInfo:
+    doc::
+        Describes a file.
+
+    size UInt64::
+        File size in bytes.
+    mime_type String nullable::
+        The Internet media type determined by the file extension.
+    media_info MediaInfo::
+        Information specific to photo and video media.
+
+    example default:
+        id="xyz123"
+        id_rev=2
+        path="/Photos/flower.jpg"
+        size=1234
+        mime_type="image/jpg"
+        modified="Sat, 28 Jun 2014 18:23:21"
+        is_deleted=false
+
+struct FolderInfo extends EntryInfo:
+    doc::
+        Describes a folder.
+
+    example default:
+        id="abc456"
+        id_rev=3
+        path="/Photos"
+        modified="Sat, 28 Jun 2014 18:23:21"
+        is_deleted=false
+
+union FileOrFolderInfo:
+    doc::
+        A file or folder in a Dropbox.
+
+    file FileInfo
+    folder FolderInfo
+
+struct InfoRequest:
+    doc::
+        Describes a path.
+
+    path String::
+        The path to the file or folder.
+
+    example default:
+        path="/Photos/flower.jpg"
+
+op Info:
+    doc::
+        Get the info for a file or folder.
+
+    request:
+        in1 InfoRequest
+
+    response:
+        info FileOrFolderInfo
+
+op Download:
+    doc::
+        Download a file.
+
+    request:
+        in1 InfoRequest
+
+    response:
+        info FileInfo
+        data Binary
+
+struct FolderListRequest:
+    doc::
+        Stub.
+
+    path String::
+        The path to the folder.
+    include_deleted Boolean::
+        Only applicable when list is set. If this parameter is set to true,
+        then contents will include the metadata of deleted children. Note
+        that the target of the metadata call is always returned even when
+        it has been deleted (with is_deleted set to true) regardless of
+        this flag.
+    include_media_info Boolean::
+        If true, each file will include a media_info key.
+
+op Folder-List:
+    doc::
+        Request the contents of a folder.
+
+    request:
+        in1 FolderListRequest
+
+    response:
+        folder FolderInfo
+        contents SList(data_type=FileOrFolderInfo)
+
+
+struct DeltaHeader:
+    doc::
+        Header of a delta response.
+
+    reset Boolean::
+        If true, clear your local state before processing the delta entries.
+        reset is always true on the initial call to /delta (i.e. when no cursor
+        is passed in). Otherwise, it is true in rare situations, such as after
+        server or account maintenance, or if a user deletes their app folder.
+    created DbxTimestamp::
+        When file was created.
+
+    example default:
+        reset=false
+        created="Sat, 21 Aug 2010 22:31:20"
+
+struct DeltaFooter:
+    doc::
+        Footer of a delta response. Stores values that can only be computed
+        after the final EntryInfo.
+
+        This is the next part of the doc.
+
+    cursor String::
+        A string that encodes the latest information that has been returned.
+        On the next call to /delta, pass in this value.
+    has_more Boolean::
+        If true, then there are more entries available; you can call /delta
+        again immediately to retrieve those entries. If 'false', then wait
+        for at least five minutes (preferably longer) before checking again.
+
+    example default:
+        cursor="xyz123"
+        has_more=true
+
+struct DeltaRequest:
+    doc::
+        Delta request.
+
+    cursor String nullable::
+        A string that is used to keep track of your current state. On the
+        next call pass in this value to return delta entries that have been
+        recorded since the cursor was returned.
+    path_prefix String nullable::
+        Filters the response to only include entries at or under the specified
+        path. If you use the path_prefix parameter, you must continue to pass
+        the same prefix on subsequent calls using the returned cursor.
+    include_media_info Boolean::
+        If true, each file will include a media_info key. When
+        include_media_info is specified, files will only appear in delta
+        responses when the media info is ready. If you use the
+        include_media_info parameter, you must continue to pass the same
+        value on subsequent calls using the returned cursor.
+
+    example default:
+        cursor=null
+        path_prefix=null
+        include_media_info=false
+
+op Delta:
+    doc::
+        A way of letting you keep up with changes to files and folders in a
+        user's Dropbox. You can periodically call /delta to get a list of
+        "delta entries", which are instructions on how to update your local
+        state to match the server's state.
+
+    request:
+        in1 DeltaRequest
+
+    response:
+        header DeltaHeader
+        entries SList(data_type=FileOrFolderInfo)
+        footer DeltaFooteradsfsaf
+
+struct ThumbnailRequest:
+    doc::
+        Stub.
+
+    format String::
+        jpeg (default) or png. For images that are photos, jpeg should be
+        preferred, while png is better for screenshots and digital art.
+    size String::
+        One of the following values: xs, s (default), m, l, xl.
+
+    example default:
+        format="jpeg"
+        size="m"
+
+op Thumbnail:
+    doc::
+        Get the thumbnail for a file.
+
+    request:
+        in1 ThumbnailRequest
+
+    response:
+        info FileInfo
+        data Binary
+
+
+op Revisions:
+    doc::
+        Obtains metadata for the previous revisions of a file.
+
+        Only revisions up to thirty days old are available (or more if the
+        Dropbox user has Packrat). You can use the revision number in
+        conjunction with the /restore call to revert the file to its previous
+        state.
+
+    request:
+        in1 InfoRequest
+
+    response:
+        revisions SList(data_type=EntryInfo)
+
+
+struct UpdateParentRev:
+    doc::
+        On a write conflict, overwrite the existing file if the parent rev matches.
+
+    parent_rev String::
+        The revision to be updated.
+    auto_rename Boolean::
+        Whether the new file should be renamed on a conflict.
+
+    example default:
+        parent_rev="abc123"
+        auto_rename=false
+
+union WriteConflictPolicy:
+    doc::
+        Policy for managing write conflicts.
+
+    reject::
+        On a write conflict, reject the new file.
+    overwrite::
+        On a write conflict, overwrite the existing file.
+    rename::
+        On a write conflict, rename the new file with a numerical suffix.
+    update_if_matching_parent_rev UpdateParentRev::
+        On a write conflict, overwrite the existing file.
+
+struct FileUploadRequest:
+    doc::
+        Stub.
+
+    path String::
+        The full path to the file you want to write to. It should not point to a folder.
+    write_conflict_policy WriteConflictPolicy::
+        Action to take if a file already exists at the specified path.
+
+    example default:
+        path="Documents/plan.docx"
+
+union UploadError:
+    doc::
+        Errors that can be received on error.
+
+    file_exists::
+        File already exists.
+    bad_path::
+        Target folder does not exist.
+    user_over_quota::
+        The user does not have space in their Dropbox.
+
+op Upload:
+    doc::
+        Upload a file to Dropbox.
+
+    request:
+        in1 FileUploadRequest
+        in2 Binary
+
+    response:
+        info FileInfo
+
+    error:
+        UploadError
