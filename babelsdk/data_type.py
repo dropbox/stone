@@ -75,12 +75,12 @@ class _BoundedInteger(PrimitiveType):
                                  'value for this type (%s < %s)'
                                  % (min_value, self.minimum))
         if max_value is not None:
-            if max_value >= self.maximum:
+            if max_value <= self.maximum:
                 self.maximum = max_value
             else:
-                raise ValueError('min_value cannot be less than the minimum '
+                raise ValueError('max_value cannot be greater than the maximum '
                                  'value for this type (%s < %s)'
-                                 % (min_value, self.maximum))
+                                 % (max_value, self.maximum))
 
     def check(self, val):
         if not isinstance(val, numbers.Integral):
@@ -366,7 +366,7 @@ class Struct(CompositeType):
                     field.check(example[field.name])
                     ordered_example[field.name] = example[field.name]
             elif not isinstance(field.data_type, CompositeType):
-                raise KeyError('Missing non-nullable field %r' % field.name)
+                raise KeyError('Missing field %r in example' % field.name)
         self.examples[label] = ordered_example
 
     def has_example(self, label):
