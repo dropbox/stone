@@ -57,10 +57,10 @@ A struct is a type made up of other types::
            normal=1000
            shared=500
 
-A struct must (TODO: change to optional) define a documentation string by declaring "doc::".
-The double colon indicates that text that is free of keywords and other Babel semantics follows.
-Documentation mode is terminated only by a line that is on the same indent as the original
-"doc::" string.
+A struct can optionally define a documentation string by declaring "doc::".
+The double colon enters documentation mode and indicates that the following
+text is free form. Documentation mode is terminated only by a line that is on
+the same indent as the original "doc::" string.
 
 After the documentation is a list of fields. Fields are formatted with the field name
 first followed by the field type. To provide documentation for a field, use "::", otherwise
