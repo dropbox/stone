@@ -133,6 +133,7 @@ class TowerOfBabel(object):
             else:
                 obj = env[babel_field.data_type_name]
                 if inspect.isclass(obj):
+                    self._resolve_attrs(env, babel_field.data_type_attrs)
                     data_type = obj(**dict(babel_field.data_type_attrs))
                 elif babel_field.data_type_attrs:
                     # An instance of a type cannot have any additional
@@ -154,6 +155,17 @@ class TowerOfBabel(object):
             api_type.add_example(example_label, dict(example))
         env[item.name] = api_type
         return api_type
+
+    def _resolve_attrs(self, env, attrs):
+        """
+        Resolves symbols in data type attributes to data types in environment.
+        """
+        for i, (k, v) in enumerate(attrs):
+            if isinstance(v, BabelSymbol):
+                if v.name not in env:
+                    raise Exception('Symbol %r is undefined' % v.name)
+                else:
+                    attrs[i] = (k, env[v.name])
 
     def add_to_api(self, path, desc):
 
@@ -193,7 +205,7 @@ class TowerOfBabel(object):
                 )
                 operation = ApiOperation(
                     item.name,
-                    item.name,
+                    item.path or item.name,
                     item.doc,
                     request_segmentation,
                     response_segmentation,
