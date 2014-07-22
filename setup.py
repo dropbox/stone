@@ -4,7 +4,9 @@ use_setuptools()
 
 from setuptools import setup
 
-install_reqs = ['jinja2>=2.7.0']
+# ply is also required, but is not on pip
+install_reqs = ['jinja2>=2.7.0',
+                'ply>=3.4']
 
 dist = setup(
     name='babelsdk',
