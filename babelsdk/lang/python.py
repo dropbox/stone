@@ -1,4 +1,3 @@
-import copy
 import pprint
 import re
 
@@ -32,18 +31,33 @@ class PythonTargetLanguage(TargetLanguage):
         String: 'str',
     }
 
+
+    def _split_on_upper(self, words):
+        """
+        Splits a word based on capitalized words.
+            Example: 'GetFile' -> ['Get', 'File']
+        """
+        all_words = []
+        for word in words:
+            vals = re.findall('[A-Z]+[a-z0-9]*', word)
+            if vals:
+                all_words.extend(vals)
+            else:
+                all_words.append(word)
+        return all_words
+
     def format_type(self, data_type):
-        return PythonTargetLanguage._type_table[data_type]
+        return PythonTargetLanguage._type_table.get(data_type.__class__, data_type.name)
 
     def format_obj(self, o):
         return pprint.pformat(o, width=1)
 
     def format_class(self, s):
         # Might be separated by _ or -
-        words = re.split('\W+|-_', s)
+        words = self._split_on_upper(re.split('\W+|-_', s))
         return ''.join([word.capitalize() for word in words])
 
     def format_method(self, s):
-        words = re.split('\W+|-_', s)
+        words = self._split_on_upper(re.split('\W+|-_', s))
         return '_'.join([word.lower() for word in words])
 
