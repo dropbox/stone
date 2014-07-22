@@ -9,7 +9,7 @@ Babel makes no assumptions about the RPC layer being used to make API requests
 and return responses. Babel does make some assumptions about the data types
 present in the target programming language, as well as the data serialization
 format. It's assumed that there is a capacity for representing dictionaries
-(unordered String Keys -> Value), lists, numeric types, and unicode. It's also
+(unordered String Keys -> Value), lists, numeric types, and strings. It's also
 assumed that an endpoint can have a static definition of its request type and
 response type.
 
@@ -76,7 +76,7 @@ Types can also be composed of other types::
        doc::
            Information relevant to a team.
 
-       name Unicode::
+       name String::
            The name of the team.
 
        example default:
@@ -86,7 +86,7 @@ Types can also be composed of other types::
        doc::
            Information for a user's account.
 
-       display_name Unicode::
+       display_name String::
            The full name of a user.
        quota QuotaInfo::
            The user's quota.
@@ -114,13 +114,13 @@ A struct can also inherit from another struct using the "extends" keyword::
         doc::
             A file or folder entry.
 
-        id Unicode(max_length=40)::
+        id String(max_length=40)::
             A unique identifier for the file.
         id_rev UInt64::
             A unique identifier for the current revision of a file. This field is
             the same rev as elsewhere in the API and can be used to detect changes
             and avoid conflicts.
-        path Unicode::
+        path String::
             Path to file or folder.
         modified DbxDate nullable::
             The last time the file was modified on Dropbox, in the standard date
@@ -134,7 +134,7 @@ A struct can also inherit from another struct using the "extends" keyword::
 
         size UInt64::
             File size in bytes.
-        mime_type Unicode nullable::
+        mime_type String nullable::
             The Internet media type determined by the file extension.
         media_info MediaInfo::
             Information specific to photo and video media.
@@ -196,7 +196,7 @@ Tags that do not map to a type can be declared. An example follows::
         doc::
             On a write conflict, overwrite the existing file if the parent rev matches.
 
-        parent_rev Unicode::
+        parent_rev String::
             The revision to be updated.
         auto_rename Boolean::
             Whether the new file should be renamed on a conflict.
@@ -226,9 +226,9 @@ These types exist without having to be declared:
 
    * Integers: Int32, Int64, UInt32, UInt64
    * Float, Double
-   * Unicode
+   * String
    * Boolean
-   * Date
+   * Timestamp
    * List
 
 Alias
@@ -238,13 +238,13 @@ Sometimes we prefer to use an alias, rather than re-declaring a type over and ov
 For example, the Dropbox API uses a special date format. We can create an alias called
 DbxDate, which sets this format, and can be used in struct and union definitions::
 
-   alias DbxDate = Date(format="%a, %d %b %Y %H:%M:%S")
+   alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S")
 
    struct Example:
        doc::
            An example.
 
-       created DbxDate
+       created DbxTimestamp
 
 Operations
 ----------
@@ -256,7 +256,7 @@ and a list of data types for the response::
         doc::
             Input to request.
 
-        account_id Unicode::
+        account_id String::
             A user's account identifier. Use "me" to get information for the
             current account.
 
@@ -281,7 +281,7 @@ The following is an example of an endpoint with two request segments::
         doc::
             Stub.
 
-        path Unicode::
+        path String::
             The full path to the file you want to write to. It should not point to a folder.
         write_conflict_policy WriteConflictPolicy::
             Action to take if a file already exists at the specified path.
