@@ -74,7 +74,10 @@ def main():
     )
     c.build()
 
-    return api
+    if not sys.argv[0].endswith('babelsdk'):
+        # If we aren't running from an entry_point, then return api to make it
+        # easier to do debugging.
+        return api
 
 if __name__ == '__main__':
     # Assign api variable for easy debugging from a Python console
