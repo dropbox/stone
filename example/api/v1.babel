@@ -1,0 +1,286 @@
+namespace v1
+
+include v1_common
+
+struct QuotaInfo:
+    doc::
+        The space quota info for a user.
+
+    quota UInt64::
+        The user's total quota allocation (bytes).
+    normal UInt64::
+        The user's used quota outside of shared folders (bytes).
+    shared UInt64::
+        The user's used quota in shared folders (bytes).
+    datastores UInt64 nullable::
+        The user's used quota in datastores (bytes).
+
+    example default:
+        quota=1000000
+        normal=1000
+        shared=500
+        datastores=100
+
+struct Team:
+    doc::
+        Information about a team.
+
+    name String::
+        The name of the team.
+
+    example default:
+        name="Acme, Inc."
+
+struct AccountInfo:
+    doc::
+        Information for a user's account.
+
+    referral_link String::
+        The user's referral link.
+    display_name String::
+        The full name of a user.
+    uid UInt64::
+        The user's unique Dropbox ID.
+    country String(min_length=2, max_length=2)::
+        The user's two-letter country code, if available.
+    email String::
+        The user's e-mail address.
+    quota_info QuotaInfo::
+        The user's quota.
+    team Team nullable::
+        If this paired account is a member of a team.
+
+    example default:
+        referral_link="https://db.tt/ZITNuhtI"
+        display_name="Jon Snow"
+        uid=386406
+        country="US"
+        email="jsnow@westeros.com"
+
+    example unpaired:
+        referral_link="https://db.tt/ZITNuhtI"
+        display_name="Jon Snow"
+        uid=386406
+        country="US"
+        email="jsnow@westeros.com"
+        team=null
+
+struct LocaleRequest:
+
+    locale String nullable::
+        Use to specify language settings for user error messages and other
+        language specific text.
+
+struct AccountInfoRequest extends LocaleRequest:
+    doc::
+        This request has no fields. In v2, this request will take an account_id.
+
+op AccountInfo /account/info:
+    doc::
+        Get user account information.
+
+    request:
+        info AccountInfoRequest
+
+    response:
+        info AccountInfo
+
+    extras:
+        method="GET"
+
+struct GetFileRequest:
+
+    path String::
+        The path to the file you want to retrieve.
+    rev Rev nullable::
+        The revision of the file to retrieve. This defaults to the most recent
+        revision.
+
+struct PhotoInfo:
+    doc::
+        Photo-specific information derived from EXIF data.
+
+    time_taken DbxTimestamp::
+        When the photo was taken.
+    lat_long List(data_type=Float) nullable::
+        The GPS coordinates where the photo was taken.
+
+    example default:
+        time_taken="Sat, 28 Jun 2014 18:23:21 +0000"
+        lat_long=null
+
+struct VideoInfo:
+    doc::
+        Video-specific information derived from EXIF data.
+
+    time_taken DbxTimestamp::
+        When the photo was taken.
+    lat_long List(data_type=Float) nullable::
+        The GPS coordinates where the photo was taken.
+    duration Float nullable::
+        Length of video in milliseconds.
+
+    example default:
+        time_taken="Sat, 28 Jun 2014 18:23:21 +0000"
+        lat_long=null
+        duration=3
+
+struct EntryInfo:
+    doc::
+        A file or folder entry.
+
+    path String::
+        Returns the canonical path to the file or directory.
+    size String::
+        A human-readable description of the file size (translated by locale).
+    bytes UInt64::
+        The file size in bytes.
+    is_dir Boolean::
+        Whether the given entry is a folder or not.
+    thumb_exists Boolean::
+        True if the file is an image that can be converted to a thumbnail via
+        the /thumbnails call.
+    icon String::
+        The name of the icon used to illustrate the file type in Dropbox's icon
+        library.
+    root String::
+        The root or top-level folder depending on your access level. All paths
+        returned are relative to this root level. Permitted values are either
+        dropbox or app_folder.
+    hash String nullable::
+        A folder's hash is useful for indicating changes to the folder's
+        contents in later calls to /metadata. This is roughly the folder
+        equivalent to a file's rev.
+    is_deleted Boolean nullable::
+        Whether the given entry is deleted.
+    modified DbxTimestamp nullable::
+        The last time the file was modified on Dropbox, in the standard Timestamp
+        format (null for root folder).
+    rev Rev nullable::
+        A unique identifier for the current revision of a file. This field is
+        the same rev as elsewhere in the API and can be used to detect changes
+        and avoid conflicts.
+    revision String nullable::
+        A deprecated field that semi-uniquely identifies a file. Use rev
+        instead.
+    client_mtime String nullable::
+        For files, this is the modification time set by the desktop client when
+        the file was added to Dropbox, in the standard date format. Since this
+        time is not verified (the Dropbox server stores whatever the desktop
+        client sends up), this should only be used for display purposes (such
+        as sorting) and not, for example, to determine if a file has changed
+        or not.
+    photo_info PhotoInfo nullable::
+        Only returned when the include_media_info parameter is true and the
+        file is an image.
+    video_info VideoInfo nullable::
+        Only returned when the include_media_info parameter is true and the
+        file is a video.
+
+struct FileOrFolderInfo extends EntryInfo:
+    doc::
+        A file or folder entry.
+
+    contents List(data_type=EntryInfo) nullable::
+        Folder contents.
+
+op GetFile /files:
+    doc::
+        Downloads a file. Note that this call goes to api-content.dropbox.com
+        instead of api.dropbox.com.
+
+    request:
+        in GetFileRequest
+
+    response:
+        info EntryInfo
+        data Binary
+
+    extras:
+        method="GET"
+
+struct FilesPutRequest extends LocaleRequest:
+
+    path String::
+        path The full path to the file you want to write to. This parameter
+        should not point to a folder.
+    overwrite Boolean nullable::
+        This value, either true (default) or false, determines what happens
+        when there's already a file at the specified path. If true, the
+        existing file will be overwritten by the new one. If false, the new
+        file will be automatically renamed (for example, test.txt might be
+        automatically renamed to test (1).txt). The new name can be obtained
+        from the returned metadata.
+    parent_rev Rev nullable::
+        If present, this parameter specifies the revision of the file you're
+        editing. If parent_rev matches the latest version of the file on the
+        user's Dropbox, that file will be replaced. Otherwise, the new file
+        will be automatically renamed (for example, test.txt might be
+        automatically renamed to test (conflicted copy).txt). If you specify
+        a parent_rev and that revision doesn't exist, the file won't save.
+        Get the most recent rev by performing a call to /metadata.
+
+op PutFile /files_put:
+    doc::
+        Uploads a file using PUT semantics. Note that this call goes to
+        api-content.dropbox.com instead of api.dropbox.com.
+
+    request:
+        in FilesPutRequest
+        data Binary
+
+    response:
+        info EntryInfo
+
+    extras:
+        method="POST"
+
+struct MetadataRequest extends LocaleRequest:
+
+    path String::
+        The path to the file or folder.
+    file_limit UInt32(max_value=25000) nullable::
+        Default is 10,000 (max is 25,000). When listing a folder, the service
+        won't report listings containing more than the specified amount of
+        files and will instead respond with a 406 (Not Acceptable) status
+        response.
+    hash String nullable::
+        Each call to /metadata on a folder will return a hash field, generated
+        by hashing all of the metadata contained in that response. On later
+        calls to /metadata, you should provide that value via this parameter so
+        that if nothing has changed, the response will be a 304 (Not Modified)
+        status code instead of the full, potentially very large, folder
+        listing. This parameter is ignored if the specified path is associated
+        with a file or if list=false. A folder shared between two users will
+        have the same hash for each user.
+    list Boolean nullable::
+        The strings true and false are valid values. true is the default. If
+        true, the folder's metadata will include a contents field with a list
+        of metadata entries for the contents of the folder. If false, the
+        contents field will be omitted.
+    include_deleted Boolean nullable::
+        Only applicable when list is set. If this parameter is set to true,
+        then contents will include the metadata of deleted children. Note that
+        the target of the metadata call is always returned even when it has
+        been deleted (with is_deleted set to true) regardless of this flag.
+    rev Rev nullable::
+        If you include a particular revision number, then only the metadata
+        for that revision will be returned.
+    include_media_info Boolean nullable::
+        If true, each file will include a photo_info dictionary for photos and
+        a video_info dictionary for videos with additional media info. If the
+        data isn't available yet, the string pending will be returned instead
+        of a dictionary.
+
+op Metadata /metadata/auto:
+    doc::
+        Retrieves file and folder metadata.
+
+    request:
+        in MetadataRequest
+
+    response:
+        info FileOrFolderInfo
+
+    extras:
+        method="GET"
