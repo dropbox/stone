@@ -38,7 +38,7 @@ class Jinja2Generator(Generator):
                 self.ext_to_language[ext] = language
 
         self.env_vars = {'api': api}
-        self.template_env = jinja2.Environment()
+        self.template_env = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
 
         # Default filter: Pretty JSON
         self.template_env.filters['pjson'] = lambda s: json.dumps(s, indent=2)
