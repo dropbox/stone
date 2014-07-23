@@ -101,6 +101,11 @@ window.setTimeout(function() {
         <li id="toc-Info"><a href="#files-Info">Info</a></li><li id="toc-Download"><a href="#files-Download">Download</a></li><li id="toc-Folder-List"><a href="#files-Folder-List">Folder-List</a></li><li id="toc-Delta"><a href="#files-Delta">Delta</a></li><li id="toc-Thumbnail"><a href="#files-Thumbnail">Thumbnail</a></li><li id="toc-Revisions"><a href="#files-Revisions">Revisions</a></li><li id="toc-Upload"><a href="#files-Upload">Upload</a></li>
     </ul>
 
+<h4>Users</h4>
+    <ul>
+        <li id="toc-Info"><a href="#users-Info">Info</a></li>
+    </ul>
+
 
 
 <h4>Webhooks</h4>
@@ -252,9 +257,7 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -278,8 +281,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -460,9 +462,7 @@ Describes a folder.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -486,8 +486,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -690,9 +689,7 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -716,8 +713,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -992,11 +988,7 @@ Stub.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Only applicable when list is set. If this parameter is set to true,
-then contents will include the metadata of deleted children. Note
-that the target of the metadata call is always returned even when
-it has been deleted (with is_deleted set to true) regardless of
-this flag.</td>
+        <td>Only applicable when list is set. If this parameter is set to true, then contents will include the metadata of deleted children. Note that the target of the metadata call is always returned even when it has been deleted (with is_deleted set to true) regardless of this flag.</td>
     </tr>
     <tr>
         <td>
@@ -1059,9 +1051,7 @@ Describes a folder.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -1085,8 +1075,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -1190,9 +1179,7 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -1216,8 +1203,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -1398,9 +1384,7 @@ Describes a folder.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -1424,8 +1408,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -1570,9 +1553,7 @@ Delta request.
         </td>
         <td>String</td>
         <td>Yes</td>
-        <td>A string that is used to keep track of your current state. On the
-next call pass in this value to return delta entries that have been
-recorded since the cursor was returned.</td>
+        <td>A string that is used to keep track of your current state. On the next call pass in this value to return delta entries that have been recorded since the cursor was returned.</td>
     </tr>
     <tr>
         <td>
@@ -1580,9 +1561,7 @@ recorded since the cursor was returned.</td>
         </td>
         <td>String</td>
         <td>Yes</td>
-        <td>Filters the response to only include entries at or under the specified
-path. If you use the path_prefix parameter, you must continue to pass
-the same prefix on subsequent calls using the returned cursor.</td>
+        <td>Filters the response to only include entries at or under the specified path. If you use the path_prefix parameter, you must continue to pass the same prefix on subsequent calls using the returned cursor.</td>
     </tr>
     <tr>
         <td>
@@ -1590,11 +1569,7 @@ the same prefix on subsequent calls using the returned cursor.</td>
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, each file will include a media_info key. When
-include_media_info is specified, files will only appear in delta
-responses when the media info is ready. If you use the
-include_media_info parameter, you must continue to pass the same
-value on subsequent calls using the returned cursor.</td>
+        <td>If true, each file will include a media_info key. When include_media_info is specified, files will only appear in delta responses when the media info is ready. If you use the include_media_info parameter, you must continue to pass the same value on subsequent calls using the returned cursor.</td>
     </tr>
     
 </table>
@@ -1648,10 +1623,7 @@ Header of a delta response.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, clear your local state before processing the delta entries.
-reset is always true on the initial call to /delta (i.e. when no cursor
-is passed in). Otherwise, it is true in rare situations, such as after
-server or account maintenance, or if a user deletes their app folder.</td>
+        <td>If true, clear your local state before processing the delta entries. reset is always true on the initial call to /delta (i.e. when no cursor is passed in). Otherwise, it is true in rare situations, such as after server or account maintenance, or if a user deletes their app folder.</td>
     </tr>
     <tr>
         <td>
@@ -1743,9 +1715,7 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -1769,8 +1739,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -1951,9 +1920,7 @@ Describes a folder.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -1977,8 +1944,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -2091,8 +2057,7 @@ This is the next part of the doc.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A string that encodes the latest information that has been returned.
-On the next call to /delta, pass in this value.</td>
+        <td>A string that encodes the latest information that has been returned. On the next call to /delta, pass in this value.</td>
     </tr>
     <tr>
         <td>
@@ -2100,9 +2065,7 @@ On the next call to /delta, pass in this value.</td>
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, then there are more entries available; you can call /delta
-again immediately to retrieve those entries. If 'false', then wait
-for at least five minutes (preferably longer) before checking again.</td>
+        <td>If true, then there are more entries available; you can call /delta again immediately to retrieve those entries. If 'false', then wait for at least five minutes (preferably longer) before checking again.</td>
     </tr>
     
 </table>
@@ -2181,8 +2144,7 @@ Stub.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>jpeg (default) or png. For images that are photos, jpeg should be
-preferred, while png is better for screenshots and digital art.</td>
+        <td>jpeg (default) or png. For images that are photos, jpeg should be preferred, while png is better for screenshots and digital art.</td>
     </tr>
     <tr>
         <td>
@@ -2250,9 +2212,7 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -2276,8 +2236,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -2603,9 +2562,7 @@ A file or folder entry.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -2629,8 +2586,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -2911,9 +2867,7 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is
-the same rev as elsewhere in the API and can be used to detect changes
-and avoid conflicts.</td>
+        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
     </tr>
     <tr>
         <td>
@@ -2937,8 +2891,7 @@ and avoid conflicts.</td>
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp
-format (null for root folder).</td>
+        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (null for root folder).</td>
     </tr>
     <tr>
         <td>
@@ -3197,6 +3150,245 @@ Errors that can be received on error.
 
 
 
+
+        </dd>
+        
+    </dl>
+    
+</div>
+
+<div id="users" class="section toc-el">
+    <h2>Users</h2>
+    
+    <a name="users-Info"></a>
+    <h3 class="method-title-first">users/info
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Get user account information.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/users/info</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            
+    <h4>Segment 1 of 1 (AccountInfoRequest)</h4>
+        
+        
+
+<h5>AccountInfoRequest (Struct)</h5>
+Stub.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+    <tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>A user's account identifier. Use "me" to get information for the current account.</td>
+    </tr>
+    
+</table>
+
+
+<br />
+
+
+
+        <br />
+
+            
+
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">
+struct AccountInfoRequest:
+    account_id = String</pre>
+
+        
+    
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            
+    <h4>Segment 1 of 1 (AccountInfo)</h4>
+        
+        
+
+<h5>AccountInfo (Struct)</h5>
+Information for a user's account.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+    <tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>The full name of a user.</td>
+    </tr>
+    <tr>
+        <td>
+            <code>quota</code>
+        </td>
+        <td>QuotaInfo</td>
+        <td>No</td>
+        <td>The user's quota.</td>
+    </tr>
+    <tr>
+        <td>
+            <code>is_paired</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>Whether the user has a personal and business account.</td>
+    </tr>
+    <tr>
+        <td>
+            <code>team</code>
+        </td>
+        <td>Team</td>
+        <td>Yes</td>
+        <td>If this paired account is a member of a team.</td>
+    </tr>
+    
+</table>
+
+
+<br />
+
+
+<h5>QuotaInfo (Struct)</h5>
+The space quota info for a user.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+    <tr>
+        <td>
+            <code>quota</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>The user's total quota allocation (bytes).</td>
+    </tr>
+    <tr>
+        <td>
+            <code>normal</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>The user's used quota outside of shared folders (bytes).</td>
+    </tr>
+    <tr>
+        <td>
+            <code>shared</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>The user's used quota in shared folders (bytes).</td>
+    </tr>
+    
+</table>
+
+
+<br />
+
+
+
+
+<h5>Team (Struct)</h5>
+Information relevant to a team.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+    <tr>
+        <td>
+            <code>name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>The name of the team.</td>
+    </tr>
+    
+</table>
+
+
+<br />
+
+
+
+
+
+        <br />
+
+            
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "display_name": "Jon Snow", 
+  "is_paired": true, 
+  "quota": {
+    "quota": 1000000, 
+    "normal": 1000, 
+    "shared": 500
+  }, 
+  "team": {
+    "name": "Acme, Inc."
+  }
+}</pre>
+            
+
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">
+struct AccountInfo:
+    display_name = String
+    quota = QuotaInfo
+    is_paired = Boolean
+    team = Team
+
+struct QuotaInfo:
+    quota = UInt64
+    normal = UInt64
+    shared = UInt64
+
+struct Team:
+    name = String</pre>
+
+        
+    
 
         </dd>
         
