@@ -11,6 +11,7 @@ class BabelOpDef(object):
         self.request_segmentation = []
         self.response_segmentation = []
         self.error_data_type_name = None
+        self.extras = {}
     def set_doc(self, docstring):
         self.doc = docstring
     def set_request_segmentation(self, segments):
@@ -19,6 +20,8 @@ class BabelOpDef(object):
         self.response_segmentation = segments
     def set_error_data_type_name(self, data_type_name):
         self.error_data_type_name = data_type_name
+    def set_extras(self, extras):
+        self.extras = extras
 
 class BabelTypeDef(object):
     def __init__(self, composite_type, name, extends=None):
@@ -235,26 +238,47 @@ class BabelParser(object):
             for label, example in p[10]:
                 p[0].add_example(label, example)
 
+    def p_statement_request_section(self, p):
+        """reqsection : REQUEST COLON NEWLINE INDENT field_list DEDENT"""
+        p[0] = p[5]
+
+    def p_statement_response_section(self, p):
+        """respsection : RESPONSE COLON NEWLINE INDENT field_list DEDENT"""
+        p[0] = p[5]
+
+    def p_statement_error_section(self, p):
+        """errorsection : ERROR COLON NEWLINE INDENT ID NEWLINE DEDENT
+                        | empty"""
+        if p[1]:
+            p[0] = p[5]
+
+    def p_statement_extras_section(self, p):
+        """extrassection : EXTRAS COLON NEWLINE INDENT example_field_list DEDENT
+                         | empty"""
+        if p[1]:
+            p[0] = p[5]
+
     def p_statement_opdef(self, p):
-        """opdef : OP ID COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT DEDENT
-                 | OP ID COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT ERROR COLON NEWLINE INDENT ID NEWLINE DEDENT DEDENT"""
-        p[0] = BabelOpDef(p[2])
-        p[0].set_doc(self._normalize_docstring(p[6]))
-        p[0].set_request_segmentation(p[11])
-        p[0].set_response_segmentation(p[17])
-        if len(p) > 20:
-            p[0].set_error_data_type_name(p[23])
-
-    def p_statement_opdef_with_path(self, p):
-        """opdef : OP ID PATH COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT DEDENT
-                 | OP ID PATH COLON NEWLINE INDENT docsection REQUEST COLON NEWLINE INDENT field_list DEDENT RESPONSE COLON NEWLINE INDENT field_list DEDENT ERROR COLON NEWLINE INDENT ID NEWLINE DEDENT DEDENT"""
-
-        p[0] = BabelOpDef(p[2], p[3])
-        p[0].set_doc(self._normalize_docstring(p[7]))
-        p[0].set_request_segmentation(p[12])
-        p[0].set_response_segmentation(p[18])
-        if len(p) > 21:
-            p[0].set_error_data_type_name(p[24])
+        """opdef : OP ID COLON NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT
+                 | OP ID PATH COLON NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT"""
+        if p[3] == ':':
+            p[0] = BabelOpDef(p[2])
+            p[0].set_doc(self._normalize_docstring(p[6]))
+            p[0].set_request_segmentation(p[7])
+            p[0].set_response_segmentation(p[8])
+            if p[9]:
+                p[0].set_error_data_type_name(p[9])
+            if p[10]:
+                p[0].set_extras(dict(p[10]))
+        else:
+            p[0] = BabelOpDef(p[2], p[3])
+            p[0].set_doc(self._normalize_docstring(p[7]))
+            p[0].set_request_segmentation(p[8])
+            p[0].set_response_segmentation(p[9])
+            if p[10]:
+                p[0].set_error_data_type_name(p[10])
+            if p[11]:
+                p[0].set_extras(dict(p[11]))
 
     def p_statement_add_doc(self, p):
         """docsection : KEYWORD DOUBLE_COLON docstring DEDENT

@@ -210,6 +210,7 @@ class TowerOfBabel(object):
                     request_segmentation,
                     response_segmentation,
                     error_data_type,
+                    item.extras,
                 )
                 namespace.add_operation(operation)
             else:

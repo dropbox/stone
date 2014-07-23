@@ -137,6 +137,7 @@ class BabelLexer(object):
         'doc',
         'example',
         'extends',
+        'extras',
         'include',
         'namespace',
         'nullable',
@@ -150,6 +151,7 @@ class BabelLexer(object):
 
     RESERVED = {
         'error': 'ERROR',
+        'extras': 'EXTRAS',
         'include': 'INCLUDE',
         'op': 'OP',
         'request': 'REQUEST',

@@ -41,7 +41,8 @@ class ApiOperation(object):
                  doc,
                  request_segmentation,
                  response_segmentation,
-                 error_data_type):
+                 error_data_type,
+                 extras):
         """
         :param str name: Friendly name of the endpoint.
         :param str path: Request path.
@@ -59,3 +60,5 @@ class ApiOperation(object):
         self.request_segmentation = request_segmentation
         self.response_segmentation = response_segmentation
         self.error_data_type = error_data_type
+        self.extras = extras
+
