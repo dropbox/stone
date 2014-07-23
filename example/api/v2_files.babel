@@ -235,7 +235,7 @@ op Delta:
     response:
         header DeltaHeader
         entries SList(data_type=FileOrFolderInfo)
-        footer DeltaFooteradsfsaf
+        footer DeltaFooter
 
 struct ThumbnailRequest:
     doc::
