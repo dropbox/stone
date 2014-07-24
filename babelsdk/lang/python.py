@@ -9,7 +9,9 @@ from babelsdk.data_type import (
     Float,
     Int32,
     Int64,
+    List,
     String,
+    Timestamp,
     UInt32,
     UInt64,
 )
@@ -25,12 +27,13 @@ class PythonTargetLanguage(TargetLanguage):
         Boolean: 'bool',
         Float: 'float',
         Int32: 'int',
-        UInt32: 'long',
         Int64: 'long',
-        UInt64: 'long',
+        List: 'list',
         String: 'str',
+        UInt32: 'long',
+        UInt64: 'long',
+        Timestamp: 'datetime',
     }
-
 
     def _split_on_upper(self, words):
         """
@@ -60,4 +63,3 @@ class PythonTargetLanguage(TargetLanguage):
     def format_method(self, s):
         words = self._split_on_upper(re.split('\W+|-_', s))
         return '_'.join([word.lower() for word in words])
-
