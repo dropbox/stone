@@ -16,3 +16,5 @@ Todo
 - Add ability to give arbitrary tags to each endpoint (noauth, notify/content server)
 - Perhaps errors shouldn't be printed to stdout immediately. They should be collected by the parser,
   and then printed by the caller if desired.
+- Switch symbol lookup in environment to dynamic lookup.
+  - This lets us have circular references... as well as out of order declarations.

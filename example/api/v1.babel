@@ -184,7 +184,7 @@ struct FileOrFolderInfo extends EntryInfo:
     contents List(data_type=EntryInfo) nullable::
         Folder contents.
 
-op GetFile /files:
+op GetFile /files/auto:
     doc::
         Downloads a file. Note that this call goes to api-content.dropbox.com
         instead of api.dropbox.com.
@@ -198,6 +198,7 @@ op GetFile /files:
 
     extras:
         method="GET"
+        host="content"
 
 struct FilesPutRequest extends LocaleRequest:
 
@@ -220,7 +221,7 @@ struct FilesPutRequest extends LocaleRequest:
         a parent_rev and that revision doesn't exist, the file won't save.
         Get the most recent rev by performing a call to /metadata.
 
-op PutFile /files_put:
+op PutFile /files_put/auto:
     doc::
         Uploads a file using PUT semantics. Note that this call goes to
         api-content.dropbox.com instead of api.dropbox.com.
@@ -233,7 +234,8 @@ op PutFile /files_put:
         info EntryInfo
 
     extras:
-        method="POST"
+        method="PUT"
+        host="content"
 
 struct MetadataRequest extends LocaleRequest:
 
