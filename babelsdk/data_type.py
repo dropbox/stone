@@ -332,7 +332,8 @@ class CompositeType(DataType):
         Returns an iterator that traverses required fields in all super types
         first, and then for this type.
         """
-        return self._filter_fields(lambda field: not field.optional)
+        return self._filter_fields(lambda f: (isinstance(f, SymbolField)
+                                              or not f.optional))
 
 
     @property
@@ -341,7 +342,8 @@ class CompositeType(DataType):
         Returns an iterator that traverses optional fields in all super types
         first, and then for this type.
         """
-        return self._filter_fields(lambda field: field.optional)
+        return self._filter_fields(lambda f: (not isinstance(f, SymbolField)
+                                              and f.optional))
 
     @property
     def name(self):
