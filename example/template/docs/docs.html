@@ -163,7 +163,10 @@ Describes a path.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:path = String</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+
+</pre>
 
 
         </dd>
@@ -461,9 +464,63 @@ Describes a folder.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">union FileOrFolderInfo:file = FileInfofolder = FolderInfostruct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FileInfo extends EntryInfo:size = UInt64mime_type = Stringmedia_info = MediaInfounion MediaInfo:audiophoto = PhotoInfovideo = VideoInfostruct PhotoInfo:time_taken = Timestamplat_long = Liststruct VideoInfo:time_taken = Timestamplat_long = Listduration = Floatstruct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FolderInfo extends EntryInfo</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">union FileOrFolderInfo:
+    file = FileInfo
+    folder = FolderInfo
+
+struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FileInfo extends EntryInfo:
+    size = UInt64
+    mime_type = String
+    media_info = MediaInfo
+
+union MediaInfo:
+    audio
+    photo = PhotoInfo
+    video = VideoInfo
+
+struct PhotoInfo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct VideoInfo:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+
+struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FolderInfo extends EntryInfo
+
+
+</pre>
 
 
         </dd>
@@ -525,7 +582,10 @@ Describes a path.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:path = String</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+
+</pre>
 
 
         </dd>
@@ -735,8 +795,42 @@ Video-specific information derived from EXIF data.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FileInfo extends EntryInfo:size = UInt64mime_type = Stringmedia_info = MediaInfounion MediaInfo:audiophoto = PhotoInfovideo = VideoInfostruct PhotoInfo:time_taken = Timestamplat_long = Liststruct VideoInfo:time_taken = Timestamplat_long = Listduration = Float</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FileInfo extends EntryInfo:
+    size = UInt64
+    mime_type = String
+    media_info = MediaInfo
+
+union MediaInfo:
+    audio
+    photo = PhotoInfo
+    video = VideoInfo
+
+struct PhotoInfo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct VideoInfo:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+</pre>
 
 <h4>Segment 2 of 2 (Binary)</h4>
             &mdash;
@@ -812,7 +906,12 @@ Stub.
 
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct FolderListRequest:path = Stringinclude_deleted = Booleaninclude_media_info = Boolean</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct FolderListRequest:
+    path = String
+    include_deleted = Boolean
+    include_media_info = Boolean
+
+</pre>
 
 
         </dd>
@@ -893,8 +992,22 @@ Describes a folder.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FolderInfo extends EntryInfo</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FolderInfo extends EntryInfo
+
+</pre>
 
 <h4>Segment 2 of 2 (List of FileOrFolderInfo)</h4>
         
@@ -1188,9 +1301,63 @@ Describes a folder.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">union FileOrFolderInfo:file = FileInfofolder = FolderInfostruct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FileInfo extends EntryInfo:size = UInt64mime_type = Stringmedia_info = MediaInfounion MediaInfo:audiophoto = PhotoInfovideo = VideoInfostruct PhotoInfo:time_taken = Timestamplat_long = Liststruct VideoInfo:time_taken = Timestamplat_long = Listduration = Floatstruct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FolderInfo extends EntryInfo</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">union FileOrFolderInfo:
+    file = FileInfo
+    folder = FolderInfo
+
+struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FileInfo extends EntryInfo:
+    size = UInt64
+    mime_type = String
+    media_info = MediaInfo
+
+union MediaInfo:
+    audio
+    photo = PhotoInfo
+    video = VideoInfo
+
+struct PhotoInfo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct VideoInfo:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+
+struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FolderInfo extends EntryInfo
+
+
+</pre>
 
 
         </dd>
@@ -1270,7 +1437,12 @@ Delta request.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaRequest:cursor = Stringpath_prefix = Stringinclude_media_info = Boolean</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaRequest:
+    cursor = String
+    path_prefix = String
+    include_media_info = Boolean
+
+</pre>
 
 
         </dd>
@@ -1316,7 +1488,11 @@ Header of a delta response.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaHeader:reset = Booleancreated = Timestamp</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaHeader:
+    reset = Boolean
+    created = Timestamp
+
+</pre>
 
 <h4>Segment 2 of 3 (List of FileOrFolderInfo)</h4>
         
@@ -1610,9 +1786,63 @@ Describes a folder.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">union FileOrFolderInfo:file = FileInfofolder = FolderInfostruct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FileInfo extends EntryInfo:size = UInt64mime_type = Stringmedia_info = MediaInfounion MediaInfo:audiophoto = PhotoInfovideo = VideoInfostruct PhotoInfo:time_taken = Timestamplat_long = Liststruct VideoInfo:time_taken = Timestamplat_long = Listduration = Floatstruct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FolderInfo extends EntryInfo</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">union FileOrFolderInfo:
+    file = FileInfo
+    folder = FolderInfo
+
+struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FileInfo extends EntryInfo:
+    size = UInt64
+    mime_type = String
+    media_info = MediaInfo
+
+union MediaInfo:
+    audio
+    photo = PhotoInfo
+    video = VideoInfo
+
+struct PhotoInfo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct VideoInfo:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+
+struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FolderInfo extends EntryInfo
+
+
+</pre>
 
 <h4>Segment 3 of 3 (DeltaFooter)</h4>
         <h5>DeltaFooter (Struct)</h5>
@@ -1655,7 +1885,11 @@ This is the next part of the doc.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaFooter:cursor = Stringhas_more = Boolean</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaFooter:
+    cursor = String
+    has_more = Boolean
+
+</pre>
 
 
         </dd>
@@ -1726,7 +1960,11 @@ Stub.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct ThumbnailRequest:format = Stringsize = String</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct ThumbnailRequest:
+    format = String
+    size = String
+
+</pre>
 
 
         </dd>
@@ -1936,8 +2174,42 @@ Video-specific information derived from EXIF data.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FileInfo extends EntryInfo:size = UInt64mime_type = Stringmedia_info = MediaInfounion MediaInfo:audiophoto = PhotoInfovideo = VideoInfostruct PhotoInfo:time_taken = Timestamplat_long = Liststruct VideoInfo:time_taken = Timestamplat_long = Listduration = Float</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FileInfo extends EntryInfo:
+    size = UInt64
+    mime_type = String
+    media_info = MediaInfo
+
+union MediaInfo:
+    audio
+    photo = PhotoInfo
+    video = VideoInfo
+
+struct PhotoInfo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct VideoInfo:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+</pre>
 
 <h4>Segment 2 of 2 (Binary)</h4>
             &mdash;
@@ -2002,7 +2274,10 @@ Describes a path.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:path = String</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+
+</pre>
 
 
         </dd>
@@ -2095,7 +2370,19 @@ Blah.
 
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+</pre>
 
 
         </dd>
@@ -2239,7 +2526,23 @@ On a write conflict, overwrite the existing file if the parent rev matches.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct FileUploadRequest:path = Stringwrite_conflict_policy = WriteConflictPolicyunion WriteConflictPolicy:rejectoverwriterenameupdate_if_matching_parent_rev = UpdateParentRevstruct UpdateParentRev:parent_rev = Stringauto_rename = Boolean</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct FileUploadRequest:
+    path = String
+    write_conflict_policy = WriteConflictPolicy
+
+union WriteConflictPolicy:
+    reject
+    overwrite
+    rename
+    update_if_matching_parent_rev = UpdateParentRev
+
+struct UpdateParentRev:
+    parent_rev = String
+    auto_rename = Boolean
+
+
+
+</pre>
 
 <h4>Segment 2 of 2 (Binary)</h4>
             &mdash;
@@ -2451,8 +2754,42 @@ Video-specific information derived from EXIF data.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:id = Stringid_rev = UInt64path = Stringshared_folder = SharedFoldermodified = Timestampis_deleted = Booleanstruct SharedFolder:id = String
-struct FileInfo extends EntryInfo:size = UInt64mime_type = Stringmedia_info = MediaInfounion MediaInfo:audiophoto = PhotoInfovideo = VideoInfostruct PhotoInfo:time_taken = Timestamplat_long = Liststruct VideoInfo:time_taken = Timestamplat_long = Listduration = Float</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+    id = String
+    id_rev = UInt64
+    path = String
+    shared_folder = SharedFolder
+    modified = Timestamp
+    is_deleted = Boolean
+
+struct SharedFolder:
+    id = String
+
+
+
+struct FileInfo extends EntryInfo:
+    size = UInt64
+    mime_type = String
+    media_info = MediaInfo
+
+union MediaInfo:
+    audio
+    photo = PhotoInfo
+    video = VideoInfo
+
+struct PhotoInfo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct VideoInfo:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+</pre>
 
 
         </dd>
@@ -2553,7 +2890,10 @@ Stub.
 
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct AccountInfoRequest:account_id = String</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct AccountInfoRequest:
+    account_id = String
+
+</pre>
 
 
         </dd>
@@ -2679,7 +3019,23 @@ Information relevant to a team.
 }</pre>
 
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct AccountInfo:display_name = Stringquota = QuotaInfois_paired = Booleanteam = Teamstruct QuotaInfo:quota = UInt64normal = UInt64shared = UInt64struct Team:name = String</pre>
+            <pre class="last literal-block prettyprint dbprettyprint">struct AccountInfo:
+    display_name = String
+    quota = QuotaInfo
+    is_paired = Boolean
+    team = Team
+
+struct QuotaInfo:
+    quota = UInt64
+    normal = UInt64
+    shared = UInt64
+
+
+struct Team:
+    name = String
+
+
+</pre>
 
 
         </dd>

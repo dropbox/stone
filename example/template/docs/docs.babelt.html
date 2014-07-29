@@ -61,18 +61,25 @@
 
 
 {% macro formal_def(data_type) -%}
-{% if data_type.super_type %}{{ formal_def(data_type.super_type) }}
+{% if data_type.super_type %}
+{{ formal_def(data_type.super_type) }}
 {% endif %}
 {{ data_type.composite_type }} {{ data_type.name }}{% if data_type.super_type %} extends {{ data_type.super_type.name }}{% endif %}{% if data_type.fields %}:{% endif %}
-{%- for field in data_type.fields %}
-    {% if field.symbol %}{{ field.name }}{% else %}{{ field.name }} = {{ field.data_type.name }}{% endif %}
-{%- endfor %}
 
-{%- for field in data_type.fields -%}
+{% for field in data_type.fields %}
+    {% if field.symbol %}
+    {{ field.name }}
+    {% else %}
+    {{ field.name }} = {{ field.data_type.name }}
+    {% endif %}
+{% endfor %}
+
+{% for field in data_type.fields -%}
 {% if not field.symbol and field.data_type.composite_type %}
-{{ formal_def(field.data_type) }}{% endif %}
-{%- endfor %}
-{%- endmacro %}
+{{ formal_def(field.data_type) }}
+{% endif %}
+{% endfor %}
+{% endmacro %}
 
 
 {% macro segmentation_def(segmentation, type) %}
