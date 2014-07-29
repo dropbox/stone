@@ -3,12 +3,13 @@
 require 'date'
 
 
+
 module Dropbox
   module API
 
     # Converts a string date to a Date object
     def self.convert_date(str)
-      Date.strptime(str, '%a, %d %b %Y %H:%M:%S +0000')
+      DateTime.strptime(str, '%a, %d %b %Y %H:%M:%S +0000')
     end
 
     # The space quota info for a user.
@@ -22,20 +23,18 @@ module Dropbox
     #   The user's used quota in shared folders (bytes).
     # * +datastores+ (+UInt64+):
     #   The user's used quota in datastores (bytes).
-    # * +opts+:
-    #   Ignored
     class QuotaInfo
-      attr_accessor :quota
-      attr_accessor :normal
-      attr_accessor :shared
-      attr_accessor :datastores
+      attr_accessor
+          :quota, 
+          :normal, 
+          :shared, 
+          :datastores
     
       def initialize(
-          quota,
-          normal,
-          shared,
-          datastores = nil,
-          opts = {}
+        quota,
+        normal,
+        shared,
+        datastores
       )
         @quota = quota
         @normal = normal
@@ -48,7 +47,7 @@ module Dropbox
           hash['quota'],
           hash['normal'],
           hash['shared'],
-          hash['datastores'],
+          hash['datastores'].nil? ? nil : hash['datastores'],
         )
       end
     end
@@ -58,14 +57,12 @@ module Dropbox
     # Fields:
     # * +name+ (+String+):
     #   The name of the team.
-    # * +opts+:
-    #   Ignored
     class Team
-      attr_accessor :name
+      attr_accessor
+          :name
     
       def initialize(
-          name,
-          opts = {}
+        name
       )
         @name = name
       end
@@ -94,26 +91,24 @@ module Dropbox
     #   The user's quota.
     # * +team+ (+Team+):
     #   If this paired account is a member of a team.
-    # * +opts+:
-    #   Ignored
     class AccountInfo
-      attr_accessor :referral_link
-      attr_accessor :display_name
-      attr_accessor :uid
-      attr_accessor :country
-      attr_accessor :email
-      attr_accessor :quota_info
-      attr_accessor :team
+      attr_accessor
+          :referral_link, 
+          :display_name, 
+          :uid, 
+          :country, 
+          :email, 
+          :quota_info, 
+          :team
     
       def initialize(
-          referral_link,
-          display_name,
-          uid,
-          country,
-          email,
-          quota_info,
-          team = nil,
-          opts = {}
+        referral_link,
+        display_name,
+        uid,
+        country,
+        email,
+        quota_info,
+        team
       )
         @referral_link = referral_link
         @display_name = display_name
@@ -132,7 +127,7 @@ module Dropbox
           hash['country'],
           hash['email'],
           QuotaInfo.from_hash(hash['quota_info']),
-          hash.include?('team') && hash['team'] ? Team.from_hash(hash['team']) : nil,
+          hash['team'].nil? ? nil : Team.from_hash(hash['team']),
         )
       end
     end
@@ -147,16 +142,14 @@ module Dropbox
     #   When the photo was taken.
     # * +lat_long+ (+List+):
     #   The GPS coordinates where the photo was taken.
-    # * +opts+:
-    #   Ignored
     class PhotoInfo
-      attr_accessor :time_taken
-      attr_accessor :lat_long
+      attr_accessor
+          :time_taken, 
+          :lat_long
     
       def initialize(
-          time_taken,
-          lat_long = nil,
-          opts = {}
+        time_taken,
+        lat_long
       )
         @time_taken = time_taken
         @lat_long = lat_long
@@ -164,8 +157,8 @@ module Dropbox
     
       def self.from_hash(hash)
         self.new(
-          hash.include?('time_taken') ? Dropbox::API::convert_date(hash['time_taken']) : nil,
-          hash['lat_long'],
+          convert_date(hash['time_taken']),
+          hash['lat_long'].nil? ? nil : hash['lat_long'],
         )
       end
     end
@@ -179,18 +172,16 @@ module Dropbox
     #   The GPS coordinates where the photo was taken.
     # * +duration+ (+Float+):
     #   Length of video in milliseconds.
-    # * +opts+:
-    #   Ignored
     class VideoInfo
-      attr_accessor :time_taken
-      attr_accessor :lat_long
-      attr_accessor :duration
+      attr_accessor
+          :time_taken, 
+          :lat_long, 
+          :duration
     
       def initialize(
-          time_taken,
-          lat_long = nil,
-          duration = nil,
-          opts = {}
+        time_taken,
+        lat_long,
+        duration
       )
         @time_taken = time_taken
         @lat_long = lat_long
@@ -199,9 +190,9 @@ module Dropbox
     
       def self.from_hash(hash)
         self.new(
-          hash.include?('time_taken') ? Dropbox::API::convert_date(hash['time_taken']) : nil,
-          hash['lat_long'],
-          hash['duration'],
+          convert_date(hash['time_taken']),
+          hash['lat_long'].nil? ? nil : hash['lat_long'],
+          hash['duration'].nil? ? nil : hash['duration'],
         )
       end
     end
@@ -227,22 +218,22 @@ module Dropbox
     #   The root or top-level folder depending on your access level. All paths
     #   returned are relative to this root level. Permitted values are either
     #   dropbox or app_folder.
-    # * +hash+ (+String+):
-    #   A folder's hash is useful for indicating changes to the folder's
-    #   contents in later calls to /metadata. This is roughly the folder
-    #   equivalent to a file's rev.
-    # * +is_deleted+ (+Boolean+):
-    #   Whether the given entry is deleted.
-    # * +modified+ (+Timestamp+):
-    #   The last time the file was modified on Dropbox, in the standard
-    #   Timestamp format (null for root folder).
     # * +rev+ (+String+):
     #   A unique identifier for the current revision of a file. This field is
     #   the same rev as elsewhere in the API and can be used to detect changes
     #   and avoid conflicts.
-    # * +revision+ (+String+):
+    # * +revision+ (+UInt64+):
     #   A deprecated field that semi-uniquely identifies a file. Use rev
     #   instead.
+    # * +modified+ (+Timestamp+):
+    #   The last time the file was modified on Dropbox, in the standard
+    #   Timestamp format (null for root folder).
+    # * +is_deleted+ (+Boolean+):
+    #   Whether the given entry is deleted.
+    # * +hash+ (+String+):
+    #   A folder's hash is useful for indicating changes to the folder's
+    #   contents in later calls to /metadata. This is roughly the folder
+    #   equivalent to a file's rev.
     # * +client_mtime+ (+String+):
     #   For files, this is the modification time set by the desktop client
     #   when the file was added to Dropbox, in the standard date format. Since
@@ -256,42 +247,40 @@ module Dropbox
     # * +video_info+ (+VideoInfo+):
     #   Only returned when the include_media_info parameter is true and the
     #   file is a video.
-    # * +opts+:
-    #   Ignored
     class EntryInfo
-      attr_accessor :path
-      attr_accessor :size
-      attr_accessor :bytes
-      attr_accessor :is_dir
-      attr_accessor :thumb_exists
-      attr_accessor :icon
-      attr_accessor :root
-      attr_accessor :hash
-      attr_accessor :is_deleted
-      attr_accessor :modified
-      attr_accessor :rev
-      attr_accessor :revision
-      attr_accessor :client_mtime
-      attr_accessor :photo_info
-      attr_accessor :video_info
+      attr_accessor
+          :path, 
+          :size, 
+          :bytes, 
+          :is_dir, 
+          :thumb_exists, 
+          :icon, 
+          :root, 
+          :rev, 
+          :revision, 
+          :modified, 
+          :is_deleted, 
+          :hash, 
+          :client_mtime, 
+          :photo_info, 
+          :video_info
     
       def initialize(
-          path,
-          size,
-          bytes,
-          is_dir,
-          thumb_exists,
-          icon,
-          root,
-          hash = nil,
-          is_deleted = nil,
-          modified = nil,
-          rev = nil,
-          revision = nil,
-          client_mtime = nil,
-          photo_info = nil,
-          video_info = nil,
-          opts = {}
+        path,
+        size,
+        bytes,
+        is_dir,
+        thumb_exists,
+        icon,
+        root,
+        rev = nil,
+        revision = nil,
+        modified = nil,
+        is_deleted = nil,
+        hash = nil,
+        client_mtime = nil,
+        photo_info = nil,
+        video_info = nil
       )
         @path = path
         @size = size
@@ -300,11 +289,11 @@ module Dropbox
         @thumb_exists = thumb_exists
         @icon = icon
         @root = root
-        @hash = hash
-        @is_deleted = is_deleted
-        @modified = modified
         @rev = rev
         @revision = revision
+        @modified = modified
+        @is_deleted = is_deleted
+        @hash = hash
         @client_mtime = client_mtime
         @photo_info = photo_info
         @video_info = video_info
@@ -319,14 +308,14 @@ module Dropbox
           hash['thumb_exists'],
           hash['icon'],
           hash['root'],
-          hash['hash'],
-          hash['is_deleted'],
-          hash.include?('modified') ? Dropbox::API::convert_date(hash['modified']) : nil,
-          hash['rev'],
-          hash['revision'],
-          hash['client_mtime'],
-          hash.include?('photo_info') && hash['photo_info'] ? PhotoInfo.from_hash(hash['photo_info']) : nil,
-          hash.include?('video_info') && hash['video_info'] ? VideoInfo.from_hash(hash['video_info']) : nil,
+          hash.include?('rev') ? nil : hash['rev'],
+          hash.include?('revision') ? nil : hash['revision'],
+          hash.include?('modified') ? nil : convert_date(hash['modified']),
+          hash.include?('is_deleted') ? nil : hash['is_deleted'],
+          hash.include?('hash') ? nil : hash['hash'],
+          hash.include?('client_mtime') ? nil : hash['client_mtime'],
+          hash['photo_info'].nil? ? nil : PhotoInfo.from_hash(hash['photo_info']),
+          hash['video_info'].nil? ? nil : VideoInfo.from_hash(hash['video_info']),
         )
       end
     end
@@ -336,29 +325,27 @@ module Dropbox
     # Fields:
     # * +contents+ (+List+):
     #   Folder contents.
-    # * +opts+:
-    #   Ignored
     class FileOrFolderInfo < EntryInfo
-      attr_accessor :contents
+      attr_accessor
+          :contents
     
       def initialize(
-          path,
-          size,
-          bytes,
-          is_dir,
-          thumb_exists,
-          icon,
-          root,
-          hash = nil,
-          is_deleted = nil,
-          modified = nil,
-          rev = nil,
-          revision = nil,
-          client_mtime = nil,
-          photo_info = nil,
-          video_info = nil,
-          contents = nil,
-          opts = {}
+        path,
+        size,
+        bytes,
+        is_dir,
+        thumb_exists,
+        icon,
+        root,
+        rev = nil,
+        revision = nil,
+        modified = nil,
+        is_deleted = nil,
+        hash = nil,
+        client_mtime = nil,
+        photo_info = nil,
+        video_info = nil,
+        contents = nil
       )
         @path = path
         @size = size
@@ -367,11 +354,11 @@ module Dropbox
         @thumb_exists = thumb_exists
         @icon = icon
         @root = root
-        @hash = hash
-        @is_deleted = is_deleted
-        @modified = modified
         @rev = rev
         @revision = revision
+        @modified = modified
+        @is_deleted = is_deleted
+        @hash = hash
         @client_mtime = client_mtime
         @photo_info = photo_info
         @video_info = video_info
@@ -387,20 +374,60 @@ module Dropbox
           hash['thumb_exists'],
           hash['icon'],
           hash['root'],
-          hash['hash'],
-          hash['is_deleted'],
-          hash.include?('modified') ? Dropbox::API::convert_date(hash['modified']) : nil,
-          hash['rev'],
-          hash['revision'],
-          hash['client_mtime'],
-          hash.include?('photo_info') && hash['photo_info'] ? PhotoInfo.from_hash(hash['photo_info']) : nil,
-          hash.include?('video_info') && hash['video_info'] ? VideoInfo.from_hash(hash['video_info']) : nil,
-          hash['contents'].collect { |elem| EntryInfo.from_hash(elem) },
+          hash.include?('rev') ? nil : hash['rev'],
+          hash.include?('revision') ? nil : hash['revision'],
+          hash.include?('modified') ? nil : convert_date(hash['modified']),
+          hash.include?('is_deleted') ? nil : hash['is_deleted'],
+          hash.include?('hash') ? nil : hash['hash'],
+          hash.include?('client_mtime') ? nil : hash['client_mtime'],
+          hash['photo_info'].nil? ? nil : PhotoInfo.from_hash(hash['photo_info']),
+          hash['video_info'].nil? ? nil : VideoInfo.from_hash(hash['video_info']),
+          hash['contents'].nil? ? nil : hash['contents'].collect { |elem| EntryInfo.from_hash(elem) },
         )
       end
     end
     
 
 
+
+    # Fields:
+    # * +reset+ (+Boolean+):
+    #   If true, clear your local state before processing the delta entries.
+    #   reset is always true on the initial call to /delta (i.e. when no
+    #   cursor is passed in). Otherwise, it is true in rare situations, such
+    #   as after server or account maintenance, or if a user deletes their app
+    #   folder.
+    # * +cursor+ (+String+):
+    #   A string that encodes the latest information that has been returned.
+    #   On the next call to /delta, pass in this value.
+    # * +has_more+ (+Boolean+):
+    #   If true, then there are more entries available; you can call /delta
+    #   again immediately to retrieve those entries. If 'false', then wait for
+    #   at least five minutes (preferably longer) before checking again.
+    class DeltaResponse
+      attr_accessor
+          :reset, 
+          :cursor, 
+          :has_more
+    
+      def initialize(
+        reset,
+        cursor,
+        has_more
+      )
+        @reset = reset
+        @cursor = cursor
+        @has_more = has_more
+      end
+    
+      def self.from_hash(hash)
+        self.new(
+          hash['reset'],
+          hash['cursor'],
+          hash['has_more'],
+        )
+      end
+    end
+    
   end
 end

@@ -15,29 +15,30 @@ from babelsdk.data_type import (
     UInt64,
 )
 
-class PythonTargetLanguage(TargetLanguage):
+class RubyTargetLanguage(TargetLanguage):
 
-    _language_short_name = 'py'
+    _language_short_name = 'rb'
 
     def get_supported_extensions(self):
-        return ('.py', )
+        return ('.rb', )
 
     _type_table = {
-        Boolean: 'bool',
-        Float: 'float',
-        Int32: 'int',
-        Int64: 'long',
-        List: 'list',
-        String: 'str',
-        UInt32: 'long',
-        UInt64: 'long',
-        Timestamp: 'datetime',
+        Boolean: 'boolean',
+        Float: 'Float',
+        Int32: 'Integer',
+        Int64: 'Integer',
+        List: 'Array',
+        String: 'String',
+        UInt32: 'Integer',
+        UInt64: 'Integer',
+        Timestamp: 'DateTime',
     }
 
     def format_type(self, data_type):
-        return PythonTargetLanguage._type_table.get(data_type.__class__, data_type.name)
+        return RubyTargetLanguage._type_table.get(data_type.__class__, data_type.name)
 
     def format_obj(self, o):
+        assert not isinstance(o, dict), "Bad argument to format_obj: pprint's dict formatting is not valid Ruby."
         return pprint.pformat(o, width=1)
 
     def format_class(self, words):

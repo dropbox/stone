@@ -7,16 +7,16 @@ class TargetLanguage(object):
         return self._language_short_name
 
     def get_supported_extensions(self):
-        return []
+        raise NotImplemented
 
-    def format_method(self, s):
-        return s
+    def format_method(self, words):
+        raise NotImplemented
 
-    def format_class(self, s):
-        return s
+    def format_class(self, words):
+        raise NotImplemented
 
     def format_type(self, data_type):
-        return str(data_type)
+        raise NotImplemented
 
     def format_obj(self, o):
-        return str(o)
+        raise NotImplemented

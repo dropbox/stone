@@ -1,19 +1,49 @@
 # babelsdk(jinja2)
 
+{% macro host(op) %}
+{%- if op.extras['host'] == 'content' -%}
+Dropbox::API::API_CONTENT_SERVER
+{%- else -%}
+Dropbox::API::API_SERVER
+{%- endif -%}
+{% endmacro %}
+
+{% macro url_path(fields) %}
+{%- if fields and fields[0].name == 'path' -%}
+/#{ format_path(path, true) }
+{%- endif -%}
+{% endmacro %}
+
+{% macro binary(op) %}
+{%- if op.request_segmentation.segments[1] -%}
+, {}, {{ op.request_segmentation.segments[1].name|lower }}
+{%- endif -%}
+{% endmacro %}
+
 {% macro operation_def(namespace_name, op, indent_spaces) %}
 {% filter indent(indent_spaces, indentfirst=True) %}
+{% set request_fields = op.request_segmentation.segments[0].data_type.fields %}
 # {{ op.doc|default('', True)|wordwrap(70)|default('', True)|replace('\n', '\n# ') }}
 #
 # Args:
 {% for field in op.request_segmentation.segments[0].data_type.fields %}
-# * +{{ field.name }}+{% if field.data_type %}: +{{ field.data_type }}+
+# * +{{ field.name }}+{% if field.data_type %} (+{{ field.data_type }}+){% endif %}:
 #   {{ field.doc|default('', True)|wordwrap(70)|default('', True)|replace('\n', '\n#   ') }}
-{% endif %}
 {% endfor %}
+#
+# Returns:
+#   {{ op.response_segmentation.segments[0].data_type.name|class }}
 {# hack: assume there's only one input struct with an optional binary (called data) after it #}
 {# hack: assume if path is the first field of the input struct, it should be appended to the URL #}
 {# hack: assume if there's more than one field in the response, then the first one is a struct and the second is binary #}
-def {{ op.name|replace('-', '_')|lower }}({% if op.request_segmentation.segments[0].data_type.fields|length > 0 %}{{ op.request_segmentation.segments[0].data_type.fields|join(' = nil, ', 'name') }} = nil{% if op.request_segmentation.segments[1] %}, {{ op.request_segmentation.segments[1].name|lower }} = nil{% endif %}{% endif %})
+def {{ op.name|method }}(
+  {%- if op.request_segmentation.segments[0].data_type.fields|length > 0 -%}
+    {{ op.request_segmentation.segments[0].data_type.fields|join(' = nil, ', 'name') }} = nil
+    {%- if op.request_segmentation.segments[1] -%}
+      , {{ op.request_segmentation.segments[1].name|lower }} = nil
+    {%- endif -%}
+  {%- endif -%}
+  )
   input = {
     {% for field in op.request_segmentation.segments[0].data_type.fields %}
       {% if field.name != 'path' %}
@@ -21,13 +51,15 @@ def {{ op.name|replace('-', '_')|lower }}({% if op.request_segmentation.segments
       {% endif %}
     {% endfor %}
   }
-  response = @session.do_{{ op.extras['method']|lower }}({% if op.extras['host'] == 'content' %}Dropbox::API::API_CONTENT_SERVER{% else %}Dropbox::API::API_SERVER{% endif %}, "{{ op.path }}{% if op.request_segmentation.segments[0].data_type.fields and op.request_segmentation.segments[0].data_type.fields[0].name == 'path' %}/#{ format_path(path, true) }{% endif %}", input{% if op.request_segmentation.segments|length > 1 %}, {}, data{% endif %})
+  response = @session.do_{{ op.extras['method']|lower }}({%- trim -%}
+    {{ host(op) }}, "{{ op.path }}{{ url_path(request_fields) }}", input{{ binary(op) }})
   {% if op.response_segmentation.segments|length > 1 %}
   parsed_response = Dropbox::API::HTTP.parse_response(response, true)
   metadata = parse_metadata(response)
   return parsed_response, metadata
   {% else %}
-  Dropbox::API::{{ op.response_segmentation.segments[0].data_type.name }}.from_hash(Dropbox::API::HTTP.parse_response(response))
+  Dropbox::API::{{ op.response_segmentation.segments[0].data_type.name|class }}{%- trim -%}
+      .from_hash(Dropbox::API::HTTP.parse_response(response))
   {% endif %}
 end
 
