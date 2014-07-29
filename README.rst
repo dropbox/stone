@@ -46,17 +46,22 @@ alternatively replace ``babelsdk`` with ``python -m babelsdk.cli`` as follows::
 
 You can view the generated documentation using::
 
-   $ google-chrome build/docs/docs.html 
+   $ google-chrome example/template/docs/docs.html
 
 Defining a Babel
 ================
 
-Babel files (.babel extension) must begin with a namespace declaration:
+Babel files (.babel extension) must begin with a namespace declaration::
+
+   namespace ::= 'namespace' Identifier
+
+Example:
 
    namespace users
 
-This is the namespace for all the operations and data types in the Babel file. It helps us seperate
-different namespaces like "files", "users", "datastores", and "photos".
+This is the namespace for all the operations and data types in the Babel file.
+It helps us seperate different parts of the API like  like "files", "users",
+and "photos".
 
 Following the namespace should be struct, union, or op declarations.
 
@@ -160,8 +165,10 @@ A struct can also inherit from another struct using the "extends" keyword::
             File size in bytes.
         mime_type String nullable::
             The Internet media type determined by the file extension.
-        media_info MediaInfo::
-            Information specific to photo and video media.
+
+        optional:
+            media_info MediaInfo::
+                Information specific to photo and video media.
 
         example default:
             id="xyz123"
@@ -171,6 +178,9 @@ A struct can also inherit from another struct using the "extends" keyword::
             mime_type="image/jpg"
             modified="Sat, 28 Jun 2014 18:23:21"
             is_deleted=false
+
+Note the use of the ``optional`` section which denotes that the fields may not
+be present. How this is handled is language and implementation specific.
 
 Union
 -----
@@ -248,10 +258,12 @@ Primitives
 
 These types exist without having to be declared:
 
+   * Boolean
    * Integers: Int32, Int64, UInt32, UInt64
+      * Attributes ``min_value`` and ``max_value can be set for more
+        restrictive bounding.
    * Float, Double
    * String
-   * Boolean
    * Timestamp
    * List
 
@@ -260,7 +272,7 @@ Alias
 
 Sometimes we prefer to use an alias, rather than re-declaring a type over and over again.
 For example, the Dropbox API uses a special date format. We can create an alias called
-DbxDate, which sets this format, and can be used in struct and union definitions::
+DbxTimestamp, which sets this format, and can be used in struct and union definitions::
 
    alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S")
 
@@ -280,7 +292,7 @@ and a list of data types for the response::
         doc::
             Input to request.
 
-        account_id String::
+        account_id String = "me"::
             A user's account identifier. Use "me" to get information for the
             current account.
 
@@ -294,12 +306,13 @@ and a list of data types for the response::
         response:
             info AccountInfo
 
+Note that ``account_id`` was given a default value of ``"me"``. This is useful
+for including in generated SDKs.
 
 Each "segment" of a request or response has a name ("in" and "info" above). It is recommended
 that this name be used as the name of the accessor in generated SDKs.
 
 The following is an example of an endpoint with two request segments::
-
 
     struct FileUploadRequest:
         doc::
