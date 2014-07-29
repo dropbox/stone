@@ -209,7 +209,7 @@ class Field(object):
     Represents a field in a composite type.
     """
 
-    def __init__(self, name, data_type, doc, nullable=False):
+    def __init__(self, name, data_type, doc, nullable=False, optional=False):
         """
         Creates a new Field.
 
@@ -217,11 +217,26 @@ class Field(object):
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
         :param bool nullable: Whether the field can be null.
+        :param bool optional: Whether the field can be absent.
         """
         self.name = name
         self.data_type = data_type
         self.doc = doc
         self.nullable = nullable
+        self.optional = optional
+        self.has_default = False
+        self._default = None
+
+    def set_default(self, default):
+        self.has_default = True
+        self._default = default
+
+    @property
+    def default(self):
+        if not self.has_default:
+            raise Exception('Type has no default')
+        else:
+            return self._default
 
     def check(self, val):
         if val is None:
@@ -233,7 +248,10 @@ class Field(object):
             return self.data_type.check(val)
 
     def __repr__(self):
-        return 'Field(%r, %r, %r)' % (self.name, self.data_type, self.nullable)
+        return 'Field(%r, %r, %r, %r)' % (self.name,
+                                          self.data_type,
+                                          self.nullable,
+                                          self.optional)
 
 class SymbolField(object):
     symbol = True
@@ -284,14 +302,46 @@ class CompositeType(DataType):
     @property
     def all_fields(self):
         """
-        Returns an iterator that traverses fields in all super types before
-        as well as fields for this type.
+        Returns an iterator of all fields. Required fields before optional
+        fields. Super type fields before type fields.
+        """
+        for field in self.all_required_fields:
+            yield field
+        for field in self.all_optional_fields:
+            yield field
+
+    def _filter_fields(self, filter):
+        """
+        Utility to iterate through all fields (super types first) of a type.
+
+        :param filter: A function that takes in a Field object. If it returns
+            True, the field is part of the generated output. If False, it is
+            omitted.
         """
         if self.super_type:
-            for field in self.super_type.all_fields:
-                yield field
+            for field in self.super_type.fields:
+                if filter(field):
+                    yield field
         for field in self.fields:
-            yield field
+            if filter(field):
+                yield field
+
+    @property
+    def all_required_fields(self):
+        """
+        Returns an iterator that traverses required fields in all super types
+        first, and then for this type.
+        """
+        return self._filter_fields(lambda field: not field.optional)
+
+
+    @property
+    def all_optional_fields(self):
+        """
+        Returns an iterator that traverses optional fields in all super types
+        first, and then for this type.
+        """
+        return self._filter_fields(lambda field: field.optional)
 
     @property
     def name(self):
@@ -365,7 +415,7 @@ class Struct(CompositeType):
                 else:
                     field.check(example[field.name])
                     ordered_example[field.name] = example[field.name]
-            elif not isinstance(field.data_type, CompositeType):
+            elif not isinstance(field.data_type, CompositeType) and not field.optional:
                 raise KeyError('Missing field %r in example' % field.name)
         self.examples[label] = ordered_example
 

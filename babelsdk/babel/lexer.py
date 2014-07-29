@@ -8,9 +8,13 @@ class MultiToken(object):
         self.type = tokens[0].type
         self.tokens = tokens
 
+# Represents a null value. We want to differentiate between the Python "None"
+# and null in several places.
+BabelNull = object()
+
 class BabelLexer(object):
     """
-    Lexer.
+    Lexer. Tokenizes babel files.
     """
 
     def __init__(self):
@@ -142,6 +146,7 @@ class BabelLexer(object):
         'namespace',
         'nullable',
         'op',
+        'optional',
         'struct',
         'union',
         'request',
@@ -153,7 +158,9 @@ class BabelLexer(object):
         'error': 'ERROR',
         'extras': 'EXTRAS',
         'include': 'INCLUDE',
+        'nullable': 'NULLABLE',
         'op': 'OP',
+        'optional': 'OPTIONAL',
         'request': 'REQUEST',
         'response': 'RESPONSE',
     }
@@ -167,7 +174,7 @@ class BabelLexer(object):
 
     def t_NULL(self, token):
         r'\bnull\b'
-        token.value = None
+        token.value = BabelNull
         return token
 
     # No leading digits

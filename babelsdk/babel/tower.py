@@ -116,7 +116,7 @@ class TowerOfBabel(object):
             composite_type_obj = Struct
             if item.extends:
                 if item.extends not in env:
-                    raise Exception('Data type %r is undefined')
+                    raise Exception('Data type %r is undefined' % item.extends)
                 else:
                     super_type = env.get(item.extends)
         elif item.composite_type == 'union':
@@ -126,35 +126,48 @@ class TowerOfBabel(object):
                              % item.composite_type)
         api_type_fields = []
         for babel_field in item.fields:
-            if isinstance(babel_field, BabelSymbol):
-                api_type_field = SymbolField(babel_field.name, babel_field.doc)
-            elif babel_field.data_type_name not in env:
-                raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
-            else:
-                obj = env[babel_field.data_type_name]
-                if inspect.isclass(obj):
-                    self._resolve_attrs(env, babel_field.data_type_attrs)
-                    data_type = obj(**dict(babel_field.data_type_attrs))
-                elif babel_field.data_type_attrs:
-                    # An instance of a type cannot have any additional
-                    # attributes specified.
-                    raise Exception('Attributes cannot be specified for instantiated '
-                                    'type %r.' % babel_field.data_type_name)
-                else:
-                    data_type = env[babel_field.data_type_name]
-
-                api_type_field = Field(
-                    babel_field.name,
-                    data_type,
-                    babel_field.doc,
-                    nullable=babel_field.nullable,
-                )
+            api_type_field = self._create_field(env, babel_field, optional=False)
+            api_type_fields.append(api_type_field)
+        for babel_field in item.optional_fields:
+            api_type_field = self._create_field(env, babel_field, optional=True)
             api_type_fields.append(api_type_field)
         api_type = composite_type_obj(item.name, item.doc, api_type_fields, super_type)
         for example_label, example in item.examples.items():
             api_type.add_example(example_label, dict(example))
         env[item.name] = api_type
         return api_type
+
+    def _create_field(self, env, babel_field, optional):
+        if isinstance(babel_field, BabelSymbol):
+            api_type_field = SymbolField(babel_field.name, babel_field.doc)
+        elif babel_field.data_type_name not in env:
+            raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
+        else:
+            obj = env[babel_field.data_type_name]
+            if inspect.isclass(obj):
+                self._resolve_attrs(env, babel_field.data_type_attrs)
+                data_type = obj(**dict(babel_field.data_type_attrs))
+            elif babel_field.data_type_attrs:
+                # An instance of a type cannot have any additional
+                # attributes specified.
+                raise Exception('Attributes cannot be specified for instantiated '
+                                'type %r.' % babel_field.data_type_name)
+            else:
+                data_type = env[babel_field.data_type_name]
+
+            api_type_field = Field(
+                babel_field.name,
+                data_type,
+                babel_field.doc,
+                nullable=babel_field.nullable,
+                optional=optional,
+            )
+            if babel_field.has_default:
+                if not (babel_field.nullable and babel_field.default is None):
+                    # Verify that the type of the default value is correct for this field
+                    data_type.check(babel_field.default)
+                api_type_field.set_default(babel_field.default)
+        return api_type_field
 
     def _resolve_attrs(self, env, attrs):
         """

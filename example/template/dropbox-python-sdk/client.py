@@ -53,7 +53,7 @@ class QuotaInfo(object):
                  quota,
                  normal,
                  shared,
-                 datastores=None,
+                 datastores,
                  **kwargs):
         """
         Creates a new QuotaInfo object.
@@ -129,7 +129,7 @@ class AccountInfo(object):
                  country,
                  email,
                  quota_info,
-                 team=None,
+                 team,
                  **kwargs):
         """
         Creates a new AccountInfo object.
@@ -164,8 +164,10 @@ class AccountInfo(object):
     def from_json(cls, obj):
         """Creates new AccountInfo object from JSON dict."""
         obj['quota_info'] = QuotaInfo.from_json(obj['quota_info'])
-        if 'team' in obj and obj['team']:
+        if obj['team'] is not None:
             obj['team'] = Team.from_json(obj['team'])
+        else:
+            obj['team'] = None
         return cls(**obj)
 
     def __repr__(self):
@@ -186,7 +188,7 @@ class PhotoInfo(object):
     """
     def __init__(self,
                  time_taken,
-                 lat_long=None,
+                 lat_long,
                  **kwargs):
         """
         Creates a new PhotoInfo object.
@@ -222,8 +224,8 @@ class VideoInfo(object):
     """
     def __init__(self,
                  time_taken,
-                 lat_long=None,
-                 duration=None,
+                 lat_long,
+                 duration,
                  **kwargs):
         """
         Creates a new VideoInfo object.
@@ -269,11 +271,11 @@ class EntryInfo(object):
                  thumb_exists,
                  icon,
                  root,
-                 hash=None,
-                 is_deleted=None,
-                 modified=None,
                  rev=None,
                  revision=None,
+                 modified=None,
+                 is_deleted=None,
+                 hash=None,
                  client_mtime=None,
                  photo_info=None,
                  video_info=None,
@@ -301,22 +303,22 @@ class EntryInfo(object):
                 The root or top-level folder depending on your access level. All
                 paths returned are relative to this root level. Permitted values
                 are either dropbox or app_folder.
-            hash (str)
-                A folder's hash is useful for indicating changes to the folder's
-                contents in later calls to /metadata. This is roughly the folder
-                equivalent to a file's rev.
-            is_deleted (bool)
-                Whether the given entry is deleted.
-            modified (datetime)
-                The last time the file was modified on Dropbox, in the standard
-                Timestamp format (null for root folder).
             rev (str)
                 A unique identifier for the current revision of a file. This field
                 is the same rev as elsewhere in the API and can be used to detect
                 changes and avoid conflicts.
-            revision (str)
+            revision (long)
                 A deprecated field that semi-uniquely identifies a file. Use rev
                 instead.
+            modified (datetime)
+                The last time the file was modified on Dropbox, in the standard
+                Timestamp format (null for root folder).
+            is_deleted (bool)
+                Whether the given entry is deleted.
+            hash (str)
+                A folder's hash is useful for indicating changes to the folder's
+                contents in later calls to /metadata. This is roughly the folder
+                equivalent to a file's rev.
             client_mtime (str)
                 For files, this is the modification time set by the desktop client
                 when the file was added to Dropbox, in the standard date format.
@@ -340,11 +342,11 @@ class EntryInfo(object):
         self.thumb_exists = thumb_exists
         self.icon = icon
         self.root = root
-        self.hash = hash
-        self.is_deleted = is_deleted
-        self.modified = modified
         self.rev = rev
         self.revision = revision
+        self.modified = modified
+        self.is_deleted = is_deleted
+        self.hash = hash
         self.client_mtime = client_mtime
         self.photo_info = photo_info
         self.video_info = video_info
@@ -355,9 +357,15 @@ class EntryInfo(object):
         if obj.get('modified'):
             obj['modified'] = date_str_to_datetime(obj['modified'])
         if 'photo_info' in obj and obj['photo_info']:
-            obj['photo_info'] = PhotoInfo.from_json(obj['photo_info'])
+            if obj['photo_info'] is not None:
+                obj['photo_info'] = PhotoInfo.from_json(obj['photo_info'])
+            else:
+                obj['photo_info'] = None
         if 'video_info' in obj and obj['video_info']:
-            obj['video_info'] = VideoInfo.from_json(obj['video_info'])
+            if obj['video_info'] is not None:
+                obj['video_info'] = VideoInfo.from_json(obj['video_info'])
+            else:
+                obj['video_info'] = None
         return cls(**obj)
 
     def __repr__(self):
@@ -369,11 +377,11 @@ class EntryInfo(object):
                 repr(self.thumb_exists),
                 repr(self.icon),
                 repr(self.root),
-                repr(self.hash),
-                repr(self.is_deleted),
-                repr(self.modified),
                 repr(self.rev),
                 repr(self.revision),
+                repr(self.modified),
+                repr(self.is_deleted),
+                repr(self.hash),
                 repr(self.client_mtime),
                 repr(self.photo_info),
                 repr(self.video_info),
@@ -392,11 +400,11 @@ class FileOrFolderInfo(EntryInfo):
                  thumb_exists,
                  icon,
                  root,
-                 hash=None,
-                 is_deleted=None,
-                 modified=None,
                  rev=None,
                  revision=None,
+                 modified=None,
+                 is_deleted=None,
+                 hash=None,
                  client_mtime=None,
                  photo_info=None,
                  video_info=None,
@@ -418,11 +426,11 @@ class FileOrFolderInfo(EntryInfo):
         self.thumb_exists = thumb_exists
         self.icon = icon
         self.root = root
-        self.hash = hash
-        self.is_deleted = is_deleted
-        self.modified = modified
         self.rev = rev
         self.revision = revision
+        self.modified = modified
+        self.is_deleted = is_deleted
+        self.hash = hash
         self.client_mtime = client_mtime
         self.photo_info = photo_info
         self.video_info = video_info
@@ -434,10 +442,17 @@ class FileOrFolderInfo(EntryInfo):
         if obj.get('modified'):
             obj['modified'] = date_str_to_datetime(obj['modified'])
         if 'photo_info' in obj and obj['photo_info']:
-            obj['photo_info'] = PhotoInfo.from_json(obj['photo_info'])
+            if obj['photo_info'] is not None:
+                obj['photo_info'] = PhotoInfo.from_json(obj['photo_info'])
+            else:
+                obj['photo_info'] = None
         if 'video_info' in obj and obj['video_info']:
-            obj['video_info'] = VideoInfo.from_json(obj['video_info'])
-        obj['contents'] = [EntryInfo.from_json(item) for item in obj['contents']]
+            if obj['video_info'] is not None:
+                obj['video_info'] = VideoInfo.from_json(obj['video_info'])
+            else:
+                obj['video_info'] = None
+        if 'contents' in obj:
+            obj['contents'] = [EntryInfo.from_json(item) for item in obj['contents']]
         return cls(**obj)
 
     def __repr__(self):
@@ -449,16 +464,61 @@ class FileOrFolderInfo(EntryInfo):
                 repr(self.thumb_exists),
                 repr(self.icon),
                 repr(self.root),
-                repr(self.hash),
-                repr(self.is_deleted),
-                repr(self.modified),
                 repr(self.rev),
                 repr(self.revision),
+                repr(self.modified),
+                repr(self.is_deleted),
+                repr(self.hash),
                 repr(self.client_mtime),
                 repr(self.photo_info),
                 repr(self.video_info),
             ])
         return 'FileOrFolderInfo(%s)' % s
+
+class DeltaResponse(object):
+
+    def __init__(self,
+                 reset,
+                 cursor,
+                 has_more,
+                 **kwargs):
+        """
+        Creates a new DeltaResponse object.
+
+        Parameters
+            reset (bool)
+                If true, clear your local state before processing the delta
+                entries. reset is always true on the initial call to /delta (i.e.
+                when no cursor is passed in). Otherwise, it is true in rare
+                situations, such as after server or account maintenance, or if a
+                user deletes their app folder.
+            cursor (str)
+                A string that encodes the latest information that has been
+                returned. On the next call to /delta, pass in this value.
+            has_more (bool)
+                If true, then there are more entries available; you can call
+                /delta again immediately to retrieve those entries. If 'false',
+                then wait for at least five minutes (preferably longer) before
+                checking again.
+
+            Additional kwargs are ignored.
+        """
+        self.reset = reset
+        self.cursor = cursor
+        self.has_more = has_more
+
+    @classmethod
+    def from_json(cls, obj):
+        """Creates new DeltaResponse object from JSON dict."""
+        return cls(**obj)
+
+    def __repr__(self):
+        s = ', '.join([
+                repr(self.reset),
+                repr(self.cursor),
+                repr(self.has_more),
+            ])
+        return 'DeltaResponse(%s)' % s
 
 
 
@@ -542,19 +602,6 @@ class DropboxClient(object):
 
         return url, params, headers
 
-    def account_info(self):
-        """Retrieve information about the user's account.
-
-        Returns
-              A dictionary containing account information.
-
-              For a detailed description of what this call returns, visit:
-              https://www.dropbox.com/developers/core/docs#account-info
-        """
-        url, params, headers = self.request("/account/info", method='GET')
-
-        return self.rest_client.GET(url, headers)
-
     def disable_access_token(self):
         """
         Disable the access token that this ``DropboxClient`` is using.  If this call
@@ -580,7 +627,7 @@ class DropboxClient(object):
 
 
 
-    def account_info(self):
+    def account_info(self, locale=None):
         """
         Get user account information.
         Returns
@@ -588,7 +635,11 @@ class DropboxClient(object):
         """
 
         params = {}
-        url, params, headers = self.request("/account/info", params, method='GET')
+        url, params, headers = self.request(
+            "/account/info",
+            params,
+            method='GET',
+        )
 
         v = self.rest_client.GET(url, headers)
         return AccountInfo.from_json(v)
@@ -612,13 +663,18 @@ class DropboxClient(object):
         params = {}
         if rev is not None:
             params['rev'] = rev
-        url, params, headers = self.request("/files/auto" + '/' + path, params, method='GET', content_server=True)
+        url, params, headers = self.request(
+            "/files/auto" + '/' + path,
+            params,
+            method='GET',
+            content_server=True,
+        )
 
         file_res = self.rest_client.GET(url, headers, raw_response=True)
         metadata = DropboxClient.__parse_metadata_as_dict(file_res)
         return file_res, EntryInfo.from_json(metadata)
 
-    def put_file(self, f, path, overwrite=None, parent_rev=None):
+    def put_file(self, f, path, locale=None, overwrite=None, parent_rev=None):
         """
         Uploads a file using PUT semantics. Note that this call goes to api-
         content.dropbox.com instead of api.dropbox.com.
@@ -649,18 +705,22 @@ class DropboxClient(object):
         """
 
         params = {}
-        if path is not None:
-            params['path'] = path
+        params['path'] = path
         if overwrite is not None:
             params['overwrite'] = overwrite
         if parent_rev is not None:
             params['parent_rev'] = parent_rev
-        url, params, headers = self.request("/files_put/auto" + '/' + path, params, method='PUT', content_server=True)
+        url, params, headers = self.request(
+            "/files_put/auto" + '/' + path,
+            params,
+            method='PUT',
+            content_server=True,
+        )
 
         v = self.rest_client.PUT(url, f, headers)
         return EntryInfo.from_json(v)
 
-    def metadata(self, path, file_limit=None, hash=None, list=None, include_deleted=None, rev=None, include_media_info=None):
+    def metadata(self, path, locale=None, file_limit=25000, hash=None, list=True, include_deleted=True, rev=None, include_media_info=None):
         """
         Retrieves file and folder metadata.
 
@@ -719,7 +779,11 @@ class DropboxClient(object):
             params['rev'] = rev
         if include_media_info is not None:
             params['include_media_info'] = include_media_info
-        url, params, headers = self.request("/metadata/auto" + '/' + path, params, method='GET')
+        url, params, headers = self.request(
+            "/metadata/auto" + '/' + path,
+            params,
+            method='GET',
+        )
 
         v = self.rest_client.GET(url, headers)
         return FileOrFolderInfo.from_json(v)
@@ -783,161 +847,6 @@ class DropboxClient(object):
             return reply['offset'], reply['upload_id']
         except ErrorResponse as e:
             raise e
-
-    def put_file2(self, full_path, file_obj, overwrite=False, parent_rev=None):
-        """Upload a file.
-
-        A typical use case would be as follows::
-
-            f = open('working-draft.txt', 'rb')
-            response = client.put_file('/magnum-opus.txt', f)
-            print "uploaded:", response
-
-        which would return the metadata of the uploaded file, similar to::
-
-            {
-                'bytes': 77,
-                'icon': 'page_white_text',
-                'is_dir': False,
-                'mime_type': 'text/plain',
-                'modified': 'Wed, 20 Jul 2011 22:04:50 +0000',
-                'path': '/magnum-opus.txt',
-                'rev': '362e2029684fe',
-                'revision': 221922,
-                'root': 'dropbox',
-                'size': '77 bytes',
-                'thumb_exists': False
-            }
-
-        Parameters
-            full_path
-              The full path to upload the file to, *including the file name*.
-              If the destination directory does not yet exist, it will be created.
-            file_obj
-              A file-like object to upload. If you would like, you can pass a string as file_obj.
-            overwrite
-              Whether to overwrite an existing file at the given path. (Default ``False``.)
-              If overwrite is False and a file already exists there, Dropbox
-              will rename the upload to make sure it doesn't overwrite anything.
-              You need to check the metadata returned for the new name.
-              This field should only be True if your intent is to potentially
-              clobber changes to a file that you don't know about.
-            parent_rev
-              Optional rev field from the 'parent' of this upload.
-              If your intent is to update the file at the given path, you should
-              pass the parent_rev parameter set to the rev value from the most recent
-              metadata you have of the existing file at that path. If the server
-              has a more recent version of the file at the specified path, it will
-              automatically rename your uploaded file, spinning off a conflict.
-              Using this parameter effectively causes the overwrite parameter to be ignored.
-              The file will always be overwritten if you send the most-recent parent_rev,
-              and it will never be overwritten if you send a less-recent one.
-
-        Returns
-              A dictionary containing the metadata of the newly uploaded file.
-
-              For a detailed description of what this call returns, visit:
-              https://www.dropbox.com/developers/core/docs#files-put
-
-        Raises
-              A :class:`dropbox.rest.ErrorResponse` with an HTTP status of:
-
-              - 400: Bad request (may be due to many things; check e.error for details).
-              - 503: User over quota.
-        """
-        path = "/files_put/%s%s" % (self.session.root, format_path(full_path))
-
-        params = {
-            'overwrite': bool(overwrite),
-            }
-
-        if parent_rev is not None:
-            params['parent_rev'] = parent_rev
-
-        url, params, headers = self.request(path, params, method='PUT', content_server=True)
-
-        return self.rest_client.PUT(url, file_obj, headers)
-
-    def get_file2(self, from_path, rev=None):
-        """Download a file.
-
-        Example::
-
-            out = open('magnum-opus.txt', 'wb')
-            with client.get_file('/magnum-opus.txt') as f:
-                out.write(f.read())
-
-        which would download the file ``magnum-opus.txt`` and write the contents into
-        the file ``magnum-opus.txt`` on the local filesystem.
-
-        Parameters
-            from_path
-              The path to the file to be downloaded.
-            rev
-              Optional previous rev value of the file to be downloaded.
-
-        Returns
-              A :class:`dropbox.rest.RESTResponse` that is the HTTP response for
-              the API request.  It is a file-like object that can be read from.  You
-              must call ``close()`` when you're done.
-
-        Raises
-              A :class:`dropbox.rest.ErrorResponse` with an HTTP status of:
-
-              - 400: Bad request (may be due to many things; check e.error for details).
-              - 404: No file was found at the given path, or the file that was there was deleted.
-              - 200: Request was okay but response was malformed in some way.
-        """
-        path = "/files/%s%s" % (self.session.root, format_path(from_path))
-
-        params = {}
-        if rev is not None:
-            params['rev'] = rev
-
-        url, params, headers = self.request(path, params, method='GET', content_server=True)
-        return self.rest_client.request("GET", url, headers=headers, raw_response=True)
-
-    def get_file_and_metadata(self, from_path, rev=None):
-        """Download a file alongwith its metadata.
-
-        Acts as a thin wrapper around get_file() (see :meth:`get_file()` comments for
-        more details)
-
-        A typical usage looks like this::
-
-            out = open('magnum-opus.txt', 'wb')
-            f, metadata = client.get_file_and_metadata('/magnum-opus.txt')
-            with f:
-                out.write(f.read())
-
-        Parameters
-            from_path
-              The path to the file to be downloaded.
-            rev
-              Optional previous rev value of the file to be downloaded.
-
-        Returns
-              A pair of ``(response, metadata)``:
-
-              response
-                A :class:`dropbox.rest.RESTResponse` that is the HTTP response for
-                the API request.  It is a file-like object that can be read from.  You
-                must call ``close()`` when you're done.
-              metadata
-                A dictionary containing the metadata of the file (see
-                https://www.dropbox.com/developers/core/docs#metadata for details).
-
-        Raises
-              A :class:`dropbox.rest.ErrorResponse` with an HTTP status of:
-
-              - 400: Bad request (may be due to many things; check e.error for details).
-              - 404: No file was found at the given path, or the file that was there was deleted.
-              - 200: Request was okay but response was malformed in some way.
-        """
-        file_res = self.get_file(from_path, rev)
-        metadata = DropboxClient.__parse_metadata_as_dict(file_res)
-
-        return file_res, metadata
 
     @staticmethod
     def __parse_metadata_as_dict(dropbox_raw_response):

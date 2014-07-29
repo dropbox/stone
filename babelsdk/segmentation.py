@@ -49,5 +49,8 @@ class Segmentation(object):
         if not segments:
             raise ValueError('At least one segment must be specified.')
         self.segments = segments
+        self.segments_by_name = {}
+        for segment in segments:
+            self.segments_by_name[segment.name] = segment
     def __repr__(self):
         return 'Segmentation({!r})'.format(self.segments)

@@ -47,7 +47,7 @@ def format_path(path):
 
 {%- macro fields_to_list(fields) -%}
 {% for field in fields -%}
-    , {{ field.name }}{% if field.nullable %}=None{% endif %}
+    , {{ field.name }}{% if field.has_default %}={{ field.default|pprint }}{% elif field.optional %}=None{% endif %}
 {%- endfor %}
 {%- endmacro %}
 
@@ -62,7 +62,7 @@ class {{ data_type.name|class }}({% if data_type.super_type %}{{ data_type.super
 
     def __init__(self,
                  {% for field in data_type.all_fields %}
-                 {{ field.name }}{% if field.nullable %}=None{% endif %},
+                 {{ field.name }}{% if field.has_default %}={{ field.default|pprint }}{% elif field.optional %}=None{% endif %},
                  {% endfor %}
                  **kwargs):
         """
@@ -84,17 +84,36 @@ class {{ data_type.name|class }}({% if data_type.super_type %}{{ data_type.super
     def from_json(cls, obj):
         """Creates new {{ data_type.name|class }} object from JSON dict."""
         {% for field in data_type.all_fields %}
-            {% if field.data_type.composite_type and field.nullable %}
+            {% if field.data_type.composite_type and field.optional %}
         if '{{ field.name }}' in obj and obj['{{ field.name }}']:
+                {% if field.nullable %}
+            if obj['{{ field.name }}'] is not None:
+                obj['{{ field.name }}'] = {{ field.data_type.name|class }}.from_json(obj['{{ field.name }}'])
+            else:
+                obj['{{ field.name }}'] = None
+                {% else %}
             obj['{{ field.name }}'] = {{ field.data_type.name|class }}.from_json(obj['{{ field.name }}'])
+                    {% endif %}
             {% elif field.data_type.composite_type %}
+                {% if field.nullable %}
+        if obj['{{ field.name }}'] is not None:
+            obj['{{ field.name }}'] = {{ field.data_type.name|class }}.from_json(obj['{{ field.name }}'])
+        else:
+            obj['{{ field.name }}'] = None
+                {% else %}
         obj['{{ field.name }}'] = {{ field.data_type.name|class }}.from_json(obj['{{ field.name }}'])
+                {% endif %}
             {% elif field.data_type.name == 'Timestamp' %}
         if obj.get('{{ field.name }}'):
             obj['{{ field.name }}'] = date_str_to_datetime(obj['{{ field.name }}'])
             {% elif field.data_type.name == 'List' %}
                 {% if field.data_type.data_type.composite_type %}
+                    {% if field.optional %}
+        if '{{ field.name }}' in obj:
+            obj['{{ field.name }}'] = [{{ field.data_type.data_type.name }}.from_json(item) for item in obj['{{ field.name }}']]
+                    {% else %}
         obj['{{ field.name }}'] = [{{ field.data_type.data_type.name }}.from_json(item) for item in obj['{{ field.name }}']]
+                    {% endif %}
                 {% else %}
         obj['{{ field.name }}'] = obj['{{ field.name }}']
                 {% endif %}
@@ -196,19 +215,6 @@ class DropboxClient(object):
 
         return url, params, headers
 
-    def account_info(self):
-        """Retrieve information about the user's account.
-
-        Returns
-              A dictionary containing account information.
-
-              For a detailed description of what this call returns, visit:
-              https://www.dropbox.com/developers/core/docs#account-info
-        """
-        url, params, headers = self.request("/account/info", method='GET')
-
-        return self.rest_client.GET(url, headers)
-
     def disable_access_token(self):
         """
         Disable the access token that this ``DropboxClient`` is using.  If this call
@@ -240,7 +246,7 @@ class DropboxClient(object):
 
         Parameters
             {% for field in op.request_segmentation.segments[0].data_type.fields %}
-            {{ field.name }} ({{ field.data_type|type }})
+            {{ field.name }} ({{ field.data_type|type }}{% if field.nullable %} or None{% endif %})
                 {{ field.doc|wordwrap(66)|indent(16) }}
             {% endfor %}
         {%- endif %}
@@ -255,24 +261,35 @@ class DropboxClient(object):
 {%- endmacro %}
 
     {% for op in api.namespaces.v1.operations %}
-    {% set binary_blob = op.request_segmentation.segments|length > 1 and op.request_segmentation.segments[1].data_type.name == 'Binary' %}
-    {% set raw_response = op.response_segmentation.segments|length > 1 and op.response_segmentation.segments[1].data_type.name == 'Binary' %}
-    def {{ op.name|method }}(self{% if binary_blob %}, f{% endif %}{{ fields_to_list(op.request_segmentation.segments[0].data_type.fields) }}):
+    {% set binary_blob = op.request_segmentation.segments_by_name.get('data') %}
+    {% set raw_response = op.response_segmentation.segments_by_name.get('data') %}
+    def {{ op.name|method }}(self{% if binary_blob %}, f{% endif %}{{ fields_to_list(op.request_segmentation.segments[0].data_type.all_fields) }}):
         {{ docstring(op) }}
 
         params = {}
         {% for field in op.request_segmentation.segments[0].data_type.fields -%}
             {%- if binary_blob or field.name != "path" %}
+                {% if field.optional and not field.nullable %}
         if {{ field.name }} is not None:
             params['{{ field.name }}'] = {{ field.name }}
+                {% else %}
+        params['{{ field.name }}'] = {{ field.name }}
+                {% endif %}
             {% endif -%}
         {% endfor %}
-        url, params, headers = self.request("{{ op.path }}"{{ add_path(op) }}, params, method='{{ op.extras.method }}'{% if op.extras.host == 'content' %}, content_server=True{% endif %})
+        url, params, headers = self.request(
+            "{{ op.path }}"{{ add_path(op) }},
+            params,
+            method='{{ op.extras.method }}',
+            {% if op.extras.host == 'content' %}
+            content_server=True,
+            {% endif %}
+        )
 
-        {% if op.response_segmentation.segments|length > 1%}
+        {% if raw_response %}
         file_res = self.rest_client.{{ op.extras.method }}(url, headers{% if raw_response %}, raw_response=True{% endif %})
         metadata = DropboxClient.__parse_metadata_as_dict(file_res)
-        return file_res, EntryInfo.from_json(metadata)
+        return file_res, {{ op.response_segmentation.segments[0].data_type.name|class }}.from_json(metadata)
         {% else %}
         v = self.rest_client.{{ op.extras.method }}(url{% if binary_blob %}, f{% endif %}, headers)
         return {{ op.response_segmentation.segments[0].data_type.name|class }}.from_json(v)
@@ -338,161 +355,6 @@ class DropboxClient(object):
             return reply['offset'], reply['upload_id']
         except ErrorResponse as e:
             raise e
-
-    def put_file2(self, full_path, file_obj, overwrite=False, parent_rev=None):
-        """Upload a file.
-
-        A typical use case would be as follows::
-
-            f = open('working-draft.txt', 'rb')
-            response = client.put_file('/magnum-opus.txt', f)
-            print "uploaded:", response
-
-        which would return the metadata of the uploaded file, similar to::
-
-            {
-                'bytes': 77,
-                'icon': 'page_white_text',
-                'is_dir': False,
-                'mime_type': 'text/plain',
-                'modified': 'Wed, 20 Jul 2011 22:04:50 +0000',
-                'path': '/magnum-opus.txt',
-                'rev': '362e2029684fe',
-                'revision': 221922,
-                'root': 'dropbox',
-                'size': '77 bytes',
-                'thumb_exists': False
-            }
-
-        Parameters
-            full_path
-              The full path to upload the file to, *including the file name*.
-              If the destination directory does not yet exist, it will be created.
-            file_obj
-              A file-like object to upload. If you would like, you can pass a string as file_obj.
-            overwrite
-              Whether to overwrite an existing file at the given path. (Default ``False``.)
-              If overwrite is False and a file already exists there, Dropbox
-              will rename the upload to make sure it doesn't overwrite anything.
-              You need to check the metadata returned for the new name.
-              This field should only be True if your intent is to potentially
-              clobber changes to a file that you don't know about.
-            parent_rev
-              Optional rev field from the 'parent' of this upload.
-              If your intent is to update the file at the given path, you should
-              pass the parent_rev parameter set to the rev value from the most recent
-              metadata you have of the existing file at that path. If the server
-              has a more recent version of the file at the specified path, it will
-              automatically rename your uploaded file, spinning off a conflict.
-              Using this parameter effectively causes the overwrite parameter to be ignored.
-              The file will always be overwritten if you send the most-recent parent_rev,
-              and it will never be overwritten if you send a less-recent one.
-
-        Returns
-              A dictionary containing the metadata of the newly uploaded file.
-
-              For a detailed description of what this call returns, visit:
-              https://www.dropbox.com/developers/core/docs#files-put
-
-        Raises
-              A :class:`dropbox.rest.ErrorResponse` with an HTTP status of:
-
-              - 400: Bad request (may be due to many things; check e.error for details).
-              - 503: User over quota.
-        """
-        path = "/files_put/%s%s" % (self.session.root, format_path(full_path))
-
-        params = {
-            'overwrite': bool(overwrite),
-            }
-
-        if parent_rev is not None:
-            params['parent_rev'] = parent_rev
-
-        url, params, headers = self.request(path, params, method='PUT', content_server=True)
-
-        return self.rest_client.PUT(url, file_obj, headers)
-
-    def get_file2(self, from_path, rev=None):
-        """Download a file.
-
-        Example::
-
-            out = open('magnum-opus.txt', 'wb')
-            with client.get_file('/magnum-opus.txt') as f:
-                out.write(f.read())
-
-        which would download the file ``magnum-opus.txt`` and write the contents into
-        the file ``magnum-opus.txt`` on the local filesystem.
-
-        Parameters
-            from_path
-              The path to the file to be downloaded.
-            rev
-              Optional previous rev value of the file to be downloaded.
-
-        Returns
-              A :class:`dropbox.rest.RESTResponse` that is the HTTP response for
-              the API request.  It is a file-like object that can be read from.  You
-              must call ``close()`` when you're done.
-
-        Raises
-              A :class:`dropbox.rest.ErrorResponse` with an HTTP status of:
-
-              - 400: Bad request (may be due to many things; check e.error for details).
-              - 404: No file was found at the given path, or the file that was there was deleted.
-              - 200: Request was okay but response was malformed in some way.
-        """
-        path = "/files/%s%s" % (self.session.root, format_path(from_path))
-
-        params = {}
-        if rev is not None:
-            params['rev'] = rev
-
-        url, params, headers = self.request(path, params, method='GET', content_server=True)
-        return self.rest_client.request("GET", url, headers=headers, raw_response=True)
-
-    def get_file_and_metadata(self, from_path, rev=None):
-        """Download a file alongwith its metadata.
-
-        Acts as a thin wrapper around get_file() (see :meth:`get_file()` comments for
-        more details)
-
-        A typical usage looks like this::
-
-            out = open('magnum-opus.txt', 'wb')
-            f, metadata = client.get_file_and_metadata('/magnum-opus.txt')
-            with f:
-                out.write(f.read())
-
-        Parameters
-            from_path
-              The path to the file to be downloaded.
-            rev
-              Optional previous rev value of the file to be downloaded.
-
-        Returns
-              A pair of ``(response, metadata)``:
-
-              response
-                A :class:`dropbox.rest.RESTResponse` that is the HTTP response for
-                the API request.  It is a file-like object that can be read from.  You
-                must call ``close()`` when you're done.
-              metadata
-                A dictionary containing the metadata of the file (see
-                https://www.dropbox.com/developers/core/docs#metadata for details).
-
-        Raises
-              A :class:`dropbox.rest.ErrorResponse` with an HTTP status of:
-
-              - 400: Bad request (may be due to many things; check e.error for details).
-              - 404: No file was found at the given path, or the file that was there was deleted.
-              - 200: Request was okay but response was malformed in some way.
-        """
-        file_res = self.get_file(from_path, rev)
-        metadata = DropboxClient.__parse_metadata_as_dict(file_res)
-
-        return file_res, metadata
 
     @staticmethod
     def __parse_metadata_as_dict(dropbox_raw_response):

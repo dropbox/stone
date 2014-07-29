@@ -13,7 +13,6 @@ Todo
 - Accept indentation besides 4 spaces.
 - Out of order type declarations.
 - List(data_type=Float) -> List(Float)
-- Add ability to give arbitrary tags to each endpoint (noauth, notify/content server)
 - Perhaps errors shouldn't be printed to stdout immediately. They should be collected by the parser,
   and then printed by the caller if desired.
 - Switch symbol lookup in environment to dynamic lookup.
