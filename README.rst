@@ -5,22 +5,46 @@ BabelSDK
 Define an API once in Babel. Use templates to define how the Babel definition
 maps to any programming language. Compile from Babel to all target languages.
 
-Babel makes no assumptions about the RPC layer being used to make API requests
-and return responses. Babel does make some assumptions about the data types
-present in the target programming language, as well as the data serialization
-format. It's assumed that there is a capacity for representing dictionaries
-(unordered String Keys -> Value), lists, numeric types, and strings. It's also
-assumed that an endpoint can have a static definition of its request type and
-response type.
+Babel makes no assumptions about the protocol layer being used to make API
+requests and return responses; it's first use case is the Dropbox v1 API which
+operates over HTTP.
+
+Babel make some assumptions about the data types supported in the serialization
+format and target programming language. It's assumed that there is a capacity
+for representing dictionaries (unordered String Keys -> Value), lists, numeric
+types, and strings.
+
+Babel assumes that an operation (or API endpoint) can have its request and
+response types defined without relation to each other. In other words, the
+type of response does not change based on the input to the endpoint.
 
 Getting Started
 ===============
 
-Compile babels and apply them to a documentation template::
+Installation
+------------
+
+Download or clone BabelSDK, and run the following in its root directory::
+
+   $ sudo python setup.py install
+
+Using
+-----
+
+To run BabelSDK, you can use the script ``babelsdk`` that has been installed::
+
+   $ babelsdk -h
+
+As an example, you can compile a babel and apply it to a documentation template::
+
+   $ babelsdk example/api/v2_files.babel example/api/v2_users.babel example/template/docs
+
+If you did not run ``setup.py`` but have the Python package setup, you can
+alternatively replace ``babelsdk`` with ``python -m babelsdk.cli`` as follows::
 
    $ python -m babelsdk.cli example/api/v2_files.babel example/api/v2_users.babel example/template/docs
 
-View generated documentation::
+You can view the generated documentation using::
 
    $ google-chrome build/docs/docs.html 
 
@@ -105,8 +129,8 @@ Types can also be composed of other types::
            team=null
 
 
-Note in the example above that the `AccountInfo.team` field  was marked as "nullable". By default,
-fields do not accept `null` as a valid value.
+Note in the example above that the ``AccountInfo.team`` field  was marked as "nullable". By default,
+fields do not accept ``null`` as a valid value.
 
 A struct can also inherit from another struct using the "extends" keyword::
 
@@ -312,12 +336,12 @@ must satisfy the following conditions:
        * This makes it easy to search for a file (especially in an IDE), since the prefix is still "files".
        * IDEs that use the outer extension to determine syntax highlighting can still rely on the outer extension.
 
-   2. The first line of the file must include `babelsdk(jinja2)`.
+   2. The first line of the file must include ``babelsdk(jinja2)``.
 
        * You'll want to make the first line a comment in the target language.
 
-          * `# babelsdk(jinja2)` for Python
-          * `<!-- babelsdk(jinja2) -->` for HTML
+          * ``# babelsdk(jinja2)`` for Python
+          * ``<!-- babelsdk(jinja2) -->`` for HTML
 
        * jinja2 is currently the only available generator. But, this allows for a pluggable
          architecture for templating engines.
@@ -326,7 +350,7 @@ Jinja2 Templating
 -----------------
 
 You'll want to familiarize yourself with templating in jinja2 <http://jinja.pocoo.org/docs/>. Your
-template will have access to the `api` variable, which maps to the `babelsdk.api.Api` object. From
+template will have access to the ``api`` variable, which maps to the ``babelsdk.api.Api`` object. From
 this object, you can access all the defined namespaces, data types, and operations. See the Python
 object definition for more information.
 
