@@ -87,7 +87,7 @@ Babels must begin with a namespace declaration::
 
    Namespace ::= 'namespace' Identifier
 
-Example:
+Example::
 
    namespace users
 
@@ -102,7 +102,7 @@ Use an include to make all definitions in a Babel Header available::
 
    Include ::= 'include' Identifier
 
-Example:
+Example::
 
    include api_common
 
@@ -397,23 +397,23 @@ Defining a Babel Template
 A Babel template is a file used to auto generate code for a target language. A template
 must satisfy the following conditions:
 
-   1. The filename must have '.babelt' as its inner extension. For example,
-      files.babelt.py
+1. The filename must have '.babelt' as its inner extension. For example,
+   files.babelt.py
 
-       * This makes it easy to search for a file (especially in an IDE), since
-         the prefix is still "files".
-       * IDEs that use the outer extension to determine syntax highlighting
-         will continue to work.
+   * This makes it easy to search for a file (especially in an IDE), since
+     the prefix is still "files".
+   * IDEs that use the outer extension to determine syntax highlighting
+     will continue to work.
 
-   2. The first line of the file must include ``babelsdk(jinja2)``.
+2. The first line of the file must include ``babelsdk(jinja2)``.
 
-       * You'll want to make the first line a comment in the target language.
+   * You'll want to make the first line a comment in the target language.
 
-          * ``# babelsdk(jinja2)`` for Python
-          * ``<!-- babelsdk(jinja2) -->`` for HTML
+      * ``# babelsdk(jinja2)`` for Python
+      * ``<!-- babelsdk(jinja2) -->`` for HTML
 
-       * jinja2 is currently the only available generator. But, this allows for
-         a pluggable architecture for templating engines.
+   * jinja2 is currently the only available generator. But, this allows for
+     a pluggable architecture for templating engines.
 
 Jinja2 Templating
 -----------------
@@ -441,21 +441,21 @@ These filters are tailored per language.
 Target SDKs
 ===========
 
-   * Python
-   * Ruby
-   * Java
-   * PHP
-   * Objective-C
+* Python
+* Ruby
+* Java
+* PHP
+* Objective-C
 
 Other Targets
 =============
 
-   * Web Docs
-   * Server Input Validation
-   * Server Output Validation
+* Web Docs
+* Server Input Validation
+* Server Output Validation
 
 General Rules
 =============
 
-   * Clients must accept new fields (ie. fields unknown to it), and ignore them.
-   * Server should be flexible on missing inputs (backwards compatibility), but strict on what goes out.
+* Clients must accept new fields (ie. fields unknown to it), and ignore them.
+* Server should be flexible on missing inputs (backwards compatibility), but strict on what goes out.
