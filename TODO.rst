@@ -13,6 +13,7 @@ Todo
 - Accept indentation besides 4 spaces.
 - Out of order type declarations.
 - List(data_type=Float) -> List(Float)
+- Add tuple type. Only needed for v1 endpoints (ex. delta)
 - Perhaps errors shouldn't be printed to stdout immediately. They should be collected by the parser,
   and then printed by the caller if desired.
 - Switch symbol lookup in environment to dynamic lookup.

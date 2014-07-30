@@ -16,7 +16,8 @@ types, and strings.
 
 Babel assumes that an operation (or API endpoint) can have its request and
 response types defined without relation to each other. In other words, the
-type of response does not change based on the input to the endpoint.
+type of response does not change based on the input to the endpoint. An
+exception to this rule is afforded for error responses.
 
 Getting Started
 ===============
@@ -28,42 +29,89 @@ Download or clone BabelSDK, and run the following in its root directory::
 
    $ sudo python setup.py install
 
-Using
------
-
-To run BabelSDK, you can use the script ``babelsdk`` that has been installed::
+This will install a script ``babelsdk`` to your PATH that can be run from the
+command line::
 
    $ babelsdk -h
 
-As an example, you can compile a babel and apply it to a documentation template::
+If you did not run ``setup.py`` but have the Python package in your PYTHONPATH,
+you can replace ``babelsdk`` with ``python -m babelsdk.cli`` as follows::
+
+   $ python -m babelsdk.cli -h
+
+Simple Example
+--------------
+
+You can compile an example babel and apply it to a documentation template::
 
    $ babelsdk example/api/v2_files.babel example/api/v2_users.babel example/template/docs
-
-If you did not run ``setup.py`` but have the Python package setup, you can
-alternatively replace ``babelsdk`` with ``python -m babelsdk.cli`` as follows::
-
-   $ python -m babelsdk.cli example/api/v2_files.babel example/api/v2_users.babel example/template/docs
 
 You can view the generated documentation using::
 
    $ google-chrome example/template/docs/docs.html
 
+Fundamentals
+============
+
+There are three types of files.
+
+Babel (.babel extension)
+------------------------
+
+Babels define the data types and operations available in an API.
+
+Babel Header (.babelh extension)
+--------------------------------
+
+Babel Headers define only data types available in an API. Headers can be
+included in Babel files so that common data types can be re-used.
+
+Babel Template (.babelt extension)
+----------------------------------
+
+BabelSDK will render a Babel Template based on an API defined in Babel. These
+templates can be written in any templating language (currently only jinja2 is
+supported).
+
 Defining a Babel
 ================
 
-Babel files (.babel extension) must begin with a namespace declaration::
+A Babel is composed of a namespace followed by zero or more includes and zero or more definitions::
 
-   namespace ::= 'namespace' Identifier
+   Babel ::= Namespace Include* Definition*
+
+Namespace
+---------
+
+Babels must begin with a namespace declaration::
+
+   Namespace ::= 'namespace' Identifier
 
 Example:
 
    namespace users
 
 This is the namespace for all the operations and data types in the Babel file.
-It helps us seperate different parts of the API like  like "files", "users",
-and "photos".
+It helps us separate different parts of the API like "files", "users", and
+"photos".
 
-Following the namespace should be struct, union, or op declarations.
+Include
+-------
+
+Use an include to make all definitions in a Babel Header available::
+
+   Include ::= 'include' Identifier
+
+Example:
+
+   include api_common
+
+Definition
+----------
+
+There are four types of definitions available::
+
+   Definition ::= Alias | Struct | Union | Operation
 
 Struct
 ------
@@ -224,7 +272,8 @@ a data type::
        photo PhotoInfo
        video VideoInfo
 
-Tags that do not map to a type can be declared. An example follows::
+Tags that do not map to a type can be declared. The following example
+illustrates::
 
     struct UpdateParentRev:
         doc::
@@ -260,12 +309,16 @@ These types exist without having to be declared:
 
    * Boolean
    * Integers: Int32, Int64, UInt32, UInt64
-      * Attributes ``min_value`` and ``max_value can be set for more
+      * Attributes ``min_value`` and ``max_value`` can be set for more
         restrictive bounding.
    * Float, Double
    * String
+      * Attributes ``min_length`` and ``max_length`` can be set.
    * Timestamp
+      * The ``format`` attribute must be set to define the format of the
+        timestamp.
    * List
+      * The ``data_type`` must be set to define the type of elements.
 
 Alias
 -----
@@ -344,10 +397,13 @@ Defining a Babel Template
 A Babel template is a file used to auto generate code for a target language. A template
 must satisfy the following conditions:
 
-   1. The filename must have '.babelt' as its inner extension. For example, files.babelt.py
+   1. The filename must have '.babelt' as its inner extension. For example,
+      files.babelt.py
 
-       * This makes it easy to search for a file (especially in an IDE), since the prefix is still "files".
-       * IDEs that use the outer extension to determine syntax highlighting can still rely on the outer extension.
+       * This makes it easy to search for a file (especially in an IDE), since
+         the prefix is still "files".
+       * IDEs that use the outer extension to determine syntax highlighting
+         will continue to work.
 
    2. The first line of the file must include ``babelsdk(jinja2)``.
 
@@ -356,8 +412,8 @@ must satisfy the following conditions:
           * ``# babelsdk(jinja2)`` for Python
           * ``<!-- babelsdk(jinja2) -->`` for HTML
 
-       * jinja2 is currently the only available generator. But, this allows for a pluggable
-         architecture for templating engines.
+       * jinja2 is currently the only available generator. But, this allows for
+         a pluggable architecture for templating engines.
 
 Jinja2 Templating
 -----------------
@@ -367,14 +423,18 @@ template will have access to the ``api`` variable, which maps to the ``babelsdk.
 this object, you can access all the defined namespaces, data types, and operations. See the Python
 object definition for more information.
 
-You also have access to filters to help tailor the Api Definition to the target language. For
+You also have access to filters to help tailor the API Definition to the target language. For
 example, you can use "{{ variable }}|class" to convert the variable to the standard format for
-a class (capitalized words). Other available filters include:
+a class (capitalized words). The full list of available filters is:
 
-   * class
-   * method
-   * type
-   * pprint (Pretty print)
+class
+    Converts a name to the format of a class name.
+method
+    Converts a name to the format of a method name.
+type
+    Converts a primitive data type to the name of primitive type.
+pprint
+    Outputs a primitive as a literal.
 
 These filters are tailored per language.
 
