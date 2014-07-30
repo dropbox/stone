@@ -91,8 +91,8 @@ Example::
 
    namespace users
 
-This is the namespace for all the operations and data types in the Babel file.
-It helps us separate different parts of the API like "files", "users", and
+This is the namespace for all the operations and data types in the Babel. It
+helps us separate different parts of the API like "files", "users", and
 "photos".
 
 Include
@@ -104,7 +104,10 @@ Use an include to make all definitions in a Babel Header available::
 
 Example::
 
-   include api_common
+   include common
+
+This will search for a file called ``common.babelh`` in the same directory
+as the Babel.
 
 Definition
 ----------
@@ -418,13 +421,13 @@ must satisfy the following conditions:
 Jinja2 Templating
 -----------------
 
-You'll want to familiarize yourself with templating in jinja2 <http://jinja.pocoo.org/docs/>. Your
+You'll want to familiarize yourself with templating in `jinja2 <http://jinja.pocoo.org/docs/>`_. Your
 template will have access to the ``api`` variable, which maps to the ``babelsdk.api.Api`` object. From
 this object, you can access all the defined namespaces, data types, and operations. See the Python
 object definition for more information.
 
 You also have access to filters to help tailor the API Definition to the target language. For
-example, you can use "{{ variable }}|class" to convert the variable to the standard format for
+example, you can use ``{{ variable }}|class`` to convert the variable to the standard format for
 a class (capitalized words). The full list of available filters is:
 
 class
