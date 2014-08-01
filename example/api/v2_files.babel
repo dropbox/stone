@@ -136,6 +136,10 @@ op Download:
         info FileInfo
         data Binary
 
+    extras:
+        host="content"
+        method="GET"
+
 struct FolderListRequest:
     doc::
         Stub.
@@ -262,6 +266,9 @@ op Thumbnail:
         info FileInfo
         data Binary
 
+    extras:
+        host="content"
+
 
 op Revisions:
     doc::
@@ -341,3 +348,6 @@ op Upload:
 
     error:
         UploadError
+
+    extras:
+        host="content"
