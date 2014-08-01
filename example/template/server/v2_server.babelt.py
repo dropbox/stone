@@ -10,47 +10,50 @@ from bottle import (
     run,
 )
 
-def segmentation_response(*segments):
-    """Constructs an HTTP body for a segmentation response."""
+def segmentation_response(header, *segments):
+    """Constructs HTTP headers and body for a segmentation response."""
+    response_json = []
+
     for segment in segments:
-        if isinstance(segment, dict):
-            serialized_segment = json.dumps(segment, indent=2)
-            yield 'j{}\n'.format(len(serialized_segment))
-            yield serialized_segment
-        if isinstance(segment, list):
-            yield 's\n'
-            for s in segment:
-                if isinstance(s, dict):
-                    serialized_segment = json.dumps(s, indent=2)
-                    yield 'j{}\n'.format(len(serialized_segment))
-                    yield serialized_segment
-                elif isinstance(s, str):
-                    yield 'b{}\n'.format(len(s))
-                    yield s
-            yield 'e\n'
-        elif isinstance(segment, str):
-            yield 'b{}\n'.format(len(segment))
-            yield segment
+        response_json.append(segment)
+
+    if len(response_json) == 1:
+        response_json = response_json[0]
+
+    if header:
+        response.headers['Dropbox-API-Result'] = json.dumps(response_json, indent=2)
+    else:
+        # Manually convert json to a string because bottle only dumps json for
+        # dicts, and not lists.
+        response.content_type = 'application/json'
+        return json.dumps(response_json)
 
 {% for namespace_name, namespace in api.namespaces.items() -%}
     {%- if namespace.operations %}
         {%- for op in namespace.operations %}
-@route('/2/{{ namespace_name }}/{{ op.name|lower }}', method='POST')
-def {{ namespace_name }}_{{ op.name|pymethod }}():
+@route('/2/{{ namespace_name }}/{{ op.name|lower }}', method={%- trim -%}
+    [{% if op.extras.method == "GET" %}'GET', {% endif %}'POST'])
+def {{ namespace_name }}_{{ op.name|method }}():
     return segmentation_response(
-                {%- for segment in op.response_segmentation.segments -%}
-                    {% if segment.data_type.name == 'Binary' %}
-                    {% elif segment.list %}
-        [{{ segment.data_type.get_example('default')|pypprint|indent(8) }}],
-                    {% elif segment.data_type.has_example('default') %}
-        {{ segment.data_type.get_example('default')|pypprint|indent(8) }},
-                    {% else %}
+        {% if op.extras.host == 'content' %}
+        True,
+        {% else %}
+        False,
+        {% endif %}
+        {% for segment in op.response_segmentation.segments %}
+            {% if segment.data_type.name == 'Binary' %}
+            {% elif not segment.data_type.has_example('default') %}
         {'no example': 'no example'},
-                    {%- endif -%}
-                {%- endfor %}
+            {% elif segment.list %}
+        [{{ segment.data_type.get_example('default')|pprint|indent(8) }}],
+            {% elif segment.data_type.has_example('default') %}
+        {{ segment.data_type.get_example('default')|pprint|indent(8) }},
+            {% endif %}
+        {% endfor %}
     )
-        {%- endfor %}
-    {% endif -%}
+
+        {% endfor %}
+    {% endif %}
 {% endfor %}
 
 run(host='localhost', port=8080, debug=True, reloader=True)
