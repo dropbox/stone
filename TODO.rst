@@ -19,3 +19,5 @@ Todo
   - This lets us have circular references... as well as out of order declarations.
 - Bug with indent/dedent token generation when comments, newlines, and
   superfluous indents are mixed together.
+- Add "Schema Evolution" section to README.
+- Add feature to generate one operation per file.

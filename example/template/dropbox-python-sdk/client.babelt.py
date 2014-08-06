@@ -41,7 +41,7 @@ from .session import BaseSession, DropboxSession, DropboxOAuth2Session
 {%- endmacro %}
 
 {% macro python_doc_sub(s) %}
-{{ s|doc_sub(struct=struct_doc_ref, op=op_doc_ref, link=link_doc_ref) }}
+{{ s|doc_sub(struct=struct_doc_ref, op=op_doc_ref, field=field_doc_ref, link=link_doc_ref) }}
 {%- endmacro %}
 
 def date_str_to_datetime(s):
@@ -267,7 +267,7 @@ class DropboxClient(object):
         Parameters
             {% for field in op.request_segmentation.segments[0].data_type.fields %}
             {{ field.name }} ({{ field.data_type|type }}{% if field.nullable %} or None{% endif %})
-                {{ field.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(66)|indent(16) }}
+                {{ python_doc_sub(field.doc)|wordwrap(66)|indent(16) }}
             {% endfor %}
         {%- endif %}
 
