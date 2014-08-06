@@ -1,5 +1,6 @@
 import copy
 import json
+import re
 
 import jinja2
 from jinja2.ext import Extension
@@ -13,8 +14,6 @@ from babelsdk.data_type import (
 
 from generator import Generator
 
-import re
-
 class Jinja2Generator(Generator):
     """
     Jinja2 templates will have access to the :class:`babelsdk.api.Api` object,
@@ -23,6 +22,9 @@ class Jinja2Generator(Generator):
         pjson (pretty json), is_binary, is_list, is_struct, is_union, and
         is_composite.
     """
+
+    # Matches format of Babel doc tags
+    _doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>[A-z]*)`')
 
     def __init__(self, api):
 
@@ -63,6 +65,9 @@ class Jinja2Generator(Generator):
         # {{ str|string_slice(1,5,2) }} => str[1:5:2]
         self.template_env.filters['string_slice'] = self._string_slice
 
+        # Substitutes generic Babel doc tags with language-specific ones.
+        self.template_env.filters['doc_sub'] = self._doc_sub
+
         # Add language specified filters
         for language in self.languages:
             for filter_name, method in self.get_template_filters(language).items():
@@ -74,7 +79,6 @@ class Jinja2Generator(Generator):
             for filter_name, method in self.get_template_filters(language).items():
                 language_filters[filter_name] = method
             self.language_to_template_filters[language] = language_filters
-
 
     def render(self, extension, text):
         if extension in self.ext_to_language:
@@ -92,6 +96,28 @@ class Jinja2Generator(Generator):
         return rendered_contents
 
     @staticmethod
+    def _doc_sub(doc, **kwargs):
+        """
+        Substitutes tags in Babel docs with their language-specific
+        counterpart. A tag has the following format:
+
+        :<tag>:`<value>`
+
+        'op' and 'struct' are the two supported tags, and should be passed in
+        as keywords pointing to macros. The macros should take one argument,
+        the value to convert to a language-tailored construct.
+        """
+        for match in Jinja2Generator._doc_sub_tag_re.finditer(doc):
+            matched_text = match.group(0)
+            tag = match.group('tag')
+            val = match.group('val')
+            if tag not in kwargs:
+                raise Exception('Could not find doc stub converter for tag %r'
+                                % tag)
+            doc = doc.replace(matched_text, kwargs[tag](val))
+        return doc
+
+    @staticmethod
     def _string_slice(str, start=0, end=None, step=1):
         if end is None:
             end = len(str)
@@ -104,20 +130,25 @@ class Jinja2Generator(Generator):
                 'type': language.format_type,
                 'pprint': language.format_obj,}
 
+_split_words_capitalization_re = re.compile(
+    '^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$'
+)
+
+_split_words_dashes_re = re.compile('[-_]+')
+
 def split_words(words):
     """
     Splits a word based on capitalization, dashes, or underscores.
         Example: 'GetFile' -> ['Get', 'File']
     """
     all_words = []
-    for word in re.split('[\W|-|_]+', words):
-        vals = re.findall('^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$', word)
+    for word in re.split(_split_words_dashes_re, words):
+        vals = _split_words_capitalization_re.findall(word)
         if vals:
             all_words.extend(vals)
         else:
             all_words.append(word)
     return all_words
-
 
 class TrimExtension(Extension):
     """
@@ -140,4 +171,3 @@ class TrimExtension(Extension):
     def parse(self, parser):
         parser.parse_expression()
         return []
-

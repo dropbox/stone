@@ -23,68 +23,37 @@ def segmentation_response(header, *segments):
     if header:
         response.headers['Dropbox-API-Result'] = json.dumps(response_json, indent=2)
     else:
-        # For now, manually convert json to a string because pprint
-        # prints OrderedDicts instead of ordinary hashes.
+        # Manually convert json to a string because bottle only dumps json for
+        # dicts, and not lists.
         response.content_type = 'application/json'
         return json.dumps(response_json)
 
-@route('/2/files/info', method=['POST'])
-def files_info():
+@route('/2/v1/accountinfo', method=['GET', 'POST'])
+def v1_account_info():
     return segmentation_response(
         False,
-        {'file': OrderedDict([('id', 'xyz123'), ('id_rev', 2), ('path', '/Photos/flower.jpg'), ('modified', 'Sat, 28 Jun 2014 18:23:21'), ('is_deleted', True), ('size', 1234), ('mime_type', 'image/jpg'), ('media_info', {'photo': OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21'), ('lat_long', None)])})])},
+        OrderedDict([('referral_link', 'https://db.tt/ZITNuhtI'), ('display_name', 'Jon Snow'), ('uid', 386406), ('country', 'US'), ('email', 'jsnow@westeros.com'), ('quota_info', OrderedDict([('quota', 1000000), ('normal', 1000), ('shared', 500), ('datastores', 100)])), ('team', OrderedDict([('name', 'Acme, Inc.')]))]),
     )
 
-@route('/2/files/download', method=['GET', 'POST'])
-def files_download():
+@route('/2/v1/getfile', method=['GET', 'POST'])
+def v1_get_file():
     return segmentation_response(
         True,
-        OrderedDict([('id', 'xyz123'), ('id_rev', 2), ('path', '/Photos/flower.jpg'), ('modified', 'Sat, 28 Jun 2014 18:23:21'), ('is_deleted', True), ('size', 1234), ('mime_type', 'image/jpg'), ('media_info', {'photo': OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21'), ('lat_long', None)])})]),
+        OrderedDict([('path', '/a/b/c.txt'), ('size', '32 bytes'), ('bytes', 32), ('is_dir', True), ('thumb_exists', True), ('icon', 'page_white'), ('root', 'dropbox'), ('photo_info', OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21 +0000'), ('lat_long', None)])), ('video_info', OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21 +0000'), ('lat_long', None), ('duration', 3)]))]),
     )
 
-@route('/2/files/folder-list', method=['POST'])
-def files_folder_list():
-    return segmentation_response(
-        False,
-        OrderedDict([('id', 'abc456'), ('id_rev', 3), ('path', '/Photos'), ('modified', 'Sat, 28 Jun 2014 18:23:21'), ('is_deleted', True)]),
-        [{'file': OrderedDict([('id', 'xyz123'), ('id_rev', 2), ('path', '/Photos/flower.jpg'), ('modified', 'Sat, 28 Jun 2014 18:23:21'), ('is_deleted', True), ('size', 1234), ('mime_type', 'image/jpg'), ('media_info', {'photo': OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21'), ('lat_long', None)])})])}],
-    )
-
-@route('/2/files/delta', method=['POST'])
-def files_delta():
-    return segmentation_response(
-        False,
-        OrderedDict([('reset', True), ('created', 'Sat, 21 Aug 2010 22:31:20')]),
-        [{'file': OrderedDict([('id', 'xyz123'), ('id_rev', 2), ('path', '/Photos/flower.jpg'), ('modified', 'Sat, 28 Jun 2014 18:23:21'), ('is_deleted', True), ('size', 1234), ('mime_type', 'image/jpg'), ('media_info', {'photo': OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21'), ('lat_long', None)])})])}],
-        OrderedDict([('cursor', 'xyz123'), ('has_more', True)]),
-    )
-
-@route('/2/files/thumbnail', method=['POST'])
-def files_thumbnail():
+@route('/2/v1/putfile', method=['POST'])
+def v1_put_file():
     return segmentation_response(
         True,
-        OrderedDict([('id', 'xyz123'), ('id_rev', 2), ('path', '/Photos/flower.jpg'), ('modified', 'Sat, 28 Jun 2014 18:23:21'), ('is_deleted', True), ('size', 1234), ('mime_type', 'image/jpg'), ('media_info', {'photo': OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21'), ('lat_long', None)])})]),
+        OrderedDict([('path', '/a/b/c.txt'), ('size', '32 bytes'), ('bytes', 32), ('is_dir', True), ('thumb_exists', True), ('icon', 'page_white'), ('root', 'dropbox'), ('photo_info', OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21 +0000'), ('lat_long', None)])), ('video_info', OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21 +0000'), ('lat_long', None), ('duration', 3)]))]),
     )
 
-@route('/2/files/revisions', method=['POST'])
-def files_revisions():
+@route('/2/v1/metadata', method=['GET', 'POST'])
+def v1_metadata():
     return segmentation_response(
         False,
         {'no example': 'no example'},
-    )
-
-@route('/2/files/upload', method=['POST'])
-def files_upload():
-    return segmentation_response(
-        True,
-        OrderedDict([('id', 'xyz123'), ('id_rev', 2), ('path', '/Photos/flower.jpg'), ('modified', 'Sat, 28 Jun 2014 18:23:21'), ('is_deleted', True), ('size', 1234), ('mime_type', 'image/jpg'), ('media_info', {'photo': OrderedDict([('time_taken', 'Sat, 28 Jun 2014 18:23:21'), ('lat_long', None)])})]),
-    )
-
-@route('/2/users/info', method=['POST'])
-def users_info():
-    return segmentation_response(
-        False,
-        OrderedDict([('display_name', 'Jon Snow'), ('is_paired', True), ('quota', OrderedDict([('quota', 1000000), ('normal', 1000), ('shared', 500)])), ('team', OrderedDict([('name', 'Acme, Inc.')]))]),
     )
 
 

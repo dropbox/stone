@@ -15,6 +15,8 @@ Todo
 - List(data_type=Float) -> List(Float)
 - Add tuple type. Only needed for v1 endpoints (ex. delta)
 - Perhaps errors shouldn't be printed to stdout immediately. They should be collected by the parser,
-  and then printed by the caller if desired.
+   and then printed by the caller if desired.
 - Switch symbol lookup in environment to dynamic lookup.
   - This lets us have circular references... as well as out of order declarations.
+- Bug with indent/dedent token generation when comments, newlines, and
+  superfluous indents are mixed together.

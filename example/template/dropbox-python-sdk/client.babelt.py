@@ -24,6 +24,14 @@ except ImportError:
 from .rest import ErrorResponse, RESTClient
 from .session import BaseSession, DropboxSession, DropboxOAuth2Session
 
+{% macro struct_doc_link(s) %}
+:class:`dropbox.client.{{ s|class }}`
+{%- endmacro %}
+
+{% macro op_doc_link(s) %}
+:meth:`dropbox.client.Dropbox.{{ s|method }}`
+{%- endmacro %}
+
 def date_str_to_datetime(s):
     """Converts a string date into a datetime object."""
     return datetime.datetime.strptime(s, '%a, %d %b %Y %H:%M:%S +0000',)
@@ -57,7 +65,7 @@ def format_path(path):
 class {{ data_type.name|class }}({% if data_type.super_type %}{{ data_type.super_type.name|class }}{% else %}object{% endif %}):
     {% if data_type.doc %}
     """
-    {{ data_type.doc|wordwrap(76)|indent(4) }}
+    {{ data_type.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(76)|indent(4) }}
     """{% endif %}
 
     def __init__(self,
@@ -71,7 +79,7 @@ class {{ data_type.name|class }}({% if data_type.super_type %}{{ data_type.super
         Parameters
         {% for field in data_type.fields %}
             {{ field.name }} ({{ field.data_type|type }})
-                {{ field.doc|wordwrap(66)|indent(16) }}
+                {{ field.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(66)|indent(16) }}
         {% endfor %}
 
             Additional kwargs are ignored.
@@ -240,14 +248,14 @@ class DropboxClient(object):
 
 {% macro docstring(op) -%}
 """
-        {{ op.doc|wordwrap(72)|indent(8) }}
+        {{ op.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(72)|indent(8) }}
         {%- if op.request_segmentation.segments[0].data_type.fields %}
 
 
         Parameters
             {% for field in op.request_segmentation.segments[0].data_type.fields %}
             {{ field.name }} ({{ field.data_type|type }}{% if field.nullable %} or None{% endif %})
-                {{ field.doc|wordwrap(66)|indent(16) }}
+                {{ field.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(66)|indent(16) }}
             {% endfor %}
         {%- endif %}
 
