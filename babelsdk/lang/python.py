@@ -40,6 +40,9 @@ class PythonTargetLanguage(TargetLanguage):
     def format_obj(self, o):
         return pprint.pformat(o, width=1)
 
+    def format_variable(self, words):
+        return '_'.join([word.lower() for word in words])
+
     def format_class(self, words):
         return ''.join([word.capitalize() for word in words])
 
