@@ -6,13 +6,15 @@ Define an API once in Babel. Use templates to define how the Babel definition
 maps to any programming language. Compile from Babel to all target languages.
 
 Babel makes no assumptions about the protocol layer being used to make API
-requests and return responses; it's first use case is the Dropbox v1 API which
-operates over HTTP.
+requests and return responses; its first use case is the Dropbox v1 API which
+operates over HTTP. Babel does not come with nor enforces any particular RPC
+framework.
 
 Babel make some assumptions about the data types supported in the serialization
 format and target programming language. It's assumed that there is a capacity
 for representing dictionaries (unordered String Keys -> Value), lists, numeric
-types, and strings.
+types, and strings. The intention is for Babel to map to a multitude of
+serialization formats from JSON to Protocol Buffers.
 
 Babel assumes that an operation (or API endpoint) can have its request and
 response types defined without relation to each other. In other words, the
