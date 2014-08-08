@@ -15,6 +15,9 @@ class TargetLanguage(object):
     def format_class(self, words):
         raise NotImplemented
 
+    def format_variable(self, words):
+        raise NotImplemented
+
     def format_type(self, data_type):
         raise NotImplemented
 

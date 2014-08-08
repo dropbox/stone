@@ -127,6 +127,7 @@ class Jinja2Generator(Generator):
     def get_template_filters(language):
         return {'method': lambda s: language.format_method(split_words(s)),
                 'class': lambda s: language.format_class(split_words(s)),
+                'variable': lambda s: language.format_variable(split_words(s)),
                 'type': language.format_type,
                 'pprint': language.format_obj,}
 
