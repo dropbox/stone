@@ -169,7 +169,7 @@ class BabelLexer(object):
 
     def t_BOOLEAN(self, token):
         r'\btrue\b|\bfalse\b'
-        token.value = bool(token.value)
+        token.value = (token.value == 'true')
         return token
 
     def t_NULL(self, token):
