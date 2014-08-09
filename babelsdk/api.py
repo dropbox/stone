@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from distutils.version import StrictVersion
 
 class Api(object):
@@ -6,7 +7,7 @@ class Api(object):
     """
     def __init__(self, version):
         self.version = StrictVersion(version)
-        self.namespaces = {}
+        self.namespaces = OrderedDict()
 
     def ensure_namespace(self, name):
         """
