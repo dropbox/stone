@@ -319,9 +319,8 @@ class CompositeType(DataType):
             omitted.
         """
         if self.super_type:
-            for field in self.super_type.fields:
-                if filter(field):
-                    yield field
+            for field in self.super_type._filter_fields(filter):
+                yield field
         for field in self.fields:
             if filter(field):
                 yield field
@@ -417,7 +416,7 @@ class Struct(CompositeType):
                 else:
                     field.check(example[field.name])
                     ordered_example[field.name] = example[field.name]
-            elif not isinstance(field.data_type, CompositeType) and not field.optional:
+            elif not isinstance(field.data_type, (CompositeType, List)) and not field.optional:
                 raise KeyError('Missing field %r in example' % field.name)
         self.examples[label] = ordered_example
 
@@ -447,7 +446,7 @@ class Struct(CompositeType):
                                         '%r' % (label, field.data_type.name))
                 elif (isinstance(field.data_type, List) and
                           isinstance(field.data_type.data_type, CompositeType)):
-                    example_copy[field.name] = field.data_type.data_type.get_example(label)
+                    example_copy[field.name] = [field.data_type.data_type.get_example(label)]
             return example_copy
 
     def __repr__(self):
