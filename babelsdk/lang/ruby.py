@@ -39,7 +39,14 @@ class RubyTargetLanguage(TargetLanguage):
 
     def format_obj(self, o):
         assert not isinstance(o, dict), "Bad argument to format_obj: pprint's dict formatting is not valid Ruby."
+        if o is True:
+            return 'true'
+        if o is False:
+            return 'false'
         return pprint.pformat(o, width=1)
+
+    def format_variable(self, words):
+        return '_'.join([word.lower() for word in words])
 
     def format_class(self, words):
         return ''.join([word.capitalize() for word in words])

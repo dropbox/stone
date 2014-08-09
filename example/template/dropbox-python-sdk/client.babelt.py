@@ -24,12 +24,24 @@ except ImportError:
 from .rest import ErrorResponse, RESTClient
 from .session import BaseSession, DropboxSession, DropboxOAuth2Session
 
-{% macro struct_doc_link(s) %}
+{% macro struct_doc_ref(s) %}
 :class:`dropbox.client.{{ s|class }}`
 {%- endmacro %}
 
-{% macro op_doc_link(s) %}
+{% macro op_doc_ref(s) %}
 :meth:`dropbox.client.Dropbox.{{ s|method }}`
+{%- endmacro %}
+
+{% macro field_doc_ref(s) %}
+{{ s }}
+{%- endmacro %}
+
+{% macro link_doc_ref(s) %}
+{{ s }}
+{%- endmacro %}
+
+{% macro python_doc_sub(s) %}
+{{ s|doc_sub(struct=struct_doc_ref, op=op_doc_ref, field=field_doc_ref, link=link_doc_ref) }}
 {%- endmacro %}
 
 def date_str_to_datetime(s):
@@ -65,7 +77,7 @@ def format_path(path):
 class {{ data_type.name|class }}({% if data_type.super_type %}{{ data_type.super_type.name|class }}{% else %}object{% endif %}):
     {% if data_type.doc %}
     """
-    {{ data_type.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(76)|indent(4) }}
+    {{ python_doc_sub(data_type.doc)|wordwrap(76)|indent(4) }}
     """{% endif %}
 
     def __init__(self,
@@ -79,7 +91,7 @@ class {{ data_type.name|class }}({% if data_type.super_type %}{{ data_type.super
         Parameters
         {% for field in data_type.fields %}
             {{ field.name }} ({{ field.data_type|type }})
-                {{ field.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(66)|indent(16) }}
+                {{ python_doc_sub(field.doc)|wordwrap(66)|indent(16) }}
         {% endfor %}
 
             Additional kwargs are ignored.
@@ -248,14 +260,14 @@ class DropboxClient(object):
 
 {% macro docstring(op) -%}
 """
-        {{ op.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(72)|indent(8) }}
+        {{ python_doc_sub(op.doc)|wordwrap(72)|indent(8) }}
         {%- if op.request_segmentation.segments[0].data_type.fields %}
 
 
         Parameters
             {% for field in op.request_segmentation.segments[0].data_type.fields %}
             {{ field.name }} ({{ field.data_type|type }}{% if field.nullable %} or None{% endif %})
-                {{ field.doc|doc_sub(struct=struct_doc_link, op=op_doc_link)|wordwrap(66)|indent(16) }}
+                {{ python_doc_sub(field.doc)|wordwrap(66)|indent(16) }}
             {% endfor %}
         {%- endif %}
 

@@ -152,9 +152,9 @@ struct EntryInfo:
 
     optional:
         rev Rev::
-            A unique identifier for the current revision of a file. This field is
-            the same rev as elsewhere in the API and can be used to detect changes
-            and avoid conflicts.
+            A unique identifier for the current revision of a file. This field
+            is the same rev as elsewhere in the API and can be used to detect
+            changes and avoid conflicts.
         revision UInt64::
             A deprecated field that semi-uniquely identifies a file. Use rev
             instead.
@@ -275,23 +275,24 @@ struct MetadataRequest extends LocaleRequest:
             list=false. A folder shared between two users will have the same
             hash for each user.
         list Boolean = true::
-            The strings true and false are valid values. true is the default. If
-            true, the folder's metadata will include a contents field with a list
-            of metadata entries for the contents of the folder. If false, the
-            contents field will be omitted.
+            The strings true and false are valid values. true is the default.
+            If true, the folder's metadata will include a contents field with
+            a list of metadata entries for the contents of the folder. If
+            false, the contents field will be omitted.
         include_deleted Boolean = false::
             Only applicable when list is set. If this parameter is set to true,
-            then contents will include the metadata of deleted children. Note that
-            the target of the metadata call is always returned even when it has
-            been deleted (with is_deleted set to true) regardless of this flag.
+            then contents will include the metadata of deleted children. Note
+            that the target of the metadata call is always returned even when
+            it has been deleted (with :field:`is_deleted` set to true)
+            regardless of this flag.
         rev Rev::
             If you include a particular revision number, then only the metadata
             for that revision will be returned.
         include_media_info Boolean::
-            If true, each file will include a photo_info dictionary for photos and
-            a video_info dictionary for videos with additional media info. If the
-            data isn't available yet, the string pending will be returned instead
-            of a dictionary.
+            If true, each file will include a photo_info dictionary for photos
+            and a video_info dictionary for videos with additional media info.
+            If the data isn't available yet, the string pending will be
+            returned instead of a dictionary.
 
 op Metadata /metadata/auto:
     doc::
@@ -332,9 +333,10 @@ struct DeltaResponse:
     #    A list of "delta entries".
     reset Boolean::
         If true, clear your local state before processing the delta entries.
-        reset is always true on the initial call to :op:`Delta` (i.e. when no cursor
-        is passed in). Otherwise, it is true in rare situations, such as after
-        server or account maintenance, or if a user deletes their app folder.
+        reset is always true on the initial call to :op:`Delta` (i.e. when no
+        cursor is passed in). Otherwise, it is true in rare situations, such
+        as after server or account maintenance, or if a user deletes their app
+        folder.
     cursor String::
         A string that encodes the latest information that has been returned.
         On the next call to :op:`Delta`, pass in this value.

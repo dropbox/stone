@@ -26,6 +26,9 @@ from .session import BaseSession, DropboxSession, DropboxOAuth2Session
 
 
 
+
+
+
 def date_str_to_datetime(s):
     """Converts a string date into a datetime object."""
     return datetime.datetime.strptime(s, '%a, %d %b %Y %H:%M:%S +0000',)
@@ -725,7 +728,7 @@ class DropboxClient(object):
         v = self.rest_client.PUT(url, f, headers)
         return EntryInfo.from_json(v)
 
-    def metadata(self, path, locale=None, file_limit=25000, hash=None, list=True, include_deleted=True, rev=None, include_media_info=None):
+    def metadata(self, path, locale=None, file_limit=10000, hash=None, list=True, include_deleted=True, rev=None, include_media_info=None):
         """
         Retrieves file and folder metadata.
 

@@ -6,13 +6,15 @@ Define an API once in Babel. Use templates to define how the Babel definition
 maps to any programming language. Compile from Babel to all target languages.
 
 Babel makes no assumptions about the protocol layer being used to make API
-requests and return responses; it's first use case is the Dropbox v1 API which
-operates over HTTP.
+requests and return responses; its first use case is the Dropbox v1 API which
+operates over HTTP. Babel does not come with nor enforces any particular RPC
+framework.
 
 Babel make some assumptions about the data types supported in the serialization
 format and target programming language. It's assumed that there is a capacity
 for representing dictionaries (unordered String Keys -> Value), lists, numeric
-types, and strings.
+types, and strings. The intention is for Babel to map to a multitude of
+serialization formats from JSON to Protocol Buffers.
 
 Babel assumes that an operation (or API endpoint) can have its request and
 response types defined without relation to each other. In other words, the
@@ -365,8 +367,9 @@ and a list of data types for the response::
 Note that ``account_id`` was given a default value of ``"me"``. This is useful
 for including in generated SDKs.
 
-Each "segment" of a request or response has a name ("in" and "info" above). It is recommended
-that this name be used as the name of the accessor in generated SDKs.
+Each "segment" of a request or response has a name ("in" and "info" above). It
+is recommended that this name be used as the name of the accessor in generated
+SDKs.
 
 The following is an example of an endpoint with two request segments::
 
@@ -375,7 +378,8 @@ The following is an example of an endpoint with two request segments::
             Stub.
 
         path String::
-            The full path to the file you want to write to. It should not point to a folder.
+            The full path to the file you want to write to. It should not point
+            to a folder.
         write_conflict_policy WriteConflictPolicy::
             Action to take if a file already exists at the specified path.
 
@@ -393,12 +397,34 @@ The following is an example of an endpoint with two request segments::
         response:
             info FileInfo
 
+Documentation
+-------------
+
+To help template writers tailor documentation to a language, we support stubs
+in documentation. Stubs are of the following format::
+
+    :tag:`value`
+
+Supported tags are ``op``, ``struct``, ``field``, and ``link``.
+
+op
+    A reference to an operation. Template writers should make a reference to
+    the method that represents the operation.
+struct
+    A reference to a struct. Template writers should make a reference to the
+    class that represents the struct.
+field
+    A reference to a field of a struct. It's intended for referencing
+    parameters for functions, but its utility is still TBD.
+link
+    A hyperlink. Template writers should convert this to the proper hyperlink
+    format for the language.
 
 Defining a Babel Template
 =========================
 
-A Babel template is a file used to auto generate code for a target language. A template
-must satisfy the following conditions:
+A Babel template is a file used to auto generate code for a target language. A
+template must satisfy the following conditions:
 
 1. The filename must have '.babelt' as its inner extension. For example,
    files.babelt.py
@@ -421,14 +447,16 @@ must satisfy the following conditions:
 Jinja2 Templating
 -----------------
 
-You'll want to familiarize yourself with templating in `jinja2 <http://jinja.pocoo.org/docs/>`_. Your
-template will have access to the ``api`` variable, which maps to the ``babelsdk.api.Api`` object. From
-this object, you can access all the defined namespaces, data types, and operations. See the Python
-object definition for more information.
+You'll want to familiarize yourself with templating in
+`jinja2 <http://jinja.pocoo.org/docs/>`_. Your template will have access to the
+``api`` variable, which maps to the ``babelsdk.api.Api`` object. From this
+object, you can access all the defined namespaces, data types, and operations.
+See the Python object definition for more information.
 
-You also have access to filters to help tailor the API Definition to the target language. For
-example, you can use ``{{ variable }}|class`` to convert the variable to the standard format for
-a class (capitalized words). The full list of available filters is:
+You also have access to filters to help tailor the API Definition to the target
+language. For example, you can use ``{{ variable }}|class`` to convert the
+variable to the standard format for a class (capitalized words). The full list
+of available filters is:
 
 class
     Converts a name to the format of a class name.
