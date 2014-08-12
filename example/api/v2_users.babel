@@ -13,10 +13,15 @@ struct QuotaInfo:
     shared UInt64::
         The user's used quota in shared folders (bytes).
 
+    optional:
+        datastores UInt64 nullable::
+            The user's used quota in datastores (bytes).
+
     example default:
         quota=1000000
         normal=1000
         shared=500
+        datastores=42
 
 struct Team:
     doc::
@@ -34,6 +39,14 @@ struct AccountInfo:
 
     display_name String::
         The full name of a user.
+    account_id String::
+        The user's unique Dropbox ID.
+    email String::
+        The user's e-mail address.
+    country String(min_length=2, max_length=2)::
+        The user's two-letter country code, if available.
+    referral_link String::
+        The user's referral link.
     quota QuotaInfo::
         The user's quota.
     is_paired Boolean::
@@ -43,10 +56,18 @@ struct AccountInfo:
 
     example default:
         display_name="Jon Snow"
+        account_id="314159"
+        email="jsnow@westeros.com"
+        country="US"
+        referral_link="https://db.tt/ZITNuhtI"
         is_paired=true
 
     example unpaired:
         display_name="Jon Snow"
+        account_id="314159"
+        email="jsnow@westeros.com"
+        country="US"
+        referral_link="https://db.tt/ZITNuhtI"
         is_paired=false
         team=null
 

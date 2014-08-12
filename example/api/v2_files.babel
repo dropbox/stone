@@ -35,16 +35,17 @@ union MediaInfo:
     doc::
         Media specific information.
 
-    audio::
-        Audio file.
     photo PhotoInfo
     video VideoInfo
 
 struct SharedFolder:
     doc::
-        Blah.
+        Information specific to a shared folder.
 
     id String
+
+    example default:
+        id="sf123"
 
 
 struct EntryInfo:
@@ -59,11 +60,15 @@ struct EntryInfo:
         and avoid conflicts.
     path String::
         Path to file or folder.
+    path_rev UInt64::
+        A unique identifier for the current revision of a file path. This field
+        is the same rev as elsewhere in the API and can be used to detect changes
+        and avoid conflicts.
     shared_folder SharedFolder nullable::
         If this a shared folder, information about it.
     modified DbxTimestamp nullable::
         The last time the file was modified on Dropbox, in the standard Timestamp
-        format (null for root folder).
+        format (:val:`null` for root folder).
     is_deleted Boolean::
         Whether the given entry is deleted.
 
@@ -75,13 +80,16 @@ struct FileInfo extends EntryInfo:
         File size in bytes.
     mime_type String nullable::
         The Internet media type determined by the file extension.
-    media_info MediaInfo::
-        Information specific to photo and video media.
+
+    optional:
+        media_info MediaInfo::
+            Information specific to photo and video media.
 
     example default:
         id="xyz123"
         id_rev=2
         path="/Photos/flower.jpg"
+        path_rev=19
         size=1234
         mime_type="image/jpg"
         modified="Sat, 28 Jun 2014 18:23:21"
@@ -95,6 +103,7 @@ struct FolderInfo extends EntryInfo:
         id="abc456"
         id_rev=3
         path="/Photos"
+        path_rev=20
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
 
@@ -105,12 +114,53 @@ union FileOrFolderInfo:
     file FileInfo
     folder FolderInfo
 
+struct FolderInfoAndContents extends FolderInfo:
+
+    contents List(data_type=FileOrFolderInfo)::
+        Ordered list of all contained files and folders.
+
+    example default:
+        id="abc456"
+        id_rev=3
+        path="/Photos"
+        path_rev=20
+        modified="Sat, 28 Jun 2014 18:23:21"
+        is_deleted=false
+
+struct FolderListRequest:
+    doc::
+        Stub.
+
+    path String::
+        The path to the folder.
+    include_deleted Boolean::
+        If this parameter is set to true, then :field:`contents` will include
+        the metadata of deleted children. Note that the target of the
+        :op:`folder-list` call is always returned even when it has been deleted
+        (with :field:`is_deleted` set to true) regardless of
+        this flag.
+    include_media_info Boolean::
+        If true, each file will include a media_info key.
+
+op Folder-List:
+    doc::
+        Get the contents of a folder.
+
+    request:
+        in1 FolderListRequest
+
+    response:
+        folder FolderInfoAndContents
+
 struct InfoRequest:
     doc::
         Describes a path.
 
     path String::
         The path to the file or folder.
+    optional:
+        path_rev Rev::
+            Specific revision for a given path.
 
     example default:
         path="/Photos/flower.jpg"
@@ -140,155 +190,11 @@ op Download:
         host="content"
         method="GET"
 
-struct FolderListRequest:
-    doc::
-        Stub.
-
-    path String::
-        The path to the folder.
-    include_deleted Boolean::
-        Only applicable when list is set. If this parameter is set to true,
-        then contents will include the metadata of deleted children. Note
-        that the target of the metadata call is always returned even when
-        it has been deleted (with is_deleted set to true) regardless of
-        this flag.
-    include_media_info Boolean::
-        If true, each file will include a media_info key.
-
-op Folder-List:
-    doc::
-        Request the contents of a folder.
-
-    request:
-        in1 FolderListRequest
-
-    response:
-        folder FolderInfo
-        contents SList(data_type=FileOrFolderInfo)
-
-
-struct DeltaHeader:
-    doc::
-        Header of a delta response.
-
-    reset Boolean::
-        If true, clear your local state before processing the delta entries.
-        reset is always true on the initial call to /delta (i.e. when no cursor
-        is passed in). Otherwise, it is true in rare situations, such as after
-        server or account maintenance, or if a user deletes their app folder.
-    created DbxTimestamp::
-        When file was created.
-
-    example default:
-        reset=false
-        created="Sat, 21 Aug 2010 22:31:20"
-
-struct DeltaFooter:
-    doc::
-        Footer of a delta response. Stores values that can only be computed
-        after the final EntryInfo.
-
-        This is the next part of the doc.
-
-    cursor String::
-        A string that encodes the latest information that has been returned.
-        On the next call to /delta, pass in this value.
-    has_more Boolean::
-        If true, then there are more entries available; you can call /delta
-        again immediately to retrieve those entries. If 'false', then wait
-        for at least five minutes (preferably longer) before checking again.
-
-    example default:
-        cursor="xyz123"
-        has_more=true
-
-struct DeltaRequest:
-    doc::
-        Delta request.
-
-    cursor String nullable::
-        A string that is used to keep track of your current state. On the
-        next call pass in this value to return delta entries that have been
-        recorded since the cursor was returned.
-    path_prefix String nullable::
-        Filters the response to only include entries at or under the specified
-        path. If you use the path_prefix parameter, you must continue to pass
-        the same prefix on subsequent calls using the returned cursor.
-    include_media_info Boolean::
-        If true, each file will include a media_info key. When
-        include_media_info is specified, files will only appear in delta
-        responses when the media info is ready. If you use the
-        include_media_info parameter, you must continue to pass the same
-        value on subsequent calls using the returned cursor.
-
-    example default:
-        cursor=null
-        path_prefix=null
-        include_media_info=false
-
-op Delta:
-    doc::
-        A way of letting you keep up with changes to files and folders in a
-        user's Dropbox. You can periodically call /delta to get a list of
-        "delta entries", which are instructions on how to update your local
-        state to match the server's state.
-
-    request:
-        in1 DeltaRequest
-
-    response:
-        header DeltaHeader
-        entries SList(data_type=FileOrFolderInfo)
-        footer DeltaFooter
-
-struct ThumbnailRequest:
-    doc::
-        Stub.
-
-    format String::
-        jpeg (default) or png. For images that are photos, jpeg should be
-        preferred, while png is better for screenshots and digital art.
-    size String::
-        One of the following values: xs, s (default), m, l, xl.
-
-    example default:
-        format="jpeg"
-        size="m"
-
-op Thumbnail:
-    doc::
-        Get the thumbnail for a file.
-
-    request:
-        in1 ThumbnailRequest
-
-    response:
-        info FileInfo
-        data Binary
-
-    extras:
-        host="content"
-
-
-op Revisions:
-    doc::
-        Obtains metadata for the previous revisions of a file.
-
-        Only revisions up to thirty days old are available (or more if the
-        Dropbox user has Packrat). You can use the revision number in
-        conjunction with the /restore call to revert the file to its previous
-        state.
-
-    request:
-        in1 InfoRequest
-
-    response:
-        revisions SList(data_type=EntryInfo)
-
 
 struct UpdateParentRev:
     doc::
-        On a write conflict, overwrite the existing file if the parent rev matches.
+        On a write conflict, overwrite the existing file if the parent rev
+        matches.
 
     parent_rev String::
         The revision to be updated.
@@ -351,3 +257,360 @@ op Upload:
 
     extras:
         host="content"
+
+struct DeltaResponse:
+
+    reset Boolean::
+        If :val:`true`, clear your local state before processing the delta
+        entries. :field:`reset` is always :val:`true` on the initial call to
+        :op:`Delta` (i.e. when no cursor is passed in). Otherwise, it is
+        :val:`true` in rare situations, such as after server or account
+        maintenance, or if a user deletes their app folder.
+    cursor String::
+        A string that encodes the latest information that has been returned.
+        On the next call to :op:`Delta`, pass in this value.
+    has_more Boolean::
+        If :val:`true`, then there are more entries available; you can call
+        :op:`Delta` again immediately to retrieve those entries. If
+        :val:`false`, then wait for at least five minutes (preferably longer)
+        before checking again.
+    entries List(data_type=FileOrFolderInfo)::
+        Each file or directory that has been changed.
+
+
+    example default:
+        reset=false
+        cursor="xyz123"
+        has_more=true
+
+
+struct DeltaRequest:
+    doc::
+        Delta request.
+
+    cursor String nullable::
+        A string that is used to keep track of your current state. On the
+        next call pass in this value to return delta entries that have been
+        recorded since the cursor was returned.
+    path_prefix String nullable::
+        Filters the response to only include entries at or under the specified
+        path. If you use the path_prefix parameter, you must continue to pass
+        the same prefix on subsequent calls using the returned cursor.
+    include_media_info Boolean = false::
+        If :val:`true`, each file will include a :field:`media_info` key. When
+        :field:`include_media_info` is specified, files will only appear in
+        delta responses when the media info is ready. If you use the
+        :field:`include_media_info` parameter, you must continue to pass the
+        same value on subsequent calls using the returned cursor.
+
+    example default:
+        cursor=null
+        path_prefix=null
+        include_media_info=false
+
+op Delta:
+    doc::
+        A way of letting you keep up with changes to files and folders in a
+        user's Dropbox. You can periodically call :op:`Delta` to get a list of
+        "delta entries", which are instructions on how to update your local
+        state to match the server's state.
+
+    request:
+        in1 DeltaRequest
+
+    response:
+        info DeltaResponse
+
+struct LongpollDeltaRequest:
+
+    cursor String::
+        A delta cursor as returned from a call to :op:`Delta`. Note that a
+        cursor returned from a call to :op:`Delta` with
+        :field:`include_media_info` set to :val:`true` is incompatible with
+        :op:`LongpollDelta` and an error will be returned.
+
+    optional:
+        timeout UInt32(min_value=30, max_value=480) = 30::
+            An optional integer indicating a timeout, in seconds. The request
+            will block for at most this length of time, plus up to 90 seconds
+            of random jitter added to avoid the
+            :link:`thundering herd problem
+            https://en.wikipedia.org/wiki/Thundering_herd_problem`. Care
+            should be taken when using this parameter, as some network
+            infrastructure does not support long timeouts.
+
+struct LongpollDeltaResponse:
+    doc::
+        The connection will block until there are changes available or a
+        timeout occurs.
+
+    changes Boolean::
+        Indicates whether new changes are available. If this value is
+        :val:`true`, you should call :op:`Delta` to retrieve the changes.
+        If this value is :val:`false`, it means the call to
+        :op:`LongpollDelta` timed out.
+
+    optional:
+        backoff UInt32::
+            If present, the value indicates how many seconds your code should
+            wait before calling :op:`LongpollDelta` again.
+
+    example default:
+        changes=false
+        backoff=60
+
+op LongpollDelta:
+    doc::
+        A long-poll endpoint to wait for changes on an account. In conjunction
+        with :op:`Delta`, this call gives you a low-latency way to monitor an
+        account for file changes.
+
+        Unlike most other API endpoints, this call does not require OAuth
+        authentication. The passed in :field:`cursor` can only be acquired via
+        an authenticated call to :op:`Delta`.
+
+    request:
+        in LongpollDeltaRequest
+
+    response:
+        out LongpollDeltaResponse
+
+    extras:
+        host="notify"
+        noauth=true
+
+struct ThumbnailRequest:
+    doc::
+        Stub.
+
+    format String::
+        jpeg (default) or png. For images that are photos, jpeg should be
+        preferred, while png is better for screenshots and digital art.
+
+    optional:
+        size String = "s"::
+            One of the following values: xs, s, m, l, xl.
+
+    example default:
+        format="jpeg"
+        size="m"
+
+op Thumbnail:
+    doc::
+        Get the thumbnail for a file.
+
+    request:
+        in1 ThumbnailRequest
+
+    response:
+        info FileInfo
+        data Binary
+
+    extras:
+        host="content"
+
+
+struct RevisionHistory:
+
+    revisions List(data_type=FileOrFolderInfo)::
+        List of file or folders that have been part of the revision history.
+
+op Revisions:
+    doc::
+        Obtains file information for previous revisions.
+
+        Only revisions up to thirty days old are available (or more if the
+        Dropbox user has :link:`Packrat https://www.dropbox.com/help/113`). You can use the revision number in
+        conjunction with the :op:`Restore` call to revert the file to its
+        previous state.
+
+    request:
+        in1 InfoRequest
+
+    response:
+        history RevisionHistory
+
+struct RestoreRequest:
+
+    path String::
+        The path to the file or folder.
+    rev Rev::
+        The revision of a path to restore to.
+
+op Restore:
+    doc::
+        Restores a file path to a previous revision.
+
+        Unlike downloading a file at a given revision and then re-uploading it,
+        this call is atomic. It also saves a bunch of bandwidth.
+
+    request:
+        in RestoreRequest
+
+    response:
+        out FileInfo
+
+struct SearchRequest:
+
+    query String::
+        The search string. This string is split (on spaces) into individual
+        words. Files and folders will be returned if they contain all words
+        in the search string.
+    file_limit UInt32(max_value=1000) = 1000::
+        The maximum and default value is 1,000. No more than file_limit search
+        results will be returned.
+
+    optional:
+        include_deleted Boolean = false::
+            If this parameter is set to true, then files and folders that have been
+            deleted will also be included in the search.
+        include_membership Boolean = false::
+            If true, metadata for a shared folder will include a list of the
+            members of the shared folder.
+
+struct SearchResults:
+
+    has_more Boolean::
+        If true, then the number of files found exceeds the file_limit.
+    results List(data_type=FileOrFolderInfo)::
+        List of file or folders that match the search query.
+
+    example default:
+        has_more=false
+
+op Search:
+    doc::
+        Returns metadata for all files and folders whose filename contains the
+        given search string as a substring.
+
+        Searches are limited to the folder path and its sub-folder hierarchy
+        provided in the call.
+
+    request:
+        in SearchRequest
+
+    response:
+        out SearchResults
+
+union PreviewError:
+    not_found::
+        The file wasn't found at the specified :field:`path`, or wasn't found
+        at the specified :field:`path_rev`.
+    no_preview::
+        No preview has been generated yet or unable to generate a preview for
+        the file.
+
+op Preview:
+    doc::
+        Gets a preview for a file.
+
+        The Content-Type header will be either application/pdf or text/html.
+        There is an Original-Content-Length header which contains the size of
+        the preview data.
+
+    request:
+        in InfoRequest
+
+    response:
+        out FileInfo
+        data Binary
+
+    error:
+        PreviewError
+
+    extras:
+        host="content"
+
+struct CopyRequest:
+
+    from_path String::
+        Specifies the file or folder to be copied.
+
+    to_path String::
+        Specifies the destination path, including the new name for the file or
+        folder.
+
+union CopyError:
+
+    not_found::
+        The source file wasn't found at the specified path.
+    invalid_source::
+        Trying to copy a shared folder.
+    invalid_destination::
+        There is already a file at the given destination.
+    too_many_files::
+        Too many files would be involved in the operation for it to complete
+        successfully. The limit is currently 10,000 files and folders.
+
+op Copy:
+    doc::
+        Copies a file or folder to a new location.
+
+    request:
+        in CopyRequest
+
+    response:
+        out FileInfo
+
+    error:
+        CopyError
+
+op Move:
+    doc::
+        Moves a file or folder to a new location.
+
+    request:
+        in CopyRequest
+
+    response:
+        out FileInfo
+
+    error:
+        CopyError
+
+struct FolderCreateRequest:
+
+    path String::
+        The path to the new folder to create.
+
+union FolderCreateError:
+    invalid_destination::
+        There is already a file at the given destination.
+
+op Folder-Create:
+    doc::
+        Creates a folder.
+
+    request:
+        in FolderCreateRequest
+
+    response:
+        out FileInfo
+
+    error:
+        FolderCreateError
+
+struct DeleteRequest:
+
+    path String::
+        The path to the file or folder to be deleted.
+
+union DeleteError:
+    not_found::
+        The source file wasn't found at the specified path.
+    too_many_files::
+        Too many files would be involved in the operation for it to complete
+        successfully. The limit is currently 10,000 files and folders.
+
+op Delete:
+    doc::
+        Deletes a file or folder.
+
+    request:
+        in DeleteRequest
+
+    response:
+        out FileInfo
+
+    error:
+        DeleteError

@@ -224,7 +224,7 @@ struct FilesPutRequest extends LocaleRequest:
         overwrite Boolean::
             This value, either true (default) or false, determines what happens
             when there's already a file at the specified path. If true, the
-            existing file will be overwritten by the new one. If false, the new
+            existing file wi ll be overwritten by the new one. If false, the new
             file will be automatically renamed (for example, test.txt might be
             automatically renamed to test (1).txt). The new name can be obtained
             from the returned metadata.
