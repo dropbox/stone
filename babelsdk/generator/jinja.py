@@ -24,7 +24,7 @@ class Jinja2Generator(Generator):
     """
 
     # Matches format of Babel doc tags
-    _doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>[A-z]*)`')
+    _doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>[A-z\-_]*)`')
 
     def __init__(self, api):
 
