@@ -305,12 +305,9 @@ class CompositeType(DataType):
         Returns an iterator of all fields. Required fields before optional
         fields. Super type fields before type fields.
         """
-        for field in self.all_required_fields:
-            yield field
-        for field in self.all_optional_fields:
-            yield field
+        return self.all_required_fields + self.all_optional_fields
 
-    def _filter_fields(self, filter):
+    def _filter_fields(self, filter_function):
         """
         Utility to iterate through all fields (super types first) of a type.
 
@@ -318,12 +315,11 @@ class CompositeType(DataType):
             True, the field is part of the generated output. If False, it is
             omitted.
         """
+        fields = []
         if self.super_type:
-            for field in self.super_type._filter_fields(filter):
-                yield field
-        for field in self.fields:
-            if filter(field):
-                yield field
+            fields.extend(self.super_type._filter_fields(filter_function))
+        fields.extend(filter(filter_function, self.fields))
+        return fields
 
     @property
     def all_required_fields(self):
@@ -333,7 +329,6 @@ class CompositeType(DataType):
         """
         return self._filter_fields(lambda f: (isinstance(f, SymbolField)
                                               or not f.optional))
-
 
     @property
     def all_optional_fields(self):
