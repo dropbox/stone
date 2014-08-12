@@ -24,7 +24,7 @@ class Jinja2Generator(Generator):
     """
 
     # Matches format of Babel doc tags
-    _doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>[A-z\-_]*)`')
+    _doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>.*?)`')
 
     def __init__(self, api):
 
@@ -36,15 +36,20 @@ class Jinja2Generator(Generator):
         # Language -> dict of template filters
         self.language_to_template_filters = {}
 
+        from babelsdk.lang.js import JavascriptTargetLanguage
         from babelsdk.lang.python import PythonTargetLanguage
         from babelsdk.lang.ruby import RubyTargetLanguage
-        self.languages = [PythonTargetLanguage(), RubyTargetLanguage()]
+        self.languages = [JavascriptTargetLanguage(),
+                          PythonTargetLanguage(),
+                          RubyTargetLanguage()]
         for language in self.languages:
             for ext in language.get_supported_extensions():
                 self.ext_to_language[ext] = language
 
         self.env_vars = {'api': api}
-        self.template_env = jinja2.Environment(trim_blocks=True, lstrip_blocks=True, extensions=[TrimExtension])
+        self.template_env = jinja2.Environment(trim_blocks=True,
+                                               lstrip_blocks=True,
+                                               extensions=[TrimExtension])
 
         # Default filter: Pretty JSON
         self.template_env.filters['pjson'] = lambda s: json.dumps(s, indent=2)
@@ -53,12 +58,14 @@ class Jinja2Generator(Generator):
         self.template_env.filters['is_struct'] = lambda s: isinstance(s, Struct)
         self.template_env.filters['is_union'] = lambda s: isinstance(s, Union)
         self.template_env.filters['is_composite'] = lambda s: isinstance(s, Union)
+        self.template_env.filters['formal'] = lambda s: ' '.join(word.capitalize() for word in split_words(s))
+
 
         # Filters for making it easier to render code (as opposed to HTML)
 
-        # Jinja has format(pattern, text), but no way to do the reverse. This allows
-        # us to take a string and insert it into a format string. For example,
-        # Ruby symbols: {{ variable|inverse_format(':%s') }}
+        # Jinja has format(pattern, text), but no way to do the reverse. This
+        # allows us to take a string and insert it into a format string. For
+        # example, Ruby symbols: {{ variable|inverse_format(':%s') }}
         self.template_env.filters['inverse_format'] = lambda text, pattern: pattern.format(text)
 
         # Simple wrapper for slicing a string
@@ -71,7 +78,7 @@ class Jinja2Generator(Generator):
         # Add language specified filters
         for language in self.languages:
             for filter_name, method in self.get_template_filters(language).items():
-                lang_filter_name = language.get_language_short_name() + filter_name
+                lang_filter_name = language.get_language_short_name() + '_' + filter_name
                 self.template_env.filters[lang_filter_name] = method
 
         for language in self.languages:
@@ -96,7 +103,7 @@ class Jinja2Generator(Generator):
         return rendered_contents
 
     @staticmethod
-    def _doc_sub(doc, **kwargs):
+    def _doc_sub(doc, *args, **kwargs):
         """
         Substitutes tags in Babel docs with their language-specific
         counterpart. A tag has the following format:
@@ -114,7 +121,7 @@ class Jinja2Generator(Generator):
             if tag not in kwargs:
                 raise Exception('Could not find doc stub converter for tag %r'
                                 % tag)
-            doc = doc.replace(matched_text, kwargs[tag](val))
+            doc = doc.replace(matched_text, kwargs[tag](val, *args))
         return doc
 
     @staticmethod
@@ -128,6 +135,7 @@ class Jinja2Generator(Generator):
         return {'method': lambda s: language.format_method(split_words(s)),
                 'class': lambda s: language.format_class(split_words(s)),
                 'variable': lambda s: language.format_variable(split_words(s)),
+                'string_value': language.format_string_value,
                 'type': language.format_type,
                 'pprint': language.format_obj,}
 
