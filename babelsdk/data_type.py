@@ -429,7 +429,7 @@ class Struct(CompositeType):
             return None
         else:
             example_copy = copy.copy(example)
-            for field in self.fields:
+            for field in self.all_fields:
                 if field.name in example_copy:
                     # Only valid when the field has been set to null in the
                     # example.
