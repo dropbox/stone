@@ -22,14 +22,22 @@ class Api(object):
         return self.namespaces.get(name)
 
 class ApiNamespace(object):
+    """
+    Represents a category of API endpoints and their associated data types.
+    """
+
     def __init__(self, name):
         self.name = name
         self.operations = []
+        self.operation_by_name = {}
         self.data_types = []
+        self.data_type_by_name = {}
     def add_operation(self, operation):
         self.operations.append(operation)
+        self.operation_by_name[operation.name] = operation
     def add_data_type(self, data_type):
         self.data_types.append(data_type)
+        self.data_type_by_name[data_type.name] = data_type
 
 class ApiOperation(object):
     """
