@@ -42,7 +42,8 @@ struct SharedFolder:
     doc::
         Information specific to a shared folder.
 
-    id String
+    id String::
+        The unique identifier for this shared folder.
 
     example default:
         id="sf123"
@@ -134,8 +135,8 @@ struct FolderListRequest:
     path String::
         The path to the folder.
     include_deleted Boolean::
-        If this parameter is set to true, then :field:`contents` will include
-        the metadata of deleted children. Note that the target of the
+        If this parameter is set to :val:`true`, then :field:`contents` will
+        include the metadata of deleted children. Note that the target of the
         :op:`folder-list` call is always returned even when it has been deleted
         (with :field:`is_deleted` set to true) regardless of
         this flag.

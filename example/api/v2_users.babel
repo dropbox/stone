@@ -46,7 +46,7 @@ struct AccountInfo:
     country String(min_length=2, max_length=2)::
         The user's two-letter country code, if available.
     referral_link String::
-        The user's referral link.
+        The user's :link:`referral link https://www.dropbox.com/referrals`.
     quota QuotaInfo::
         The user's quota.
     is_paired Boolean::
@@ -81,7 +81,7 @@ struct AccountInfoRequest:
 
 op Info:
     doc::
-        Get user account information.
+        Get information about a user's account.
 
     request:
         info AccountInfoRequest
