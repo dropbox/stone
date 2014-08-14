@@ -58,6 +58,11 @@ struct Ancestor:
         The type of relationship with the descendant. Options are :val:`"move"`,
         :val:`"copy"` and :val:`"sharing_policy"`.
 
+    example default:
+        id="xyz123"
+        id_revision="rev456"
+        type="copy"
+
 # Parent struct for files or folders in a filesystem.
 struct BaseFile:
     doc::
