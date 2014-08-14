@@ -615,3 +615,28 @@ op Delete:
 
     error:
         DeleteError
+
+struct GetChildrenRequest:
+
+    id String::
+        The ID whose children are returned.
+
+    optional:
+        limit UInt32(max_value=100) = 100::
+            The maximum number of children that are returned.
+
+struct ChildrenList:
+
+    results List(data_type=String)::
+        The IDs that are descendants of the query ID.
+
+op Get-Children:
+    doc::
+        Retrieves a file's children by ID.
+
+    request:
+        in GetChildrenRequest
+
+    response:
+        out ChildrenList
+
