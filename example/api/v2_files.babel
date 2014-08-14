@@ -48,8 +48,8 @@ struct SharedFolder:
     example default:
         id="sf123"
 
-
-struct EntryInfo:
+# Parent struct for files or folders in a filesystem.
+struct BaseFile:
     doc::
         A file or folder entry.
 
@@ -73,7 +73,7 @@ struct EntryInfo:
     is_deleted Boolean::
         Whether the given entry is deleted.
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     doc::
         Describes a file.
 
@@ -96,7 +96,7 @@ struct FileInfo extends EntryInfo:
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
 
-struct FolderInfo extends EntryInfo:
+struct Folder extends BaseFile:
     doc::
         Describes a folder.
 
@@ -108,16 +108,16 @@ struct FolderInfo extends EntryInfo:
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
 
-union FileOrFolderInfo:
+union Entry:
     doc::
         A file or folder in a Dropbox.
 
-    file FileInfo
-    folder FolderInfo
+    file File
+    folder Folder
 
-struct FolderInfoAndContents extends FolderInfo:
+struct FolderAndContents extends Folder:
 
-    contents List(data_type=FileOrFolderInfo)::
+    contents List(data_type=Entry)::
         Ordered list of all contained files and folders.
 
     example default:
@@ -151,7 +151,7 @@ op Folder-List:
         in1 FolderListRequest
 
     response:
-        folder FolderInfoAndContents
+        folder FolderAndContents
 
 struct InfoRequest:
     doc::
@@ -174,7 +174,7 @@ op Info:
         in1 InfoRequest
 
     response:
-        info FileOrFolderInfo
+        info Entry
 
 op Download:
     doc::
@@ -184,7 +184,7 @@ op Download:
         in1 InfoRequest
 
     response:
-        info FileInfo
+        info File
         data Binary
 
     extras:
@@ -251,7 +251,7 @@ op Upload:
         in2 Binary
 
     response:
-        info FileInfo
+        info File
 
     error:
         UploadError
@@ -275,7 +275,7 @@ struct DeltaResponse:
         :op:`Delta` again immediately to retrieve those entries. If
         :val:`false`, then wait for at least five minutes (preferably longer)
         before checking again.
-    entries List(data_type=FileOrFolderInfo)::
+    entries List(data_type=Entry)::
         Each file or directory that has been changed.
 
 
@@ -404,7 +404,7 @@ op Thumbnail:
         in1 ThumbnailRequest
 
     response:
-        info FileInfo
+        info File
         data Binary
 
     extras:
@@ -413,7 +413,7 @@ op Thumbnail:
 
 struct RevisionHistory:
 
-    revisions List(data_type=FileOrFolderInfo)::
+    revisions List(data_type=Entry)::
         List of file or folders that have been part of the revision history.
 
 op Revisions:
@@ -449,7 +449,7 @@ op Restore:
         in RestoreRequest
 
     response:
-        out FileInfo
+        out File
 
 struct SearchRequest:
 
@@ -473,7 +473,7 @@ struct SearchResults:
 
     has_more Boolean::
         If true, then the number of files found exceeds the file_limit.
-    results List(data_type=FileOrFolderInfo)::
+    results List(data_type=Entry)::
         List of file or folders that match the search query.
 
     example default:
@@ -513,7 +513,7 @@ op Preview:
         in InfoRequest
 
     response:
-        out FileInfo
+        out File
         data Binary
 
     error:
@@ -551,7 +551,7 @@ op Copy:
         in CopyRequest
 
     response:
-        out FileInfo
+        out File
 
     error:
         CopyError
@@ -564,7 +564,7 @@ op Move:
         in CopyRequest
 
     response:
-        out FileInfo
+        out File
 
     error:
         CopyError
@@ -586,7 +586,7 @@ op Folder-Create:
         in FolderCreateRequest
 
     response:
-        out FileInfo
+        out File
 
     error:
         FolderCreateError
@@ -611,7 +611,7 @@ op Delete:
         in DeleteRequest
 
     response:
-        out FileInfo
+        out File
 
     error:
         DeleteError
