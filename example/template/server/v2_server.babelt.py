@@ -10,7 +10,7 @@ from bottle import (
     run,
 )
 
-def segmentation_response(header, *segments):
+def segmentation_response(header, body, *segments):
     """Constructs HTTP headers and body for a segmentation response."""
     response_json = []
 
@@ -22,6 +22,8 @@ def segmentation_response(header, *segments):
 
     if header:
         response.headers['Dropbox-API-Result'] = json.dumps(response_json, indent=2)
+        if body:
+            return open('v2_server.babelt.py')
     else:
         # Manually convert json to a string because bottle only dumps json for
         # dicts, and not lists.
@@ -36,6 +38,11 @@ def segmentation_response(header, *segments):
 def {{ namespace_name }}_{{ op.name|method }}():
     return segmentation_response(
         {% if op.extras.host == 'content' %}
+        True,
+        {% else %}
+        False,
+        {% endif %}
+        {% if op.response_segmentation.segments_by_name.get('data') %}
         True,
         {% else %}
         False,
