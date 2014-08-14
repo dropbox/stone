@@ -52,7 +52,7 @@ struct AccountInfo:
     is_paired Boolean::
         Whether the user has a personal and business account.
     team Team nullable::
-        If this paired account is a member of a team.
+        If this account is a member of a team.
 
     example default:
         display_name="Jon Snow"
