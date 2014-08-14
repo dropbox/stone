@@ -2,7 +2,7 @@ namespace files
 
 include v2_common
 
-struct PhotoInfo:
+struct Photo:
     doc::
         Photo-specific information derived from EXIF data.
 
@@ -15,7 +15,7 @@ struct PhotoInfo:
         time_taken="Sat, 28 Jun 2014 18:23:21"
         lat_long=null
 
-struct VideoInfo:
+struct Video:
     doc::
         Video-specific information derived from EXIF data.
 
@@ -35,9 +35,10 @@ union MediaInfo:
     doc::
         Media specific information.
 
-    photo PhotoInfo
-    video VideoInfo
+    photo Photo
+    video Video
 
+# Parent struct for files or folders in a filesystem.
 struct SharedFolder:
     doc::
         Information specific to a shared folder.
@@ -48,63 +49,118 @@ struct SharedFolder:
     example default:
         id="sf123"
 
-# Parent struct for files or folders in a filesystem.
+# For fileid ancestry tree
+struct Ancestor:
+    i
+
 struct BaseFile:
     doc::
         A file or folder entry.
 
     id String(max_length=40)::
         A unique identifier for the file.
-    id_rev UInt64::
+    id_revision UInt64::
         A unique identifier for the current revision of a file. This field is
         the same rev as elsewhere in the API and can be used to detect changes
         and avoid conflicts.
     path String::
         Path to file or folder.
-    path_rev UInt64::
+    path_revision UInt64::
         A unique identifier for the current revision of a file path. This field
         is the same rev as elsewhere in the API and can be used to detect changes
         and avoid conflicts.
-    shared_folder SharedFolder nullable::
-        If this a shared folder, information about it.
     modified DbxTimestamp nullable::
         The last time the file was modified on Dropbox, in the standard Timestamp
         format (:val:`null` for root folder).
     is_deleted Boolean::
         Whether the given entry is deleted.
+    ancestor Ancestor::
+        The ancestor of this file or folder.
+
+    optional:
+        read_only Boolean::
+            For shared folders, this field specifies whether the user has
+            read-only access to the folder. For files within a shared folder,
+            this specifies the read-only status of the parent shared folder.
+
+struct SharingUser:
+
+    account_id String::
+        Account ID of the user.
+    display_name String::
+        Name of the user.
+    same_team Boolean::
+        Whether this user is part of the same team.
+
+    example default:
+        account_id="8320432"
+        display_name="John Doe"
+        same_team=true
 
 struct File extends BaseFile:
     doc::
-        Describes a file.
+        Information about a file.
 
     size UInt64::
         File size in bytes.
-    mime_type String nullable::
-        The Internet media type determined by the file extension.
 
     optional:
         media_info MediaInfo::
             Information specific to photo and video media.
+        parent_shared_folder_id String::
+            For files within a shared folder, this field specifies the ID of
+            the containing shared folder.
+        modifier SharingUser::
+            The user who last modified this file.
 
     example default:
         id="xyz123"
-        id_rev=2
-        path="/Photos/flower.jpg"
-        path_rev=19
+        id_revision=2
+        path="/Project/A/terms.docx"
+        path_revision=19
         size=1234
-        mime_type="image/jpg"
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
+        parent_shared_folder_id="abcd1234"
+
+struct SharingMember:
+
+    user SharingUser::
+        User information.
+    role String::
+        A user may be an :val:`"editor"`, :val:`"viewer"`, or :val:`"owner"`.
+    active Boolean::
+        Whether the user is an active member of the shared folder.
+
+    example default:
+        role="owner"
+        active=true
+
+struct SharedFolder:
+    doc::
+        Information specific to a shared folder.
+
+    id String::
+        The unique identifier for this shared folder.
+    members List(data_type=SharingMember)::
+        List of members who have access to this folder.
+
+    example default:
+        id="sf123"
 
 struct Folder extends BaseFile:
     doc::
-        Describes a folder.
+        Information about a folder.
+
+    optional:
+        shared_folder SharedFolder::
+            If this a shared folder, information about it.
 
     example default:
         id="abc456"
-        id_rev=3
+        id_revision=3
         path="/Photos"
-        path_rev=20
+        path_revision=20
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
 
@@ -122,9 +178,9 @@ struct FolderAndContents extends Folder:
 
     example default:
         id="abc456"
-        id_rev=3
+        id_revision=3
         path="/Photos"
-        path_rev=20
+        path_revision=20
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
 
@@ -132,20 +188,25 @@ struct FolderListRequest:
     doc::
         Stub.
 
-    path String::
-        The path to the folder.
-    include_deleted Boolean::
-        If this parameter is set to :val:`true`, then :field:`contents` will
-        include the metadata of deleted children. Note that the target of the
-        :op:`folder-list` call is always returned even when it has been deleted
-        (with :field:`is_deleted` set to true) regardless of
-        this flag.
-    include_media_info Boolean::
-        If true, each file will include a media_info key.
+    optional:
+        id String::
+            The path to the folder.
+        path String::
+            The id of the folder.
+        include_deleted Boolean = false::
+            If this parameter is set to :val:`true`, then :field:`contents` will
+            include the metadata of deleted children. Note that the target of the
+            :op:`folder-list` call is always returned even when it has been deleted
+            (with :field:`is_deleted` set to true) regardless of
+            this flag.
+        include_media_info Boolean = false::
+            If true, each file will include a media_info key.
 
 op Folder-List:
     doc::
         Get the contents of a folder.
+
+        Either a :field:`path` or :field:`id` must be specified.
 
     request:
         in1 FolderListRequest
@@ -160,7 +221,7 @@ struct InfoRequest:
     path String::
         The path to the file or folder.
     optional:
-        path_rev Rev::
+        path_revision Rev::
             Specific revision for a given path.
 
     example default:
@@ -194,16 +255,16 @@ op Download:
 
 struct UpdateParentRev:
     doc::
-        On a write conflict, overwrite the existing file if the parent rev
+        On a write conflict, overwrite the existing file if the parent revision
         matches.
 
-    parent_rev String::
+    parent_revision String::
         The revision to be updated.
     auto_rename Boolean::
         Whether the new file should be renamed on a conflict.
 
     example default:
-        parent_rev="abc123"
+        parent_revision="abc123"
         auto_rename=false
 
 union WriteConflictPolicy:
@@ -259,14 +320,73 @@ op Upload:
     extras:
         host="content"
 
+union PreviewError:
+    not_found::
+        The file wasn't found at the specified :field:`path`, or wasn't found
+        at the specified :field:`path_revision`.
+    no_preview::
+        No preview has been generated yet or unable to generate a preview for
+        the file.
+
+op Preview:
+    doc::
+        Gets a preview for a file.
+
+        The Content-Type header will be either application/pdf or text/html.
+        There is an Original-Content-Length header which contains the size of
+        the preview data.
+
+    request:
+        in InfoRequest
+
+    response:
+        out File
+        data Binary
+
+    error:
+        PreviewError
+
+    extras:
+        host="content"
+
+struct ThumbnailRequest:
+    doc::
+        Stub.
+
+    format String::
+        jpeg (default) or png. For images that are photos, jpeg should be
+        preferred, while png is better for screenshots and digital art.
+
+    optional:
+        size String = "s"::
+            One of the following values: xs, s, m, l, xl.
+
+    example default:
+        format="jpeg"
+        size="m"
+
+op Thumbnail:
+    doc::
+        Get the thumbnail for a file.
+
+    request:
+        in1 ThumbnailRequest
+
+    response:
+        info File
+        data Binary
+
+    extras:
+        host="content"
+
+
 struct DeltaResponse:
 
     reset Boolean::
-        If :val:`true`, clear your local state before processing the delta
-        entries. :field:`reset` is always :val:`true` on the initial call to
-        :op:`Delta` (i.e. when no cursor is passed in). Otherwise, it is
-        :val:`true` in rare situations, such as after server or account
-        maintenance, or if a user deletes their app folder.
+        If :val:`true`, clear your local state. There will be no
+        :field:`entries`. Then call :op:`delta` with no cursor. :field:`reset`
+        will be :val:`true` only on rare occasions, such as after server or
+        account maintenance, or if a user deletes their app folder.
     cursor String::
         A string that encodes the latest information that has been returned.
         On the next call to :op:`Delta`, pass in this value.
@@ -293,21 +413,24 @@ struct DeltaRequest:
         A string that is used to keep track of your current state. On the
         next call pass in this value to return delta entries that have been
         recorded since the cursor was returned.
-    path_prefix String nullable::
-        Filters the response to only include entries at or under the specified
-        path. If you use the path_prefix parameter, you must continue to pass
-        the same prefix on subsequent calls using the returned cursor.
-    include_media_info Boolean = false::
-        If :val:`true`, each file will include a :field:`media_info` key. When
-        :field:`include_media_info` is specified, files will only appear in
-        delta responses when the media info is ready. If you use the
-        :field:`include_media_info` parameter, you must continue to pass the
-        same value on subsequent calls using the returned cursor.
+
+    optional:
+        path_prefix String::
+            Filters the response to only include entries at or under the specified
+            path.
+        include_media_info Boolean = false::
+            If :val:`true`, each file will include a :field:`media_info` key. When
+            :field:`include_media_info` is specified, files will only appear in
+            delta responses when the media info is ready.
+        include_membership Boolean = false::
+            If true, each shared folder will include a list of the members of
+            the shared folder.
 
     example default:
         cursor=null
-        path_prefix=null
+        path_prefix="/Photos"
         include_media_info=false
+        include_membership=false
 
 op Delta:
     doc::
@@ -379,37 +502,6 @@ op LongpollDelta:
     extras:
         host="notify"
         noauth=true
-
-struct ThumbnailRequest:
-    doc::
-        Stub.
-
-    format String::
-        jpeg (default) or png. For images that are photos, jpeg should be
-        preferred, while png is better for screenshots and digital art.
-
-    optional:
-        size String = "s"::
-            One of the following values: xs, s, m, l, xl.
-
-    example default:
-        format="jpeg"
-        size="m"
-
-op Thumbnail:
-    doc::
-        Get the thumbnail for a file.
-
-    request:
-        in1 ThumbnailRequest
-
-    response:
-        info File
-        data Binary
-
-    extras:
-        host="content"
-
 
 struct RevisionHistory:
 
@@ -492,35 +584,6 @@ op Search:
 
     response:
         out SearchResults
-
-union PreviewError:
-    not_found::
-        The file wasn't found at the specified :field:`path`, or wasn't found
-        at the specified :field:`path_rev`.
-    no_preview::
-        No preview has been generated yet or unable to generate a preview for
-        the file.
-
-op Preview:
-    doc::
-        Gets a preview for a file.
-
-        The Content-Type header will be either application/pdf or text/html.
-        There is an Original-Content-Length header which contains the size of
-        the preview data.
-
-    request:
-        in InfoRequest
-
-    response:
-        out File
-        data Binary
-
-    error:
-        PreviewError
-
-    extras:
-        host="content"
 
 struct CopyRequest:
 
