@@ -147,6 +147,7 @@ class BabelLexer(object):
         'nullable',
         'op',
         'optional',
+        'pass',
         'struct',
         'union',
         'request',
@@ -163,6 +164,7 @@ class BabelLexer(object):
         'optional': 'OPTIONAL',
         'request': 'REQUEST',
         'response': 'RESPONSE',
+        'pass': 'PASS',
     }
 
     tokens += tuple(RESERVED.values())

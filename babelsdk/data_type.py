@@ -420,7 +420,7 @@ class Struct(CompositeType):
 
     def get_example(self, label):
         example = self.examples.get(label)
-        if not example:
+        if example is None:
             return None
         else:
             example_copy = copy.copy(example)

@@ -388,8 +388,12 @@ class BabelParser(object):
         p[0] = (p[2], p[6])
 
     def p_statement_example_field_list(self, p):
-        'example_field_list : example_field'
-        p[0] = [p[1]]
+        """example_field_list : example_field
+                              | PASS NEWLINE"""
+        if p[1] == 'pass':
+            p[0] = []
+        else:
+            p[0] = [p[1]]
 
     def p_statement_example_field_list_2(self, p):
         'example_field_list : example_field_list example_field'
