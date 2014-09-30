@@ -126,10 +126,7 @@ class TowerOfBabel(object):
                              % item.composite_type)
         api_type_fields = []
         for babel_field in item.fields:
-            api_type_field = self._create_field(env, babel_field, optional=False)
-            api_type_fields.append(api_type_field)
-        for babel_field in item.optional_fields:
-            api_type_field = self._create_field(env, babel_field, optional=True)
+            api_type_field = self._create_field(env, babel_field, optional=babel_field.optional)
             api_type_fields.append(api_type_field)
         api_type = composite_type_obj(item.name, item.doc, api_type_fields, super_type)
         for example_label, example in item.examples.items():

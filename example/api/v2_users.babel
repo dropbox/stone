@@ -12,10 +12,8 @@ struct QuotaInfo:
         The user's used quota outside of shared folders (bytes).
     shared UInt64::
         The user's used quota in shared folders (bytes).
-
-    optional:
-        datastores UInt64 nullable::
-            The user's used quota in datastores (bytes).
+    datastores UInt64|null optional::
+        The user's used quota in datastores (bytes).
 
     example default:
         quota=1000000
@@ -43,7 +41,7 @@ struct AccountInfo:
         The user's unique Dropbox ID.
     email String::
         The user's e-mail address.
-    country String(min_length=2, max_length=2)::
+    country String(min_length=2, max_length=2, pattern="[US]+")::
         The user's two-letter country code, if available.
     referral_link String::
         The user's :link:`referral link https://www.dropbox.com/referrals`.
@@ -51,7 +49,7 @@ struct AccountInfo:
         The user's quota.
     is_paired Boolean::
         Whether the user has a personal and business account.
-    team Team nullable::
+    team Team|null::
         If this account is a member of a team.
 
     example default:
@@ -75,7 +73,7 @@ struct AccountInfoRequest:
     doc::
         Stub.
 
-    account_id String::
+    account_id String|null = "me" optional::
         A user's account identifier. Use "me" to get information for the
         current account.
 

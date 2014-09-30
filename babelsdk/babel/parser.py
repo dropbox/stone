@@ -30,7 +30,6 @@ class BabelTypeDef(object):
         self.extends = extends
         self.doc = None
         self.fields = []
-        self.optional_fields = []
         self.examples = OrderedDict()
 
     def set_doc(self, docstring):
@@ -39,20 +38,16 @@ class BabelTypeDef(object):
     def set_fields(self, fields):
         self.fields = fields
 
-    def set_optional_fields(self, fields):
-        self.optional_fields = fields
-
     def add_example(self, label, example):
         self.examples[label] = example
 
     def __str__(self):
         return self.__repr__()
     def __repr__(self):
-        return 'BabelType({!r}, {!r}, {!r}, {!r})'.format(
+        return 'BabelType({!r}, {!r}, {!r})'.format(
             self.composite_type,
             self.name,
             self.fields,
-            self.optional_fields,
         )
 
 class BabelSymbol(object):
@@ -105,7 +100,7 @@ class BabelAlias(object):
         )
 
 class BabelField(object):
-    def __init__(self, name, data_type_name, data_type_attrs, nullable=False):
+    def __init__(self, name, data_type_name, data_type_attrs, nullable, optional):
         """
         :param data_type_attrs: List of attributes.
         """
@@ -116,6 +111,7 @@ class BabelField(object):
         self.nullable = nullable
         self.has_default = False
         self.default = None
+        self.optional = optional
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -231,7 +227,7 @@ class BabelParser(object):
             p[0] = []
 
     def p_statement_typedef(self, p):
-        'typedef : KEYWORD ID COLON NEWLINE INDENT docsection field_list optional_field_list example_list DEDENT'
+        'typedef : KEYWORD ID COLON NEWLINE INDENT docsection field_list example_list DEDENT'
         if p[1] not in ('struct', 'union'):
             raise ValueError('Keyword must be struct or union')
         p[0] = BabelTypeDef(p[1], p[2])
@@ -239,15 +235,13 @@ class BabelParser(object):
             p[0].set_doc(self._normalize_docstring(p[6]))
         if p[7] is not None:
             p[0].set_fields(p[7])
-        if p[8] is not None:
-            p[0].set_optional_fields(p[8])
-        if p[9]:
-            for label, example in p[9]:
+        if p[8]:
+            for label, example in p[8]:
                 p[0].add_example(label, example)
 
     # FIXME: GET RID OF THIS by combining with above.
     def p_statement_typedef_with_inheritance(self, p):
-        'typedef : KEYWORD ID KEYWORD ID COLON NEWLINE INDENT docsection field_list optional_field_list example_list DEDENT'
+        'typedef : KEYWORD ID KEYWORD ID COLON NEWLINE INDENT docsection field_list example_list DEDENT'
         if p[1] != 'struct':
             raise ValueError('Keyword must be struct')
         elif p[3] != 'extends':
@@ -258,16 +252,8 @@ class BabelParser(object):
         if p[9] is not None:
             p[0].set_fields(p[9])
         if p[10] is not None:
-            p[0].set_optional_fields(p[10])
-        if p[11] is not None:
-            for label, example in p[11]:
+            for label, example in p[10]:
                 p[0].add_example(label, example)
-
-    def p_statement_optional_fields(self, p):
-        """optional_field_list : OPTIONAL COLON NEWLINE INDENT field_list DEDENT
-                               | empty"""
-        if p[1] is not None:
-            p[0] = p[5]
 
     def p_statement_request_section(self, p):
         """reqsection : REQUEST COLON NEWLINE INDENT field_list DEDENT"""
@@ -346,10 +332,19 @@ class BabelParser(object):
         p[0] = p[1]
         p[0].append(p[2])
 
-    def p_field_nullable_option(self, p):
-        """nullable_option : NULLABLE
-                          | empty"""
+    def p_field_nullable(self, p):
+        """nullable : PIPE NULL
+                    | empty"""
         p[0] = p[1] is not None
+
+    def p_field_presence(self, p):
+        """presence : REQUIRED
+                    | OPTIONAL
+                    | empty"""
+        if bool(p[1]):
+            p[0] = (p[1] == 'optional')
+        else:
+            p[0] = False
 
     def p_eq_primitive(self, p):
         """eq_primitive : EQ INTEGER
@@ -365,10 +360,10 @@ class BabelParser(object):
         p[0] = p[1]
 
     def p_statement_field(self, p):
-        """field : ID ID attributes_group nullable_option default_option DOUBLE_COLON docstring DEDENT
-                 | ID ID attributes_group nullable_option default_option NEWLINE"""
+        """field : ID ID attributes_group nullable default_option presence DOUBLE_COLON docstring DEDENT
+                 | ID ID attributes_group nullable default_option presence NEWLINE"""
         has_docstring = (p[6] == '::')
-        p[0] = BabelField(p[1], p[2], p[3], p[4])
+        p[0] = BabelField(p[1], p[2], p[3], p[4], p[6])
         if p[5] is not None:
             if p[5] is BabelNull:
                 p[0].set_default(None)

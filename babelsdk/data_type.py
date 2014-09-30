@@ -14,6 +14,7 @@ from collections import OrderedDict
 import copy
 import datetime
 import numbers
+import re
 import types
 
 class DataType(object):
@@ -130,16 +131,30 @@ class Boolean(PrimitiveType):
             raise ValueError('%r is not a valid boolean' % val)
 
 class String(PrimitiveType):
-    def __init__(self, min_length=None, max_length=None):
+    def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
+            assert isinstance(min_length, numbers.Integral), (
+                'min_length must be an integral number'
+            )
             assert min_length >= 0, 'min_length must be >= 0'
         if max_length is not None:
+            assert isinstance(max_length, numbers.Integral), (
+                'max_length must be an integral number'
+            )
             assert max_length > 0, 'max_length must be > 0'
         if min_length and max_length:
             assert max_length >= min_length, 'max_length must be >= min_length'
 
         self.min_length = min_length
         self.max_length = max_length
+        self.pattern = pattern
+        self.pattern_re = None
+
+        if pattern:
+            try:
+                self.pattern_re = re.compile(pattern)
+            except re.error as e:
+                raise ValueError('Regex {!r} failed: {}'.format(pattern, e.args[0]))
 
     def check(self, val):
         if not isinstance(val, types.StringTypes):
@@ -150,6 +165,9 @@ class String(PrimitiveType):
         elif self.min_length is not None and len(val) < self.min_length:
             raise ValueError('%r has fewer than %s characters'
                              % (val, self.min_length))
+        elif self.pattern and not self.pattern_re.match(val):
+            raise ValueError('%r did not match pattern %r'
+                             % (val, self.pattern))
 
 class Timestamp(PrimitiveType):
     """Should support any timestamp format, not just the Dropbox format."""

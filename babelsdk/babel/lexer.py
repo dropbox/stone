@@ -97,6 +97,7 @@ class BabelLexer(object):
        'ID',
        'KEYWORD',
        'PATH',
+       'PIPE',
     )
 
     # Tokens related to free text
@@ -135,36 +136,37 @@ class BabelLexer(object):
     t_EQ = r'='
     t_COMMA = r','
     t_COLON = r':'
+    t_PIPE = r'\|'
 
     KEYWORDS = [
         'alias',
         'doc',
         'example',
+        'error',
         'extends',
         'extras',
         'include',
         'namespace',
-        'nullable',
         'op',
         'optional',
         'pass',
+        'request',
+        'required',
+        'response',
         'struct',
         'union',
-        'request',
-        'response',
-        'error',
     ]
 
     RESERVED = {
         'error': 'ERROR',
         'extras': 'EXTRAS',
         'include': 'INCLUDE',
-        'nullable': 'NULLABLE',
         'op': 'OP',
         'optional': 'OPTIONAL',
-        'request': 'REQUEST',
-        'response': 'RESPONSE',
         'pass': 'PASS',
+        'request': 'REQUEST',
+        'required': 'REQUIRED',
+        'response': 'RESPONSE',
     }
 
     tokens += tuple(RESERVED.values())
