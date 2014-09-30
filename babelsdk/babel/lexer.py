@@ -159,6 +159,7 @@ class BabelLexer(object):
 
     RESERVED = {
         'error': 'ERROR',
+        'extends': 'EXTENDS',
         'extras': 'EXTRAS',
         'include': 'INCLUDE',
         'op': 'OP',
@@ -167,6 +168,8 @@ class BabelLexer(object):
         'request': 'REQUEST',
         'required': 'REQUIRED',
         'response': 'RESPONSE',
+        'struct': 'STRUCT',
+        'union': 'UNION',
     }
 
     tokens += tuple(RESERVED.values())

@@ -174,7 +174,7 @@ Types can also be composed of other types::
            The user's quota.
        is_paired Boolean::
            Whether the user has a personal and business account.
-       team Team nullable::
+       team Team|null::
            If this paired account is a member of a team.
 
        example default:
@@ -187,7 +187,7 @@ Types can also be composed of other types::
            team=null
 
 
-Note in the example above that the ``AccountInfo.team`` field  was marked as "nullable". By default,
+Note in the example above that the ``AccountInfo.team`` field  was marked as nullable. By default,
 fields do not accept ``null`` as a valid value.
 
 A struct can also inherit from another struct using the "extends" keyword::
@@ -204,7 +204,7 @@ A struct can also inherit from another struct using the "extends" keyword::
             and avoid conflicts.
         path String::
             Path to file or folder.
-        modified DbxDate nullable::
+        modified DbxDate|null::
             The last time the file was modified on Dropbox, in the standard date
             format (null for root folder).
         is_deleted Boolean::
@@ -216,12 +216,10 @@ A struct can also inherit from another struct using the "extends" keyword::
 
         size UInt64::
             File size in bytes.
-        mime_type String nullable::
+        mime_type String|null::
             The Internet media type determined by the file extension.
-
-        optional:
-            media_info MediaInfo::
-                Information specific to photo and video media.
+        media_info MediaInfo optional::
+            Information specific to photo and video media.
 
         example default:
             id="xyz123"
@@ -232,7 +230,7 @@ A struct can also inherit from another struct using the "extends" keyword::
             modified="Sat, 28 Jun 2014 18:23:21"
             is_deleted=false
 
-Note the use of the ``optional`` section which denotes that the fields may not
+Note the use of the ``optional`` keyword which denotes that the field may not
 be present. How this is handled is language and implementation specific.
 
 Union
@@ -247,7 +245,7 @@ a data type::
 
        time_taken DbxDate::
            When the photo was taken.
-       lat_long List(data_type=Float) nullable::
+       lat_long List(data_type=Float)|null::
            The GPS coordinates where the photo was taken.
 
        example default:
@@ -260,7 +258,7 @@ a data type::
 
        time_taken DbxDate::
            When the photo was taken.
-       lat_long List(data_type=Float) nullable::
+       lat_long List(data_type=Float)|null::
            The GPS coordinates where the photo was taken.
        duration Float::
            Length of video in milliseconds.

@@ -126,7 +126,7 @@ class TowerOfBabel(object):
                              % item.composite_type)
         api_type_fields = []
         for babel_field in item.fields:
-            api_type_field = self._create_field(env, babel_field, optional=babel_field.optional)
+            api_type_field = self._create_field(env, babel_field)
             api_type_fields.append(api_type_field)
         api_type = composite_type_obj(item.name, item.doc, api_type_fields, super_type)
         for example_label, example in item.examples.items():
@@ -134,7 +134,7 @@ class TowerOfBabel(object):
         env[item.name] = api_type
         return api_type
 
-    def _create_field(self, env, babel_field, optional):
+    def _create_field(self, env, babel_field):
         if isinstance(babel_field, BabelSymbol):
             api_type_field = SymbolField(babel_field.name, babel_field.doc)
         elif babel_field.data_type_name not in env:
@@ -157,7 +157,7 @@ class TowerOfBabel(object):
                 data_type,
                 babel_field.doc,
                 nullable=babel_field.nullable,
-                optional=optional,
+                optional=babel_field.optional,
             )
             if babel_field.has_default:
                 if not (babel_field.nullable and babel_field.default is None):

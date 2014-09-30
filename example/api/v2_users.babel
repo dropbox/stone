@@ -69,6 +69,13 @@ struct AccountInfo:
         is_paired=false
         team=null
 
+struct MoreAccountInfo extends AccountInfo:
+    doc::
+        Stub for testing.
+
+    locale String::
+        Locale set by the user.
+
 struct AccountInfoRequest:
     doc::
         Stub.

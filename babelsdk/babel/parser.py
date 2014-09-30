@@ -226,10 +226,8 @@ class BabelParser(object):
         else:
             p[0] = []
 
-    def p_statement_typedef(self, p):
-        'typedef : KEYWORD ID COLON NEWLINE INDENT docsection field_list example_list DEDENT'
-        if p[1] not in ('struct', 'union'):
-            raise ValueError('Keyword must be struct or union')
+    def p_statement_typedef_union(self, p):
+        'typedef : UNION ID COLON NEWLINE INDENT docsection field_list example_list DEDENT'
         p[0] = BabelTypeDef(p[1], p[2])
         if p[6]:
             p[0].set_doc(self._normalize_docstring(p[6]))
@@ -239,20 +237,21 @@ class BabelParser(object):
             for label, example in p[8]:
                 p[0].add_example(label, example)
 
-    # FIXME: GET RID OF THIS by combining with above.
-    def p_statement_typedef_with_inheritance(self, p):
-        'typedef : KEYWORD ID KEYWORD ID COLON NEWLINE INDENT docsection field_list example_list DEDENT'
-        if p[1] != 'struct':
-            raise ValueError('Keyword must be struct')
-        elif p[3] != 'extends':
-            raise ValueError('Keyword must be extends')
-        p[0] = BabelTypeDef(p[1], p[2], extends=p[4])
-        if p[8]:
-            p[0].set_doc(self._normalize_docstring(p[8]))
+    def p_inheritance(self, p):
+        """inheritance : EXTENDS ID
+                       | empty"""
+        if p[1]:
+            p[0] = p[2]
+
+    def p_statement_typedef_struct(self, p):
+        'typedef : STRUCT ID inheritance COLON NEWLINE INDENT docsection field_list example_list DEDENT'
+        p[0] = BabelTypeDef(p[1], p[2], extends=p[3])
+        if p[7]:
+            p[0].set_doc(self._normalize_docstring(p[7]))
+        if p[8] is not None:
+            p[0].set_fields(p[8])
         if p[9] is not None:
-            p[0].set_fields(p[9])
-        if p[10] is not None:
-            for label, example in p[10]:
+            for label, example in p[9]:
                 p[0].add_example(label, example)
 
     def p_statement_request_section(self, p):

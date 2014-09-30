@@ -91,7 +91,7 @@ window.setTimeout(function() {
 <li id="toc-Info"><a href="#users-Info">Info</a></li>    </ul>
 <h4>Files</h4>
     <ul>
-<li id="toc-Folder-List"><a href="#files-Folder-List">Folder-List</a></li><li id="toc-Info"><a href="#files-Info">Info</a></li><li id="toc-Download"><a href="#files-Download">Download</a></li><li id="toc-Upload"><a href="#files-Upload">Upload</a></li><li id="toc-Delta"><a href="#files-Delta">Delta</a></li><li id="toc-LongpollDelta"><a href="#files-LongpollDelta">LongpollDelta</a></li><li id="toc-Thumbnail"><a href="#files-Thumbnail">Thumbnail</a></li><li id="toc-Revisions"><a href="#files-Revisions">Revisions</a></li><li id="toc-Restore"><a href="#files-Restore">Restore</a></li><li id="toc-Search"><a href="#files-Search">Search</a></li><li id="toc-Preview"><a href="#files-Preview">Preview</a></li><li id="toc-Copy"><a href="#files-Copy">Copy</a></li><li id="toc-Move"><a href="#files-Move">Move</a></li><li id="toc-Folder-Create"><a href="#files-Folder-Create">Folder-Create</a></li><li id="toc-Delete"><a href="#files-Delete">Delete</a></li>    </ul>
+<li id="toc-Folder-List"><a href="#files-Folder-List">Folder-List</a></li><li id="toc-Info"><a href="#files-Info">Info</a></li><li id="toc-Download"><a href="#files-Download">Download</a></li><li id="toc-Upload"><a href="#files-Upload">Upload</a></li><li id="toc-Preview"><a href="#files-Preview">Preview</a></li><li id="toc-Thumbnail"><a href="#files-Thumbnail">Thumbnail</a></li><li id="toc-Delta"><a href="#files-Delta">Delta</a></li><li id="toc-LongpollDelta"><a href="#files-LongpollDelta">LongpollDelta</a></li><li id="toc-Revisions"><a href="#files-Revisions">Revisions</a></li><li id="toc-Restore"><a href="#files-Restore">Restore</a></li><li id="toc-Search"><a href="#files-Search">Search</a></li><li id="toc-Copy"><a href="#files-Copy">Copy</a></li><li id="toc-Move"><a href="#files-Move">Move</a></li><li id="toc-Folder-Create"><a href="#files-Folder-Create">Folder-Create</a></li><li id="toc-Delete"><a href="#files-Delete">Delete</a></li><li id="toc-Get-Children"><a href="#files-Get-Children">Get-Children</a></li>    </ul>
 
 
 <h4>Webhooks</h4>
@@ -125,7 +125,7 @@ window.setTimeout(function() {
     </h3>
     <dl>
         <dt>Description</dt>
-        <dd>Get user account information.</dd>
+        <dd>Get information about a user's account.</dd>
         <dt class="url-label">URL Structure</dt>
         <dd>
             <pre class="literal-block">https://api.dropbox.com/2/users/info</pre>
@@ -147,8 +147,8 @@ Stub.
             <code>account_id</code>
         </td>
         <td>String</td>
-        <td>No</td>
-        <td>A user's account identifier. Use "me" to get information for the current account.</td>
+        <td>Yes</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -186,7 +186,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The full name of a user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -194,7 +194,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's unique Dropbox ID.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -202,7 +202,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's e-mail address.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -210,7 +210,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's two-letter country code, if available.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -218,7 +218,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's referral link.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -226,7 +226,7 @@ Information for a user's account.
         </td>
         <td>QuotaInfo</td>
         <td>No</td>
-        <td>The user's quota.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -234,7 +234,7 @@ Information for a user's account.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the user has a personal and business account.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -242,7 +242,7 @@ Information for a user's account.
         </td>
         <td>Team</td>
         <td>Yes</td>
-        <td>If this paired account is a member of a team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -261,7 +261,7 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>The user's total quota allocation (bytes).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -269,7 +269,7 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>The user's used quota outside of shared folders (bytes).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -277,7 +277,7 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>The user's used quota in shared folders (bytes).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -285,7 +285,7 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>Yes</td>
-        <td>The user's used quota in datastores (bytes).</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -305,7 +305,7 @@ Information relevant to a team.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The name of the team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -385,7 +385,8 @@ struct Team:
     </h3>
     <dl>
         <dt>Description</dt>
-        <dd>Get the contents of a folder.</dd>
+        <dd>Get the contents of a folder.
+Either a :field:`path` or :field:`id` must be specified.</dd>
         <dt class="url-label">URL Structure</dt>
         <dd>
             <pre class="literal-block">https://api.dropbox.com/2/files/folder-list</pre>
@@ -404,11 +405,19 @@ Stub.
     </tr>
 <tr>
         <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
             <code>path</code>
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -416,7 +425,7 @@ Stub.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If this parameter is set to true, then :field:`contents` will include the metadata of deleted children. Note that the target of the :op:`folder-list` call is always returned even when it has been deleted (with :field:`is_deleted` set to true) regardless of this flag.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -424,7 +433,7 @@ Stub.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, each file will include a media_info key.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -437,6 +446,7 @@ Stub.
             <!--
             <h5>Formal Definition</h5>
             <pre class="last literal-block prettyprint dbprettyprint">struct FolderListRequest:
+    id = String
     path = String
     include_deleted = Boolean
     include_media_info = Boolean
@@ -448,8 +458,8 @@ Stub.
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FolderInfoAndContents)</h4>
-        <h5>FolderInfoAndContents (Struct)</h5>
+            <h4>Segment 1 of 1 (FolderAndContents)</h4>
+        <h5>FolderAndContents (Struct)</h5>
 None
 <table class="api-param-values">
     <tr>
@@ -464,15 +474,15 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -480,23 +490,15 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -504,7 +506,7 @@ None
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -512,7 +514,15 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -520,7 +530,23 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>Ordered list of all contained files and folders.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>shared_folder</code>
+        </td>
+        <td>SharedFolder</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -532,59 +558,91 @@ None
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "abc456", 
-  "id_rev": 3, 
+  "id_revision": 3, 
   "path": "/Photos", 
-  "path_rev": 20, 
+  "path_revision": 20, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
-  "shared_folder": {
-    "id": "sf123"
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "contents": [
     {
       "file": {
         "id": "xyz123", 
-        "id_rev": 2, 
-        "path": "/Photos/flower.jpg", 
-        "path_rev": 19, 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
         "modified": "Sat, 28 Jun 2014 18:23:21", 
         "is_deleted": false, 
         "size": 1234, 
-        "mime_type": "image/jpg", 
-        "shared_folder": {
-          "id": "sf123"
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
         }, 
         "media_info": {
           "photo": {
             "time_taken": "Sat, 28 Jun 2014 18:23:21", 
             "lat_long": null
           }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
         }
       }
     }
-  ]
+  ], 
+  "shared_folder": {
+    "id": "sf123", 
+    "members": [
+      {
+        "role": "owner", 
+        "active": true, 
+        "user": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
+        }
+      }
+    ]
+  }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct Folder extends BaseFile:
+    shared_folder = SharedFolder
 
 struct SharedFolder:
     id = String
+    members = List
 
 
 
-struct FolderInfo extends EntryInfo
-
-
-struct FolderInfoAndContents extends FolderInfo:
+struct FolderAndContents extends Folder:
     contents = List
 
 </pre>
@@ -635,15 +693,15 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specific revision for a given path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -661,7 +719,7 @@ Describes a path.
             <h5>Formal Definition</h5>
             <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
     path = String
-    path_rev = String
+    path_revision = String
 
 </pre>
             -->
@@ -670,9 +728,9 @@ Describes a path.
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FileOrFolderInfo)</h4>
+            <h4>Segment 1 of 1 (Entry)</h4>
         
-<h5>FileOrFolderInfo (Union)</h5>
+<h5>Entry (Union)</h5>
 A file or folder in a Dropbox.
 <table class="api-param-values">
     <tr>
@@ -684,20 +742,20 @@ A file or folder in a Dropbox.
         <td>
             <code>file</code>
         </td>
-        <td>FileInfo</td>
+        <td>File</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>folder</code>
         </td>
-        <td>FolderInfo</td>
+        <td>Folder</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>FileInfo (Struct)</h5>
-Describes a file.
+<br /><h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -711,15 +769,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -727,23 +785,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -751,7 +801,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -759,7 +809,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -767,15 +825,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -783,7 +841,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -800,19 +874,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -827,7 +901,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -835,12 +909,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -855,7 +929,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -863,7 +937,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -871,15 +945,51 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
 
-<h5>FolderInfo (Struct)</h5>
-Describes a folder.
+<br />
+
+<h5>Folder (Struct)</h5>
+Information about a folder.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -893,15 +1003,15 @@ Describes a folder.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -909,23 +1019,15 @@ Describes a folder.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -933,7 +1035,7 @@ Describes a folder.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -941,11 +1043,63 @@ Describes a folder.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>shared_folder</code>
+        </td>
+        <td>SharedFolder</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br /><h5>SharedFolder (Struct)</h5>
+Information specific to a shared folder.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>members</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
+
 
 
 
@@ -955,82 +1109,108 @@ Describes a folder.
                 <pre class="last literal-block">{
   "file": {
     "id": "xyz123", 
-    "id_rev": 2, 
-    "path": "/Photos/flower.jpg", 
-    "path_rev": 19, 
+    "id_revision": 2, 
+    "path": "/Project/A/terms.docx", 
+    "path_revision": 19, 
     "modified": "Sat, 28 Jun 2014 18:23:21", 
     "is_deleted": false, 
     "size": 1234, 
-    "mime_type": "image/jpg", 
-    "shared_folder": {
-      "id": "sf123"
+    "parent_shared_folder_id": "abcd1234", 
+    "ancestor": {
+      "id": "xyz123", 
+      "id_revision": "rev456", 
+      "type": "copy"
     }, 
     "media_info": {
       "photo": {
         "time_taken": "Sat, 28 Jun 2014 18:23:21", 
         "lat_long": null
       }
+    }, 
+    "modifier": {
+      "account_id": "8320432", 
+      "display_name": "John Doe", 
+      "same_team": true
     }
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">union FileOrFolderInfo:
-    file = FileInfo
-    folder = FolderInfo
+            <pre class="last literal-block prettyprint dbprettyprint">union Entry:
+    file = File
+    folder = Folder
 
-struct EntryInfo:
+struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
 
 
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
-struct EntryInfo:
+
+
+struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct Folder extends BaseFile:
+    shared_folder = SharedFolder
 
 struct SharedFolder:
     id = String
+    members = List
 
-
-
-struct FolderInfo extends EntryInfo
 
 
 </pre>
@@ -1081,15 +1261,15 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specific revision for a given path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1107,7 +1287,7 @@ Describes a path.
             <h5>Formal Definition</h5>
             <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
     path = String
-    path_rev = String
+    path_revision = String
 
 </pre>
             -->
@@ -1116,9 +1296,9 @@ Describes a path.
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 2 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
+            <h4>Segment 1 of 2 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -1132,15 +1312,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1148,23 +1328,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1172,7 +1344,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1180,7 +1352,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1188,15 +1368,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1204,7 +1384,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1221,19 +1417,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -1248,7 +1444,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1256,12 +1452,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -1276,7 +1472,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1284,7 +1480,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1292,12 +1488,48 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
 
 
 
@@ -1306,59 +1538,76 @@ Video-specific information derived from EXIF data.
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
   "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "media_info": {
     "photo": {
       "time_taken": "Sat, 28 Jun 2014 18:23:21", 
       "lat_long": null
     }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
 
 </pre>
@@ -1411,7 +1660,7 @@ Stub.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The full path to the file you want to write to. It should not point to a folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1419,7 +1668,7 @@ Stub.
         </td>
         <td>WriteConflictPolicy</td>
         <td>No</td>
-        <td>Action to take if a file already exists at the specified path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1463,7 +1712,7 @@ Policy for managing write conflicts.
 </table>
 
 <br /><h5>UpdateParentRev (Struct)</h5>
-On a write conflict, overwrite the existing file if the parent rev matches.
+On a write conflict, overwrite the existing file if the parent revision matches.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -1473,11 +1722,11 @@ On a write conflict, overwrite the existing file if the parent rev matches.
     </tr>
 <tr>
         <td>
-            <code>parent_rev</code>
+            <code>parent_revision</code>
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The revision to be updated.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1485,7 +1734,7 @@ On a write conflict, overwrite the existing file if the parent rev matches.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the new file should be renamed on a conflict.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1501,7 +1750,7 @@ On a write conflict, overwrite the existing file if the parent rev matches.
   "path": "Documents/plan.docx", 
   "write_conflict_policy": {
     "update_if_matching_parent_rev": {
-      "parent_rev": "abc123", 
+      "parent_revision": "abc123", 
       "auto_rename": false
     }
   }
@@ -1520,7 +1769,7 @@ union WriteConflictPolicy:
     update_if_matching_parent_rev = UpdateParentRev
 
 struct UpdateParentRev:
-    parent_rev = String
+    parent_revision = String
     auto_rename = Boolean
 
 
@@ -1534,9 +1783,9 @@ struct UpdateParentRev:
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -1550,15 +1799,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1566,23 +1815,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1590,7 +1831,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1598,7 +1839,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1606,15 +1855,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1622,7 +1871,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1639,19 +1904,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -1666,7 +1931,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1674,12 +1939,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -1694,7 +1959,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1702,7 +1967,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1710,12 +1975,48 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
 
 
 
@@ -1724,59 +2025,76 @@ Video-specific information derived from EXIF data.
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
   "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "media_info": {
     "photo": {
       "time_taken": "Sat, 28 Jun 2014 18:23:21", 
       "lat_long": null
     }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
 
 </pre>
@@ -1825,6 +2143,839 @@ Errors that can be received on error.
 
         </dd>
     </dl>
+    <a name="files-Preview"></a>
+    <h3 class="method-title-first">files/preview
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Gets a preview for a file.
+The Content-Type header will be either application/pdf or text/html. There is an Original-Content-Length header which contains the size of the preview data.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/preview</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (InfoRequest)</h4>
+        <h5>InfoRequest (Struct)</h5>
+Describes a path.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "path": "/Photos/flower.jpg"
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+    path_revision = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 2 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+<h4>Segment 2 of 2 (Binary)</h4>
+            &mdash;
+
+        </dd>
+        <dt>Error</dt>
+        <dd style="margin-top:35px;">
+            
+    
+<h5>PreviewError (Union)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>not_found</code>
+        </td>
+        <td>&mdash;</td>
+        <td>The file wasn't found at the specified :field:`path`, or wasn't found at the specified :field:`path_rev`.</td>
+    </tr>
+<tr>
+        <td>
+            <code>no_preview</code>
+        </td>
+        <td>&mdash;</td>
+        <td>No preview has been generated yet or unable to generate a preview for the file.</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        </dd>
+    </dl>
+    <a name="files-Thumbnail"></a>
+    <h3 class="method-title-first">files/thumbnail
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Get the thumbnail for a file.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/thumbnail</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (ThumbnailRequest)</h4>
+        <h5>ThumbnailRequest (Struct)</h5>
+Stub.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>format</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "format": "jpeg", 
+  "size": "m"
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct ThumbnailRequest:
+    format = String
+    size = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 2 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+<h4>Segment 2 of 2 (Binary)</h4>
+            &mdash;
+
+        </dd>
+    </dl>
     <a name="files-Delta"></a>
     <h3 class="method-title-first">files/delta
         <ul>
@@ -1867,15 +3018,15 @@ Delta request.
         </td>
         <td>String</td>
         <td>Yes</td>
-        <td>A string that is used to keep track of your current state. On the next call pass in this value to return delta entries that have been recorded since the cursor was returned.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>path_prefix</code>
         </td>
         <td>String</td>
-        <td>Yes</td>
-        <td>Filters the response to only include entries at or under the specified path. If you use the path_prefix parameter, you must continue to pass the same prefix on subsequent calls using the returned cursor.</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1883,7 +3034,15 @@ Delta request.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If :val:`true`, each file will include a :field:`media_info` key. When :field:`include_media_info` is specified, files will only appear in delta responses when the media info is ready. If you use the :field:`include_media_info` parameter, you must continue to pass the same value on subsequent calls using the returned cursor.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>include_membership</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1895,8 +3054,9 @@ Delta request.
                 <h5>Sample JSON request</h5>
                 <pre class="last literal-block">{
   "cursor": null, 
-  "path_prefix": null, 
-  "include_media_info": false
+  "path_prefix": "/Photos", 
+  "include_media_info": false, 
+  "include_membership": false
 }</pre>
 
             <!--
@@ -1905,6 +3065,7 @@ Delta request.
     cursor = String
     path_prefix = String
     include_media_info = Boolean
+    include_membership = Boolean
 
 </pre>
             -->
@@ -1929,7 +3090,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If :val:`true`, clear your local state before processing the delta entries. :field:`reset` is always :val:`true` on the initial call to :op:`Delta` (i.e. when no cursor is passed in). Otherwise, it is :val:`true` in rare situations, such as after server or account maintenance, or if a user deletes their app folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1937,7 +3098,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A string that encodes the latest information that has been returned. On the next call to :op:`Delta`, pass in this value.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1945,7 +3106,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If :val:`true`, then there are more entries available; you can call :op:`Delta` again immediately to retrieve those entries. If :val:`false`, then wait for at least five minutes (preferably longer) before checking again.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1953,7 +3114,7 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>Each file or directory that has been changed.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1971,21 +3132,28 @@ None
     {
       "file": {
         "id": "xyz123", 
-        "id_rev": 2, 
-        "path": "/Photos/flower.jpg", 
-        "path_rev": 19, 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
         "modified": "Sat, 28 Jun 2014 18:23:21", 
         "is_deleted": false, 
         "size": 1234, 
-        "mime_type": "image/jpg", 
-        "shared_folder": {
-          "id": "sf123"
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
         }, 
         "media_info": {
           "photo": {
             "time_taken": "Sat, 28 Jun 2014 18:23:21", 
             "lat_long": null
           }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
         }
       }
     }
@@ -2049,7 +3217,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A delta cursor as returned from a call to :op:`Delta`. Note that a cursor returned from a call to :op:`Delta` with :field:`include_media_info` set to :val:`true` is incompatible with :op:`LongpollDelta` and an error will be returned.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2057,7 +3225,7 @@ None
         </td>
         <td>UInt32</td>
         <td>No</td>
-        <td>An optional integer indicating a timeout, in seconds. The request will block for at most this length of time, plus up to 90 seconds of random jitter added to avoid the :link:`thundering herd problem https://en.wikipedia.org/wiki/Thundering_herd_problem`. Care should be taken when using this parameter, as some network infrastructure does not support long timeouts.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2096,7 +3264,7 @@ The connection will block until there are changes available or a timeout occurs.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Indicates whether new changes are available. If this value is :val:`true`, you should call :op:`Delta` to retrieve the changes. If this value is :val:`false`, it means the call to :op:`LongpollDelta` timed out.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2104,7 +3272,7 @@ The connection will block until there are changes available or a timeout occurs.
         </td>
         <td>UInt32</td>
         <td>No</td>
-        <td>If present, the value indicates how many seconds your code should wait before calling :op:`LongpollDelta` again.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2128,337 +3296,6 @@ The connection will block until there are changes available or a timeout occurs.
 </pre>
             -->
 
-
-        </dd>
-    </dl>
-    <a name="files-Thumbnail"></a>
-    <h3 class="method-title-first">files/thumbnail
-        <ul>
-            <li>
-                <a href="#broken"> Python</a>
-            </li>
-            <li>
-                <a href="#broken">Java</a>
-            </li>
-            <li>
-                <a href="#broken">Ruby</a>
-            </li>
-            <li>
-                <a href="#broken">PHP</a>
-            </li>
-        </ul>
-    </h3>
-    <dl>
-        <dt>Description</dt>
-        <dd>Get the thumbnail for a file.</dd>
-        <dt class="url-label">URL Structure</dt>
-        <dd>
-            <pre class="literal-block">https://api.dropbox.com/2/files/thumbnail</pre>
-        </dd>
-        <dt>Request</dt>
-        <dd style="margin-top:30px;">
-            <h4>Segment 1 of 1 (ThumbnailRequest)</h4>
-        <h5>ThumbnailRequest (Struct)</h5>
-Stub.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>format</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>jpeg (default) or png. For images that are photos, jpeg should be preferred, while png is better for screenshots and digital art.</td>
-    </tr>
-<tr>
-        <td>
-            <code>size</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>One of the following values: xs, s, m, l, xl.</td>
-    </tr>
-</table>
-
-<br />
-
-
-        <br />
-
-                <h5>Sample JSON request</h5>
-                <pre class="last literal-block">{
-  "format": "jpeg", 
-  "size": "m"
-}</pre>
-
-            <!--
-            <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct ThumbnailRequest:
-    format = String
-    size = String
-
-</pre>
-            -->
-
-
-        </dd>
-        <dt>Response</dt>
-        <dd style="margin-top:35px;">
-            <h4>Segment 1 of 2 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>id</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>A unique identifier for the file.</td>
-    </tr>
-<tr>
-        <td>
-            <code>id_rev</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>path</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>Path to file or folder.</td>
-    </tr>
-<tr>
-        <td>
-            <code>path_rev</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
-    </tr>
-<tr>
-        <td>
-            <code>modified</code>
-        </td>
-        <td>Timestamp</td>
-        <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
-    </tr>
-<tr>
-        <td>
-            <code>is_deleted</code>
-        </td>
-        <td>Boolean</td>
-        <td>No</td>
-        <td>Whether the given entry is deleted.</td>
-    </tr>
-<tr>
-        <td>
-            <code>size</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>File size in bytes.</td>
-    </tr>
-<tr>
-        <td>
-            <code>mime_type</code>
-        </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
-    </tr>
-<tr>
-        <td>
-            <code>media_info</code>
-        </td>
-        <td>MediaInfo</td>
-        <td>No</td>
-        <td>Information specific to photo and video media.</td>
-    </tr>
-</table>
-
-<br />
-<h5>MediaInfo (Union)</h5>
-Media specific information.
-<table class="api-param-values">
-    <tr>
-        <th>option</th>
-        <th>data type</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>photo</code>
-        </td>
-        <td>PhotoInfo</td>
-        <td>&mdash;</td>
-    </tr>
-<tr>
-        <td>
-            <code>video</code>
-        </td>
-        <td>VideoInfo</td>
-        <td>&mdash;</td>
-    </tr>
-</table>
-
-<br /><h5>PhotoInfo (Struct)</h5>
-Photo-specific information derived from EXIF data.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>time_taken</code>
-        </td>
-        <td>Timestamp</td>
-        <td>No</td>
-        <td>When the photo was taken.</td>
-    </tr>
-<tr>
-        <td>
-            <code>lat_long</code>
-        </td>
-        <td>List</td>
-        <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
-    </tr>
-</table>
-
-<br />
-<h5>VideoInfo (Struct)</h5>
-Video-specific information derived from EXIF data.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>time_taken</code>
-        </td>
-        <td>Timestamp</td>
-        <td>No</td>
-        <td>When the photo was taken.</td>
-    </tr>
-<tr>
-        <td>
-            <code>lat_long</code>
-        </td>
-        <td>List</td>
-        <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
-    </tr>
-<tr>
-        <td>
-            <code>duration</code>
-        </td>
-        <td>Float</td>
-        <td>No</td>
-        <td>Length of video in milliseconds.</td>
-    </tr>
-</table>
-
-<br />
-
-
-
-
-        <br />
-
-                <h5>Sample JSON response</h5>
-                <pre class="last literal-block">{
-  "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
-  "modified": "Sat, 28 Jun 2014 18:23:21", 
-  "is_deleted": false, 
-  "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
-  }, 
-  "media_info": {
-    "photo": {
-      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
-      "lat_long": null
-    }
-  }
-}</pre>
-
-            <!--
-            <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
-    id = String
-    id_rev = UInt64
-    path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
-    modified = Timestamp
-    is_deleted = Boolean
-
-struct SharedFolder:
-    id = String
-
-
-
-struct FileInfo extends EntryInfo:
-    size = UInt64
-    mime_type = String
-    media_info = MediaInfo
-
-union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
-
-struct PhotoInfo:
-    time_taken = Timestamp
-    lat_long = List
-
-
-struct VideoInfo:
-    time_taken = Timestamp
-    lat_long = List
-    duration = Float
-
-
-
-</pre>
-            -->
-
-<h4>Segment 2 of 2 (Binary)</h4>
-            &mdash;
 
         </dd>
     </dl>
@@ -2505,15 +3342,15 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specific revision for a given path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2531,7 +3368,7 @@ Describes a path.
             <h5>Formal Definition</h5>
             <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
     path = String
-    path_rev = String
+    path_revision = String
 
 </pre>
             -->
@@ -2556,7 +3393,7 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>List of file or folders that have been part of the revision history.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2620,7 +3457,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2628,7 +3465,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The revision of a path to restore to.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2651,9 +3488,9 @@ None
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -2667,15 +3504,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2683,23 +3520,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2707,7 +3536,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2715,7 +3544,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2723,15 +3560,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2739,7 +3576,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2756,19 +3609,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -2783,7 +3636,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2791,12 +3644,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -2811,7 +3664,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2819,7 +3672,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2827,12 +3680,48 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
 
 
 
@@ -2841,59 +3730,76 @@ Video-specific information derived from EXIF data.
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
   "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "media_info": {
     "photo": {
       "time_taken": "Sat, 28 Jun 2014 18:23:21", 
       "lat_long": null
     }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
 
 </pre>
@@ -2945,7 +3851,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The search string. This string is split (on spaces) into individual words. Files and folders will be returned if they contain all words in the search string.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2953,7 +3859,7 @@ None
         </td>
         <td>UInt32</td>
         <td>No</td>
-        <td>The maximum and default value is 1,000. No more than file_limit search results will be returned.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2961,7 +3867,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If this parameter is set to true, then files and folders that have been deleted will also be included in the search.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2969,7 +3875,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, metadata for a shared folder will include a list of the members of the shared folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3010,7 +3916,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, then the number of files found exceeds the file_limit.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3018,7 +3924,7 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>List of file or folders that match the search query.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3034,21 +3940,28 @@ None
     {
       "file": {
         "id": "xyz123", 
-        "id_rev": 2, 
-        "path": "/Photos/flower.jpg", 
-        "path_rev": 19, 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
         "modified": "Sat, 28 Jun 2014 18:23:21", 
         "is_deleted": false, 
         "size": 1234, 
-        "mime_type": "image/jpg", 
-        "shared_folder": {
-          "id": "sf123"
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
         }, 
         "media_info": {
           "photo": {
             "time_taken": "Sat, 28 Jun 2014 18:23:21", 
             "lat_long": null
           }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
         }
       }
     }
@@ -3063,370 +3976,6 @@ None
 
 </pre>
             -->
-
-
-        </dd>
-    </dl>
-    <a name="files-Preview"></a>
-    <h3 class="method-title-first">files/preview
-        <ul>
-            <li>
-                <a href="#broken"> Python</a>
-            </li>
-            <li>
-                <a href="#broken">Java</a>
-            </li>
-            <li>
-                <a href="#broken">Ruby</a>
-            </li>
-            <li>
-                <a href="#broken">PHP</a>
-            </li>
-        </ul>
-    </h3>
-    <dl>
-        <dt>Description</dt>
-        <dd>Gets a preview for a file.
-The Content-Type header will be either application/pdf or text/html. There is an Original-Content-Length header which contains the size of the preview data.</dd>
-        <dt class="url-label">URL Structure</dt>
-        <dd>
-            <pre class="literal-block">https://api.dropbox.com/2/files/preview</pre>
-        </dd>
-        <dt>Request</dt>
-        <dd style="margin-top:30px;">
-            <h4>Segment 1 of 1 (InfoRequest)</h4>
-        <h5>InfoRequest (Struct)</h5>
-Describes a path.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>path</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>The path to the file or folder.</td>
-    </tr>
-<tr>
-        <td>
-            <code>path_rev</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>Specific revision for a given path.</td>
-    </tr>
-</table>
-
-<br />
-
-
-        <br />
-
-                <h5>Sample JSON request</h5>
-                <pre class="last literal-block">{
-  "path": "/Photos/flower.jpg"
-}</pre>
-
-            <!--
-            <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
-    path = String
-    path_rev = String
-
-</pre>
-            -->
-
-
-        </dd>
-        <dt>Response</dt>
-        <dd style="margin-top:35px;">
-            <h4>Segment 1 of 2 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>id</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>A unique identifier for the file.</td>
-    </tr>
-<tr>
-        <td>
-            <code>id_rev</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>path</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>Path to file or folder.</td>
-    </tr>
-<tr>
-        <td>
-            <code>path_rev</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
-    </tr>
-<tr>
-        <td>
-            <code>modified</code>
-        </td>
-        <td>Timestamp</td>
-        <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
-    </tr>
-<tr>
-        <td>
-            <code>is_deleted</code>
-        </td>
-        <td>Boolean</td>
-        <td>No</td>
-        <td>Whether the given entry is deleted.</td>
-    </tr>
-<tr>
-        <td>
-            <code>size</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>File size in bytes.</td>
-    </tr>
-<tr>
-        <td>
-            <code>mime_type</code>
-        </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
-    </tr>
-<tr>
-        <td>
-            <code>media_info</code>
-        </td>
-        <td>MediaInfo</td>
-        <td>No</td>
-        <td>Information specific to photo and video media.</td>
-    </tr>
-</table>
-
-<br />
-<h5>MediaInfo (Union)</h5>
-Media specific information.
-<table class="api-param-values">
-    <tr>
-        <th>option</th>
-        <th>data type</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>photo</code>
-        </td>
-        <td>PhotoInfo</td>
-        <td>&mdash;</td>
-    </tr>
-<tr>
-        <td>
-            <code>video</code>
-        </td>
-        <td>VideoInfo</td>
-        <td>&mdash;</td>
-    </tr>
-</table>
-
-<br /><h5>PhotoInfo (Struct)</h5>
-Photo-specific information derived from EXIF data.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>time_taken</code>
-        </td>
-        <td>Timestamp</td>
-        <td>No</td>
-        <td>When the photo was taken.</td>
-    </tr>
-<tr>
-        <td>
-            <code>lat_long</code>
-        </td>
-        <td>List</td>
-        <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
-    </tr>
-</table>
-
-<br />
-<h5>VideoInfo (Struct)</h5>
-Video-specific information derived from EXIF data.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>time_taken</code>
-        </td>
-        <td>Timestamp</td>
-        <td>No</td>
-        <td>When the photo was taken.</td>
-    </tr>
-<tr>
-        <td>
-            <code>lat_long</code>
-        </td>
-        <td>List</td>
-        <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
-    </tr>
-<tr>
-        <td>
-            <code>duration</code>
-        </td>
-        <td>Float</td>
-        <td>No</td>
-        <td>Length of video in milliseconds.</td>
-    </tr>
-</table>
-
-<br />
-
-
-
-
-        <br />
-
-                <h5>Sample JSON response</h5>
-                <pre class="last literal-block">{
-  "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
-  "modified": "Sat, 28 Jun 2014 18:23:21", 
-  "is_deleted": false, 
-  "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
-  }, 
-  "media_info": {
-    "photo": {
-      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
-      "lat_long": null
-    }
-  }
-}</pre>
-
-            <!--
-            <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
-    id = String
-    id_rev = UInt64
-    path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
-    modified = Timestamp
-    is_deleted = Boolean
-
-struct SharedFolder:
-    id = String
-
-
-
-struct FileInfo extends EntryInfo:
-    size = UInt64
-    mime_type = String
-    media_info = MediaInfo
-
-union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
-
-struct PhotoInfo:
-    time_taken = Timestamp
-    lat_long = List
-
-
-struct VideoInfo:
-    time_taken = Timestamp
-    lat_long = List
-    duration = Float
-
-
-
-</pre>
-            -->
-
-<h4>Segment 2 of 2 (Binary)</h4>
-            &mdash;
-
-        </dd>
-        <dt>Error</dt>
-        <dd style="margin-top:35px;">
-            
-    
-<h5>PreviewError (Union)</h5>
-None
-<table class="api-param-values">
-    <tr>
-        <th>option</th>
-        <th>data type</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>not_found</code>
-        </td>
-        <td>&mdash;</td>
-        <td>The file wasn't found at the specified :field:`path`, or wasn't found at the specified :field:`path_rev`.</td>
-    </tr>
-<tr>
-        <td>
-            <code>no_preview</code>
-        </td>
-        <td>&mdash;</td>
-        <td>No preview has been generated yet or unable to generate a preview for the file.</td>
-    </tr>
-</table>
-
-<br />
-
 
 
         </dd>
@@ -3473,7 +4022,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the file or folder to be copied.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3481,7 +4030,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the destination path, including the new name for the file or folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3504,9 +4053,9 @@ None
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -3520,15 +4069,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3536,23 +4085,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3560,7 +4101,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3568,7 +4109,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3576,15 +4125,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3592,7 +4141,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3609,19 +4174,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -3636,7 +4201,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3644,12 +4209,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -3664,7 +4229,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3672,7 +4237,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3680,12 +4245,48 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
 
 
 
@@ -3694,59 +4295,76 @@ Video-specific information derived from EXIF data.
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
   "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "media_info": {
     "photo": {
       "time_taken": "Sat, 28 Jun 2014 18:23:21", 
       "lat_long": null
     }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
 
 </pre>
@@ -3844,7 +4462,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the file or folder to be copied.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3852,7 +4470,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the destination path, including the new name for the file or folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3875,9 +4493,9 @@ None
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -3891,15 +4509,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3907,23 +4525,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3931,7 +4541,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3939,7 +4549,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3947,15 +4565,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3963,7 +4581,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3980,19 +4614,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -4007,7 +4641,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4015,12 +4649,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -4035,7 +4669,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4043,7 +4677,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4051,12 +4685,48 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
 
 
 
@@ -4065,59 +4735,76 @@ Video-specific information derived from EXIF data.
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
   "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "media_info": {
     "photo": {
       "time_taken": "Sat, 28 Jun 2014 18:23:21", 
       "lat_long": null
     }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
 
 </pre>
@@ -4215,7 +4902,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the new folder to create.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4237,9 +4924,9 @@ None
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -4253,15 +4940,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4269,23 +4956,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4293,7 +4972,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4301,7 +4980,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4309,15 +4996,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4325,7 +5012,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4342,19 +5045,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -4369,7 +5072,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4377,12 +5080,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -4397,7 +5100,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4405,7 +5108,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4413,12 +5116,48 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
 
 
 
@@ -4427,59 +5166,76 @@ Video-specific information derived from EXIF data.
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
   "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "media_info": {
     "photo": {
       "time_taken": "Sat, 28 Jun 2014 18:23:21", 
       "lat_long": null
     }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
 
 </pre>
@@ -4556,7 +5312,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder to be deleted.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4578,9 +5334,9 @@ None
         </dd>
         <dt>Response</dt>
         <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (FileInfo)</h4>
-        <h5>FileInfo (Struct)</h5>
-Describes a file.
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -4594,15 +5350,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>id_rev</code>
+            <code>id_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4610,23 +5366,15 @@ Describes a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>path_rev</code>
+            <code>path_revision</code>
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared_folder</code>
-        </td>
-        <td>SharedFolder</td>
-        <td>Yes</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4634,7 +5382,7 @@ Describes a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4642,7 +5390,15 @@ Describes a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4650,15 +5406,15 @@ Describes a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
-            <code>mime_type</code>
+            <code>read_only</code>
         </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>The Internet media type determined by the file extension.</td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4666,7 +5422,23 @@ Describes a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4683,19 +5455,19 @@ Media specific information.
         <td>
             <code>photo</code>
         </td>
-        <td>PhotoInfo</td>
+        <td>Photo</td>
         <td>&mdash;</td>
     </tr>
 <tr>
         <td>
             <code>video</code>
         </td>
-        <td>VideoInfo</td>
+        <td>Video</td>
         <td>&mdash;</td>
     </tr>
 </table>
 
-<br /><h5>PhotoInfo (Struct)</h5>
+<br /><h5>Photo (Struct)</h5>
 Photo-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -4710,7 +5482,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4718,12 +5490,12 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
-<h5>VideoInfo (Struct)</h5>
+<h5>Video (Struct)</h5>
 Video-specific information derived from EXIF data.
 <table class="api-param-values">
     <tr>
@@ -4738,7 +5510,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4746,7 +5518,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4754,12 +5526,48 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Float</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
 
 
 
@@ -4768,59 +5576,76 @@ Video-specific information derived from EXIF data.
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
   "id": "xyz123", 
-  "id_rev": 2, 
-  "path": "/Photos/flower.jpg", 
-  "path_rev": 19, 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
   "modified": "Sat, 28 Jun 2014 18:23:21", 
   "is_deleted": false, 
   "size": 1234, 
-  "mime_type": "image/jpg", 
-  "shared_folder": {
-    "id": "sf123"
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
   "media_info": {
     "photo": {
       "time_taken": "Sat, 28 Jun 2014 18:23:21", 
       "lat_long": null
     }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct EntryInfo:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    id_rev = UInt64
+    id_revision = UInt64
     path = String
-    path_rev = UInt64
-    shared_folder = SharedFolder
+    path_revision = UInt64
     modified = Timestamp
     is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
-struct SharedFolder:
+struct Ancestor:
     id = String
+    id_revision = String
+    type = String
 
 
 
-struct FileInfo extends EntryInfo:
+struct File extends BaseFile:
     size = UInt64
-    mime_type = String
     media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
 
 union MediaInfo:
-    photo = PhotoInfo
-    video = VideoInfo
+    photo = Photo
+    video = Video
 
-struct PhotoInfo:
+struct Photo:
     time_taken = Timestamp
     lat_long = List
 
 
-struct VideoInfo:
+struct Video:
     time_taken = Timestamp
     lat_long = List
     duration = Float
 
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
 
 
 </pre>
@@ -4858,6 +5683,116 @@ None
 
 <br />
 
+
+
+        </dd>
+    </dl>
+    <a name="files-Get-Children"></a>
+    <h3 class="method-title-first">files/get-children
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Retrieves a file's children by ID.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/get-children</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (GetChildrenRequest)</h4>
+        <h5>GetChildrenRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>limit</code>
+        </td>
+        <td>UInt32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct GetChildrenRequest:
+    id = String
+    limit = UInt32
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (ChildrenList)</h4>
+        <h5>ChildrenList (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>results</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct ChildrenList:
+    results = List
+
+</pre>
+            -->
 
 
         </dd>

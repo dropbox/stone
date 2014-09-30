@@ -8,7 +8,7 @@ struct Photo:
 
     time_taken DbxTimestamp::
         When the photo was taken.
-    lat_long List(data_type=Float) nullable::
+    lat_long List(data_type=Float)|null::
         The GPS coordinates where the photo was taken.
 
     example default:
@@ -21,7 +21,7 @@ struct Video:
 
     time_taken DbxTimestamp::
         When the photo was taken.
-    lat_long List(data_type=Float) nullable::
+    lat_long List(data_type=Float)|null::
         The GPS coordinates where the photo was taken.
     duration Float::
         Length of video in milliseconds.
@@ -80,19 +80,17 @@ struct BaseFile:
         A unique identifier for the current revision of a file path. This field
         is the same rev as elsewhere in the API and can be used to detect changes
         and avoid conflicts.
-    modified DbxTimestamp nullable::
+    modified DbxTimestamp|null::
         The last time the file was modified on Dropbox, in the standard Timestamp
         format (:val:`null` for root folder).
     is_deleted Boolean::
         Whether the given entry is deleted.
     ancestor Ancestor::
         The ancestor of this file or folder.
-
-    optional:
-        read_only Boolean::
-            For shared folders, this field specifies whether the user has
-            read-only access to the folder. For files within a shared folder,
-            this specifies the read-only status of the parent shared folder.
+    read_only Boolean optional::
+        For shared folders, this field specifies whether the user has
+        read-only access to the folder. For files within a shared folder,
+        this specifies the read-only status of the parent shared folder.
 
 struct SharingUser:
 
@@ -128,15 +126,13 @@ struct File extends BaseFile:
 
     size UInt64::
         File size in bytes.
-
-    optional:
-        media_info MediaInfo::
-            Information specific to photo and video media.
-        parent_shared_folder_id String::
-            For files within a shared folder, this field specifies the ID of
-            the containing shared folder.
-        modifier SharingUser::
-            The user who last modified this file.
+    media_info MediaInfo optional::
+        Information specific to photo and video media.
+    parent_shared_folder_id String optional::
+        For files within a shared folder, this field specifies the ID of
+        the containing shared folder.
+    modifier SharingUser optional::
+        The user who last modified this file.
 
     example default:
         id="xyz123"
@@ -177,9 +173,8 @@ struct Folder extends BaseFile:
     doc::
         Information about a folder.
 
-    optional:
-        shared_folder SharedFolder::
-            If this a shared folder, information about it.
+    shared_folder SharedFolder optional::
+        If this a shared folder, information about it.
 
     example default:
         id="abc456"
@@ -213,19 +208,18 @@ struct FolderListRequest:
     doc::
         Stub.
 
-    optional:
-        id String::
-            The path to the folder.
-        path String::
-            The id of the folder.
-        include_deleted Boolean = false::
-            If this parameter is set to :val:`true`, then :field:`contents` will
-            include the metadata of deleted children. Note that the target of the
-            :op:`folder-list` call is always returned even when it has been deleted
-            (with :field:`is_deleted` set to true) regardless of
-            this flag.
-        include_media_info Boolean = false::
-            If true, each file will include a media_info key.
+    id String optional::
+        The path to the folder.
+    path String optional::
+        The id of the folder.
+    include_deleted Boolean = false optional::
+        If this parameter is set to :val:`true`, then :field:`contents` will
+        include the metadata of deleted children. Note that the target of the
+        :op:`folder-list` call is always returned even when it has been deleted
+        (with :field:`is_deleted` set to true) regardless of
+        this flag.
+    include_media_info Boolean = false optional::
+        If true, each file will include a media_info key.
 
 op Folder-List:
     doc::
@@ -245,9 +239,8 @@ struct InfoRequest:
 
     path String::
         The path to the file or folder.
-    optional:
-        path_revision Rev::
-            Specific revision for a given path.
+    path_revision Rev optional::
+        Specific revision for a given path.
 
     example default:
         path="/Photos/flower.jpg"
@@ -381,10 +374,8 @@ struct ThumbnailRequest:
     format String::
         jpeg (default) or png. For images that are photos, jpeg should be
         preferred, while png is better for screenshots and digital art.
-
-    optional:
-        size String = "s"::
-            One of the following values: xs, s, m, l, xl.
+    size String = "s" optional::
+        One of the following values: xs, s, m, l, xl.
 
     example default:
         format="jpeg"
@@ -433,22 +424,20 @@ struct DeltaRequest:
     doc::
         Delta request.
 
-    cursor String nullable::
+    cursor String|null::
         A string that is used to keep track of your current state. On the
         next call pass in this value to return delta entries that have been
         recorded since the cursor was returned.
-
-    optional:
-        path_prefix String::
-            Filters the response to only include entries at or under the specified
-            path.
-        include_media_info Boolean = false::
-            If :val:`true`, each file will include a :field:`media_info` key. When
-            :field:`include_media_info` is specified, files will only appear in
-            delta responses when the media info is ready.
-        include_membership Boolean = false::
-            If true, each shared folder will include a list of the members of
-            the shared folder.
+    path_prefix String optional::
+        Filters the response to only include entries at or under the specified
+        path.
+    include_media_info Boolean = false optional::
+        If :val:`true`, each file will include a :field:`media_info` key. When
+        :field:`include_media_info` is specified, files will only appear in
+        delta responses when the media info is ready.
+    include_membership Boolean = false optional::
+        If true, each shared folder will include a list of the members of
+        the shared folder.
 
     example default:
         cursor=null
@@ -477,15 +466,14 @@ struct LongpollDeltaRequest:
         :field:`include_media_info` set to :val:`true` is incompatible with
         :op:`LongpollDelta` and an error will be returned.
 
-    optional:
-        timeout UInt32(min_value=30, max_value=480) = 30::
-            An optional integer indicating a timeout, in seconds. The request
-            will block for at most this length of time, plus up to 90 seconds
-            of random jitter added to avoid the
-            :link:`thundering herd problem
-            https://en.wikipedia.org/wiki/Thundering_herd_problem`. Care
-            should be taken when using this parameter, as some network
-            infrastructure does not support long timeouts.
+    timeout UInt32(min_value=30, max_value=480) = 30 optional::
+        An optional integer indicating a timeout, in seconds. The request
+        will block for at most this length of time, plus up to 90 seconds
+        of random jitter added to avoid the
+        :link:`thundering herd problem
+        https://en.wikipedia.org/wiki/Thundering_herd_problem`. Care
+        should be taken when using this parameter, as some network
+        infrastructure does not support long timeouts.
 
 struct LongpollDeltaResponse:
     doc::
@@ -498,10 +486,9 @@ struct LongpollDeltaResponse:
         If this value is :val:`false`, it means the call to
         :op:`LongpollDelta` timed out.
 
-    optional:
-        backoff UInt32::
-            If present, the value indicates how many seconds your code should
-            wait before calling :op:`LongpollDelta` again.
+    backoff UInt32 optional::
+        If present, the value indicates how many seconds your code should
+        wait before calling :op:`LongpollDelta` again.
 
     example default:
         changes=false
@@ -577,13 +564,12 @@ struct SearchRequest:
         The maximum and default value is 1,000. No more than file_limit search
         results will be returned.
 
-    optional:
-        include_deleted Boolean = false::
-            If this parameter is set to true, then files and folders that have been
-            deleted will also be included in the search.
-        include_membership Boolean = false::
-            If true, metadata for a shared folder will include a list of the
-            members of the shared folder.
+    include_deleted Boolean = false optional::
+        If this parameter is set to true, then files and folders that have been
+        deleted will also be included in the search.
+    include_membership Boolean = false optional::
+        If true, metadata for a shared folder will include a list of the
+        members of the shared folder.
 
 struct SearchResults:
 
@@ -707,10 +693,8 @@ struct GetChildrenRequest:
 
     id String::
         The ID whose children are returned.
-
-    optional:
-        limit UInt32(max_value=100) = 100::
-            The maximum number of children that are returned.
+    limit UInt32(max_value=100) = 100 optional::
+        The maximum number of children that are returned.
 
 struct ChildrenList:
 
