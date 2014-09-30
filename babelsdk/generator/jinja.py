@@ -60,7 +60,6 @@ class Jinja2Generator(Generator):
         self.template_env.filters['is_composite'] = lambda s: isinstance(s, Union)
         self.template_env.filters['formal'] = lambda s: ' '.join(word.capitalize() for word in split_words(s))
 
-
         # Filters for making it easier to render code (as opposed to HTML)
 
         # Jinja has format(pattern, text), but no way to do the reverse. This
@@ -132,12 +131,15 @@ class Jinja2Generator(Generator):
 
     @staticmethod
     def get_template_filters(language):
-        return {'method': lambda s: language.format_method(split_words(s)),
+        return {
+                'method': lambda s: language.format_method(split_words(s)),
                 'class': lambda s: language.format_class(split_words(s)),
                 'variable': lambda s: language.format_variable(split_words(s)),
                 'string_value': language.format_string_value,
                 'type': language.format_type,
-                'pprint': language.format_obj,}
+                'pprint': language.format_obj,
+                'func_call_args': language.format_func_call_args,
+                }
 
 _split_words_capitalization_re = re.compile(
     '^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$'

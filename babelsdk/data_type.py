@@ -366,8 +366,14 @@ class CompositeType(DataType):
         pass
 
     @abstractmethod
-    def add_example(self, label, example):
+    def add_example(self, label, text, example):
         pass
+
+class OrderedExample(OrderedDict):
+
+    def __init__(self, *args, **kwargs):
+        super(OrderedExample, self).__init__(*args, **kwargs)
+        self.text = None
 
 class Struct(CompositeType):
     """
@@ -387,7 +393,7 @@ class Struct(CompositeType):
             else:
                 raise ValueError('Field %r is unspecified' % field.name)
 
-    def add_example(self, label, example):
+    def add_example(self, label, text, example):
         """
         Add a plausible example of the contents of this type. The example is
         validated against the type definition.
@@ -399,7 +405,8 @@ class Struct(CompositeType):
         if label in example:
             raise ValueError('Example label %s already specified' % label)
 
-        ordered_example = OrderedDict()
+        ordered_example = OrderedExample()
+        ordered_example.text = text
 
         # Check for examples with keys that don't belong
         extra_fields = set(example.keys()) - set([f.name for f in self.all_fields])

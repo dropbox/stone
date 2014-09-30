@@ -129,8 +129,8 @@ class TowerOfBabel(object):
             api_type_field = self._create_field(env, babel_field)
             api_type_fields.append(api_type_field)
         api_type = composite_type_obj(item.name, item.doc, api_type_fields, super_type)
-        for example_label, example in item.examples.items():
-            api_type.add_example(example_label, dict(example))
+        for example_label, (example_text, example) in item.examples.items():
+            api_type.add_example(example_label, example_text, dict(example))
         env[item.name] = api_type
         return api_type
 
