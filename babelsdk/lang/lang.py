@@ -32,4 +32,9 @@ class TargetLanguage(object):
             return self.format_obj(eval(s))
 
     def format_obj(self, o):
+        """The representation of an object in the target language. For example,
+        it may convert a None to null for certain languages."""
         raise NotImplemented
+
+    def format_func_call_args(self, values):
+        return ', '.join([self.format_obj(value) for value in values])

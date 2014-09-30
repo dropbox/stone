@@ -38,8 +38,8 @@ class BabelTypeDef(object):
     def set_fields(self, fields):
         self.fields = fields
 
-    def add_example(self, label, example):
-        self.examples[label] = example
+    def add_example(self, label, text, example):
+        self.examples[label] = (text, example)
 
     def __str__(self):
         return self.__repr__()
@@ -234,8 +234,8 @@ class BabelParser(object):
         if p[7] is not None:
             p[0].set_fields(p[7])
         if p[8]:
-            for label, example in p[8]:
-                p[0].add_example(label, example)
+            for label, text, example in p[8]:
+                p[0].add_example(label, text, example)
 
     def p_inheritance(self, p):
         """inheritance : EXTENDS ID
@@ -251,8 +251,8 @@ class BabelParser(object):
         if p[8] is not None:
             p[0].set_fields(p[8])
         if p[9] is not None:
-            for label, example in p[9]:
-                p[0].add_example(label, example)
+            for label, text, example in p[9]:
+                p[0].add_example(label, text, example)
 
     def p_statement_request_section(self, p):
         """reqsection : REQUEST COLON NEWLINE INDENT field_list DEDENT"""
@@ -378,8 +378,9 @@ class BabelParser(object):
             p[0].set_doc(self._normalize_docstring(p[3]))
 
     def p_statement_example(self, p):
-        'example : KEYWORD ID COLON NEWLINE INDENT example_field_list DEDENT'
-        p[0] = (p[2], p[6])
+        """example : KEYWORD ID STRING COLON NEWLINE INDENT example_field_list DEDENT
+                   | KEYWORD ID empty COLON NEWLINE INDENT example_field_list DEDENT"""
+        p[0] = (p[2], p[3], p[7])
 
     def p_statement_example_field_list(self, p):
         """example_field_list : example_field

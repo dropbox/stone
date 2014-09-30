@@ -174,7 +174,7 @@ struct Folder extends BaseFile:
         Information about a folder.
 
     shared_folder SharedFolder optional::
-        If this a shared folder, information about it.
+        If this is a shared folder, information about it.
 
     example default:
         id="abc456"
@@ -519,6 +519,9 @@ struct RevisionHistory:
     revisions List(data_type=Entry)::
         List of file or folders that have been part of the revision history.
 
+    example default:
+        pass
+
 op Revisions:
     doc::
         Obtains file information for previous revisions.
@@ -573,13 +576,11 @@ struct SearchRequest:
 
 struct SearchResults:
 
-    has_more Boolean::
-        If true, then the number of files found exceeds the file_limit.
     results List(data_type=Entry)::
         List of file or folders that match the search query.
 
     example default:
-        has_more=false
+        pass
 
 op Search:
     doc::

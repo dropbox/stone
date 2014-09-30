@@ -23,17 +23,20 @@ struct QuotaInfo:
 
 struct Team:
     doc::
-        Information relevant to a team.
+        Information about a team.
 
+    id String::
+        The team's unique ID.
     name String::
         The name of the team.
 
     example default:
+        id="ha83cda8h"
         name="Acme, Inc."
 
 struct AccountInfo:
     doc::
-        Information for a user's account.
+        Information about a user's account.
 
     display_name String::
         The full name of a user.
@@ -52,7 +55,7 @@ struct AccountInfo:
     team Team|null::
         If this account is a member of a team.
 
-    example default:
+    example default "Paired account":
         display_name="Jon Snow"
         account_id="314159"
         email="jsnow@westeros.com"
