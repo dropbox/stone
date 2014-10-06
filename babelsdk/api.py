@@ -32,12 +32,38 @@ class ApiNamespace(object):
         self.operation_by_name = {}
         self.data_types = []
         self.data_type_by_name = {}
+
     def add_operation(self, operation):
         self.operations.append(operation)
         self.operation_by_name[operation.name] = operation
+
     def add_data_type(self, data_type):
         self.data_types.append(data_type)
         self.data_type_by_name[data_type.name] = data_type
+
+    def linearize_data_types(self):
+        """
+        Returns a list of all data types used in the namespace. Because the
+        inheritance of data types can be modeled as a DAG, the list will be a
+        linearization of the DAG. It's ideal to generate data types in this
+        order so that composite types that reference other composite types are
+        defined in the correct order.
+        """
+        linearized_data_types = []
+        seen_data_types = set()
+
+        def add_data_type(data_type):
+            if data_type in seen_data_types:
+                return
+            if data_type.super_type:
+                add_data_type(data_type.super_type)
+            linearized_data_types.append(data_type)
+            seen_data_types.add(data_type)
+
+        for data_type in self.data_types:
+            add_data_type(data_type)
+
+        return linearized_data_types
 
 class ApiOperation(object):
     """
