@@ -158,6 +158,7 @@ class TowerOfBabel(object):
                 babel_field.doc,
                 nullable=babel_field.nullable,
                 optional=babel_field.optional,
+                deprecated=babel_field.deprecated,
             )
             if babel_field.has_default:
                 if not (babel_field.nullable and babel_field.default is None):

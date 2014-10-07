@@ -227,7 +227,13 @@ class Field(object):
     Represents a field in a composite type.
     """
 
-    def __init__(self, name, data_type, doc, nullable=False, optional=False):
+    def __init__(self,
+                 name,
+                 data_type,
+                 doc,
+                 nullable=False,
+                 optional=False,
+                 deprecated=False):
         """
         Creates a new Field.
 
@@ -236,12 +242,14 @@ class Field(object):
         :param str doc: Documentation for the field.
         :param bool nullable: Whether the field can be null.
         :param bool optional: Whether the field can be absent.
+        :param bool deprecated: Whether the field is deprecated.
         """
         self.name = name
         self.data_type = data_type
         self.doc = doc
         self.nullable = nullable
         self.optional = optional
+        self.deprecated = deprecated
         self.has_default = False
         self._default = None
 

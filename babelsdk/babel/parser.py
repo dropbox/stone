@@ -100,7 +100,13 @@ class BabelAlias(object):
         )
 
 class BabelField(object):
-    def __init__(self, name, data_type_name, data_type_attrs, nullable, optional):
+    def __init__(self,
+                 name,
+                 data_type_name,
+                 data_type_attrs,
+                 nullable,
+                 optional,
+                 deprecated):
         """
         :param data_type_attrs: List of attributes.
         """
@@ -112,6 +118,7 @@ class BabelField(object):
         self.has_default = False
         self.default = None
         self.optional = optional
+        self.deprecated = deprecated
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -345,6 +352,11 @@ class BabelParser(object):
         else:
             p[0] = False
 
+    def p_field_deprecation(self, p):
+        """deprecation : DEPRECATED
+                       | empty"""
+        p[0] = (p[1] == 'deprecated')
+
     def p_eq_primitive(self, p):
         """eq_primitive : EQ INTEGER
                         | EQ FLOAT
@@ -359,17 +371,17 @@ class BabelParser(object):
         p[0] = p[1]
 
     def p_statement_field(self, p):
-        """field : ID ID attributes_group nullable default_option presence DOUBLE_COLON docstring DEDENT
-                 | ID ID attributes_group nullable default_option presence NEWLINE"""
-        has_docstring = (p[7] == '::')
-        p[0] = BabelField(p[1], p[2], p[3], p[4], p[6])
+        """field : ID ID attributes_group nullable default_option presence deprecation DOUBLE_COLON docstring DEDENT
+                 | ID ID attributes_group nullable default_option presence deprecation NEWLINE"""
+        has_docstring = (p[8] == '::')
+        p[0] = BabelField(p[1], p[2], p[3], p[4], p[6], p[7])
         if p[5] is not None:
             if p[5] is BabelNull:
                 p[0].set_default(None)
             else:
                 p[0].set_default(p[5])
         if has_docstring:
-            p[0].set_doc(self._normalize_docstring(p[8]))
+            p[0].set_doc(self._normalize_docstring(p[9]))
 
     def p_statement_field_symbol(self, p):
         'field : ID DOUBLE_COLON docstring DEDENT'

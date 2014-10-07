@@ -140,6 +140,7 @@ class BabelLexer(object):
 
     KEYWORDS = [
         'alias',
+        'deprecated',
         'doc',
         'example',
         'error',
@@ -158,6 +159,7 @@ class BabelLexer(object):
     ]
 
     RESERVED = {
+        'deprecated': 'DEPRECATED',
         'error': 'ERROR',
         'extends': 'EXTENDS',
         'extras': 'EXTRAS',
