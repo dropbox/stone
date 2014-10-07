@@ -5,7 +5,8 @@ import pprint
 from babelsdk.lang.lang import TargetLanguage
 from babelsdk.data_type import (
     Boolean,
-    Float,
+    Float32,
+    Float64,
     Int32,
     Int64,
     List,
@@ -24,7 +25,8 @@ class RubyTargetLanguage(TargetLanguage):
 
     _type_table = {
         Boolean: 'boolean',
-        Float: 'Float',
+        Float32: 'Float',
+        Float64: 'Float',
         Int32: 'Integer',
         Int64: 'Integer',
         List: 'Array',

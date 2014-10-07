@@ -11,7 +11,7 @@ Todo
 - Fix server code to not output "OrderedDict" in code. Or, fix pretty print to do it better.
 - Accept indentation besides 4 spaces.
 - Out of order type declarations.
-- List(data_type=Float) -> List(Float)
+- List(data_type=Float32) -> List(Float32)
 - Add tuple type. Only needed for v1 endpoints (ex. delta)
 - Perhaps errors shouldn't be printed to stdout immediately. They should be collected by the parser,
   and then printed by the caller if desired.

@@ -2,7 +2,7 @@ import unittest
 
 from babelsdk.data_type import (
     Boolean,
-    Float,
+    Float32,
     Int32,
     Int64,
     List,
@@ -138,7 +138,7 @@ class TestBabelInternal(unittest.TestCase):
 
     def test_float(self):
 
-        f = Float()
+        f = Float32()
 
         # check valid float
         f.check(3.14)

@@ -8,7 +8,7 @@ struct Photo:
 
     time_taken DbxTimestamp::
         When the photo was taken.
-    lat_long List(data_type=Float)|null::
+    lat_long List(data_type=Float32)|null::
         The GPS coordinates where the photo was taken.
 
     example default:
@@ -21,9 +21,9 @@ struct Video:
 
     time_taken DbxTimestamp::
         When the photo was taken.
-    lat_long List(data_type=Float)|null::
+    lat_long List(data_type=Float32)|null::
         The GPS coordinates where the photo was taken.
-    duration Float::
+    duration Float32::
         Length of video in milliseconds.
 
     example default:

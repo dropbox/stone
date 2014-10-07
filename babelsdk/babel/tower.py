@@ -9,7 +9,7 @@ from babelsdk.data_type import (
     Binary,
     Boolean,
     Field,
-    Float,
+    Float32,
     Int32,
     Int64,
     List,
@@ -44,7 +44,7 @@ class TowerOfBabel(object):
     data_types = [
         Binary,
         Boolean,
-        Float,
+        Float32,
         Int32,
         Int64,
         List,

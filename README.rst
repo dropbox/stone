@@ -245,7 +245,7 @@ a data type::
 
        time_taken DbxDate::
            When the photo was taken.
-       lat_long List(data_type=Float)|null::
+       lat_long List(data_type=Float32)|null::
            The GPS coordinates where the photo was taken.
 
        example default:
@@ -258,9 +258,9 @@ a data type::
 
        time_taken DbxDate::
            When the photo was taken.
-       lat_long List(data_type=Float)|null::
+       lat_long List(data_type=Float32)|null::
            The GPS coordinates where the photo was taken.
-       duration Float::
+       duration Float32::
            Length of video in milliseconds.
 
        example default:
@@ -314,7 +314,7 @@ These types exist without having to be declared:
    * Integers: Int32, Int64, UInt32, UInt64
       * Attributes ``min_value`` and ``max_value`` can be set for more
         restrictive bounding.
-   * Float, Double
+   * Float32, Float64
    * String
       * Attributes ``min_length`` and ``max_length`` can be set.
    * Timestamp

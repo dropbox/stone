@@ -11,7 +11,7 @@ from babelsdk.data_type import (
     Binary,
     Boolean,
     Field,
-    Float,
+    Float32,
     SymbolField,
     List,
     Int32,
@@ -142,7 +142,7 @@ MediaInfo = Struct(
     'MediaInfo',
     "Media type specific metadata.",
     [
-     Field('lat_long', List(Float(), min_items=2, max_items=2), 'The coordinates where a photo was taken.'),
+     Field('lat_long', List(Float32(), min_items=2, max_items=2), 'The coordinates where a photo was taken.'),
      Field('time_taken', DbxTimestamp, 'When created.'),
      ],
 )

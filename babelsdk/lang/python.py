@@ -5,7 +5,8 @@ import pprint
 from babelsdk.lang.lang import TargetLanguage
 from babelsdk.data_type import (
     Boolean,
-    Float,
+    Float32,
+    Float64,
     Int32,
     Int64,
     List,
@@ -24,7 +25,8 @@ class PythonTargetLanguage(TargetLanguage):
 
     _type_table = {
         Boolean: 'bool',
-        Float: 'float',
+        Float32: 'float',
+        Float64: 'float',
         Int32: 'int',
         Int64: 'long',
         List: 'list',

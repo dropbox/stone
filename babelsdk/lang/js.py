@@ -4,7 +4,8 @@ import pprint
 from babelsdk.lang.lang import TargetLanguage
 from babelsdk.data_type import (
     Boolean,
-    Float,
+    Float32,
+    Float64,
     Int32,
     Int64,
     List,
@@ -23,7 +24,8 @@ class JavascriptTargetLanguage(TargetLanguage):
 
     _type_table = {
         Boolean: 'boolean',
-        Float: 'number',
+        Float32: 'number',
+        Float64: 'number',
         Int32: 'number',
         Int64: 'number',
         List: 'object',

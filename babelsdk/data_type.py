@@ -114,13 +114,13 @@ class BigInt(PrimitiveType):
         if not isinstance(val, numbers.Integral):
             raise ValueError('%r is not a valid integer')
 
-class Float(PrimitiveType):
+class Float32(PrimitiveType):
     # TODO: Decide how to enforce a 32-bit float
     def check(self, val):
         if not isinstance(val, numbers.Real):
             raise ValueError('%r is not a valid float' % val)
 
-class Double(PrimitiveType):
+class Float64(PrimitiveType):
     def check(self, val):
         if not isinstance(val, numbers.Real):
             raise ValueError('%r is not a valid double' % val)
