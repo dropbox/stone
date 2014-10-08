@@ -234,14 +234,14 @@ class BabelParser(object):
             p[0] = []
 
     def p_statement_typedef_union(self, p):
-        'typedef : UNION ID COLON NEWLINE INDENT docsection field_list example_list DEDENT'
+        'typedef : UNION ID NEWLINE INDENT docsection field_list example_list DEDENT'
         p[0] = BabelTypeDef(p[1], p[2])
-        if p[6]:
-            p[0].set_doc(self._normalize_docstring(p[6]))
-        if p[7] is not None:
-            p[0].set_fields(p[7])
-        if p[8]:
-            for label, text, example in p[8]:
+        if p[5]:
+            p[0].set_doc(self._normalize_docstring(p[5]))
+        if p[6] is not None:
+            p[0].set_fields(p[6])
+        if p[7]:
+            for label, text, example in p[7]:
                 p[0].add_example(label, text, example)
 
     def p_inheritance(self, p):
@@ -251,60 +251,54 @@ class BabelParser(object):
             p[0] = p[2]
 
     def p_statement_typedef_struct(self, p):
-        'typedef : STRUCT ID inheritance COLON NEWLINE INDENT docsection field_list example_list DEDENT'
+        'typedef : STRUCT ID inheritance NEWLINE INDENT docsection field_list example_list DEDENT'
         p[0] = BabelTypeDef(p[1], p[2], extends=p[3])
-        if p[7]:
-            p[0].set_doc(self._normalize_docstring(p[7]))
+        if p[6]:
+            p[0].set_doc(self._normalize_docstring(p[6]))
+        if p[7] is not None:
+            p[0].set_fields(p[7])
         if p[8] is not None:
-            p[0].set_fields(p[8])
-        if p[9] is not None:
-            for label, text, example in p[9]:
+            for label, text, example in p[8]:
                 p[0].add_example(label, text, example)
 
     def p_statement_request_section(self, p):
-        """reqsection : REQUEST COLON NEWLINE INDENT field_list DEDENT"""
-        p[0] = p[5]
+        """reqsection : REQUEST NEWLINE INDENT field_list DEDENT"""
+        p[0] = p[4]
 
     def p_statement_response_section(self, p):
-        """respsection : RESPONSE COLON NEWLINE INDENT field_list DEDENT"""
-        p[0] = p[5]
+        """respsection : RESPONSE NEWLINE INDENT field_list DEDENT"""
+        p[0] = p[4]
 
     def p_statement_error_section(self, p):
-        """errorsection : ERROR COLON NEWLINE INDENT ID NEWLINE DEDENT
+        """errorsection : ERROR NEWLINE INDENT ID NEWLINE DEDENT
                         | empty"""
         if p[1]:
-            p[0] = p[5]
+            p[0] = p[4]
 
     def p_statement_extras_section(self, p):
-        """extrassection : EXTRAS COLON NEWLINE INDENT example_field_list DEDENT
+        """extrassection : EXTRAS NEWLINE INDENT example_field_list DEDENT
                          | empty"""
         if p[1]:
-            p[0] = p[5]
+            p[0] = p[4]
+
+    def p_path(self, p):
+        """path_option : PATH
+                       | empty"""
+        p[0] = p[1]
 
     def p_statement_opdef(self, p):
-        """opdef : OP ID COLON NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT
-                 | OP ID PATH COLON NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT"""
-        if p[3] == ':':
-            p[0] = BabelOpDef(p[2])
-            p[0].set_doc(self._normalize_docstring(p[6]))
-            p[0].set_request_segmentation(p[7])
-            p[0].set_response_segmentation(p[8])
-            if p[9]:
-                p[0].set_error_data_type_name(p[9])
-            if p[10]:
-                p[0].set_extras(dict(p[10]))
-        else:
-            p[0] = BabelOpDef(p[2], p[3])
-            p[0].set_doc(self._normalize_docstring(p[7]))
-            p[0].set_request_segmentation(p[8])
-            p[0].set_response_segmentation(p[9])
-            if p[10]:
-                p[0].set_error_data_type_name(p[10])
-            if p[11]:
-                p[0].set_extras(dict(p[11]))
+        'opdef : OP ID path_option NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT'
+        p[0] = BabelOpDef(p[2], p[3])
+        p[0].set_doc(self._normalize_docstring(p[6]))
+        p[0].set_request_segmentation(p[7])
+        p[0].set_response_segmentation(p[8])
+        if p[9]:
+            p[0].set_error_data_type_name(p[9])
+        if p[10]:
+            p[0].set_extras(dict(p[10]))
 
     def p_statement_add_doc(self, p):
-        """docsection : KEYWORD DOUBLE_COLON docstring DEDENT
+        """docsection : KEYWORD COLON docstring DEDENT
                       | empty"""
         if p[1]:
             if p[1] != 'doc':
@@ -371,7 +365,7 @@ class BabelParser(object):
         p[0] = p[1]
 
     def p_statement_field(self, p):
-        """field : ID ID attributes_group nullable default_option presence deprecation DOUBLE_COLON docstring DEDENT
+        """field : ID ID attributes_group nullable default_option presence deprecation COLON docstring DEDENT
                  | ID ID attributes_group nullable default_option presence deprecation NEWLINE"""
         has_docstring = (p[8] == '::')
         p[0] = BabelField(p[1], p[2], p[3], p[4], p[6], p[7])
@@ -384,15 +378,15 @@ class BabelParser(object):
             p[0].set_doc(self._normalize_docstring(p[9]))
 
     def p_statement_field_symbol(self, p):
-        'field : ID DOUBLE_COLON docstring DEDENT'
+        'field : ID COLON docstring DEDENT'
         p[0] = BabelSymbol(p[1])
         if p[3]:
             p[0].set_doc(self._normalize_docstring(p[3]))
 
     def p_statement_example(self, p):
-        """example : KEYWORD ID STRING COLON NEWLINE INDENT example_field_list DEDENT
-                   | KEYWORD ID empty COLON NEWLINE INDENT example_field_list DEDENT"""
-        p[0] = (p[2], p[3], p[7])
+        """example : KEYWORD ID STRING NEWLINE INDENT example_field_list DEDENT
+                   | KEYWORD ID empty NEWLINE INDENT example_field_list DEDENT"""
+        p[0] = (p[2], p[3], p[6])
 
     def p_statement_example_field_list(self, p):
         """example_field_list : example_field

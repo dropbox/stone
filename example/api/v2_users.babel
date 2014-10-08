@@ -2,60 +2,60 @@ namespace users
 
 include v2_common
 
-struct QuotaInfo:
-    doc::
+struct QuotaInfo
+    doc:
         The space quota info for a user.
 
-    quota UInt64::
+    quota UInt64:
         The user's total quota allocation (bytes).
-    normal UInt64::
+    normal UInt64:
         The user's used quota outside of shared folders (bytes).
-    shared UInt64::
+    shared UInt64:
         The user's used quota in shared folders (bytes).
-    datastores UInt64|null optional::
+    datastores UInt64|null optional:
         The user's used quota in datastores (bytes).
 
-    example default:
+    example default
         quota=1000000
         normal=1000
         shared=500
         datastores=42
 
-struct Team:
-    doc::
+struct Team
+    doc:
         Information about a team.
 
-    id String::
+    id String:
         The team's unique ID.
-    name String::
+    name String:
         The name of the team.
 
-    example default:
+    example default
         id="ha83cda8h"
         name="Acme, Inc."
 
-struct AccountInfo:
-    doc::
+struct AccountInfo
+    doc:
         Information about a user's account.
 
-    display_name String::
+    display_name String:
         The full name of a user.
-    account_id String::
+    account_id String:
         The user's unique Dropbox ID.
-    email String::
+    email String:
         The user's e-mail address.
-    country String(min_length=2, max_length=2, pattern="[US]+")::
+    country String(min_length=2, max_length=2, pattern="[US]+"):
         The user's two-letter country code, if available.
-    referral_link String::
+    referral_link String:
         The user's :link:`referral link https://www.dropbox.com/referrals`.
-    quota QuotaInfo::
+    quota QuotaInfo:
         The user's quota.
-    is_paired Boolean::
+    is_paired Boolean:
         Whether the user has a personal and business account.
-    team Team|null::
+    team Team|null:
         If this account is a member of a team.
 
-    example default "Paired account":
+    example default "Paired account"
         display_name="Jon Snow"
         account_id="314159"
         email="jsnow@westeros.com"
@@ -63,7 +63,7 @@ struct AccountInfo:
         referral_link="https://db.tt/ZITNuhtI"
         is_paired=true
 
-    example unpaired:
+    example unpaired
         display_name="Jon Snow"
         account_id="314159"
         email="jsnow@westeros.com"
@@ -72,27 +72,27 @@ struct AccountInfo:
         is_paired=false
         team=null
 
-struct MoreAccountInfo extends AccountInfo:
-    doc::
+struct MoreAccountInfo extends AccountInfo
+    doc:
         Stub for testing.
 
-    locale String::
+    locale String:
         Locale set by the user.
 
-struct AccountInfoRequest:
-    doc::
+struct AccountInfoRequest
+    doc:
         Stub.
 
-    account_id String|null = "me" optional::
+    account_id String|null = "me" optional:
         A user's account identifier. Use "me" to get information for the
         current account.
 
-op Info:
-    doc::
+op Info
+    doc:
         Get information about a user's account.
 
-    request:
+    request
         info AccountInfoRequest
 
-    response:
+    response
         info AccountInfo

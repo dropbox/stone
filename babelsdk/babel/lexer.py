@@ -102,7 +102,6 @@ class BabelLexer(object):
 
     # Tokens related to free text
     tokens += (
-       'DOUBLE_COLON',
        'LINE',
     )
 
@@ -135,7 +134,6 @@ class BabelLexer(object):
     t_RPAR  = r'\)'
     t_EQ = r'='
     t_COMMA = r','
-    t_COLON = r':'
     t_PIPE = r'\|'
 
     KEYWORDS = [
@@ -199,9 +197,9 @@ class BabelLexer(object):
         r'\/[/a-zA-Z0-9_-]*'
         return token
 
-    def t_DOUBLE_COLON(self, token):
-        r'::'
-        self._logger.debug('Pushing freetext stat')
+    def t_COLON(self, token):
+        r':'
+        self._logger.debug('Pushing freetext state')
         token.lexer.push_state('freetext')
         self.cur_indent += 4
         # TODO: Can we not force it? Should we emit an indent and newline token?

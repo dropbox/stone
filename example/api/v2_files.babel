@@ -2,139 +2,139 @@ namespace files
 
 include v2_common
 
-struct Photo:
-    doc::
+struct Photo
+    doc:
         Photo-specific information derived from EXIF data.
 
-    time_taken DbxTimestamp::
+    time_taken DbxTimestamp:
         When the photo was taken.
-    lat_long List(data_type=Float32)|null::
+    lat_long List(data_type=Float32)|null:
         The GPS coordinates where the photo was taken.
 
-    example default:
+    example default
         time_taken="Sat, 28 Jun 2014 18:23:21"
         lat_long=null
 
-struct Video:
-    doc::
+struct Video
+    doc:
         Video-specific information derived from EXIF data.
 
-    time_taken DbxTimestamp::
+    time_taken DbxTimestamp:
         When the photo was taken.
-    lat_long List(data_type=Float32)|null::
+    lat_long List(data_type=Float32)|null:
         The GPS coordinates where the photo was taken.
-    duration Float32::
+    duration Float32:
         Length of video in milliseconds.
 
-    example default:
+    example default
         time_taken="Sat, 28 Jun 2014 18:23:21"
         lat_long=null
         duration=3
 
-union MediaInfo:
-    doc::
+union MediaInfo
+    doc:
         Media specific information.
 
     photo Photo
     video Video
 
-struct SharedFolder:
-    doc::
+struct SharedFolder
+    doc:
         Information specific to a shared folder.
 
-    id String::
+    id String:
         The unique identifier for this shared folder.
 
-    example default:
+    example default
         id="sf123"
 
 # For fileid ancestry tree
-struct Ancestor:
-    id String(max_length=40)::
+struct Ancestor
+    id String(max_length=40):
         A unique identifier for the ancestor.
-    id_revision String(max_length=40)::
+    id_revision String(max_length=40):
         The revision of the ancestor.
-    type String(max_length=15)::
+    type String(max_length=15):
         The type of relationship with the descendant. Options are :val:`"move"`,
         :val:`"copy"` and :val:`"sharing_policy"`.
 
-    example default:
+    example default
         id="xyz123"
         id_revision="rev456"
         type="copy"
 
 # Parent struct for files or folders in a filesystem.
-struct BaseFile:
-    doc::
+struct BaseFile
+    doc:
         A file or folder entry.
 
-    id String(max_length=40)::
+    id String(max_length=40):
         A unique identifier for the file.
-    id_revision UInt64::
+    id_revision UInt64:
         A unique identifier for the current revision of a file. This field is
         the same rev as elsewhere in the API and can be used to detect changes
         and avoid conflicts.
-    path String::
+    path String:
         Path to file or folder.
-    path_revision UInt64::
+    path_revision UInt64:
         A unique identifier for the current revision of a file path. This field
         is the same rev as elsewhere in the API and can be used to detect changes
         and avoid conflicts.
-    modified DbxTimestamp|null::
+    modified DbxTimestamp|null:
         The last time the file was modified on Dropbox, in the standard Timestamp
         format (:val:`null` for root folder).
-    is_deleted Boolean::
+    is_deleted Boolean:
         Whether the given entry is deleted.
-    ancestor Ancestor::
+    ancestor Ancestor:
         The ancestor of this file or folder.
-    read_only Boolean optional::
+    read_only Boolean optional:
         For shared folders, this field specifies whether the user has
         read-only access to the folder. For files within a shared folder,
         this specifies the read-only status of the parent shared folder.
 
-struct SharingUser:
+struct SharingUser
 
-    account_id String::
+    account_id String:
         Account ID of the user.
-    display_name String::
+    display_name String:
         Name of the user.
-    same_team Boolean::
+    same_team Boolean:
         Whether this user is part of the same team.
 
-    example default:
+    example default
         account_id="8320432"
         display_name="John Doe"
         same_team=true
 
-struct SharingUser:
+struct SharingUser
 
-    account_id String::
+    account_id String:
         Account ID of the user.
-    display_name String::
+    display_name String:
         Name of the user.
-    same_team Boolean::
+    same_team Boolean:
         Whether this user is part of the same team.
 
-    example default:
+    example default
         account_id="8320432"
         display_name="John Doe"
         same_team=true
 
-struct File extends BaseFile:
-    doc::
+struct File extends BaseFile
+    doc:
         Information about a file.
 
-    size UInt64::
+    size UInt64:
         File size in bytes.
-    media_info MediaInfo optional::
+    media_info MediaInfo optional:
         Information specific to photo and video media.
-    parent_shared_folder_id String optional::
+    parent_shared_folder_id String optional:
         For files within a shared folder, this field specifies the ID of
         the containing shared folder.
-    modifier SharingUser optional::
+    modifier SharingUser optional:
         The user who last modified this file.
 
-    example default:
+    example default
         id="xyz123"
         id_revision=2
         path="/Project/A/terms.docx"
@@ -144,39 +144,39 @@ struct File extends BaseFile:
         is_deleted=false
         parent_shared_folder_id="abcd1234"
 
-struct SharingMember:
+struct SharingMember
 
-    user SharingUser::
+    user SharingUser:
         User information.
-    role String::
+    role String:
         A user may be an :val:`"editor"`, :val:`"viewer"`, or :val:`"owner"`.
-    active Boolean::
+    active Boolean:
         Whether the user is an active member of the shared folder.
 
-    example default:
+    example default
         role="owner"
         active=true
 
-struct SharedFolder:
-    doc::
+struct SharedFolder
+    doc:
         Information specific to a shared folder.
 
-    id String::
+    id String:
         The unique identifier for this shared folder.
-    members List(data_type=SharingMember)::
+    members List(data_type=SharingMember):
         List of members who have access to this folder.
 
-    example default:
+    example default
         id="sf123"
 
-struct Folder extends BaseFile:
-    doc::
+struct Folder extends BaseFile
+    doc:
         Information about a folder.
 
-    shared_folder SharedFolder optional::
+    shared_folder SharedFolder optional:
         If this is a shared folder, information about it.
 
-    example default:
+    example default
         id="abc456"
         id_revision=3
         path="/Photos"
@@ -184,19 +184,19 @@ struct Folder extends BaseFile:
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
 
-union Entry:
-    doc::
+union Entry
+    doc:
         A file or folder in a Dropbox.
 
     file File
     folder Folder
 
-struct FolderAndContents extends Folder:
+struct FolderAndContents extends Folder
 
-    contents List(data_type=Entry)::
+    contents List(data_type=Entry):
         Ordered list of all contained files and folders.
 
-    example default:
+    example default
         id="abc456"
         id_revision=3
         path="/Photos"
@@ -204,269 +204,269 @@ struct FolderAndContents extends Folder:
         modified="Sat, 28 Jun 2014 18:23:21"
         is_deleted=false
 
-struct FolderListRequest:
-    doc::
+struct FolderListRequest
+    doc:
         Stub.
 
-    id String optional::
+    id String optional:
         The path to the folder.
-    path String optional::
+    path String optional:
         The id of the folder.
-    include_deleted Boolean = false optional::
+    include_deleted Boolean = false optional:
         If this parameter is set to :val:`true`, then :field:`contents` will
         include the metadata of deleted children. Note that the target of the
         :op:`folder-list` call is always returned even when it has been deleted
         (with :field:`is_deleted` set to true) regardless of
         this flag.
-    include_media_info Boolean = false optional::
+    include_media_info Boolean = false optional:
         If true, each file will include a media_info key.
 
-op Folder-List:
-    doc::
+op Folder-List
+    doc:
         Get the contents of a folder.
 
         Either a :field:`path` or :field:`id` must be specified.
 
-    request:
+    request
         in1 FolderListRequest
 
-    response:
+    response
         folder FolderAndContents
 
-struct InfoRequest:
-    doc::
+struct InfoRequest
+    doc:
         Describes a path.
 
-    path String::
+    path String:
         The path to the file or folder.
-    path_revision Rev optional::
+    path_revision Rev optional:
         Specific revision for a given path.
 
-    example default:
+    example default
         path="/Photos/flower.jpg"
 
-op Info:
-    doc::
+op Info
+    doc:
         Get the info for a file or folder.
 
-    request:
+    request
         in1 InfoRequest
 
-    response:
+    response
         info Entry
 
-op Download:
-    doc::
+op Download
+    doc:
         Download a file.
 
-    request:
+    request
         in1 InfoRequest
 
-    response:
+    response
         info File
         data Binary
 
-    extras:
+    extras
         host="content"
         method="GET"
 
 
-struct UpdateParentRev:
-    doc::
+struct UpdateParentRev
+    doc:
         On a write conflict, overwrite the existing file if the parent revision
         matches.
 
-    parent_revision String::
+    parent_revision String:
         The revision to be updated.
-    auto_rename Boolean::
+    auto_rename Boolean:
         Whether the new file should be renamed on a conflict.
 
-    example default:
+    example default
         parent_revision="abc123"
         auto_rename=false
 
-union WriteConflictPolicy:
-    doc::
+union WriteConflictPolicy
+    doc:
         Policy for managing write conflicts.
 
-    reject::
+    reject:
         On a write conflict, reject the new file.
-    overwrite::
+    overwrite:
         On a write conflict, overwrite the existing file.
-    rename::
+    rename:
         On a write conflict, rename the new file with a numerical suffix.
-    update_if_matching_parent_rev UpdateParentRev::
+    update_if_matching_parent_rev UpdateParentRev:
         On a write conflict, overwrite the existing file.
 
-struct FileUploadRequest:
-    doc::
+struct FileUploadRequest
+    doc:
         Stub.
 
-    path String::
+    path String:
         The full path to the file you want to write to. It should not point to a folder.
-    write_conflict_policy WriteConflictPolicy::
+    write_conflict_policy WriteConflictPolicy:
         Action to take if a file already exists at the specified path.
 
-    example default:
+    example default
         path="Documents/plan.docx"
 
-union UploadError:
-    doc::
+union UploadError
+    doc:
         Errors that can be received on error.
 
-    file_exists::
+    file_exists:
         File already exists.
-    bad_path::
+    bad_path:
         Target folder does not exist.
-    user_over_quota::
+    user_over_quota:
         The user does not have space in their Dropbox.
 
-op Upload:
-    doc::
+op Upload
+    doc:
         Upload a file to Dropbox.
 
-    request:
+    request
         in1 FileUploadRequest
         in2 Binary
 
-    response:
+    response
         info File
 
-    error:
+    error
         UploadError
 
-    extras:
+    extras
         host="content"
 
-union PreviewError:
-    not_found::
+union PreviewError
+    not_found:
         The file wasn't found at the specified :field:`path`, or wasn't found
         at the specified :field:`path_rev`.
-    no_preview::
+    no_preview:
         No preview has been generated yet or unable to generate a preview for
         the file.
 
-op Preview:
-    doc::
+op Preview
+    doc:
         Gets a preview for a file.
 
         The Content-Type header will be either application/pdf or text/html.
         There is an Original-Content-Length header which contains the size of
         the preview data.
 
-    request:
+    request
         in InfoRequest
 
-    response:
+    response
         out File
         data Binary
 
-    error:
+    error
         PreviewError
 
-    extras:
+    extras
         host="content"
 
-struct ThumbnailRequest:
-    doc::
+struct ThumbnailRequest
+    doc:
         Stub.
 
-    format String::
+    format String:
         jpeg (default) or png. For images that are photos, jpeg should be
         preferred, while png is better for screenshots and digital art.
-    size String = "s" optional::
+    size String = "s" optional:
         One of the following values: xs, s, m, l, xl.
 
-    example default:
+    example default
         format="jpeg"
         size="m"
 
-op Thumbnail:
-    doc::
+op Thumbnail
+    doc:
         Get the thumbnail for a file.
 
-    request:
+    request
         in1 ThumbnailRequest
 
-    response:
+    response
         info File
         data Binary
 
-    extras:
+    extras
         host="content"
 
-struct DeltaResponse:
+struct DeltaResponse
 
-    reset Boolean::
+    reset Boolean:
         If :val:`true`, clear your local state. There will be no
         :field:`entries`. Then call :op:`delta` with no cursor. :field:`reset`
         will be :val:`true` only on rare occasions, such as after server or
         account maintenance, or if a user deletes their app folder.
-    cursor String::
+    cursor String:
         A string that encodes the latest information that has been returned.
         On the next call to :op:`Delta`, pass in this value.
-    has_more Boolean::
+    has_more Boolean:
         If :val:`true`, then there are more entries available; you can call
         :op:`Delta` again immediately to retrieve those entries. If
         :val:`false`, then wait for at least five minutes (preferably longer)
         before checking again.
-    entries List(data_type=Entry)::
+    entries List(data_type=Entry):
         Each file or directory that has been changed.
 
 
-    example default:
+    example default
         reset=false
         cursor="xyz123"
         has_more=true
 
 
-struct DeltaRequest:
-    doc::
+struct DeltaRequest
+    doc:
         Delta request.
 
-    cursor String|null::
+    cursor String|null:
         A string that is used to keep track of your current state. On the
         next call pass in this value to return delta entries that have been
         recorded since the cursor was returned.
-    path_prefix String optional::
+    path_prefix String optional:
         Filters the response to only include entries at or under the specified
         path.
-    include_media_info Boolean = false optional::
+    include_media_info Boolean = false optional:
         If :val:`true`, each file will include a :field:`media_info` key. When
         :field:`include_media_info` is specified, files will only appear in
         delta responses when the media info is ready.
-    include_membership Boolean = false optional::
+    include_membership Boolean = false optional:
         If true, each shared folder will include a list of the members of
         the shared folder.
 
-    example default:
+    example default
         cursor=null
         path_prefix="/Photos"
         include_media_info=false
         include_membership=false
 
-op Delta:
-    doc::
+op Delta
+    doc:
         A way of letting you keep up with changes to files and folders in a
         user's Dropbox. You can periodically call :op:`Delta` to get a list of
         "delta entries", which are instructions on how to update your local
         state to match the server's state.
 
-    request:
+    request
         in1 DeltaRequest
 
-    response:
+    response
         info DeltaResponse
 
-struct LongpollDeltaRequest:
+struct LongpollDeltaRequest
 
-    cursor String::
+    cursor String:
         A delta cursor as returned from a call to :op:`Delta`. Note that a
         cursor returned from a call to :op:`Delta` with
         :field:`include_media_info` set to :val:`true` is incompatible with
         :op:`LongpollDelta` and an error will be returned.
 
-    timeout UInt32(min_value=30, max_value=480) = 30 optional::
+    timeout UInt32(min_value=30, max_value=480) = 30 optional:
         An optional integer indicating a timeout, in seconds. The request
         will block for at most this length of time, plus up to 90 seconds
         of random jitter added to avoid the
@@ -475,27 +475,27 @@ struct LongpollDeltaRequest:
         should be taken when using this parameter, as some network
         infrastructure does not support long timeouts.
 
-struct LongpollDeltaResponse:
-    doc::
+struct LongpollDeltaResponse
+    doc:
         The connection will block until there are changes available or a
         timeout occurs.
 
-    changes Boolean::
+    changes Boolean:
         Indicates whether new changes are available. If this value is
         :val:`true`, you should call :op:`Delta` to retrieve the changes.
         If this value is :val:`false`, it means the call to
         :op:`LongpollDelta` timed out.
 
-    backoff UInt32 optional::
+    backoff UInt32 optional:
         If present, the value indicates how many seconds your code should
         wait before calling :op:`LongpollDelta` again.
 
-    example default:
+    example default
         changes=false
         backoff=60
 
-op LongpollDelta:
-    doc::
+op LongpollDelta
+    doc:
         A long-poll endpoint to wait for changes on an account. In conjunction
         with :op:`Delta`, this call gives you a low-latency way to monitor an
         account for file changes.
@@ -504,26 +504,26 @@ op LongpollDelta:
         authentication. The passed in :field:`cursor` can only be acquired via
         an authenticated call to :op:`Delta`.
 
-    request:
+    request
         in LongpollDeltaRequest
 
-    response:
+    response
         out LongpollDeltaResponse
 
-    extras:
+    extras
         host="notify"
         noauth=true
 
-struct RevisionHistory:
+struct RevisionHistory
 
-    revisions List(data_type=Entry)::
+    revisions List(data_type=Entry):
         List of file or folders that have been part of the revision history.
 
-    example default:
+    example default
         pass
 
-op Revisions:
-    doc::
+op Revisions
+    doc:
         Obtains file information for previous revisions.
 
         Only revisions up to thirty days old are available (or more if the
@@ -531,184 +531,184 @@ op Revisions:
         conjunction with the :op:`Restore` call to revert the file to its
         previous state.
 
-    request:
+    request
         in1 InfoRequest
 
-    response:
+    response
         history RevisionHistory
 
-struct RestoreRequest:
+struct RestoreRequest
 
-    path String::
+    path String:
         The path to the file or folder.
-    rev Rev::
+    rev Rev:
         The revision of a path to restore to.
 
-op Restore:
-    doc::
+op Restore
+    doc:
         Restores a file path to a previous revision.
 
         Unlike downloading a file at a given revision and then re-uploading it,
         this call is atomic. It also saves a bunch of bandwidth.
 
-    request:
+    request
         in RestoreRequest
 
-    response:
+    response
         out File
 
-struct SearchRequest:
+struct SearchRequest
 
-    query String::
+    query String:
         The search string. This string is split (on spaces) into individual
         words. Files and folders will be returned if they contain all words
         in the search string.
-    file_limit UInt32(max_value=1000) = 1000::
+    file_limit UInt32(max_value=1000) = 1000:
         The maximum and default value is 1,000. No more than file_limit search
         results will be returned.
 
-    include_deleted Boolean = false optional::
+    include_deleted Boolean = false optional:
         If this parameter is set to true, then files and folders that have been
         deleted will also be included in the search.
-    include_membership Boolean = false optional::
+    include_membership Boolean = false optional:
         If true, metadata for a shared folder will include a list of the
         members of the shared folder.
 
-struct SearchResults:
+struct SearchResults
 
-    results List(data_type=Entry)::
+    results List(data_type=Entry):
         List of file or folders that match the search query.
 
-    example default:
+    example default
         pass
 
-op Search:
-    doc::
+op Search
+    doc:
         Returns metadata for all files and folders whose filename contains the
         given search string as a substring.
 
         Searches are limited to the folder path and its sub-folder hierarchy
         provided in the call.
 
-    request:
+    request
         in SearchRequest
 
-    response:
+    response
         out SearchResults
 
-struct CopyRequest:
+struct CopyRequest
 
-    from_path String::
+    from_path String:
         Specifies the file or folder to be copied.
 
-    to_path String::
+    to_path String:
         Specifies the destination path, including the new name for the file or
         folder.
 
-union CopyError:
+union CopyError
 
-    not_found::
+    not_found:
         The source file wasn't found at the specified path.
-    invalid_source::
+    invalid_source:
         Trying to copy a shared folder.
-    invalid_destination::
+    invalid_destination:
         There is already a file at the given destination.
-    too_many_files::
+    too_many_files:
         Too many files would be involved in the operation for it to complete
         successfully. The limit is currently 10,000 files and folders.
 
-op Copy:
-    doc::
+op Copy
+    doc:
         Copies a file or folder to a new location.
 
-    request:
+    request
         in CopyRequest
 
-    response:
+    response
         out File
 
-    error:
+    error
         CopyError
 
-op Move:
-    doc::
+op Move
+    doc:
         Moves a file or folder to a new location.
 
-    request:
+    request
         in CopyRequest
 
-    response:
+    response
         out File
 
-    error:
+    error
         CopyError
 
-struct FolderCreateRequest:
+struct FolderCreateRequest
 
-    path String::
+    path String:
         The path to the new folder to create.
 
-union FolderCreateError:
-    invalid_destination::
+union FolderCreateError
+    invalid_destination:
         There is already a file at the given destination.
 
-op Folder-Create:
-    doc::
+op Folder-Create
+    doc:
         Creates a folder.
 
-    request:
+    request
         in FolderCreateRequest
 
-    response:
+    response
         out File
 
-    error:
+    error
         FolderCreateError
 
-struct DeleteRequest:
+struct DeleteRequest
 
-    path String::
+    path String:
         The path to the file or folder to be deleted.
 
-union DeleteError:
-    not_found::
+union DeleteError
+    not_found:
         The source file wasn't found at the specified path.
-    too_many_files::
+    too_many_files:
         Too many files would be involved in the operation for it to complete
         successfully. The limit is currently 10,000 files and folders.
 
-op Delete:
-    doc::
+op Delete
+    doc:
         Deletes a file or folder.
 
-    request:
+    request
         in DeleteRequest
 
-    response:
+    response
         out File
 
-    error:
+    error
         DeleteError
 
-struct GetChildrenRequest:
+struct GetChildrenRequest
 
-    id String::
+    id String:
         The ID whose children are returned.
-    limit UInt32(max_value=100) = 100 optional::
+    limit UInt32(max_value=100) = 100 optional:
         The maximum number of children that are returned.
 
-struct ChildrenList:
+struct ChildrenList
 
-    results List(data_type=String)::
+    results List(data_type=String):
         The IDs that are descendants of the query ID.
 
-op Get-Children:
-    doc::
+op Get-Children
+    doc:
         Retrieves a file's children by ID.
 
-    request:
+    request
         in GetChildrenRequest
 
-    response:
+    response
         out ChildrenList
 

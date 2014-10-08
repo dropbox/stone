@@ -148,7 +148,7 @@ Stub.
         </td>
         <td>String</td>
         <td>Yes</td>
-        <td>A user's account identifier. Use "me" to get information for the current account.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -172,7 +172,7 @@ Stub.
         <dd style="margin-top:35px;">
             <h4>Segment 1 of 1 (AccountInfo)</h4>
         <h5>AccountInfo (Struct)</h5>
-Information for a user's account.
+Information about a user's account.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -186,7 +186,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The full name of a user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -194,7 +194,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's unique Dropbox ID.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -202,7 +202,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's e-mail address.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -210,7 +210,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's two-letter country code, if available.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -218,7 +218,7 @@ Information for a user's account.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The user's :link:`referral link https://www.dropbox.com/referrals`.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -226,7 +226,7 @@ Information for a user's account.
         </td>
         <td>QuotaInfo</td>
         <td>No</td>
-        <td>The user's quota.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -234,7 +234,7 @@ Information for a user's account.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the user has a personal and business account.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -242,7 +242,7 @@ Information for a user's account.
         </td>
         <td>Team</td>
         <td>Yes</td>
-        <td>If this account is a member of a team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -261,7 +261,7 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>The user's total quota allocation (bytes).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -269,7 +269,7 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>The user's used quota outside of shared folders (bytes).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -277,7 +277,7 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>The user's used quota in shared folders (bytes).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -285,13 +285,13 @@ The space quota info for a user.
         </td>
         <td>UInt64</td>
         <td>Yes</td>
-        <td>The user's used quota in datastores (bytes).</td>
+        <td>None</td>
     </tr>
 </table>
 
 <br />
 <h5>Team (Struct)</h5>
-Information relevant to a team.
+Information about a team.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -301,11 +301,19 @@ Information relevant to a team.
     </tr>
 <tr>
         <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
             <code>name</code>
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The name of the team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -330,6 +338,7 @@ Information relevant to a team.
     "datastores": 42
   }, 
   "team": {
+    "id": "ha83cda8h", 
     "name": "Acme, Inc."
   }
 }</pre>
@@ -354,6 +363,7 @@ struct QuotaInfo:
 
 
 struct Team:
+    id = String
     name = String
 
 
@@ -409,7 +419,7 @@ Stub.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -417,7 +427,7 @@ Stub.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The id of the folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -425,7 +435,7 @@ Stub.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If this parameter is set to :val:`true`, then :field:`contents` will include the metadata of deleted children. Note that the target of the :op:`folder-list` call is always returned even when it has been deleted (with :field:`is_deleted` set to true) regardless of this flag.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -433,7 +443,7 @@ Stub.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, each file will include a media_info key.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -474,7 +484,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -482,7 +492,7 @@ None
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -490,7 +500,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -498,7 +508,7 @@ None
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -506,7 +516,7 @@ None
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -514,7 +524,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -522,7 +532,7 @@ None
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -530,7 +540,7 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>Ordered list of all contained files and folders.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -538,7 +548,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -546,7 +556,7 @@ None
         </td>
         <td>SharedFolder</td>
         <td>No</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -693,7 +703,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -701,7 +711,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specific revision for a given path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -769,7 +779,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -777,7 +787,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -785,7 +795,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -793,7 +803,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -801,7 +811,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -809,7 +819,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -817,7 +827,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -825,7 +835,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -833,7 +843,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -841,7 +851,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -849,7 +859,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -857,7 +867,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -901,7 +911,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -909,7 +919,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -929,7 +939,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -937,15 +947,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -966,7 +976,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -974,7 +984,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -982,7 +992,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1003,7 +1013,7 @@ Information about a folder.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1011,7 +1021,7 @@ Information about a folder.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1019,7 +1029,7 @@ Information about a folder.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1027,7 +1037,7 @@ Information about a folder.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1035,7 +1045,7 @@ Information about a folder.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1043,7 +1053,7 @@ Information about a folder.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1051,7 +1061,7 @@ Information about a folder.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1059,7 +1069,7 @@ Information about a folder.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1067,7 +1077,7 @@ Information about a folder.
         </td>
         <td>SharedFolder</td>
         <td>No</td>
-        <td>If this a shared folder, information about it.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1086,7 +1096,7 @@ Information specific to a shared folder.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The unique identifier for this shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1094,7 +1104,7 @@ Information specific to a shared folder.
         </td>
         <td>List</td>
         <td>No</td>
-        <td>List of members who have access to this folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1176,7 +1186,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -1261,7 +1271,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1269,7 +1279,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specific revision for a given path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1312,7 +1322,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1320,7 +1330,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1328,7 +1338,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1336,7 +1346,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1344,7 +1354,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1352,7 +1362,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1360,7 +1370,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1368,7 +1378,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1376,7 +1386,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1384,7 +1394,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1392,7 +1402,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1400,7 +1410,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1444,7 +1454,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1452,7 +1462,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1472,7 +1482,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1480,15 +1490,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1509,7 +1519,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1517,7 +1527,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1525,7 +1535,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1600,7 +1610,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -1660,7 +1670,7 @@ Stub.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The full path to the file you want to write to. It should not point to a folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1668,7 +1678,7 @@ Stub.
         </td>
         <td>WriteConflictPolicy</td>
         <td>No</td>
-        <td>Action to take if a file already exists at the specified path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1726,7 +1736,7 @@ On a write conflict, overwrite the existing file if the parent revision matches.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The revision to be updated.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1734,7 +1744,7 @@ On a write conflict, overwrite the existing file if the parent revision matches.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the new file should be renamed on a conflict.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1799,7 +1809,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1807,7 +1817,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1815,7 +1825,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1823,7 +1833,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1831,7 +1841,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1839,7 +1849,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1847,7 +1857,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1855,7 +1865,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1863,7 +1873,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1871,7 +1881,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1879,7 +1889,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1887,7 +1897,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1931,7 +1941,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1939,7 +1949,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1959,7 +1969,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -1967,15 +1977,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -1996,7 +2006,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2004,7 +2014,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2012,7 +2022,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2087,7 +2097,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -2186,7 +2196,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2194,7 +2204,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specific revision for a given path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2237,7 +2247,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2245,7 +2255,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2253,7 +2263,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2261,7 +2271,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2269,7 +2279,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2277,7 +2287,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2285,7 +2295,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2293,7 +2303,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2301,7 +2311,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2309,7 +2319,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2317,7 +2327,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2325,7 +2335,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2369,7 +2379,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2377,7 +2387,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2397,7 +2407,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2405,15 +2415,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2434,7 +2444,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2442,7 +2452,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2450,7 +2460,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2525,7 +2535,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -2618,7 +2628,7 @@ Stub.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>jpeg (default) or png. For images that are photos, jpeg should be preferred, while png is better for screenshots and digital art.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2626,7 +2636,7 @@ Stub.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>One of the following values: xs, s, m, l, xl.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2670,7 +2680,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2678,7 +2688,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2686,7 +2696,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2694,7 +2704,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2702,7 +2712,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2710,7 +2720,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2718,7 +2728,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2726,7 +2736,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2734,7 +2744,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2742,7 +2752,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2750,7 +2760,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2758,7 +2768,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2802,7 +2812,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2810,7 +2820,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2830,7 +2840,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2838,15 +2848,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2867,7 +2877,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2875,7 +2885,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -2883,7 +2893,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -2958,7 +2968,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -3018,7 +3028,7 @@ Delta request.
         </td>
         <td>String</td>
         <td>Yes</td>
-        <td>A string that is used to keep track of your current state. On the next call pass in this value to return delta entries that have been recorded since the cursor was returned.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3026,7 +3036,7 @@ Delta request.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Filters the response to only include entries at or under the specified path.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3034,7 +3044,7 @@ Delta request.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If :val:`true`, each file will include a :field:`media_info` key. When :field:`include_media_info` is specified, files will only appear in delta responses when the media info is ready.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3042,7 +3052,7 @@ Delta request.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, each shared folder will include a list of the members of the shared folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3090,7 +3100,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If :val:`true`, clear your local state. There will be no :field:`entries`. Then call :op:`delta` with no cursor. :field:`reset` will be :val:`true` only on rare occasions, such as after server or account maintenance, or if a user deletes their app folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3098,7 +3108,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A string that encodes the latest information that has been returned. On the next call to :op:`Delta`, pass in this value.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3106,7 +3116,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If :val:`true`, then there are more entries available; you can call :op:`Delta` again immediately to retrieve those entries. If :val:`false`, then wait for at least five minutes (preferably longer) before checking again.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3114,7 +3124,7 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>Each file or directory that has been changed.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3217,7 +3227,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A delta cursor as returned from a call to :op:`Delta`. Note that a cursor returned from a call to :op:`Delta` with :field:`include_media_info` set to :val:`true` is incompatible with :op:`LongpollDelta` and an error will be returned.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3225,7 +3235,7 @@ None
         </td>
         <td>UInt32</td>
         <td>No</td>
-        <td>An optional integer indicating a timeout, in seconds. The request will block for at most this length of time, plus up to 90 seconds of random jitter added to avoid the :link:`thundering herd problem https://en.wikipedia.org/wiki/Thundering_herd_problem`. Care should be taken when using this parameter, as some network infrastructure does not support long timeouts.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3264,7 +3274,7 @@ The connection will block until there are changes available or a timeout occurs.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Indicates whether new changes are available. If this value is :val:`true`, you should call :op:`Delta` to retrieve the changes. If this value is :val:`false`, it means the call to :op:`LongpollDelta` timed out.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3272,7 +3282,7 @@ The connection will block until there are changes available or a timeout occurs.
         </td>
         <td>UInt32</td>
         <td>No</td>
-        <td>If present, the value indicates how many seconds your code should wait before calling :op:`LongpollDelta` again.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3342,7 +3352,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3350,7 +3360,7 @@ Describes a path.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specific revision for a given path.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3393,7 +3403,7 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>List of file or folders that have been part of the revision history.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3402,6 +3412,39 @@ None
 
         <br />
 
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "revisions": [
+    {
+      "file": {
+        "id": "xyz123", 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
+        "modified": "Sat, 28 Jun 2014 18:23:21", 
+        "is_deleted": false, 
+        "size": 1234, 
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
+        }, 
+        "media_info": {
+          "photo": {
+            "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+            "lat_long": null
+          }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
+        }
+      }
+    }
+  ]
+}</pre>
 
             <!--
             <h5>Formal Definition</h5>
@@ -3457,7 +3500,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3465,7 +3508,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The revision of a path to restore to.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3504,7 +3547,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3512,7 +3555,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3520,7 +3563,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3528,7 +3571,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3536,7 +3579,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3544,7 +3587,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3552,7 +3595,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3560,7 +3603,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3568,7 +3611,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3576,7 +3619,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3584,7 +3627,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3592,7 +3635,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3636,7 +3679,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3644,7 +3687,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3664,7 +3707,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3672,15 +3715,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3701,7 +3744,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3709,7 +3752,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3717,7 +3760,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3792,7 +3835,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -3851,7 +3894,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The search string. This string is split (on spaces) into individual words. Files and folders will be returned if they contain all words in the search string.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3859,7 +3902,7 @@ None
         </td>
         <td>UInt32</td>
         <td>No</td>
-        <td>The maximum and default value is 1,000. No more than file_limit search results will be returned.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3867,7 +3910,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If this parameter is set to true, then files and folders that have been deleted will also be included in the search.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -3875,7 +3918,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>If true, metadata for a shared folder will include a list of the members of the shared folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3912,19 +3955,11 @@ None
     </tr>
 <tr>
         <td>
-            <code>has_more</code>
-        </td>
-        <td>Boolean</td>
-        <td>No</td>
-        <td>If true, then the number of files found exceeds the file_limit.</td>
-    </tr>
-<tr>
-        <td>
             <code>results</code>
         </td>
         <td>List</td>
         <td>No</td>
-        <td>List of file or folders that match the search query.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -3935,7 +3970,6 @@ None
 
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
-  "has_more": false, 
   "results": [
     {
       "file": {
@@ -3971,7 +4005,6 @@ None
             <!--
             <h5>Formal Definition</h5>
             <pre class="last literal-block prettyprint dbprettyprint">struct SearchResults:
-    has_more = Boolean
     results = List
 
 </pre>
@@ -4022,7 +4055,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the file or folder to be copied.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4030,7 +4063,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the destination path, including the new name for the file or folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4069,7 +4102,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4077,7 +4110,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4085,7 +4118,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4093,7 +4126,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4101,7 +4134,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4109,7 +4142,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4117,7 +4150,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4125,7 +4158,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4133,7 +4166,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4141,7 +4174,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4149,7 +4182,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4157,7 +4190,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4201,7 +4234,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4209,7 +4242,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4229,7 +4262,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4237,15 +4270,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4266,7 +4299,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4274,7 +4307,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4282,7 +4315,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4357,7 +4390,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -4462,7 +4495,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the file or folder to be copied.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4470,7 +4503,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Specifies the destination path, including the new name for the file or folder.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4509,7 +4542,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4517,7 +4550,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4525,7 +4558,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4533,7 +4566,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4541,7 +4574,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4549,7 +4582,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4557,7 +4590,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4565,7 +4598,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4573,7 +4606,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4581,7 +4614,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4589,7 +4622,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4597,7 +4630,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4641,7 +4674,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4649,7 +4682,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4669,7 +4702,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4677,15 +4710,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4706,7 +4739,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4714,7 +4747,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4722,7 +4755,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4797,7 +4830,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -4902,7 +4935,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the new folder to create.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -4940,7 +4973,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4948,7 +4981,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4956,7 +4989,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4964,7 +4997,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4972,7 +5005,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4980,7 +5013,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4988,7 +5021,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -4996,7 +5029,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5004,7 +5037,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5012,7 +5045,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5020,7 +5053,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5028,7 +5061,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5072,7 +5105,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5080,7 +5113,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5100,7 +5133,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5108,15 +5141,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5137,7 +5170,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5145,7 +5178,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5153,7 +5186,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5228,7 +5261,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -5312,7 +5345,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The path to the file or folder to be deleted.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5350,7 +5383,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>A unique identifier for the file.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5358,7 +5391,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5366,7 +5399,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Path to file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5374,7 +5407,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>A unique identifier for the current revision of a file path. This field is the same rev as elsewhere in the API and can be used to detect changes and avoid conflicts.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5382,7 +5415,7 @@ Information about a file.
         </td>
         <td>Timestamp</td>
         <td>Yes</td>
-        <td>The last time the file was modified on Dropbox, in the standard Timestamp format (:val:`null` for root folder).</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5390,7 +5423,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether the given entry is deleted.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5398,7 +5431,7 @@ Information about a file.
         </td>
         <td>Ancestor</td>
         <td>No</td>
-        <td>The ancestor of this file or folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5406,7 +5439,7 @@ Information about a file.
         </td>
         <td>UInt64</td>
         <td>No</td>
-        <td>File size in bytes.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5414,7 +5447,7 @@ Information about a file.
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>For shared folders, this field specifies whether the user has read-only access to the folder. For files within a shared folder, this specifies the read-only status of the parent shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5422,7 +5455,7 @@ Information about a file.
         </td>
         <td>MediaInfo</td>
         <td>No</td>
-        <td>Information specific to photo and video media.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5430,7 +5463,7 @@ Information about a file.
         </td>
         <td>String</td>
         <td>No</td>
-        <td>For files within a shared folder, this field specifies the ID of the containing shared folder.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5438,7 +5471,7 @@ Information about a file.
         </td>
         <td>SharingUser</td>
         <td>No</td>
-        <td>The user who last modified this file.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5482,7 +5515,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5490,7 +5523,7 @@ Photo-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5510,7 +5543,7 @@ Video-specific information derived from EXIF data.
         </td>
         <td>Timestamp</td>
         <td>No</td>
-        <td>When the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5518,15 +5551,15 @@ Video-specific information derived from EXIF data.
         </td>
         <td>List</td>
         <td>Yes</td>
-        <td>The GPS coordinates where the photo was taken.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
             <code>duration</code>
         </td>
-        <td>Float</td>
+        <td>Float32</td>
         <td>No</td>
-        <td>Length of video in milliseconds.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5547,7 +5580,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Account ID of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5555,7 +5588,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>Name of the user.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5563,7 +5596,7 @@ None
         </td>
         <td>Boolean</td>
         <td>No</td>
-        <td>Whether this user is part of the same team.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5638,7 +5671,7 @@ struct Photo:
 struct Video:
     time_taken = Timestamp
     lat_long = List
-    duration = Float
+    duration = Float32
 
 
 
@@ -5729,7 +5762,7 @@ None
         </td>
         <td>String</td>
         <td>No</td>
-        <td>The ID whose children are returned.</td>
+        <td>None</td>
     </tr>
 <tr>
         <td>
@@ -5737,7 +5770,7 @@ None
         </td>
         <td>UInt32</td>
         <td>No</td>
-        <td>The maximum number of children that are returned.</td>
+        <td>None</td>
     </tr>
 </table>
 
@@ -5776,7 +5809,7 @@ None
         </td>
         <td>List</td>
         <td>No</td>
-        <td>The IDs that are descendants of the query ID.</td>
+        <td>None</td>
     </tr>
 </table>
 
