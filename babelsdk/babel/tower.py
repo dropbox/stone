@@ -10,6 +10,7 @@ from babelsdk.data_type import (
     Boolean,
     Field,
     Float32,
+    Float64,
     Int32,
     Int64,
     List,
@@ -45,6 +46,7 @@ class TowerOfBabel(object):
         Binary,
         Boolean,
         Float32,
+        Float64,
         Int32,
         Int64,
         List,
@@ -135,23 +137,23 @@ class TowerOfBabel(object):
         return api_type
 
     def _create_field(self, env, babel_field):
+        """
+        Given a BabelField, returns a babelsdk.babel.tower.Field object.
+
+        A BabelField is composed of symbols. This function resolves symbols to
+        objects that we've instantiated in the current environment. For example,
+        a field with type name "String" is converted into a String() object.
+        """
         if isinstance(babel_field, BabelSymbol):
             api_type_field = SymbolField(babel_field.name, babel_field.doc)
         elif babel_field.data_type_name not in env:
             raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
         else:
-            obj = env[babel_field.data_type_name]
-            if inspect.isclass(obj):
-                self._resolve_attrs(env, babel_field.data_type_attrs)
-                data_type = obj(**dict(babel_field.data_type_attrs))
-            elif babel_field.data_type_attrs:
-                # An instance of a type cannot have any additional
-                # attributes specified.
-                raise Exception('Attributes cannot be specified for instantiated '
-                                'type %r.' % babel_field.data_type_name)
-            else:
-                data_type = env[babel_field.data_type_name]
-
+            data_type = self._resolve_type(
+                env,
+                babel_field.data_type_name,
+                babel_field.data_type_attrs,
+            )
             api_type_field = Field(
                 babel_field.name,
                 data_type,
@@ -167,16 +169,36 @@ class TowerOfBabel(object):
                 api_type_field.set_default(babel_field.default)
         return api_type_field
 
+    def _resolve_type(self, env, data_type_name, data_type_attrs):
+        """
+        Resolves the data type referenced by the data_type_name.
+        """
+        obj = env[data_type_name]
+        if inspect.isclass(obj):
+            resolved_data_type_attrs = self._resolve_attrs(env, data_type_attrs)
+            data_type = obj(**dict(resolved_data_type_attrs))
+        elif data_type_attrs:
+            # An instance of a type cannot have any additional
+            # attributes specified.
+            raise Exception('Attributes cannot be specified for instantiated '
+                            'type %r.' % data_type_name)
+        else:
+            data_type = env[data_type_name]
+        return data_type
+
     def _resolve_attrs(self, env, attrs):
         """
         Resolves symbols in data type attributes to data types in environment.
         """
+        new_attrs = []
         for i, (k, v) in enumerate(attrs):
             if isinstance(v, BabelSymbol):
                 if v.name not in env:
                     raise Exception('Symbol %r is undefined' % v.name)
                 else:
-                    attrs[i] = (k, env[v.name])
+                    new_attr = (k, self._resolve_type(env, v.name, []))
+                    new_attrs.append(new_attr)
+        return new_attrs
 
     def add_to_api(self, path, desc):
 

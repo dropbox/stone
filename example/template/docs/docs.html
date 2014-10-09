@@ -86,9 +86,9 @@ window.setTimeout(function() {
     </ul>
 
 
-<h4>Users</h4>
+<h4>Files</h4>
     <ul>
-<li id="toc-Info"><a href="#users-Info">Info</a></li>    </ul>
+<li id="toc-Folder-List"><a href="#files-Folder-List">Folder-List</a></li><li id="toc-Info"><a href="#files-Info">Info</a></li><li id="toc-Download"><a href="#files-Download">Download</a></li><li id="toc-Upload"><a href="#files-Upload">Upload</a></li><li id="toc-Preview"><a href="#files-Preview">Preview</a></li><li id="toc-Thumbnail"><a href="#files-Thumbnail">Thumbnail</a></li><li id="toc-Delta"><a href="#files-Delta">Delta</a></li><li id="toc-LongpollDelta"><a href="#files-LongpollDelta">LongpollDelta</a></li><li id="toc-Revisions"><a href="#files-Revisions">Revisions</a></li><li id="toc-Restore"><a href="#files-Restore">Restore</a></li><li id="toc-Search"><a href="#files-Search">Search</a></li><li id="toc-Copy"><a href="#files-Copy">Copy</a></li><li id="toc-Move"><a href="#files-Move">Move</a></li><li id="toc-Folder-Create"><a href="#files-Folder-Create">Folder-Create</a></li><li id="toc-Delete"><a href="#files-Delete">Delete</a></li><li id="toc-Get-Children"><a href="#files-Get-Children">Get-Children</a></li>    </ul>
 
 
 <h4>Webhooks</h4>
@@ -101,10 +101,10 @@ window.setTimeout(function() {
 </pre></dd></dl></div><div id="oa2-from-oa1" class="section toc-el"><h3 class="method-title">/oauth2/token_from_oauth1<ul><li><a href="/developers/core/docs/python#DropboxClient.create_oauth2_access_token">Python</a></li><li><a href="http://dropbox.github.io/dropbox-sdk-java/api-docs/v1.7.x/com/dropbox/core/DbxOAuth1Upgrader.html">Java</a></li><li><a href="http://dropbox.github.io/dropbox-sdk-ruby/api-docs/v1.6.4/DropboxClient.html#method-i-create_oauth2_access_token">Ruby</a></li><li><a href="http://dropbox.github.io/dropbox-sdk-php/api-docs/v1.1.x/class-Dropbox.OAuth1Upgrader.html">PHP</a></li></ul></h3><dl><dt>Description</dt><dd><p>This endpoint should be used by apps transitioning from OAuth 1 to OAuth 2. It will return an OAuth 2 token for the authenticated user.</p><p>Calls to <code>/oauth2/token_from_oauth1</code> must be authenticated via OAuth 1.</p></dd><dt class="url-label">URL Structure</dt><dd><pre class="literal-block">https://api.dropbox.com/1/oauth2/token_from_oauth1</pre></dd><dt>Method</dt><dd>POST</dd><dt>Returns</dt><dd><p>A JSON-encoded dictionary including an access token (<code>access_token</code>) and a token type (<code>token_type</code>). The token type will always be "bearer".</p><p><strong>Sample response</strong></p><pre class="literal-block">{"access_token": "ABCDEFG", token_type: "bearer"}</pre></dd></dl></div></div></div><div id="tokens" class="section"><h2>Access tokens</h2><div id="disable-token" class="section toc-el"><h3 class="method-title">/disable_access_token<ul><li><a href="/developers/core/docs/python#DropboxClient.disable_access_token">Python</a></li><li><a href="http://dropbox.github.io/dropbox-sdk-java/api-docs/v1.7.x/com/dropbox/core/DbxClient.html#disableAccessToken()">Java</a></li><li><a href="http://dropbox.github.io/dropbox-sdk-ruby/api-docs/v1.6.4/DropboxClient.html#method-i-disable_access_token">Ruby</a></li><li><a href="http://dropbox.github.io/dropbox-sdk-php/api-docs/v1.1.x/class-Dropbox.Client.html#_disableAccessToken">PHP</a></li></ul></h3><dl><dt>Description</dt><dd>Disables the access token used to authenticate the call. This method works for OAuth 1 and OAuth 2 tokens.</dd><dt class="url-label">URL Structure</dt><dd><pre class="literal-block">https://api.dropbox.com/1/disable_access_token</pre></dd><dt>Method</dt><dd>POST</dd><dt>Returns</dt><dd><p>An empty JSON dictionary, which indicates success.</p></dd></dl></div></div>
 
 
-<div id="users" class="section toc-el">
-    <h2>Users</h2>
-    <a name="users-Info"></a>
-    <h3 class="method-title-first">users/info
+<div id="files" class="section toc-el">
+    <h2>Files</h2>
+    <a name="files-Folder-List"></a>
+    <h3 class="method-title-first">files/folder-list
         <ul>
             <li>
                 <a href="#broken"> Python</a>
@@ -122,173 +122,17 @@ window.setTimeout(function() {
     </h3>
     <dl>
         <dt>Description</dt>
-        <dd>Get information about a user's account.</dd>
+        <dd>Get the contents of a folder.
+Either a :field:`path` or :field:`id` must be specified.</dd>
         <dt class="url-label">URL Structure</dt>
         <dd>
-            <pre class="literal-block">https://api.dropbox.com/2/users/info</pre>
+            <pre class="literal-block">https://api.dropbox.com/2/files/folder-list</pre>
         </dd>
         <dt>Request</dt>
         <dd style="margin-top:30px;">
-            <h4>Segment 1 of 1 (AccountInfoRequest)</h4>
-        <h5>AccountInfoRequest (Struct)</h5>
+            <h4>Segment 1 of 1 (FolderListRequest)</h4>
+        <h5>FolderListRequest (Struct)</h5>
 Stub.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>account_id</code>
-        </td>
-        <td>String</td>
-        <td>Yes</td>
-        <td>None</td>
-    </tr>
-</table>
-
-<br />
-
-
-        <br />
-
-
-            <!--
-            <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct AccountInfoRequest:
-    account_id = String
-
-</pre>
-            -->
-
-
-        </dd>
-        <dt>Response</dt>
-        <dd style="margin-top:35px;">
-            <h4>Segment 1 of 1 (AccountInfo)</h4>
-        <h5>AccountInfo (Struct)</h5>
-Information about a user's account.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>display_name</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>account_id</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>email</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>country</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>referral_link</code>
-        </td>
-        <td>String</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>quota</code>
-        </td>
-        <td>QuotaInfo</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>is_paired</code>
-        </td>
-        <td>Boolean</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>team</code>
-        </td>
-        <td>Team</td>
-        <td>Yes</td>
-        <td>None</td>
-    </tr>
-</table>
-
-<br /><h5>QuotaInfo (Struct)</h5>
-The space quota info for a user.
-<table class="api-param-values">
-    <tr>
-        <th>field</th>
-        <th>data type</th>
-        <th>nullable</th>
-        <th>description</th>
-    </tr>
-<tr>
-        <td>
-            <code>quota</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>normal</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>shared</code>
-        </td>
-        <td>UInt64</td>
-        <td>No</td>
-        <td>None</td>
-    </tr>
-<tr>
-        <td>
-            <code>datastores</code>
-        </td>
-        <td>UInt64</td>
-        <td>Yes</td>
-        <td>None</td>
-    </tr>
-</table>
-
-<br />
-<h5>Team (Struct)</h5>
-Information about a team.
 <table class="api-param-values">
     <tr>
         <th>field</th>
@@ -306,9 +150,1117 @@ Information about a team.
     </tr>
 <tr>
         <td>
-            <code>name</code>
+            <code>path</code>
         </td>
         <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>include_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>include_media_info</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct FolderListRequest:
+    id = String
+    path = String
+    include_deleted = Boolean
+    include_media_info = Boolean
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (FolderAndContents)</h4>
+        <h5>FolderAndContents (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>contents</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>shared_folder</code>
+        </td>
+        <td>SharedFolder</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "abc456", 
+  "id_revision": 3, 
+  "path": "/Photos", 
+  "path_revision": 20, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "contents": [
+    {
+      "file": {
+        "id": "xyz123", 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
+        "modified": "Sat, 28 Jun 2014 18:23:21", 
+        "is_deleted": false, 
+        "size": 1234, 
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
+        }, 
+        "media_info": {
+          "photo": {
+            "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+            "lat_long": null
+          }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
+        }
+      }
+    }
+  ], 
+  "shared_folder": {
+    "id": "sf123", 
+    "members": [
+      {
+        "role": "owner", 
+        "active": true, 
+        "user": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
+        }
+      }
+    ]
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct Folder extends BaseFile:
+    shared_folder = SharedFolder
+
+struct SharedFolder:
+    id = String
+    members = List
+
+
+
+struct FolderAndContents extends Folder:
+    contents = List
+
+</pre>
+            -->
+
+
+        </dd>
+    </dl>
+    <a name="files-Info"></a>
+    <h3 class="method-title-first">files/info
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Get the info for a file or folder.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/info</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (InfoRequest)</h4>
+        <h5>InfoRequest (Struct)</h5>
+Describes a path.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "path": "/Photos/flower.jpg"
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+    path_revision = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (Entry)</h4>
+        
+<h5>Entry (Union)</h5>
+A file or folder in a Dropbox.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>file</code>
+        </td>
+        <td>File</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>folder</code>
+        </td>
+        <td>Folder</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>Folder (Struct)</h5>
+Information about a folder.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>shared_folder</code>
+        </td>
+        <td>SharedFolder</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br /><h5>SharedFolder (Struct)</h5>
+Information specific to a shared folder.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>members</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "file": {
+    "id": "xyz123", 
+    "id_revision": 2, 
+    "path": "/Project/A/terms.docx", 
+    "path_revision": 19, 
+    "modified": "Sat, 28 Jun 2014 18:23:21", 
+    "is_deleted": false, 
+    "size": 1234, 
+    "parent_shared_folder_id": "abcd1234", 
+    "ancestor": {
+      "id": "xyz123", 
+      "id_revision": "rev456", 
+      "type": "copy"
+    }, 
+    "media_info": {
+      "photo": {
+        "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+        "lat_long": null
+      }
+    }, 
+    "modifier": {
+      "account_id": "8320432", 
+      "display_name": "John Doe", 
+      "same_team": true
+    }
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">union Entry:
+    file = File
+    folder = Folder
+
+struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+
+struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct Folder extends BaseFile:
+    shared_folder = SharedFolder
+
+struct SharedFolder:
+    id = String
+    members = List
+
+
+
+</pre>
+            -->
+
+
+        </dd>
+    </dl>
+    <a name="files-Download"></a>
+    <h3 class="method-title-first">files/download
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Download a file.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/download</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (InfoRequest)</h4>
+        <h5>InfoRequest (Struct)</h5>
+Describes a path.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "path": "/Photos/flower.jpg"
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+    path_revision = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 2 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
         <td>No</td>
         <td>None</td>
     </tr>
@@ -322,47 +1274,4282 @@ Information about a team.
 
                 <h5>Sample JSON response</h5>
                 <pre class="last literal-block">{
-  "display_name": "Jon Snow", 
-  "account_id": "314159", 
-  "email": "jsnow@westeros.com", 
-  "country": "US", 
-  "referral_link": "https://db.tt/ZITNuhtI", 
-  "is_paired": true, 
-  "quota": {
-    "quota": 1000000, 
-    "normal": 1000, 
-    "shared": 500, 
-    "datastores": 42
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
   }, 
-  "team": {
-    "id": "ha83cda8h", 
-    "name": "Acme, Inc."
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
   }
 }</pre>
 
             <!--
             <h5>Formal Definition</h5>
-            <pre class="last literal-block prettyprint dbprettyprint">struct AccountInfo:
-    display_name = String
-    account_id = String
-    email = String
-    country = String
-    referral_link = String
-    quota = QuotaInfo
-    is_paired = Boolean
-    team = Team
-
-struct QuotaInfo:
-    quota = UInt64
-    normal = UInt64
-    shared = UInt64
-    datastores = UInt64
-
-
-struct Team:
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
     id = String
-    name = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
 
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+<h4>Segment 2 of 2 (Binary)</h4>
+            &mdash;
+
+        </dd>
+    </dl>
+    <a name="files-Upload"></a>
+    <h3 class="method-title-first">files/upload
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Upload a file to Dropbox.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/upload</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 2 (FileUploadRequest)</h4>
+        <h5>FileUploadRequest (Struct)</h5>
+Stub.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>write_conflict_policy</code>
+        </td>
+        <td>WriteConflictPolicy</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>WriteConflictPolicy (Union)</h5>
+Policy for managing write conflicts.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>reject</code>
+        </td>
+        <td>&mdash;</td>
+        <td>On a write conflict, reject the new file.</td>
+    </tr>
+<tr>
+        <td>
+            <code>overwrite</code>
+        </td>
+        <td>&mdash;</td>
+        <td>On a write conflict, overwrite the existing file.</td>
+    </tr>
+<tr>
+        <td>
+            <code>rename</code>
+        </td>
+        <td>&mdash;</td>
+        <td>On a write conflict, rename the new file with a numerical suffix.</td>
+    </tr>
+<tr>
+        <td>
+            <code>update_if_matching_parent_rev</code>
+        </td>
+        <td>UpdateParentRev</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>UpdateParentRev (Struct)</h5>
+On a write conflict, overwrite the existing file if the parent revision matches.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>parent_revision</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>auto_rename</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "path": "Documents/plan.docx", 
+  "write_conflict_policy": {
+    "update_if_matching_parent_rev": {
+      "parent_revision": "abc123", 
+      "auto_rename": false
+    }
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct FileUploadRequest:
+    path = String
+    write_conflict_policy = WriteConflictPolicy
+
+union WriteConflictPolicy:
+    reject
+    overwrite
+    rename
+    update_if_matching_parent_rev = UpdateParentRev
+
+struct UpdateParentRev:
+    parent_revision = String
+    auto_rename = Boolean
+
+
+
+</pre>
+            -->
+
+<h4>Segment 2 of 2 (Binary)</h4>
+            &mdash;
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Error</dt>
+        <dd style="margin-top:35px;">
+            
+    
+<h5>UploadError (Union)</h5>
+Errors that can be received on error.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>file_exists</code>
+        </td>
+        <td>&mdash;</td>
+        <td>File already exists.</td>
+    </tr>
+<tr>
+        <td>
+            <code>bad_path</code>
+        </td>
+        <td>&mdash;</td>
+        <td>Target folder does not exist.</td>
+    </tr>
+<tr>
+        <td>
+            <code>user_over_quota</code>
+        </td>
+        <td>&mdash;</td>
+        <td>The user does not have space in their Dropbox.</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        </dd>
+    </dl>
+    <a name="files-Preview"></a>
+    <h3 class="method-title-first">files/preview
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Gets a preview for a file.
+The Content-Type header will be either application/pdf or text/html. There is an Original-Content-Length header which contains the size of the preview data.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/preview</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (InfoRequest)</h4>
+        <h5>InfoRequest (Struct)</h5>
+Describes a path.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "path": "/Photos/flower.jpg"
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+    path_revision = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 2 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+<h4>Segment 2 of 2 (Binary)</h4>
+            &mdash;
+
+        </dd>
+        <dt>Error</dt>
+        <dd style="margin-top:35px;">
+            
+    
+<h5>PreviewError (Union)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>not_found</code>
+        </td>
+        <td>&mdash;</td>
+        <td>The file wasn't found at the specified :field:`path`, or wasn't found at the specified :field:`path_rev`.</td>
+    </tr>
+<tr>
+        <td>
+            <code>no_preview</code>
+        </td>
+        <td>&mdash;</td>
+        <td>No preview has been generated yet or unable to generate a preview for the file.</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        </dd>
+    </dl>
+    <a name="files-Thumbnail"></a>
+    <h3 class="method-title-first">files/thumbnail
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Get the thumbnail for a file.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/thumbnail</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (ThumbnailRequest)</h4>
+        <h5>ThumbnailRequest (Struct)</h5>
+Stub.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>format</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "format": "jpeg", 
+  "size": "m"
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct ThumbnailRequest:
+    format = String
+    size = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 2 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+<h4>Segment 2 of 2 (Binary)</h4>
+            &mdash;
+
+        </dd>
+    </dl>
+    <a name="files-Delta"></a>
+    <h3 class="method-title-first">files/delta
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>A way of letting you keep up with changes to files and folders in a user's Dropbox. You can periodically call :op:`Delta` to get a list of "delta entries", which are instructions on how to update your local state to match the server's state.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/delta</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (DeltaRequest)</h4>
+        <h5>DeltaRequest (Struct)</h5>
+Delta request.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>cursor</code>
+        </td>
+        <td>String</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_prefix</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>include_media_info</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>include_membership</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "cursor": null, 
+  "path_prefix": "/Photos", 
+  "include_media_info": false, 
+  "include_membership": false
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaRequest:
+    cursor = String
+    path_prefix = String
+    include_media_info = Boolean
+    include_membership = Boolean
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (DeltaResponse)</h4>
+        <h5>DeltaResponse (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>reset</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>cursor</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>has_more</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>entries</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "reset": false, 
+  "cursor": "xyz123", 
+  "has_more": true, 
+  "entries": [
+    {
+      "file": {
+        "id": "xyz123", 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
+        "modified": "Sat, 28 Jun 2014 18:23:21", 
+        "is_deleted": false, 
+        "size": 1234, 
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
+        }, 
+        "media_info": {
+          "photo": {
+            "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+            "lat_long": null
+          }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
+        }
+      }
+    }
+  ]
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct DeltaResponse:
+    reset = Boolean
+    cursor = String
+    has_more = Boolean
+    entries = List
+
+</pre>
+            -->
+
+
+        </dd>
+    </dl>
+    <a name="files-LongpollDelta"></a>
+    <h3 class="method-title-first">files/longpolldelta
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>A long-poll endpoint to wait for changes on an account. In conjunction with :op:`Delta`, this call gives you a low-latency way to monitor an account for file changes.
+Unlike most other API endpoints, this call does not require OAuth authentication. The passed in :field:`cursor` can only be acquired via an authenticated call to :op:`Delta`.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/longpolldelta</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (LongpollDeltaRequest)</h4>
+        <h5>LongpollDeltaRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>cursor</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>timeout</code>
+        </td>
+        <td>UInt32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct LongpollDeltaRequest:
+    cursor = String
+    timeout = UInt32
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (LongpollDeltaResponse)</h4>
+        <h5>LongpollDeltaResponse (Struct)</h5>
+The connection will block until there are changes available or a timeout occurs.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>changes</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>backoff</code>
+        </td>
+        <td>UInt32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "changes": false, 
+  "backoff": 60
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct LongpollDeltaResponse:
+    changes = Boolean
+    backoff = UInt32
+
+</pre>
+            -->
+
+
+        </dd>
+    </dl>
+    <a name="files-Revisions"></a>
+    <h3 class="method-title-first">files/revisions
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Obtains file information for previous revisions.
+Only revisions up to thirty days old are available (or more if the Dropbox user has :link:`Packrat https://www.dropbox.com/help/113`). You can use the revision number in conjunction with the :op:`Restore` call to revert the file to its previous state.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/revisions</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (InfoRequest)</h4>
+        <h5>InfoRequest (Struct)</h5>
+Describes a path.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON request</h5>
+                <pre class="last literal-block">{
+  "path": "/Photos/flower.jpg"
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct InfoRequest:
+    path = String
+    path_revision = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (RevisionHistory)</h4>
+        <h5>RevisionHistory (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>revisions</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "revisions": [
+    {
+      "file": {
+        "id": "xyz123", 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
+        "modified": "Sat, 28 Jun 2014 18:23:21", 
+        "is_deleted": false, 
+        "size": 1234, 
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
+        }, 
+        "media_info": {
+          "photo": {
+            "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+            "lat_long": null
+          }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
+        }
+      }
+    }
+  ]
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct RevisionHistory:
+    revisions = List
+
+</pre>
+            -->
+
+
+        </dd>
+    </dl>
+    <a name="files-Restore"></a>
+    <h3 class="method-title-first">files/restore
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Restores a file path to a previous revision.
+Unlike downloading a file at a given revision and then re-uploading it, this call is atomic. It also saves a bunch of bandwidth.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/restore</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (RestoreRequest)</h4>
+        <h5>RestoreRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>rev</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct RestoreRequest:
+    path = String
+    rev = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+
+        </dd>
+    </dl>
+    <a name="files-Search"></a>
+    <h3 class="method-title-first">files/search
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Returns metadata for all files and folders whose filename contains the given search string as a substring.
+Searches are limited to the folder path and its sub-folder hierarchy provided in the call.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/search</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (SearchRequest)</h4>
+        <h5>SearchRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>query</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>file_limit</code>
+        </td>
+        <td>UInt32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>include_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>include_membership</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct SearchRequest:
+    query = String
+    file_limit = UInt32
+    include_deleted = Boolean
+    include_membership = Boolean
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (SearchResults)</h4>
+        <h5>SearchResults (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>results</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "results": [
+    {
+      "file": {
+        "id": "xyz123", 
+        "id_revision": 2, 
+        "path": "/Project/A/terms.docx", 
+        "path_revision": 19, 
+        "modified": "Sat, 28 Jun 2014 18:23:21", 
+        "is_deleted": false, 
+        "size": 1234, 
+        "parent_shared_folder_id": "abcd1234", 
+        "ancestor": {
+          "id": "xyz123", 
+          "id_revision": "rev456", 
+          "type": "copy"
+        }, 
+        "media_info": {
+          "photo": {
+            "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+            "lat_long": null
+          }
+        }, 
+        "modifier": {
+          "account_id": "8320432", 
+          "display_name": "John Doe", 
+          "same_team": true
+        }
+      }
+    }
+  ]
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct SearchResults:
+    results = List
+
+</pre>
+            -->
+
+
+        </dd>
+    </dl>
+    <a name="files-Copy"></a>
+    <h3 class="method-title-first">files/copy
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Copies a file or folder to a new location.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/copy</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (CopyRequest)</h4>
+        <h5>CopyRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>from_path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>to_path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct CopyRequest:
+    from_path = String
+    to_path = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Error</dt>
+        <dd style="margin-top:35px;">
+            
+    
+<h5>CopyError (Union)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>not_found</code>
+        </td>
+        <td>&mdash;</td>
+        <td>The source file wasn't found at the specified path.</td>
+    </tr>
+<tr>
+        <td>
+            <code>invalid_source</code>
+        </td>
+        <td>&mdash;</td>
+        <td>Trying to copy a shared folder.</td>
+    </tr>
+<tr>
+        <td>
+            <code>invalid_destination</code>
+        </td>
+        <td>&mdash;</td>
+        <td>There is already a file at the given destination.</td>
+    </tr>
+<tr>
+        <td>
+            <code>too_many_files</code>
+        </td>
+        <td>&mdash;</td>
+        <td>Too many files would be involved in the operation for it to complete successfully. The limit is currently 10,000 files and folders.</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        </dd>
+    </dl>
+    <a name="files-Move"></a>
+    <h3 class="method-title-first">files/move
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Moves a file or folder to a new location.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/move</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (CopyRequest)</h4>
+        <h5>CopyRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>from_path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>to_path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct CopyRequest:
+    from_path = String
+    to_path = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Error</dt>
+        <dd style="margin-top:35px;">
+            
+    
+<h5>CopyError (Union)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>not_found</code>
+        </td>
+        <td>&mdash;</td>
+        <td>The source file wasn't found at the specified path.</td>
+    </tr>
+<tr>
+        <td>
+            <code>invalid_source</code>
+        </td>
+        <td>&mdash;</td>
+        <td>Trying to copy a shared folder.</td>
+    </tr>
+<tr>
+        <td>
+            <code>invalid_destination</code>
+        </td>
+        <td>&mdash;</td>
+        <td>There is already a file at the given destination.</td>
+    </tr>
+<tr>
+        <td>
+            <code>too_many_files</code>
+        </td>
+        <td>&mdash;</td>
+        <td>Too many files would be involved in the operation for it to complete successfully. The limit is currently 10,000 files and folders.</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        </dd>
+    </dl>
+    <a name="files-Folder-Create"></a>
+    <h3 class="method-title-first">files/folder-create
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Creates a folder.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/folder-create</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (FolderCreateRequest)</h4>
+        <h5>FolderCreateRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct FolderCreateRequest:
+    path = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Error</dt>
+        <dd style="margin-top:35px;">
+            
+    
+<h5>FolderCreateError (Union)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>invalid_destination</code>
+        </td>
+        <td>&mdash;</td>
+        <td>There is already a file at the given destination.</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        </dd>
+    </dl>
+    <a name="files-Delete"></a>
+    <h3 class="method-title-first">files/delete
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Deletes a file or folder.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/delete</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (DeleteRequest)</h4>
+        <h5>DeleteRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct DeleteRequest:
+    path = String
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (File)</h4>
+        <h5>File (Struct)</h5>
+Information about a file.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>id_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>path_revision</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modified</code>
+        </td>
+        <td>Timestamp</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>is_deleted</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>ancestor</code>
+        </td>
+        <td>Ancestor</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>size</code>
+        </td>
+        <td>UInt64</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>read_only</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>media_info</code>
+        </td>
+        <td>MediaInfo</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>parent_shared_folder_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>modifier</code>
+        </td>
+        <td>SharingUser</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>MediaInfo (Union)</h5>
+Media specific information.
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>photo</code>
+        </td>
+        <td>Photo</td>
+        <td>&mdash;</td>
+    </tr>
+<tr>
+        <td>
+            <code>video</code>
+        </td>
+        <td>Video</td>
+        <td>&mdash;</td>
+    </tr>
+</table>
+
+<br /><h5>Photo (Struct)</h5>
+Photo-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+<h5>Video (Struct)</h5>
+Video-specific information derived from EXIF data.
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>time_taken</code>
+        </td>
+        <td>Timestamp</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>lat_long</code>
+        </td>
+        <td>List</td>
+        <td>Yes</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>duration</code>
+        </td>
+        <td>Float32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+<h5>SharingUser (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>account_id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>display_name</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>same_team</code>
+        </td>
+        <td>Boolean</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        <br />
+
+                <h5>Sample JSON response</h5>
+                <pre class="last literal-block">{
+  "id": "xyz123", 
+  "id_revision": 2, 
+  "path": "/Project/A/terms.docx", 
+  "path_revision": 19, 
+  "modified": "Sat, 28 Jun 2014 18:23:21", 
+  "is_deleted": false, 
+  "size": 1234, 
+  "parent_shared_folder_id": "abcd1234", 
+  "ancestor": {
+    "id": "xyz123", 
+    "id_revision": "rev456", 
+    "type": "copy"
+  }, 
+  "media_info": {
+    "photo": {
+      "time_taken": "Sat, 28 Jun 2014 18:23:21", 
+      "lat_long": null
+    }
+  }, 
+  "modifier": {
+    "account_id": "8320432", 
+    "display_name": "John Doe", 
+    "same_team": true
+  }
+}</pre>
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct BaseFile:
+    id = String
+    id_revision = UInt64
+    path = String
+    path_revision = UInt64
+    modified = Timestamp
+    is_deleted = Boolean
+    ancestor = Ancestor
+    read_only = Boolean
+
+struct Ancestor:
+    id = String
+    id_revision = String
+    type = String
+
+
+
+struct File extends BaseFile:
+    size = UInt64
+    media_info = MediaInfo
+    parent_shared_folder_id = String
+    modifier = SharingUser
+
+union MediaInfo:
+    photo = Photo
+    video = Video
+
+struct Photo:
+    time_taken = Timestamp
+    lat_long = List
+
+
+struct Video:
+    time_taken = Timestamp
+    lat_long = List
+    duration = Float32
+
+
+
+struct SharingUser:
+    account_id = String
+    display_name = String
+    same_team = Boolean
+
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Error</dt>
+        <dd style="margin-top:35px;">
+            
+    
+<h5>DeleteError (Union)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>option</th>
+        <th>data type</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>not_found</code>
+        </td>
+        <td>&mdash;</td>
+        <td>The source file wasn't found at the specified path.</td>
+    </tr>
+<tr>
+        <td>
+            <code>too_many_files</code>
+        </td>
+        <td>&mdash;</td>
+        <td>Too many files would be involved in the operation for it to complete successfully. The limit is currently 10,000 files and folders.</td>
+    </tr>
+</table>
+
+<br />
+
+
+
+        </dd>
+    </dl>
+    <a name="files-Get-Children"></a>
+    <h3 class="method-title-first">files/get-children
+        <ul>
+            <li>
+                <a href="#broken"> Python</a>
+            </li>
+            <li>
+                <a href="#broken">Java</a>
+            </li>
+            <li>
+                <a href="#broken">Ruby</a>
+            </li>
+            <li>
+                <a href="#broken">PHP</a>
+            </li>
+        </ul>
+    </h3>
+    <dl>
+        <dt>Description</dt>
+        <dd>Retrieves a file's children by ID.</dd>
+        <dt class="url-label">URL Structure</dt>
+        <dd>
+            <pre class="literal-block">https://api.dropbox.com/2/files/get-children</pre>
+        </dd>
+        <dt>Request</dt>
+        <dd style="margin-top:30px;">
+            <h4>Segment 1 of 1 (GetChildrenRequest)</h4>
+        <h5>GetChildrenRequest (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>id</code>
+        </td>
+        <td>String</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+<tr>
+        <td>
+            <code>limit</code>
+        </td>
+        <td>UInt32</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct GetChildrenRequest:
+    id = String
+    limit = UInt32
+
+</pre>
+            -->
+
+
+        </dd>
+        <dt>Response</dt>
+        <dd style="margin-top:35px;">
+            <h4>Segment 1 of 1 (ChildrenList)</h4>
+        <h5>ChildrenList (Struct)</h5>
+None
+<table class="api-param-values">
+    <tr>
+        <th>field</th>
+        <th>data type</th>
+        <th>nullable</th>
+        <th>description</th>
+    </tr>
+<tr>
+        <td>
+            <code>results</code>
+        </td>
+        <td>List</td>
+        <td>No</td>
+        <td>None</td>
+    </tr>
+</table>
+
+<br />
+
+
+        <br />
+
+
+            <!--
+            <h5>Formal Definition</h5>
+            <pre class="last literal-block prettyprint dbprettyprint">struct ChildrenList:
+    results = List
 
 </pre>
             -->
