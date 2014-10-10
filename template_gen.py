@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import re
+import textwrap
 
 from babelsdk.data_type import (
     Boolean,
@@ -19,7 +20,9 @@ from babelsdk.data_type import (
 )
 from babelsdk.lang.python import PythonTargetLanguage
 
-base = """
+# support file name by file name?
+
+base = """\
 from dropbox import arg_struct_parser as asp
 
 # We use an identity function because we don't need to mutate the return value
@@ -49,17 +52,12 @@ def split_words(words):
             all_words.append(word)
     return all_words
 
-class Indenter(object):
-    def __init__(self, gen, dent):
-        print 'created indenter'
-        self.gen = gen
-        self.dent = dent
-
-    def __enter__(self):
-        self.gen.cur_indent += self.dent
-
-    def __exit__(self):
-        self.gen.cur_indent -= self.dent
+def filter_none_valued_keys(d):
+    new_d = {}
+    for k, v in d.iteritems():
+        if v is not None:
+            new_d[k] = v
+    return new_d
 
 class TemplateGenerator(object):
     def __init__(self, api):
@@ -67,12 +65,8 @@ class TemplateGenerator(object):
         self.output = []
         self.python = PythonTargetLanguage()
 
-        self.indent_stack = []
         self.cur_indent = 0
         self.tabs_for_indents = False
-
-    #def indent(self, dent):
-    #    return Indenter(self, dent)
 
     @contextmanager
     def indent(self, dent=None):
@@ -82,10 +76,8 @@ class TemplateGenerator(object):
                 dent = 1
             else:
                 dent = 4
-        self.indent_stack.append(dent)
         self.cur_indent += dent
         yield
-        self.indent_stack.pop()
         self.cur_indent -= dent
 
     def make_indent(self):
@@ -94,20 +86,26 @@ class TemplateGenerator(object):
         else:
             return ' ' * self.cur_indent
 
+    def emit(self, s):
+        self.output.append(s)
+
     def emit_indent(self):
         self.emit(self.make_indent())
 
-    def emit(self, blob):
-        #self.output.append(self.make_indent())
-        self.output.append(blob)
-
-    def emit_line(self, blob):
+    def emit_line(self, s):
         self.emit_indent()
-        self.emit(blob)
+        self.emit(s)
         self.emit('\n')
 
     def emit_empty_line(self):
         self.emit('\n')
+
+    def emit_string_wrap(self, s, prefix=''):
+        indent = self.make_indent() + prefix
+        self.emit(textwrap.fill(s,
+                                initial_indent=indent,
+                                subsequent_indent=indent,
+                                width=80))
 
     def _validator_name(self, namespace, data_type):
         return '{}_{}_validator'.format(
@@ -127,6 +125,9 @@ class TemplateGenerator(object):
                           for k, v in kwargs.items()])
         return ', '.join(func_args)
 
+    def _create_function_args_filter_none_kwargs(self, *args, **kwargs):
+        return self._create_function_args(**filter_none_valued_keys(kwargs))
+
     def _resolve_asp_type(self, namespace, field):
         if isinstance(field, SymbolField):
             return 'object()'
@@ -140,7 +141,7 @@ class TemplateGenerator(object):
                 return self._validator_name(namespace, data_type)
             elif isinstance(data_type, String):
                 s = 'asp.StringB({})'.format(
-                    self._create_function_args(
+                    self._create_function_args_filter_none_kwargs(
                         min_length=data_type.min_length,
                         max_length=data_type.max_length,
                         regex=data_type.pattern,
@@ -157,13 +158,11 @@ class TemplateGenerator(object):
             elif isinstance(data_type, Timestamp):
                 s = 'asp.Timestamp()'
             else:
-                #return None
-                print is_list, isinstance(data_type, (Float32, Float64))
-                raise Exception(data_type)
+                raise Exception('Unhandled data type %r' % data_type.name)
             if is_list:
                 s = 'asp.List({})'.format(s)
             if field.nullable:
-                return 'Nullable({})'.format(s)
+                return 'asp.Nullable({})'.format(s)
             else:
                 return s
 
@@ -175,6 +174,9 @@ class TemplateGenerator(object):
                     self.emit_line(self._struct_validator_declaration(namespace, data_type))
                     with self.indent():
                         for field in data_type.fields:
+                            if field.doc:
+                                self.emit_string_wrap(field.doc, prefix='# ')
+                                self.emit_empty_line()
                             if field.has_default:
                                 self.emit_line("('{}', {}, {}),".format(
                                     field.name,
@@ -192,6 +194,9 @@ class TemplateGenerator(object):
                     self.emit_line(self._union_validator_declaration(namespace, data_type))
                     with self.indent():
                         for field in data_type.fields:
+                            if field.doc:
+                                self.emit_string_wrap(field.doc, prefix='# ')
+                                self.emit_empty_line()
                             self.emit_line("('{}', identity, {}),".format(
                                 field.name,
                                 self._resolve_asp_type(namespace, field)),

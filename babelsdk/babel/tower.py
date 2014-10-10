@@ -191,13 +191,15 @@ class TowerOfBabel(object):
         Resolves symbols in data type attributes to data types in environment.
         """
         new_attrs = []
-        for i, (k, v) in enumerate(attrs):
+        for (k, v) in attrs:
             if isinstance(v, BabelSymbol):
                 if v.name not in env:
                     raise Exception('Symbol %r is undefined' % v.name)
                 else:
                     new_attr = (k, self._resolve_type(env, v.name, []))
                     new_attrs.append(new_attr)
+            else:
+                new_attrs.append((k, v))
         return new_attrs
 
     def add_to_api(self, path, desc):

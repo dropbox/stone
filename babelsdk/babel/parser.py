@@ -367,7 +367,7 @@ class BabelParser(object):
     def p_statement_field(self, p):
         """field : ID ID attributes_group nullable default_option presence deprecation COLON docstring DEDENT
                  | ID ID attributes_group nullable default_option presence deprecation NEWLINE"""
-        has_docstring = (p[8] == '::')
+        has_docstring = (p[8] == ':')
         p[0] = BabelField(p[1], p[2], p[3], p[4], p[6], p[7])
         if p[5] is not None:
             if p[5] is BabelNull:
