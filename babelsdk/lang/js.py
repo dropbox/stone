@@ -41,7 +41,8 @@ class JavascriptTargetLanguage(TargetLanguage):
     def format_obj(self, o):
         return json.dumps(o, indent=2)
 
-    def format_variable(self, words):
+    def format_variable(self, name):
+        words = self._split_words(name)
         for i, word in enumerate(words):
             if i == 0:
                 words[i] = words[i].lower()
@@ -49,8 +50,8 @@ class JavascriptTargetLanguage(TargetLanguage):
                 words[i] = words[i].capitalize()
         return ''.join(words)
 
-    def format_class(self, words):
-        return ''.join([word.capitalize() for word in words])
+    def format_class(self, name):
+        return ''.join([word.capitalize() for word in self._split_words(name)])
 
-    def format_method(self, words):
-        return self.format_variable(words)
+    def format_method(self, name):
+        return self.format_variable(self._split_words(name))

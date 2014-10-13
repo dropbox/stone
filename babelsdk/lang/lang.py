@@ -1,3 +1,10 @@
+import re
+
+_split_words_capitalization_re = re.compile(
+    '^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$'
+)
+
+_split_words_dashes_re = re.compile('[-_]+')
 
 class TargetLanguage(object):
 
@@ -38,3 +45,18 @@ class TargetLanguage(object):
 
     def format_func_call_args(self, values):
         return ', '.join([self.format_obj(value) for value in values])
+
+    @staticmethod
+    def _split_words(name):
+        """
+        Splits a word based on capitalization, dashes, or underscores.
+            Example: 'GetFile' -> ['Get', 'File']
+        """
+        all_words = []
+        for word in re.split(_split_words_dashes_re, name):
+            vals = _split_words_capitalization_re.findall(word)
+            if vals:
+                all_words.extend(vals)
+            else:
+                all_words.append(word)
+        return all_words

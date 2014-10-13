@@ -42,11 +42,11 @@ class PythonTargetLanguage(TargetLanguage):
     def format_obj(self, o):
         return pprint.pformat(o, width=1)
 
-    def format_variable(self, words):
-        return '_'.join([word.lower() for word in words])
+    def format_variable(self, name):
+        return '_'.join([word.lower() for word in self._split_words(name)])
 
-    def format_class(self, words):
-        return ''.join([word.capitalize() for word in words])
+    def format_class(self, name):
+        return ''.join([word.capitalize() for word in self._split_words(name)])
 
-    def format_method(self, words):
-        return '_'.join([word.lower() for word in words])
+    def format_method(self, name):
+        return '_'.join([word.lower() for word in self._split_words(name)])

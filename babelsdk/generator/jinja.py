@@ -11,6 +11,7 @@ from babelsdk.data_type import (
     Struct,
     Union,
 )
+from babelsdk.lang.lang import TargetLanguage
 
 from generator import Generator
 
@@ -58,7 +59,9 @@ class Jinja2Generator(Generator):
         self.template_env.filters['is_struct'] = lambda s: isinstance(s, Struct)
         self.template_env.filters['is_union'] = lambda s: isinstance(s, Union)
         self.template_env.filters['is_composite'] = lambda s: isinstance(s, Union)
-        self.template_env.filters['formal'] = lambda s: ' '.join(word.capitalize() for word in split_words(s))
+        def formalize(s):
+            return ' '.join(word.capitalize() for word in TargetLanguage._split_words(s))
+        self.template_env.filters['formal'] = lambda s: formalize(s)
 
         # Filters for making it easier to render code (as opposed to HTML)
 
@@ -132,34 +135,14 @@ class Jinja2Generator(Generator):
     @staticmethod
     def get_template_filters(language):
         return {
-                'method': lambda s: language.format_method(split_words(s)),
-                'class': lambda s: language.format_class(split_words(s)),
-                'variable': lambda s: language.format_variable(split_words(s)),
+                'method': lambda s: language.format_method(s),
+                'class': lambda s: language.format_class(s),
+                'variable': lambda s: language.format_variable(s),
                 'string_value': language.format_string_value,
                 'type': language.format_type,
                 'pprint': language.format_obj,
                 'func_call_args': language.format_func_call_args,
                 }
-
-_split_words_capitalization_re = re.compile(
-    '^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$'
-)
-
-_split_words_dashes_re = re.compile('[-_]+')
-
-def split_words(words):
-    """
-    Splits a word based on capitalization, dashes, or underscores.
-        Example: 'GetFile' -> ['Get', 'File']
-    """
-    all_words = []
-    for word in re.split(_split_words_dashes_re, words):
-        vals = _split_words_capitalization_re.findall(word)
-        if vals:
-            all_words.extend(vals)
-        else:
-            all_words.append(word)
-    return all_words
 
 class TrimExtension(Extension):
     """

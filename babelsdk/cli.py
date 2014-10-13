@@ -46,7 +46,7 @@ def main():
         logging_level = logging.INFO
     logging.basicConfig(level=logging_level)
 
-    logging.info('Analyzing these Babel files: %r', args.api)
+    logging.info('Analyzing these API specifications: %r', args.api)
 
     if args.api[0].endswith('.py'):
         # Special case if the API description file ends in .py
