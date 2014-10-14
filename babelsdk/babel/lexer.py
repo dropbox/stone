@@ -180,7 +180,7 @@ class BabelLexer(object):
         return token
 
     def t_NULL(self, token):
-        r'\bNull\b'
+        r'\bnull\b'
         token.value = BabelNull
         return token
 

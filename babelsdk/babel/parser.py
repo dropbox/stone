@@ -362,9 +362,15 @@ class BabelParser(object):
         p[0].append(p[2])
 
     def p_field_nullable(self, p):
-        """nullable : PIPE NULL
+        """nullable : PIPE ID
                     | empty"""
-        p[0] = p[1] is not None
+        if p[1] is not None:
+            if p[2] != 'Null':
+                raise ValueError('Only Null can be specified in a union')
+            else:
+                p[0] = True
+        else:
+            p[0] = False
 
     def p_field_presence(self, p):
         """presence : REQUIRED
