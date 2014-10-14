@@ -127,7 +127,7 @@ class CodeGenerator(object):
         raise NotImplemented
 
 
-class CodeGeneratorMonoLingual(CodeGenerator):
+class CodeGeneratorMonolingual(CodeGenerator):
     """Identical to CodeGenerator, except that an additional attribute `lang`
     exists."""
 
@@ -136,4 +136,4 @@ class CodeGeneratorMonoLingual(CodeGenerator):
 
     def __init__(self, api, target_folder_path):
         assert self.lang, 'Language must be specified'
-        super(CodeGeneratorMonoLingual, self).__init__(api, target_folder_path)
+        super(CodeGeneratorMonolingual, self).__init__(api, target_folder_path)

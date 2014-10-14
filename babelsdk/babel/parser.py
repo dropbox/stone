@@ -134,6 +134,16 @@ class BabelField(object):
             self.data_type_attrs,
         )
 
+class BabelSegment(object):
+    def __init__(self, data_type_name, name):
+        self.data_type_name = data_type_name
+        self.name = name
+    def __repr__(self):
+        return 'BabelSegment({!r}, {!r})'.format(
+            self.data_type_name,
+            self.name,
+        )
+
 class BabelParser(object):
     """
     Due to how ply.yacc works, the docstring of each parser method is a BNF
@@ -261,12 +271,31 @@ class BabelParser(object):
             for label, text, example in p[8]:
                 p[0].add_example(label, text, example)
 
+    def p_segment(self, p):
+        """segment : ID ID NEWLINE
+                   | ID NEWLINE"""
+        if p[2].strip() == '':
+            p[0] = BabelSegment(p[1], None)
+        else:
+            p[0] = BabelSegment(p[2], p[1])
+
+    def p_segment_list_create(self, p):
+        """segment_list : segment
+                        | empty"""
+        if p[1] is not None:
+            p[0] = [p[1]]
+
+    def p_segment_list_extend(self, p):
+        'segment_list : segment_list segment'
+        p[0] = p[1]
+        p[0].append(p[2])
+
     def p_statement_request_section(self, p):
-        """reqsection : REQUEST NEWLINE INDENT field_list DEDENT"""
+        """reqsection : REQUEST NEWLINE INDENT segment_list DEDENT"""
         p[0] = p[4]
 
     def p_statement_response_section(self, p):
-        """respsection : RESPONSE NEWLINE INDENT field_list DEDENT"""
+        """respsection : RESPONSE NEWLINE INDENT segment_list DEDENT"""
         p[0] = p[4]
 
     def p_statement_error_section(self, p):

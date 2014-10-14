@@ -306,7 +306,4 @@ class TowerOfBabel(object):
             raise Exception('Symbol %r is undefined' % data_type_name)
 
         data_type = env.get(data_type_name)
-        if not isinstance(data_type, Union):
-            raise Exception('%r must be a Union data type' % data_type_name)
-
         return data_type

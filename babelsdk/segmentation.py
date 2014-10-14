@@ -12,7 +12,7 @@ from babelsdk.data_type import (
 
 class Segment(object):
     """
-    One part of a segmentation.
+    One segment of a segmentation.
     """
     def __init__(self, name, data_type):
         """
