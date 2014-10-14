@@ -8,6 +8,7 @@ from babelsdk.babel.parser import BabelParser
 from babelsdk.data_type import (
     Binary,
     Boolean,
+    Empty,
     Field,
     Float32,
     Float64,
@@ -59,6 +60,7 @@ class TowerOfBabel(object):
     ]
 
     default_env = {data_type.__name__: data_type for data_type in data_types}
+    default_env['Empty'] = Empty
 
     # FIXME: Version should not have a default.
     def __init__(self, paths, version='0.1b1', debug=False):

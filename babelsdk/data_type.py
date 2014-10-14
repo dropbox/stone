@@ -540,3 +540,5 @@ class Union(CompositeType):
 
     def __repr__(self):
         return 'Union(%r, %r)' % (self.name, self.fields)
+
+Empty = Struct('Empty', None, [])

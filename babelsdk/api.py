@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from distutils.version import StrictVersion
 
+from babelsdk.data_type import Empty
+
 class Api(object):
     """
     A full description of an API's namespaces, data types, and operations.
@@ -51,6 +53,16 @@ class ApiNamespace(object):
         """
         linearized_data_types = []
         seen_data_types = set()
+
+        found_empty = False
+        for operation in self.operations:
+            for segment in (operation.request_segmentation.segments
+                                + operation.response_segmentation.segments):
+                if segment.data_type == Empty and not found_empty:
+                    linearized_data_types.append(Empty)
+                    seen_data_types.add(Empty)
+                    found_empty = True
+                    break
 
         def add_data_type(data_type):
             if data_type in seen_data_types:
