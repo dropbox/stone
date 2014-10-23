@@ -1,4 +1,4 @@
-# babelsdk(jinja2)
+# babelapi(jinja2)
 
 {% macro host(op) %}
 {%- if op.extras['host'] == 'content' -%}

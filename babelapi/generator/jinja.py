@@ -5,19 +5,19 @@ import re
 import jinja2
 from jinja2.ext import Extension
 
-from babelsdk.data_type import (
+from babelapi.data_type import (
     Binary,
     List,
     Struct,
     Union,
 )
-from babelsdk.lang.lang import TargetLanguage
+from babelapi.lang.lang import TargetLanguage
 
 from generator import Generator
 
 class Jinja2Generator(Generator):
     """
-    Jinja2 templates will have access to the :class:`babelsdk.api.Api` object,
+    Jinja2 templates will have access to the :class:`babelapi.api.Api` object,
     as well as the following additional filters:
 
         pjson (pretty json), is_binary, is_list, is_struct, is_union, and
@@ -37,9 +37,9 @@ class Jinja2Generator(Generator):
         # Language -> dict of template filters
         self.language_to_template_filters = {}
 
-        from babelsdk.lang.js import JavascriptTargetLanguage
-        from babelsdk.lang.python import PythonTargetLanguage
-        from babelsdk.lang.ruby import RubyTargetLanguage
+        from babelapi.lang.js import JavascriptTargetLanguage
+        from babelapi.lang.python import PythonTargetLanguage
+        from babelapi.lang.ruby import RubyTargetLanguage
         self.languages = [JavascriptTargetLanguage(),
                           PythonTargetLanguage(),
                           RubyTargetLanguage()]

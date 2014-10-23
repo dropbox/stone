@@ -2,8 +2,8 @@ import pprint
 
 # language by language regex for finding what functions have already been defined
 
-from babelsdk.lang.lang import TargetLanguage
-from babelsdk.data_type import (
+from babelapi.lang.lang import TargetLanguage
+from babelapi.data_type import (
     Boolean,
     Float32,
     Float64,

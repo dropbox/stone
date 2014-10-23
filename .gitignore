@@ -8,6 +8,6 @@ parsetab.py
 /build
 /dist
 /MANIFEST
-/babelsdk.egg-info
+/babelapi.egg-info
 /setuptools-3.1-py2.7.egg
 /setuptools-3.1.zip

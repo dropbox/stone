@@ -1,13 +1,13 @@
-from babelsdk.api import (
+from babelapi.api import (
     Api,
     ApiOperation,
 )
-from babelsdk.segmentation import (
+from babelapi.segmentation import (
     Segment,
     SegmentList,
     Segmentation,
 )
-from babelsdk.data_type import (
+from babelapi.data_type import (
     Binary,
     Boolean,
     Field,

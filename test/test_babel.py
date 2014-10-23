@@ -1,6 +1,6 @@
 import unittest
 
-from babelsdk.babel.parser import (
+from babelapi.babel.parser import (
     BabelNamespace,
     BabelAlias,
     BabelField,

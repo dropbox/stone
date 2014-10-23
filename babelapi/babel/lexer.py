@@ -21,7 +21,7 @@ class BabelLexer(object):
         self.lex = None
         self.tokens_queue = None
         self.cur_indent = None
-        self._logger = logging.getLogger('babelsdk.babel.lexer')
+        self._logger = logging.getLogger('babelapi.babel.lexer')
         self.last_token = None
 
     def input(self, file_data, **kwargs):

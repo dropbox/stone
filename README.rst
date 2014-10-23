@@ -1,5 +1,5 @@
 ****************
-BabelSDK
+BabelAPI
 ****************
 
 Define an API once in Babel. Use templates to define how the Babel definition
@@ -31,22 +31,22 @@ Download or clone BabelSDK, and run the following in its root directory::
 
    $ sudo python setup.py install
 
-This will install a script ``babelsdk`` to your PATH that can be run from the
+This will install a script ``babelapi`` to your PATH that can be run from the
 command line::
 
-   $ babelsdk -h
+   $ babelapi -h
 
 If you did not run ``setup.py`` but have the Python package in your PYTHONPATH,
-you can replace ``babelsdk`` with ``python -m babelsdk.cli`` as follows::
+you can replace ``babelapi`` with ``python -m babelapi.cli`` as follows::
 
-   $ python -m babelsdk.cli -h
+   $ python -m babelapi.cli -h
 
 Simple Example
 --------------
 
 You can compile an example babel and apply it to a documentation template::
 
-   $ babelsdk example/api/v2_files.babel example/api/v2_users.babel example/template/docs
+   $ babelapi example/api/v2_files.babel example/api/v2_users.babel example/template/docs
 
 You can view the generated documentation using::
 
@@ -432,12 +432,12 @@ template must satisfy the following conditions:
    * IDEs that use the outer extension to determine syntax highlighting
      will continue to work.
 
-2. The first line of the file must include ``babelsdk(jinja2)``.
+2. The first line of the file must include ``babelapi(jinja2)``.
 
    * You'll want to make the first line a comment in the target language.
 
-      * ``# babelsdk(jinja2)`` for Python
-      * ``<!-- babelsdk(jinja2) -->`` for HTML
+      * ``# babelapi(jinja2)`` for Python
+      * ``<!-- babelapi(jinja2) -->`` for HTML
 
    * jinja2 is currently the only available generator. But, this allows for
      a pluggable architecture for templating engines.
@@ -447,7 +447,7 @@ Jinja2 Templating
 
 You'll want to familiarize yourself with templating in
 `jinja2 <http://jinja.pocoo.org/docs/>`_. Your template will have access to the
-``api`` variable, which maps to the ``babelsdk.api.Api`` object. From this
+``api`` variable, which maps to the ``babelapi.api.Api`` object. From this
 object, you can access all the defined namespaces, data types, and operations.
 See the Python object definition for more information.
 

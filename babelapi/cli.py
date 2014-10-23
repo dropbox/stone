@@ -1,5 +1,5 @@
 """
-A command-line interface for BabelSDK.
+A command-line interface for BabelAPI.
 """
 
 import argparse
@@ -8,13 +8,13 @@ import logging
 import os
 import sys
 
-from babelsdk.compiler import Compiler
-from babelsdk.babel.tower import TowerOfBabel
+from babelapi.compiler import Compiler
+from babelapi.babel.tower import TowerOfBabel
 
 def main():
     """The entry point for the program."""
 
-    cmdline_parser = argparse.ArgumentParser(description='BabelSDK')
+    cmdline_parser = argparse.ArgumentParser(description='BabelAPI')
     cmdline_parser.add_argument(
         '-v',
         '--verbose',
@@ -74,7 +74,7 @@ def main():
     )
     c.build()
 
-    if not sys.argv[0].endswith('babelsdk'):
+    if not sys.argv[0].endswith('babelapi'):
         # If we aren't running from an entry_point, then return api to make it
         # easier to do debugging.
         return api

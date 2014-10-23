@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from distutils.version import StrictVersion
 
-from babelsdk.data_type import Empty
+from babelapi.data_type import Empty
 
 class Api(object):
     """

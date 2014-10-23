@@ -2,7 +2,7 @@ from collections import OrderedDict
 import logging
 import ply.yacc as yacc
 
-from babelsdk.babel.lexer import BabelLexer, BabelNull
+from babelapi.babel.lexer import BabelLexer, BabelNull
 
 class BabelOpDef(object):
     def __init__(self, name, path=None):
@@ -161,7 +161,7 @@ class BabelParser(object):
         self.debug = debug
         self.yacc = yacc.yacc(module=self, debug=self.debug, write_tables=self.debug)
         self.lexer = BabelLexer()
-        self._logger = logging.getLogger('babelsdk.babel.parser')
+        self._logger = logging.getLogger('babelapi.babel.parser')
 
     def parse(self, data):
         return self.yacc.parse(data.lstrip(), lexer=self.lexer, debug=self.debug)

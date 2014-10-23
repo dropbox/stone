@@ -2,8 +2,8 @@ import pprint
 
 # language by language regex for finding what functions have already been defined
 
-from babelsdk.lang.lang import TargetLanguage
-from babelsdk.data_type import (
+from babelapi.lang.lang import TargetLanguage
+from babelapi.data_type import (
     Boolean,
     Float32,
     Float64,
@@ -37,7 +37,8 @@ class PythonTargetLanguage(TargetLanguage):
     }
 
     def format_type(self, data_type):
-        return PythonTargetLanguage._type_table.get(data_type.__class__, data_type.name)
+        return PythonTargetLanguage._type_table.get(data_type.__class__,
+                                                    self.format_class(data_type.name))
 
     def format_obj(self, o):
         return pprint.pformat(o, width=1)

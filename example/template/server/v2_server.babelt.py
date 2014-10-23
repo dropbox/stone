@@ -1,4 +1,4 @@
-# babelsdk(jinja2)
+# babelapi(jinja2)
 
 import json
 from collections import OrderedDict
@@ -9,6 +9,8 @@ from bottle import (
     route,
     run,
 )
+
+from babelapi.data_type import OrderedExample
 
 def segmentation_response(header, body, *segments):
     """Constructs HTTP headers and body for a segmentation response."""

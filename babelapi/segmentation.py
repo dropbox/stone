@@ -1,10 +1,10 @@
 """
-Note that BabelSDK has no understanding of how a segment of Struct, Union,
+Note that BabelAPI has no understanding of how a segment of Struct, Union,
 or Binary data type is serialized on the wire. Likewise, a full segmentation
 description does not have any defacto RPC format.
 """
 
-from babelsdk.data_type import (
+from babelapi.data_type import (
     Binary,
     Struct,
     Union,

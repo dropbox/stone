@@ -4,8 +4,8 @@ import logging
 import os
 import sys
 
-from babelsdk.babel.parser import BabelParser
-from babelsdk.data_type import (
+from babelapi.babel.parser import BabelParser
+from babelapi.data_type import (
     Binary,
     Boolean,
     Empty,
@@ -23,11 +23,11 @@ from babelsdk.data_type import (
     UInt64,
     Union,
 )
-from babelsdk.api import (
+from babelapi.api import (
     Api,
     ApiOperation,
 )
-from babelsdk.babel.parser import (
+from babelapi.babel.parser import (
     BabelAlias,
     BabelInclude,
     BabelNamespace,
@@ -35,7 +35,7 @@ from babelsdk.babel.parser import (
     BabelSymbol,
     BabelTypeDef,
 )
-from babelsdk.segmentation import (
+from babelapi.segmentation import (
     Segment,
     SegmentList,
     Segmentation,
@@ -67,7 +67,7 @@ class TowerOfBabel(object):
         """Creates a new tower of babel."""
 
         self._debug = debug
-        self._logger = logging.getLogger('babelsdk.dsl.tower')
+        self._logger = logging.getLogger('babelapi.dsl.tower')
 
         self.api = Api(version=version)
 
@@ -140,7 +140,7 @@ class TowerOfBabel(object):
 
     def _create_field(self, env, babel_field):
         """
-        Given a BabelField, returns a babelsdk.babel.tower.Field object.
+        Given a BabelField, returns a babelapi.babel.tower.Field object.
 
         A BabelField is composed of symbols. This function resolves symbols to
         objects that we've instantiated in the current environment. For example,
@@ -240,9 +240,14 @@ class TowerOfBabel(object):
                     env,
                     item.error_data_type_name,
                 )
+                if item.path:
+                    path = item.path.lstrip('/')
+                else:
+                    # TODO: Split and add dashes
+                    path = item.name.lower()
                 operation = ApiOperation(
                     item.name,
-                    item.path or item.name,
+                    path,
                     item.doc,
                     request_segmentation,
                     response_segmentation,
