@@ -26,8 +26,9 @@ from .dropbox import assert_only_one, Dropbox, Namespace
 
 """
 
-class ASPGenerator(CodeGeneratorMonolingual):
-    """A generator for arg_struct_parser definitions."""
+class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
+    """Generates Python modules for the Dropbox Python v2 SDK that implement
+    the data types and operations defined in the spec."""
 
     lang = PythonTargetLanguage()
 
@@ -513,32 +514,3 @@ class ASPGenerator(CodeGeneratorMonolingual):
                         else:
                             self.emit_line(field.name)
         self.emit_line('"""')
-
-    def _generate_func_arg_list(self, args, compact=True):
-        self.emit('(')
-        if len(args) == 0:
-            self.emit(')')
-            return
-        elif len(args) == 1:
-            self.emit(args[0])
-            self.emit(')')
-        else:
-            if compact:
-                with self.indent_to_cur_col():
-                    args = args[:]
-                    self.emit(args.pop(0))
-                    self.emit(',')
-                    self.emit_empty_line()
-                    for (i, arg) in enumerate(args):
-                        if i == len(args) - 1:
-                            self.emit_line(arg, trailing_newline=False)
-                        else:
-                            self.emit_line(arg + ',')
-                    self.emit(')')
-            else:
-                self.emit_empty_line()
-                with self.indent():
-                    for arg in args:
-                        self.emit_line(arg + ',')
-                self.emit_indent()
-                self.emit(')')
