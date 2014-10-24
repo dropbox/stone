@@ -6,6 +6,31 @@ Define an API once in Babel. Implement or use an existing code generator to
 map the API definition into usable objects and functions in any programming
 language.
 
+Motivation
+==========
+
+Being an API designer is tough. There are an innumerable number of protocols
+and serialization formats that two hosts can use to communicate. Today, JSON
+over HTTP is gaining popularity, but just a few years ago, XML was the
+standard. To compound the issue, developers need to support an increasing
+number of language-specific SDKs to gain wide adoption.
+
+Babel seeks to:
+
+    1. Define API endpoints in terms of input and output data types that can
+       be consistently implemented in different protocols and languages.
+    2. Use structs (product types) and tagged unions (sum types) as fundamental
+       data types for modeling APIs flexibly, but strictly.
+    3. Improve the visibility teams have into their APIs by centralizing
+       specifications and documentation.
+
+If we only had one protocol and one language BabelAPI wouldn't be needed, but
+unfortunately humanity was handicapped for good reason. See
+`Why do we have multiple programming languages?`_
+
+Assumptions
+-----------
+
 Babel makes no assumptions about the protocol layer being used to make API
 requests and return responses; its first use case is the Dropbox v2 API which
 operates over HTTP. Babel does not come with nor enforces any particular RPC
@@ -205,32 +230,32 @@ Type Inheritance
 
 A struct can also inherit from another struct using the ``extends`` keyword::
 
-    struct EntryInfo:
-        doc::
+    struct EntryInfo
+        doc:
             A file or folder entry.
 
-        id String(max_length=40)::
+        id String(max_length=40):
             A unique identifier for the file.
-        path String::
+        path String:
             Path to file or folder.
-        modified DbxTimestamp|Null::
+        modified DbxTimestamp|Null:
             The last time the file was modified on Dropbox, in the standard date
             format (null for root folder).
-        is_deleted Boolean::
+        is_deleted Boolean:
             Whether the given entry is deleted.
 
-    struct FileInfo extends EntryInfo:
-        doc::
+    struct FileInfo extends EntryInfo
+        doc:
             Describes a file.
 
-        size UInt64::
+        size UInt64:
             File size in bytes.
-        mime_type String|Null::
+        mime_type String|Null:
             The Internet media type determined by the file extension.
-        media_info MediaInfo optional::
+        media_info MediaInfo optional:
             Information specific to photo and video media.
 
-        example default:
+        example default
             id="xyz123"
             path="/Photos/flower.jpg"
             size=1234
@@ -257,37 +282,37 @@ Union
 A union in Babel is a tagged union. In its field declarations, a tag name is followed by
 a data type::
 
-   struct PhotoInfo:
-       doc::
+   struct PhotoInfo
+       doc:
            Photo-specific information derived from EXIF data.
 
-       time_taken DbxTimestamp::
+       time_taken DbxTimestamp:
            When the photo was taken.
-       lat_long List(data_type=Float32)|null::
+       lat_long List(data_type=Float32)|null:
            The GPS coordinates where the photo was taken.
 
-       example default:
+       example default
            time_taken="Sat, 28 Jun 2014 18:23:21"
            lat_long=null
 
-   struct VideoInfo:
-       doc::
+   struct VideoInfo
+       doc:
            Video-specific information derived from EXIF data.
 
-       time_taken DbxTimestamp::
+       time_taken DbxTimestamp:
            When the photo was taken.
-       lat_long List(data_type=Float32)|null::
+       lat_long List(data_type=Float32)|null:
            The GPS coordinates where the photo was taken.
-       duration Float32::
+       duration Float32:
            Length of video in milliseconds.
 
-       example default:
+       example default
            time_taken="Sat, 28 Jun 2014 18:23:21"
            lat_long=null
            duration=3
 
-   union MediaInfo:
-       doc::
+   union MediaInfo
+       doc:
            Media specific information.
 
        photo PhotoInfo
@@ -440,8 +465,8 @@ Defining a Code Generator
 A code generator is a Python class which will generate code for a target language
 given an API description. A code generator must satisfy the following conditions:
 
-1. The filename must have '.babelt.py' as its extension. For example,
-   base_namespace.babelt.py
+1. The filename must have ``.babelt.py`` as its extension. For example,
+   ``example.babelt.py``
 
 2. A class must exist in the file that extends the
    ``babelapi.generator.generator.CodeGenerator`` class and implements the
@@ -456,108 +481,181 @@ of the ``babelapi.api.Api`` class. From this object, you can access all the
 defined namespaces, data types, and operations. See the Python object definition
 for more information.
 
-Example
--------
+Examples
+--------
 
-Here's an example of a minimal generator of Python code::
+The following examples can all be found in the ``babelapi/example/generator``
+folder.
 
-   from babelapi.generator.generator import CodeGeneratorMonolingual
-   from babelapi.lang.python import PythonTargetLanguage
+Example 1: List All Namespaces
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-   # Optionally define a string that contains code that you want to appear
-   # in auto generated files, but that doesn't need any tailoring to the spec.
-   base = """\
-   import os
+We'll create a generator ``ex1.babelt.py`` that generates a file called
+``ex1.out``. Each line in the file will be the name of a defined namespace::
 
-   """
+    from babelapi.generator.generator import CodeGenerator
 
-   # CodeGeneratorMonolingual is a simple child class of CodeGenerator that
-   # enforces that self.lang is mapped to a TargetLanguage.
-   class ExamplePythonGenerator(CodeGeneratorMonolingual):
+    class ExampleGenerator(CodeGenerator):
+        def generate(self):
+            """Generates a file that lists each namespace."""
+            with self.output_to_relative_path('ex1.out'):
+                for namespace in self.api.namespaces.values():
+                    self.emit_line(namespace.name)
 
-       # PythonTargetLanguage has helper methods for formatting class, obj
-       # and variable names (some languages use underscores to separate words,
-       # others use camelcase.
-       lang = PythonTargetLanguage()
+We use ``output_to_relative_path()`` a member of ``CodeGenerator`` to specify
+where the output of our ``emit*()`` calls go (See more emit_methods_).
 
-       def generate(self):
-           """Generates a module for each namespace."""
-           for namespace in self.api.namespaces.values():
-               # One module per namespace is created. The module takes the name
-               # of the namespace.
-               with self.output_to_relative_path('{}.py'.format(namespace.name)):
-                   self._generate_namespace_module(namespace)
+Run the generator from the root of the BabelAPI folder using the example specs
+we've provided::
 
-    def _generate_namespace_module(self, namespace):
-        """Creates a module for the namespace. All data types are represented
-        as classes. The operations are added to a class that takes the name of
-        the namespace."""
+    $ babelapi example/api/dbx-core*.babel example/generator/ex1
 
-        # Emit boilerplate you've defined.
-        self.emit(base)
+Now examine the contents of the output::
 
-        # When we generate classes to represent the data types in the Spec,
-        # we need to differentiate between structs and unions as they behave
-        # differently.
-        for data_type in namespace.linearize_data_types():
-            if isinstance(data_type, Struct):
-                self._generate_struct_class(data_type)
-            elif isinstance(data_type, Union):
-                self._generate_union_class(data_type)
-            else:
-                raise TypeError('Cannot handle type %r' % type(data_type))
+    $ cat example/generator/ex1/ex1.out
+    files
+    users
 
-        # Put all operations in a class that will have one method per class.
-        self.emit_line('class {}(Namespace):'.format(self.lang.format_class(namespace.name)))
-        with self.indent():
-            for operation in namespace.operations:
-                self._generate_operation(namespace, operation)
+.. _emit_methods:
 
+Emit*() Methods
+^^^^^^^^^^^^^^^
 
-   def _generate_operation(self, namespace, operation):
-       """Generate a Python method that corresponds to an operation."""
-       request_data_type = operation.request_segmentation.segments[0].data_type
-       response_data_type = operation.response_segmentation.segments[0].data_type
+There are several ``emit*()`` methods that you can use from a ``CodeGenerator``
+that each serve a different purpose.
 
-       request_binary_body = self._has_binary_segment(operation.request_segmentation)
-       response_binary_body = self._has_binary_segment(operation.response_segmentation)
-       host = self._generate_op_host(operation.extras.get('host', 'api'))
-       style = self._generate_op_style(operation.extras.get('style', 'rpc'))
+``emit(s)``
+    The input string is written to the output file.
 
-       self._generate_operation_method_decl(operation, request_data_type, request_binary_body)
+``emit_line(s, trailing_newline=True)``
+    The current indentation level followed by the input string is written to the
+    output file. If ``trailing_newline`` is True (default) then a newline is
+    written as well.
 
-       with self.indent():
-           self._generate_operation_method_docstring(operation, request_data_type, request_binary_body)
+``emit_wrapped_lines(s, prefix='', width=80, trailing_newline=True, first_line_prefix=True)``
+    The current indentation level followed by the input prefix (assuming
+    ``first_line_prefix`` is ``True``) are written to the output file. The
+    input string is then written into lines with each line starting with the
+    indentation level and prefix. This is ideal for generating blocks of
+    comments.
 
-           # Code to instantiate a class for the request data type
-           self.emit_line('o = {}'.format(
-               self._class_name_for_data_type(request_data_type)
-           ), trailing_newline=False)
-           self._generate_func_arg_list([f.name for f in request_data_type.all_fields])
-           self.emit_empty_line()
+``emit_empty_line()``
+    Writes an empty line to the output file.
 
-           # Code to make the request
-           self.emit_line('r = self._dropbox.request', trailing_newline=False)
-           args = [host,
-                   "'{}/{}'".format(namespace.name, operation.path),
-                   style,
-                   'o.to_json()']
-           if request_binary_body:
-               args.append('f')
-           else:
-               args.append('None')
-           self._generate_func_arg_list(args, compact=True)
-           self.emit_empty_line()
+``emit_indent()``
+    Writes the number of tabs or spaces for the current indentation level to
+    the output file.
 
-           if response_binary_body:
-               self.emit_line('return {}.from_json(r.obj_segment), r.binary_segment'.format(
-                   self._class_name_for_data_type(response_data_type)
-               ))
-           else:
-               self.emit_line('return {}.from_json(r.obj_segment)'.format(
-                   self._class_name_for_data_type(response_data_type)
-               ))
-       self.emit_empty_line()
+Example 2: A Python module for each Namespace
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Now we'll create a Python module for each namespace. Each module will define
+a ``noop()`` function::
+
+    from babelapi.generator.generator import CodeGenerator
+
+    class ExamplePythonGenerator(CodeGenerator):
+        def generate(self):
+            """Generates a module for each namespace."""
+            for namespace in self.api.namespaces.values():
+                # One module per namespace is created. The module takes the name
+                # of the namespace.
+                with self.output_to_relative_path('{}.py'.format(namespace.name)):
+                    self._generate_namespace_module(namespace)
+
+        def _generate_namespace_module(self, namespace):
+            self.emit_line('def noop():')
+            with self.indent():
+                self.emit_line('pass')
+
+Note how we used the ``self.indent()`` context manager to increase the
+indentation level by a default 4 spaces. If you want to use tabs instead,
+set the ``tabs_for_indents`` class variable of your extended CodeGenerator
+class to ``True``.
+
+Run the generator from the root of the BabelAPI folder using the example specs
+we've provided::
+
+    $ babelapi example/api/dbx-core*.babel example/generator/ex2
+
+Now examine the contents of the output::
+
+    $ cat example/generator/ex2/files.py
+    def noop():
+        pass
+    $ cat example/generator/ex2/users.py
+    def noop():
+        pass
+
+Example 3: Define Python Classes for Structs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As a more advanced example, we'll define a generator that makes a Python class
+for each struct in our specification. We'll extend from
+``MonolingualCodeGenerator``, which enforces that a ``lang`` class variable is
+declared::
+
+    from babelapi.data_type import Struct
+    from babelapi.generator.generator import CodeGeneratorMonolingual
+    from babelapi.lang.python import PythonTargetLanguage
+
+    class ExamplePythonGenerator(CodeGeneratorMonolingual):
+
+        # PythonTargetLanguage has helper methods for formatting class, obj
+        # and variable names (some languages use underscores to separate words,
+        # others use camelcase).
+        lang = PythonTargetLanguage()
+
+        def generate(self):
+            """Generates a module for each namespace."""
+            for namespace in self.api.namespaces.values():
+                # One module per namespace is created. The module takes the name
+                # of the namespace.
+                with self.output_to_relative_path('{}.py'.format(namespace.name)):
+                    self._generate_namespace_module(namespace)
+
+        def _generate_namespace_module(self, namespace):
+            for data_type in namespace.linearize_data_types():
+                if not isinstance(data_type, Struct):
+                    # Do not handle Union types
+                    continue
+
+                # Define a class for each struct
+                class_def = 'class {}(object):'.format(self.lang.format_class(data_type.name))
+                self.emit_line(class_def)
+
+                with self.indent():
+                    if data_type.doc:
+                        self.emit_line('"""')
+                        self.emit_wrapped_lines(data_type.doc)
+                        self.emit_line('"""')
+
+                    self.emit_empty_line()
+
+                    # Define constructor to take each field
+                    self.emit_line('def __init__', trailing_newline=False)
+                    args = ['self']
+                    for field in data_type.fields:
+                        args.append(self.lang.format_variable(field.name))
+                    self._generate_func_arg_list(args)
+                    self.emit(':')
+                    self.emit_empty_line()
+
+                    with self.indent():
+                        if data_type.fields:
+                            # Body of init should assign all init vars
+                            for field in data_type.fields:
+                                if field.doc:
+                                    self.emit_wrapped_lines(field.doc, prefix='# ')
+                                member_name = self.lang.format_variable(field.name)
+                                self.emit_line('self.{0} = {0}'.format(member_name))
+                        else:
+                            self.emit_line('pass')
+                self.emit_empty_line()
+
+One new method of ``CodeGenerator`` that was used is ``generate_func_arg_list(args)``.
+It helps you generate a list of arguments in a function declaration or invocation
+enclosed by parentheses.
 
 Target SDKs
 ===========
@@ -581,3 +679,24 @@ General Rules
 * Clients must accept new fields (ie. fields unknown to it), and ignore them.
 * Server should be flexible on missing inputs (backwards compatibility) if a
   default value has been specified in the spec, but strict on what goes out.
+
+.. _why_multiple_languages:
+
+Why do we have multiple programming languages?
+==============================================
+
+From the King James version of the Bible:
+
+    4 And they said, Go to, let us build us a city and a tower, whose top may reach unto heaven; and let us make us a name, lest we be scattered abroad upon the face of the whole earth.
+
+    5 And the Lord came down to see the city and the tower, which the children of men builded.
+
+    6 And the Lord said, Behold, the people is one, and they have all one language; and this they begin to do: and now nothing will be restrained from them, which they have imagined to do.
+
+    7 Go to, let us go down, and there confound their language, that they may not understand one another's speech.
+
+    8 So the Lord scattered them abroad from thence upon the face of all the earth: and they left off to build the city.
+
+    9 Therefore is the name of it called Babel; because the Lord did there confound the language of all the earth: and from thence did the Lord scatter them abroad upon the face of all the earth.
+
+    —Genesis 11:4–9[1]
