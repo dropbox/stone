@@ -382,10 +382,10 @@ DbxTimestamp, which sets this format, and can be used in struct and union defini
        created DbxTimestamp:
            When this example was created.
 
-Operations
-----------
+Routes
+------
 
-Operations map to your API endpoints. You specify a list of data types for the request,
+Routes map to your API endpoints. You specify a list of data types for the request,
 and a list of data types for the response::
 
     struct AccountInfoRequest
