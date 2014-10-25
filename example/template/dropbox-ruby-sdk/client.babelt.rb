@@ -1,7 +1,7 @@
 # babelapi(jinja2)
 
-{% macro host(op) %}
-{%- if op.extras['host'] == 'content' -%}
+{% macro host(route) %}
+{%- if route.extras['host'] == 'content' -%}
 Dropbox::API::API_CONTENT_SERVER
 {%- else -%}
 Dropbox::API::API_SERVER
@@ -14,51 +14,51 @@ Dropbox::API::API_SERVER
 {%- endif -%}
 {% endmacro %}
 
-{% macro binary(op) %}
-{%- if op.request_segmentation.segments[1] -%}
-, {}, {{ op.request_segmentation.segments[1].name|lower }}
+{% macro binary(route) %}
+{%- if route.request_segmentation.segments[1] -%}
+, {}, {{ route.request_segmentation.segments[1].name|lower }}
 {%- endif -%}
 {% endmacro %}
 
-{% macro operation_def(namespace_name, op, indent_spaces) %}
+{% macro route_def(namespace_name, route, indent_spaces) %}
 {% filter indent(indent_spaces, indentfirst=True) %}
-{% set request_fields = op.request_segmentation.segments[0].data_type.fields %}
-# {{ op.doc|default('', True)|wordwrap(70)|default('', True)|replace('\n', '\n# ') }}
+{% set request_fields = route.request_segmentation.segments[0].data_type.fields %}
+# {{ route.doc|default('', True)|wordwrap(70)|default('', True)|replace('\n', '\n# ') }}
 #
 # Args:
-{% for field in op.request_segmentation.segments[0].data_type.fields %}
+{% for field in route.request_segmentation.segments[0].data_type.fields %}
 # * +{{ field.name }}+{% if field.data_type %} (+{{ field.data_type }}+){% endif %}:
 #   {{ field.doc|default('', True)|wordwrap(70)|default('', True)|replace('\n', '\n#   ') }}
 {% endfor %}
 #
 # Returns:
-#   {{ op.response_segmentation.segments[0].data_type.name|class }}
+#   {{ route.response_segmentation.segments[0].data_type.name|class }}
 {# hack: assume there's only one input struct with an optional binary (called data) after it #}
 {# hack: assume if path is the first field of the input struct, it should be appended to the URL #}
 {# hack: assume if there's more than one field in the response, then the first one is a struct and the second is binary #}
-def {{ op.name|method }}(
-  {%- if op.request_segmentation.segments[0].data_type.fields|length > 0 -%}
-    {{ op.request_segmentation.segments[0].data_type.fields|join(' = nil, ', 'name') }} = nil
-    {%- if op.request_segmentation.segments[1] -%}
-      , {{ op.request_segmentation.segments[1].name|lower }} = nil
+def {{ route.name|method }}(
+  {%- if route.request_segmentation.segments[0].data_type.fields|length > 0 -%}
+    {{ route.request_segmentation.segments[0].data_type.fields|join(' = nil, ', 'name') }} = nil
+    {%- if route.request_segmentation.segments[1] -%}
+      , {{ route.request_segmentation.segments[1].name|lower }} = nil
     {%- endif -%}
   {%- endif -%}
   )
   input = {
-    {% for field in op.request_segmentation.segments[0].data_type.fields %}
+    {% for field in route.request_segmentation.segments[0].data_type.fields %}
       {% if field.name != 'path' %}
     {{ field.name }}: {{ field.name }},
       {% endif %}
     {% endfor %}
   }
-  response = @session.do_{{ op.extras['method']|lower }}({%- trim -%}
-    {{ host(op) }}, "{{ op.path }}{{ url_path(request_fields) }}", input{{ binary(op) }})
-  {% if op.response_segmentation.segments|length > 1 %}
+  response = @session.do_{{ route.extras['method']|lower }}({%- trim -%}
+    {{ host(route) }}, "{{ route.path }}{{ url_path(request_fields) }}", input{{ binary(route) }})
+  {% if route.response_segmentation.segments|length > 1 %}
   parsed_response = Dropbox::API::HTTP.parse_response(response, true)
   metadata = parse_metadata(response)
   return parsed_response, metadata
   {% else %}
-  Dropbox::API::{{ op.response_segmentation.segments[0].data_type.name|class }}{%- trim -%}
+  Dropbox::API::{{ route.response_segmentation.segments[0].data_type.name|class }}{%- trim -%}
       .from_hash(Dropbox::API::HTTP.parse_response(response))
   {% endif %}
 end
@@ -95,8 +95,8 @@ module Dropbox
       end
 
       {% for namespace_name, namespace in api.namespaces.items() %}
-        {% for op in namespace.operations %}
-          {{- operation_def(namespace_name, op, 6) }}
+        {% for route in namespace.routes %}
+          {{- route_def(namespace_name, route, 6) }}
         {% endfor %}
       {% endfor %}
 

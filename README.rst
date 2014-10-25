@@ -42,7 +42,7 @@ for representing dictionaries (unordered String Keys -> Value), lists, numeric
 types, and strings. The intention is for Babel to map to a multitude of
 serialization formats from JSON to Protocol Buffers.
 
-Babel assumes that an operation (or API endpoint) can have its request and
+Babel assumes that a route (or API endpoint) can have its request and
 response types defined without relation to each other. In other words, the
 type of response does not change based on the input to the endpoint. An
 exception to this rule is afforded for error responses.
@@ -86,7 +86,7 @@ There are three types of files.
 Spec (.babel extension)
 ------------------------
 
-Specifications define the data types and operations available in an API.
+Specifications define the data types and routes available in an API.
 
 Header (.babelh extension)
 --------------------------------
@@ -121,7 +121,7 @@ Example::
 
    namespace users
 
-This is the namespace for all the operations and data types in the Spec file. It
+This is the namespace for all the routes and data types in the Spec file. It
 helps us separate different parts of the API like "files", "users", and "photos".
 
 Include
@@ -143,7 +143,7 @@ Definition
 
 There are four types of definitions available::
 
-   Definition ::= Alias | Struct | Union | Operation
+   Definition ::= Alias | Route | Struct | Union
 
 Struct
 ------
@@ -273,7 +273,7 @@ intentionally conflated in languages that don't maintain a strict difference.
 Default Values
 ^^^^^^^^^^^^^^
 
-The setting of default values for fields is best seen in the context of operations.
+The setting of default values for fields is best seen in the context of routes.
 Please see the example below default_value_example_.
 
 Union
@@ -396,7 +396,7 @@ and a list of data types for the response::
             A user's account identifier. Use "me" to get information for the
             current account.
 
-    op GetInfo
+    route GetInfo
         doc:
             Get user account information.
 
@@ -425,7 +425,7 @@ The following is an example of an endpoint with two request segments::
         example default
             path="Documents/plan.docx"
 
-    op Upload
+    route Upload
         doc:
             Upload a file to dropbox.
 
@@ -444,11 +444,11 @@ in documentation. Stubs are of the following format::
 
     :tag:`value`
 
-Supported tags are ``op``, ``struct``, ``field``, and ``link``.
+Supported tags are ``route``, ``struct``, ``field``, and ``link``.
 
-op
-    A reference to an operation. Template writers should make a reference to
-    the method that represents the operation.
+route
+    A reference to a route. Template writers should make a reference to
+    the method that represents the route.
 struct
     A reference to a struct. Template writers should make a reference to the
     class that represents the struct.
@@ -478,7 +478,7 @@ Using the API Object
 
 Code generators have a ``self.api`` member variable. The object is an instance
 of the ``babelapi.api.Api`` class. From this object, you can access all the
-defined namespaces, data types, and operations. See the Python object definition
+defined namespaces, data types, and routes. See the Python object definition
 for more information.
 
 Examples

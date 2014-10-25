@@ -32,126 +32,122 @@ module Dropbox
         end
       end
 
-      # Get user account information.
-      #
-      # Args:
-      #
-      # Returns:
-      #   AccountInfo
-      def account_info()
-        input = {
-        }
-        response = @session.do_get(Dropbox::API::API_SERVER, "/account/info", input)
-        Dropbox::API::AccountInfo.from_hash(Dropbox::API::HTTP.parse_response(response))
-      end
-      
-      # Downloads a file. Note that this call goes to api-content.dropbox.com
-      # instead of api.dropbox.com.
+      # Download a file in a user's Dropbox.
       #
       # Args:
       # * +path+ (+String+):
-      #   The path to the file you want to retrieve.
+      #   Path from root. Should be an empty string for root.
       # * +rev+ (+String+):
-      #   The revision of the file to retrieve. This defaults to the most recent
-      #   revision.
+      #   Revision of target file.
       #
       # Returns:
-      #   EntryInfo
-      def get_file(path = nil, rev = nil)
+      #   FileInfo
+      def download(path = nil, rev = nil)
         input = {
           rev: rev,
         }
-        response = @session.do_get(Dropbox::API::API_CONTENT_SERVER, "/files/auto/#{ format_path(path, true) }", input)
+        response = @session.do_(Dropbox::API::API_CONTENT_SERVER, "download/#{ format_path(path, true) }", input)
         parsed_response = Dropbox::API::HTTP.parse_response(response, true)
         metadata = parse_metadata(response)
         return parsed_response, metadata
       end
       
-      # Uploads a file using PUT semantics. Note that this call goes to api-
-      # content.dropbox.com instead of api.dropbox.com.
+      # Start an upload session.
       #
       # Args:
-      # * +path+ (+String+):
-      #   path The full path to the file you want to write to. This parameter
-      #   should not point to a folder.
-      # * +overwrite+ (+Boolean+):
-      #   This value, either true (default) or false, determines what happens
-      #   when there's already a file at the specified path. If true, the
-      #   existing file will be overwritten by the new one. If false, the new
-      #   file will be automatically renamed (for example, test.txt might be
-      #   automatically renamed to test (1).txt). The new name can be obtained
-      #   from the returned metadata.
-      # * +parent_rev+ (+String+):
-      #   If present, this parameter specifies the revision of the file you're
-      #   editing. If parent_rev matches the latest version of the file on the
-      #   user's Dropbox, that file will be replaced. Otherwise, the new file
-      #   will be automatically renamed (for example, test.txt might be
-      #   automatically renamed to test (conflicted copy).txt). If you specify a
-      #   parent_rev and that revision doesn't exist, the file won't save. Get
-      #   the most recent rev by performing a call to /metadata.
       #
       # Returns:
-      #   EntryInfo
-      def put_file(path = nil, overwrite = nil, parent_rev = nil, data = nil)
+      #   UploadSessionStart
+      def upload_start()
         input = {
-          overwrite: overwrite,
-          parent_rev: parent_rev,
         }
-        response = @session.do_put(Dropbox::API::API_CONTENT_SERVER, "/files_put/auto/#{ format_path(path, true) }", input, {}, data)
-        Dropbox::API::EntryInfo.from_hash(Dropbox::API::HTTP.parse_response(response))
+        response = @session.do_(Dropbox::API::API_CONTENT_SERVER, "upload/start", input, {}, none)
+        Dropbox::API::UploadSessionStart.from_hash(Dropbox::API::HTTP.parse_response(response))
       end
       
-      # Retrieves file and folder metadata.
+      # Start an upload session.
+      #
+      # Args:
+      # * +upload_id+ (+String+):
+      #   Identifies the upload session to append data to.
+      # * +offset+ (+UInt64()+):
+      #   The offset into the file of the current chunk of data being uploaded.
+      #   It can also be thought of as the amount of data that has been uploaded
+      #   so far. We use the offset as a sanity check.
+      #
+      # Returns:
+      #   Empty
+      def upload_append(upload_id = nil, offset = nil, none = nil)
+        input = {
+          upload_id: upload_id,
+          offset: offset,
+        }
+        response = @session.do_(Dropbox::API::API_CONTENT_SERVER, "upload/append", input, {}, none)
+        Dropbox::API::Empty.from_hash(Dropbox::API::HTTP.parse_response(response))
+      end
+      
+      # Use this endpoint to either finish an ongoing upload session that was
+      # begun with :route:`UploadStart` or upload a file in one shot.
       #
       # Args:
       # * +path+ (+String+):
-      #   The path to the file or folder.
-      # * +file_limit+ (+UInt32()+):
-      #   Default is 10,000 (max is 25,000). When listing a folder, the service
-      #   won't report listings containing more than the specified amount of
-      #   files and will instead respond with a 406 (Not Acceptable) status
-      #   response.
-      # * +hash+ (+String+):
-      #   Each call to /metadata on a folder will return a hash field, generated
-      #   by hashing all of the metadata contained in that response. On later
-      #   calls to /metadata, you should provide that value via this parameter
-      #   so that if nothing has changed, the response will be a 304 (Not
-      #   Modified) status code instead of the full, potentially very large,
-      #   folder listing. This parameter is ignored if the specified path is
-      #   associated with a file or if list=false. A folder shared between two
-      #   users will have the same hash for each user.
-      # * +list+ (+Boolean+):
-      #   The strings true and false are valid values. true is the default. If
-      #   true, the folder's metadata will include a contents field with a list
-      #   of metadata entries for the contents of the folder. If false, the
-      #   contents field will be omitted.
-      # * +include_deleted+ (+Boolean+):
-      #   Only applicable when list is set. If this parameter is set to true,
-      #   then contents will include the metadata of deleted children. Note that
-      #   the target of the metadata call is always returned even when it has
-      #   been deleted (with is_deleted set to true) regardless of this flag.
-      # * +rev+ (+String+):
-      #   If you include a particular revision number, then only the metadata
-      #   for that revision will be returned.
-      # * +include_media_info+ (+Boolean+):
-      #   If true, each file will include a photo_info dictionary for photos and
-      #   a video_info dictionary for videos with additional media info. If the
-      #   data isn't available yet, the string pending will be returned instead
-      #   of a dictionary.
+      #   Path in the user's Dropbox to save the file.
+      # * +mode+ (+Union('ConflictPolicy', [SymbolField('overwrite'), SymbolField('add'), Field('update', Struct('UpdateParentRev', [Field('parent_rev', String, False, False)]), False, False)])+):
+      #   The course of action to take if a file already exists at
+      #   :field:`path`.
+      # * +append_to+ (+Struct('UploadAppend', [Field('upload_id', String, False, False), Field('offset', UInt64(), False, False)])+):
+      #   If specified, the current chunk of data should be appended to an
+      #   existing upload session.
+      # * +autorename+ (+Boolean+):
+      #   Whether the file should be autorenamed in the event of a conflict.
+      # * +client_modified_utc+ (+UInt64()+):
+      #   Self reported time of when this file was created or modified.
+      # * +mute+ (+Boolean+):
+      #   Whether the devices that the user has linked should notify them of the
+      #   new or updated file.
       #
       # Returns:
-      #   FileOrFolderInfo
-      def metadata(path = nil, file_limit = nil, hash = nil, list = nil, include_deleted = nil, rev = nil, include_media_info = nil)
+      #   FileInfo
+      def upload(path = nil, mode = nil, append_to = nil, autorename = nil, client_modified_utc = nil, mute = nil, none = nil)
         input = {
-          file_limit: file_limit,
-          hash: hash,
-          list: list,
-          include_deleted: include_deleted,
-          rev: rev,
-          include_media_info: include_media_info,
+          mode: mode,
+          append_to: append_to,
+          autorename: autorename,
+          client_modified_utc: client_modified_utc,
+          mute: mute,
         }
-        response = @session.do_get(Dropbox::API::API_SERVER, "/metadata/auto/#{ format_path(path, true) }", input)
-        Dropbox::API::FileOrFolderInfo.from_hash(Dropbox::API::HTTP.parse_response(response))
+        response = @session.do_(Dropbox::API::API_CONTENT_SERVER, "upload/#{ format_path(path, true) }", input, {}, none)
+        Dropbox::API::FileInfo.from_hash(Dropbox::API::HTTP.parse_response(response))
+      end
+      
+      # Get information about a user's account.
+      #
+      # Args:
+      # * +account_id+ (+String+):
+      #   A user's account identifier. Use :val:`"me"` to get information for
+      #   the current account.
+      #
+      # Returns:
+      #   AccountInfo
+      def info(account_id = nil)
+        input = {
+          account_id: account_id,
+        }
+        response = @session.do_(Dropbox::API::API_SERVER, "info", input)
+        Dropbox::API::AccountInfo.from_hash(Dropbox::API::HTTP.parse_response(response))
+      end
+      
+      # Get information about the authorized user's account.
+      #
+      # Args:
+      #
+      # Returns:
+      #   AccountInfo
+      def info_me()
+        input = {
+        }
+        response = @session.do_(Dropbox::API::API_SERVER, "info/me", input)
+        Dropbox::API::AccountInfo.from_hash(Dropbox::API::HTTP.parse_response(response))
       end
       
 

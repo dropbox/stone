@@ -215,13 +215,13 @@ struct FolderListRequest
     include_deleted Boolean = false optional:
         If this parameter is set to :val:`true`, then :field:`contents` will
         include the metadata of deleted children. Note that the target of the
-        :op:`folder-list` call is always returned even when it has been deleted
-        (with :field:`is_deleted` set to true) regardless of
+        :route:`folder-list` call is always returned even when it has been
+        deleted (with :field:`is_deleted` set to true) regardless of
         this flag.
     include_media_info Boolean = false optional:
         If true, each file will include a media_info key.
 
-op Folder-List
+route Folder-List
     doc:
         Get the contents of a folder.
 
@@ -245,7 +245,7 @@ struct InfoRequest
     example default
         path="/Photos/flower.jpg"
 
-op Info
+route Info
     doc:
         Get the info for a file or folder.
 
@@ -255,7 +255,7 @@ op Info
     response
         info Entry
 
-op Download
+route Download
     doc:
         Download a file.
 
@@ -321,7 +321,7 @@ union UploadError
     user_over_quota:
         The user does not have space in their Dropbox.
 
-op Upload
+route Upload
     doc:
         Upload a file to Dropbox.
 
@@ -346,7 +346,7 @@ union PreviewError
         No preview has been generated yet or unable to generate a preview for
         the file.
 
-op Preview
+route Preview
     doc:
         Gets a preview for a file.
 
@@ -381,7 +381,7 @@ struct ThumbnailRequest
         format="jpeg"
         size="m"
 
-op Thumbnail
+route Thumbnail
     doc:
         Get the thumbnail for a file.
 
@@ -399,15 +399,15 @@ struct DeltaResponse
 
     reset Boolean:
         If :val:`true`, clear your local state. There will be no
-        :field:`entries`. Then call :op:`delta` with no cursor. :field:`reset`
+        :field:`entries`. Then call :route:`delta` with no cursor. :field:`reset`
         will be :val:`true` only on rare occasions, such as after server or
         account maintenance, or if a user deletes their app folder.
     cursor String:
         A string that encodes the latest information that has been returned.
-        On the next call to :op:`Delta`, pass in this value.
+        On the next call to :route:`Delta`, pass in this value.
     has_more Boolean:
         If :val:`true`, then there are more entries available; you can call
-        :op:`Delta` again immediately to retrieve those entries. If
+        :route:`Delta` again immediately to retrieve those entries. If
         :val:`false`, then wait for at least five minutes (preferably longer)
         before checking again.
     entries List(data_type=Entry):
@@ -445,11 +445,11 @@ struct DeltaRequest
         include_media_info=false
         include_membership=false
 
-op Delta
+route Delta
     doc:
         A way of letting you keep up with changes to files and folders in a
-        user's Dropbox. You can periodically call :op:`Delta` to get a list of
-        "delta entries", which are instructions on how to update your local
+        user's Dropbox. You can periodically call :route:`Delta` to get a list
+        of "delta entries", which are instructions on how to update your local
         state to match the server's state.
 
     request
@@ -461,10 +461,10 @@ op Delta
 struct LongpollDeltaRequest
 
     cursor String:
-        A delta cursor as returned from a call to :op:`Delta`. Note that a
-        cursor returned from a call to :op:`Delta` with
+        A delta cursor as returned from a call to :route:`Delta`. Note that a
+        cursor returned from a call to :route:`Delta` with
         :field:`include_media_info` set to :val:`true` is incompatible with
-        :op:`LongpollDelta` and an error will be returned.
+        :route:`LongpollDelta` and an error will be returned.
 
     timeout UInt32(min_value=30, max_value=480) = 30 optional:
         An optional integer indicating a timeout, in seconds. The request
@@ -482,27 +482,27 @@ struct LongpollDeltaResponse
 
     changes Boolean:
         Indicates whether new changes are available. If this value is
-        :val:`true`, you should call :op:`Delta` to retrieve the changes.
+        :val:`true`, you should call :route:`Delta` to retrieve the changes.
         If this value is :val:`false`, it means the call to
-        :op:`LongpollDelta` timed out.
+        :route:`LongpollDelta` timed out.
 
     backoff UInt32 optional:
         If present, the value indicates how many seconds your code should
-        wait before calling :op:`LongpollDelta` again.
+        wait before calling :route:`LongpollDelta` again.
 
     example default
         changes=false
         backoff=60
 
-op LongpollDelta
+route LongpollDelta
     doc:
         A long-poll endpoint to wait for changes on an account. In conjunction
-        with :op:`Delta`, this call gives you a low-latency way to monitor an
+        with :route:`Delta`, this call gives you a low-latency way to monitor an
         account for file changes.
 
         Unlike most other API endpoints, this call does not require OAuth
         authentication. The passed in :field:`cursor` can only be acquired via
-        an authenticated call to :op:`Delta`.
+        an authenticated call to :route:`Delta`.
 
     request
         in LongpollDeltaRequest
@@ -522,13 +522,13 @@ struct RevisionHistory
     example default
         pass
 
-op Revisions
+route Revisions
     doc:
         Obtains file information for previous revisions.
 
         Only revisions up to thirty days old are available (or more if the
         Dropbox user has :link:`Packrat https://www.dropbox.com/help/113`). You can use the revision number in
-        conjunction with the :op:`Restore` call to revert the file to its
+        conjunction with the :route:`Restore` call to revert the file to its
         previous state.
 
     request
@@ -544,7 +544,7 @@ struct RestoreRequest
     rev Rev:
         The revision of a path to restore to.
 
-op Restore
+route Restore
     doc:
         Restores a file path to a previous revision.
 
@@ -582,7 +582,7 @@ struct SearchResults
     example default
         pass
 
-op Search
+route Search
     doc:
         Returns metadata for all files and folders whose filename contains the
         given search string as a substring.
@@ -617,7 +617,7 @@ union CopyError
         Too many files would be involved in the operation for it to complete
         successfully. The limit is currently 10,000 files and folders.
 
-op Copy
+route Copy
     doc:
         Copies a file or folder to a new location.
 
@@ -630,7 +630,7 @@ op Copy
     error
         CopyError
 
-op Move
+route Move
     doc:
         Moves a file or folder to a new location.
 
@@ -652,7 +652,7 @@ union FolderCreateError
     invalid_destination:
         There is already a file at the given destination.
 
-op Folder-Create
+route Folder-Create
     doc:
         Creates a folder.
 
@@ -677,7 +677,7 @@ union DeleteError
         Too many files would be involved in the operation for it to complete
         successfully. The limit is currently 10,000 files and folders.
 
-op Delete
+route Delete
     doc:
         Deletes a file or folder.
 
@@ -702,7 +702,7 @@ struct ChildrenList
     results List(data_type=String):
         The IDs that are descendants of the query ID.
 
-op Get-Children
+route Get-Children
     doc:
         Retrieves a file's children by ID.
 

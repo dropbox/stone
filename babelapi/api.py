@@ -5,7 +5,7 @@ from babelapi.data_type import Empty
 
 class Api(object):
     """
-    A full description of an API's namespaces, data types, and operations.
+    A full description of an API's namespaces, data types, and routes.
     """
     def __init__(self, version):
         self.version = StrictVersion(version)
@@ -30,14 +30,14 @@ class ApiNamespace(object):
 
     def __init__(self, name):
         self.name = name
-        self.operations = []
-        self.operation_by_name = {}
+        self.routes = []
+        self.route_by_name = {}
         self.data_types = []
         self.data_type_by_name = {}
 
-    def add_operation(self, operation):
-        self.operations.append(operation)
-        self.operation_by_name[operation.name] = operation
+    def add_route(self, route):
+        self.routes.append(route)
+        self.route_by_name[route.name] = route
 
     def add_data_type(self, data_type):
         self.data_types.append(data_type)
@@ -55,9 +55,9 @@ class ApiNamespace(object):
         seen_data_types = set()
 
         found_empty = False
-        for operation in self.operations:
-            for segment in (operation.request_segmentation.segments
-                                + operation.response_segmentation.segments):
+        for route in self.routes:
+            for segment in (route.request_segmentation.segments
+                                + route.response_segmentation.segments):
                 if segment.data_type == Empty and not found_empty:
                     linearized_data_types.append(Empty)
                     seen_data_types.add(Empty)
@@ -77,7 +77,7 @@ class ApiNamespace(object):
 
         return linearized_data_types
 
-class ApiOperation(object):
+class ApiRoute(object):
     """
     Represents an API endpoint.
     """
@@ -108,4 +108,3 @@ class ApiOperation(object):
         self.response_segmentation = response_segmentation
         self.error_data_type = error_data_type
         self.extras = extras
-

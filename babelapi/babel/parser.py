@@ -4,7 +4,7 @@ import ply.yacc as yacc
 
 from babelapi.babel.lexer import BabelLexer, BabelNull
 
-class BabelOpDef(object):
+class BabelRouteDef(object):
     def __init__(self, name, path=None):
         self.name = name
         self.path = path
@@ -172,13 +172,13 @@ class BabelParser(object):
     def p_statement_decl_to_desc(self, p):
         """desc : decl
                 | typedef
-                | opdef"""
+                | routedef"""
         p[0] = [p[1]]
 
     def p_statement_desc_iter(self, p):
         """desc : desc decl
                 | desc typedef
-                | desc opdef"""
+                | desc routedef"""
         p[0] = p[1]
         p[0].append(p[2])
 
@@ -315,9 +315,9 @@ class BabelParser(object):
                        | empty"""
         p[0] = p[1]
 
-    def p_statement_opdef(self, p):
-        'opdef : OP ID path_option NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT'
-        p[0] = BabelOpDef(p[2], p[3])
+    def p_statement_routedef(self, p):
+        'routedef : ROUTE ID path_option NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT'
+        p[0] = BabelRouteDef(p[2], p[3])
         p[0].set_doc(self._normalize_docstring(p[6]))
         p[0].set_request_segmentation(p[7])
         p[0].set_response_segmentation(p[8])

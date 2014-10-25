@@ -25,13 +25,13 @@ from babelapi.data_type import (
 )
 from babelapi.api import (
     Api,
-    ApiOperation,
+    ApiRoute,
 )
 from babelapi.babel.parser import (
     BabelAlias,
     BabelInclude,
     BabelNamespace,
-    BabelOpDef,
+    BabelRouteDef,
     BabelSymbol,
     BabelTypeDef,
 )
@@ -227,7 +227,7 @@ class TowerOfBabel(object):
             elif isinstance(item, BabelTypeDef):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
-            elif isinstance(item, BabelOpDef):
+            elif isinstance(item, BabelRouteDef):
                 request_segmentation = self._babel_field_to_segments(
                     env,
                     item.request_segmentation,
@@ -245,7 +245,7 @@ class TowerOfBabel(object):
                 else:
                     # TODO: Split and add dashes
                     path = item.name.lower()
-                operation = ApiOperation(
+                route = ApiRoute(
                     item.name,
                     path,
                     item.doc,
@@ -254,7 +254,7 @@ class TowerOfBabel(object):
                     error_data_type,
                     item.extras,
                 )
-                namespace.add_operation(operation)
+                namespace.add_route(route)
             else:
                 raise Exception('Unknown Babel Declaration Type %r'
                                 % item.__class__.__name__)

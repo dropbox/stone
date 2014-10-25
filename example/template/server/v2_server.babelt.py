@@ -33,8 +33,8 @@ def segmentation_response(header, body, *segments):
         return json.dumps(response_json)
 
 {% for namespace_name, namespace in api.namespaces.items() -%}
-    {%- if namespace.operations %}
-        {%- for op in namespace.operations %}
+    {%- if namespace.routes %}
+        {%- for op in namespace.routes %}
 @route('/2/{{ namespace_name }}/{{ op.name|lower }}', method={%- trim -%}
     [{% if op.extras.method == "GET" %}'GET', {% endif %}'POST'])
 def {{ namespace_name }}_{{ op.name|method }}():

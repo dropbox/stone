@@ -1,6 +1,6 @@
 from babelapi.api import (
     Api,
-    ApiOperation,
+    ApiRoute,
 )
 from babelapi.segmentation import (
     Segment,
@@ -103,7 +103,7 @@ InfoRequest = Struct(
     ],
 )
 
-InfoOp = ApiOperation(
+InfoRoute = ApiRoute(
     'Info',
     'info',
     "Get information about a user's account.",
@@ -171,4 +171,4 @@ users_namespace = api.ensure_namespace('users')
 users_namespace.add_data_type(Team)
 users_namespace.add_data_type(QuotaInfo)
 users_namespace.add_data_type(AccountInfo)
-users_namespace.add_operation(InfoOp)
+users_namespace.add_route(InfoRoute)

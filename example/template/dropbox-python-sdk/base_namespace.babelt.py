@@ -28,7 +28,7 @@ from .dropbox import assert_only_one, Dropbox, Namespace
 
 class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
     """Generates Python modules for the Dropbox Python v2 SDK that implement
-    the data types and operations defined in the spec."""
+    the data types and routes defined in the spec."""
 
     lang = PythonTargetLanguage()
 
@@ -40,7 +40,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
 
     def _generate_base_namespace_module(self, namespace):
         """Creates a module for the namespace. All data types are represented
-        as classes. The operations are added to a class that takes the name of
+        as classes. The routes are added to a class that takes the name of
         the namespace."""
         self.emit(base)
         for data_type in namespace.linearize_data_types():
@@ -53,8 +53,8 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
 
         self.emit_line('class {}(Namespace):'.format(self.lang.format_class(namespace.name)))
         with self.indent():
-            for operation in namespace.operations:
-                self._generate_operation(namespace, operation)
+            for route in namespace.routes:
+                self._generate_route(namespace, route)
 
     def _class_name_for_data_type(self, data_type):
         return self.lang.format_class(data_type.name)
@@ -394,26 +394,26 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
     def _has_binary_segment(self, segmentation):
-        """If an operation has Binary specified as the second segment of a request or response,
+        """If a route has Binary specified as the second segment of a request or response,
         the payload will be in the HTTP body. Binary should never appear anywhere else in a
         segmentation."""
         return (len(segmentation.segments) == 2
                 and isinstance(segmentation.segments[1].data_type, Binary))
 
-    def _generate_operation(self, namespace, operation):
-        """Generate a Python method that corresponds to an operation."""
-        request_data_type = operation.request_segmentation.segments[0].data_type
-        response_data_type = operation.response_segmentation.segments[0].data_type
+    def _generate_route(self, namespace, route):
+        """Generate a Python method that corresponds to an route."""
+        request_data_type = route.request_segmentation.segments[0].data_type
+        response_data_type = route.response_segmentation.segments[0].data_type
 
-        request_binary_body = self._has_binary_segment(operation.request_segmentation)
-        response_binary_body = self._has_binary_segment(operation.response_segmentation)
-        host = self._generate_op_host(operation.extras.get('host', 'api'))
-        style = self._generate_op_style(operation.extras.get('style', 'rpc'))
+        request_binary_body = self._has_binary_segment(route.request_segmentation)
+        response_binary_body = self._has_binary_segment(route.response_segmentation)
+        host = self._generate_route_host(route.extras.get('host', 'api'))
+        style = self._generate_route_style(route.extras.get('style', 'rpc'))
 
-        self._generate_operation_method_decl(operation, request_data_type, request_binary_body)
+        self._generate_route_method_decl(route, request_data_type, request_binary_body)
 
         with self.indent():
-            self._generate_operation_method_docstring(operation, request_data_type, request_binary_body)
+            self._generate_route_method_docstring(route, request_data_type, request_binary_body)
 
             # Code to instantiate a class for the request data type
             self.emit_line('o = {}'.format(
@@ -425,7 +425,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
             # Code to make the request
             self.emit_line('r = self._dropbox.request', trailing_newline=False)
             args = [host,
-                    "'{}/{}'".format(namespace.name, operation.path),
+                    "'{}/{}'".format(namespace.name, route.path),
                     style,
                     'o.to_json()']
             if request_binary_body:
@@ -445,7 +445,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                 ))
         self.emit_empty_line()
 
-    def _generate_op_host(self, host):
+    def _generate_route_host(self, host):
         """"Convert the host specified in the spec to the appropriate Python object."""
         if host == 'content':
             return 'Dropbox.Host.API_CONTENT'
@@ -456,7 +456,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         else:
             raise ValueError('Unknown host')
 
-    def _generate_op_style(self, style):
+    def _generate_route_style(self, style):
         """"Convert the style specified in the spec to the appropriate Python object."""
         if style == 'rpc':
             return 'Dropbox.OpStyle.RPC'
@@ -465,10 +465,10 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         elif style == 'upload':
             return 'Dropbox.OpStyle.UPLOAD'
         else:
-            raise ValueError('Unknown operation style')
+            raise ValueError('Unknown route style')
 
-    def _generate_operation_method_decl(self, operation, request_data_type, request_binary_body):
-        self.emit_line('def {}'.format(self.lang.format_method(operation.name)),
+    def _generate_route_method_decl(self, route, request_data_type, request_binary_body):
+        self.emit_line('def {}'.format(self.lang.format_method(route.name)),
                        trailing_newline=False)
         args = ['self']
         if request_binary_body:
@@ -485,10 +485,10 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         self.emit(':')
         self.emit_empty_line()
 
-    def _generate_operation_method_docstring(self, operation, request_data_type,
+    def _generate_route_method_docstring(self, route, request_data_type,
                                              request_binary_body):
         self.emit_line('"""')
-        self.emit_wrapped_lines(operation.doc)
+        self.emit_wrapped_lines(route.doc)
         if self._field_with_doc_exists(request_data_type.fields) or request_binary_body:
             self.emit_empty_line()
             self.emit_line('Args:')
@@ -500,7 +500,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                         self.emit_wrapped_lines(field.name + ': ' + field.doc,
                                                 prefix='    ',
                                                 first_line_prefix=False)
-        error_data_type = operation.error_data_type
+        error_data_type = route.error_data_type
         if error_data_type and error_data_type.fields:
             self.emit_empty_line()
             self.emit_line('Raises:')

@@ -123,7 +123,7 @@ union InfoError
     no_account:
         The specified :field:`account_id` does not exist.
 
-op Info
+route Info
     doc:
         Get information about a user's account.
 
@@ -134,7 +134,7 @@ op Info
     error
         InfoError
 
-op InfoMe /info/me
+route InfoMe /info/me
     doc:
         Get information about the authorized user's account.
 

@@ -6,347 +6,130 @@ from dropbox import arg_struct_parser as asp
 def identity(x):
     return x
 
-files_photo_validator = asp.Record(
-    # When the photo was taken.
-    ('time_taken', asp.Timestamp()),
-    # The GPS coordinates where the photo was taken.
-    ('lat_long', asp.Nullable(asp.List(asp.Float()))),
+files_empty_validator = asp.Record(
 )
 
-files_video_validator = asp.Record(
-    # When the photo was taken.
-    ('time_taken', asp.Timestamp()),
-    # The GPS coordinates where the photo was taken.
-    ('lat_long', asp.Nullable(asp.List(asp.Float()))),
-    # Length of video in milliseconds.
-    ('duration', asp.Float()),
-)
+files_file_target_validator = asp.Record(
+    # Path from root. Should be an empty string for root.
 
-files_media_info_validator = asp.Variant(
-    ('photo', identity, files_photo_validator),
-    ('video', identity, files_video_validator),
-)
-
-files_shared_folder_validator = asp.Record(
-    # The unique identifier for this shared folder.
-    ('id', asp.StringB()),
-)
-
-files_ancestor_validator = asp.Record(
-    # A unique identifier for the ancestor.
-    ('id', asp.StringB(max_length=40)),
-    # The revision of the ancestor.
-    ('id_revision', asp.StringB(max_length=40)),
-    # The type of relationship with the descendant. Options are :val:`"move"`,
-    # :val:`"copy"` and :val:`"sharing_policy"`.
-    ('type', asp.StringB(max_length=15)),
-)
-
-files_base_file_validator = asp.Record(
-    # A unique identifier for the file.
-    ('id', asp.StringB(max_length=40)),
-    # A unique identifier for the current revision of a file. This field is the
-    # same rev as elsewhere in the API and can be used to detect changes and
-    # avoid conflicts.
-    ('id_revision', asp.Nat()),
-    # Path to file or folder.
     ('path', asp.StringB()),
-    # A unique identifier for the current revision of a file path. This field is
-    # the same rev as elsewhere in the API and can be used to detect changes and
-    # avoid conflicts.
-    ('path_revision', asp.Nat()),
-    # The last time the file was modified on Dropbox, in the standard Timestamp
-    # format (:val:`null` for root folder).
-    ('modified', asp.Nullable(asp.Timestamp())),
-    # Whether the given entry is deleted.
-    ('is_deleted', asp.Boolean()),
-    # The ancestor of this file or folder.
-    ('ancestor', files_ancestor_validator),
-    # For shared folders, this field specifies whether the user has read-only
-    # access to the folder. For files within a shared folder, this specifies the
-    # read-only status of the parent shared folder.
-    ('read_only', asp.Boolean()),
-)
+    # Revision of target file.
 
-files_sharing_user_validator = asp.Record(
-    # Account ID of the user.
-    ('account_id', asp.StringB()),
-    # Name of the user.
-    ('display_name', asp.StringB()),
-    # Whether this user is part of the same team.
-    ('same_team', asp.Boolean()),
-)
-
-files_sharing_user_validator = asp.Record(
-    # Account ID of the user.
-    ('account_id', asp.StringB()),
-    # Name of the user.
-    ('display_name', asp.StringB()),
-    # Whether this user is part of the same team.
-    ('same_team', asp.Boolean()),
-)
-
-files_file_validator = asp.Record(
-    # File size in bytes.
-    ('size', asp.Nat()),
-    # Information specific to photo and video media.
-    ('media_info', files_media_info_validator),
-    # For files within a shared folder, this field specifies the ID of the
-    # containing shared folder.
-    ('parent_shared_folder_id', asp.StringB()),
-    # The user who last modified this file.
-    ('modifier', files_sharing_user_validator),
-)
-
-files_sharing_member_validator = asp.Record(
-    # User information.
-    ('user', files_sharing_user_validator),
-    # A user may be an :val:`"editor"`, :val:`"viewer"`, or :val:`"owner"`.
-    ('role', asp.StringB()),
-    # Whether the user is an active member of the shared folder.
-    ('active', asp.Boolean()),
-)
-
-files_shared_folder_validator = asp.Record(
-    # The unique identifier for this shared folder.
-    ('id', asp.StringB()),
-    # List of members who have access to this folder.
-    ('members', files_sharing_member_validator),
-)
-
-files_folder_validator = asp.Record(
-    # If this is a shared folder, information about it.
-    ('shared_folder', files_shared_folder_validator),
-)
-
-files_entry_validator = asp.Variant(
-    ('file', identity, files_file_validator),
-    ('folder', identity, files_folder_validator),
-)
-
-files_folder_and_contents_validator = asp.Record(
-    # Ordered list of all contained files and folders.
-    ('contents', files_entry_validator),
-)
-
-files_folder_list_request_validator = asp.Record(
-    # The path to the folder.
-    ('id', asp.StringB()),
-    # The id of the folder.
-    ('path', asp.StringB()),
-    # If this parameter is set to :val:`true`, then :field:`contents` will
-    # include the metadata of deleted children. Note that the target of the :op
-    # :`folder-list` call is always returned even when it has been deleted (with
-    # :field:`is_deleted` set to true) regardless of this flag.
-    ('include_deleted', asp.Boolean(), False),
-    # If true, each file will include a media_info key.
-    ('include_media_info', asp.Boolean(), False),
-)
-
-files_info_request_validator = asp.Record(
-    # The path to the file or folder.
-    ('path', asp.StringB()),
-    # Specific revision for a given path.
-    ('path_revision', asp.StringB()),
-)
-
-files_update_parent_rev_validator = asp.Record(
-    # The revision to be updated.
-    ('parent_revision', asp.StringB()),
-    # Whether the new file should be renamed on a conflict.
-    ('auto_rename', asp.Boolean()),
-)
-
-files_write_conflict_policy_validator = asp.Variant(
-    # On a write conflict, reject the new file.
-    ('reject', identity, object()),
-    # On a write conflict, overwrite the existing file.
-    ('overwrite', identity, object()),
-    # On a write conflict, rename the new file with a numerical suffix.
-    ('rename', identity, object()),
-    # On a write conflict, overwrite the existing file.
-    ('update_if_matching_parent_rev', identity, files_update_parent_rev_validator),
-)
-
-files_file_upload_request_validator = asp.Record(
-    # The full path to the file you want to write to. It should not point to a
-    # folder.
-    ('path', asp.StringB()),
-    # Action to take if a file already exists at the specified path.
-    ('write_conflict_policy', files_write_conflict_policy_validator),
-)
-
-files_upload_error_validator = asp.Variant(
-    # File already exists.
-    ('file_exists', identity, object()),
-    # Target folder does not exist.
-    ('bad_path', identity, object()),
-    # The user does not have space in their Dropbox.
-    ('user_over_quota', identity, object()),
-)
-
-files_preview_error_validator = asp.Variant(
-    # The file wasn't found at the specified :field:`path`, or wasn't found at
-    # the specified :field:`path_rev`.
-    ('not_found', identity, object()),
-    # No preview has been generated yet or unable to generate a preview for the
-    # file.
-    ('no_preview', identity, object()),
-)
-
-files_thumbnail_request_validator = asp.Record(
-    # jpeg (default) or png. For images that are photos, jpeg should be
-    # preferred, while png is better for screenshots and digital art.
-    ('format', asp.StringB()),
-    # One of the following values: xs, s, m, l, xl.
-    ('size', asp.StringB(), 's'),
-)
-
-files_delta_response_validator = asp.Record(
-    # If :val:`true`, clear your local state. There will be no :field:`entries`.
-    # Then call :op:`delta` with no cursor. :field:`reset` will be :val:`true`
-    # only on rare occasions, such as after server or account maintenance, or if
-    # a user deletes their app folder.
-    ('reset', asp.Boolean()),
-    # A string that encodes the latest information that has been returned. On
-    # the next call to :op:`Delta`, pass in this value.
-    ('cursor', asp.StringB()),
-    # If :val:`true`, then there are more entries available; you can call
-    # :op:`Delta` again immediately to retrieve those entries. If :val:`false`,
-    # then wait for at least five minutes (preferably longer) before checking
-    # again.
-    ('has_more', asp.Boolean()),
-    # Each file or directory that has been changed.
-    ('entries', files_entry_validator),
-)
-
-files_delta_request_validator = asp.Record(
-    # A string that is used to keep track of your current state. On the next
-    # call pass in this value to return delta entries that have been recorded
-    # since the cursor was returned.
-    ('cursor', asp.Nullable(asp.StringB())),
-    # Filters the response to only include entries at or under the specified
-    # path.
-    ('path_prefix', asp.StringB()),
-    # If :val:`true`, each file will include a :field:`media_info` key. When
-    # :field:`include_media_info` is specified, files will only appear in delta
-    # responses when the media info is ready.
-    ('include_media_info', asp.Boolean(), False),
-    # If true, each shared folder will include a list of the members of the
-    # shared folder.
-    ('include_membership', asp.Boolean(), False),
-)
-
-files_longpoll_delta_request_validator = asp.Record(
-    # A delta cursor as returned from a call to :op:`Delta`. Note that a cursor
-    # returned from a call to :op:`Delta` with :field:`include_media_info` set
-    # to :val:`true` is incompatible with :op:`LongpollDelta` and an error will
-    # be returned.
-    ('cursor', asp.StringB()),
-    # An optional integer indicating a timeout, in seconds. The request will
-    # block for at most this length of time, plus up to 90 seconds of random
-    # jitter added to avoid the :link:`thundering herd problem
-    # https://en.wikipedia.org/wiki/Thundering_herd_problem`. Care should be
-    # taken when using this parameter, as some network infrastructure does not
-    # support long timeouts.
-    ('timeout', asp.Nat(), 30),
-)
-
-files_longpoll_delta_response_validator = asp.Record(
-    # Indicates whether new changes are available. If this value is :val:`true`,
-    # you should call :op:`Delta` to retrieve the changes. If this value is
-    # :val:`false`, it means the call to :op:`LongpollDelta` timed out.
-    ('changes', asp.Boolean()),
-    # If present, the value indicates how many seconds your code should wait
-    # before calling :op:`LongpollDelta` again.
-    ('backoff', asp.Nat()),
-)
-
-files_revision_history_validator = asp.Record(
-    # List of file or folders that have been part of the revision history.
-    ('revisions', files_entry_validator),
-)
-
-files_restore_request_validator = asp.Record(
-    # The path to the file or folder.
-    ('path', asp.StringB()),
-    # The revision of a path to restore to.
     ('rev', asp.StringB()),
 )
 
-files_search_request_validator = asp.Record(
-    # The search string. This string is split (on spaces) into individual words.
-    # Files and folders will be returned if they contain all words in the search
-    # string.
-    ('query', asp.StringB()),
-    # The maximum and default value is 1,000. No more than file_limit search
-    # results will be returned.
-    ('file_limit', asp.Nat(), 1000),
-    # If this parameter is set to true, then files and folders that have been
-    # deleted will also be included in the search.
-    ('include_deleted', asp.Boolean(), False),
-    # If true, metadata for a shared folder will include a list of the members
-    # of the shared folder.
-    ('include_membership', asp.Boolean(), False),
+files_file_info_validator = asp.Record(
+    # Name of file.
+
+    ('name', asp.StringB()),
 )
 
-files_search_results_validator = asp.Record(
-    # List of file or folders that match the search query.
-    ('results', files_entry_validator),
+files_sub_error_validator = asp.Record(
+    # A code indicating the type of error.
+
+    ('reason', asp.StringB()),
 )
 
-files_copy_request_validator = asp.Record(
-    # Specifies the file or folder to be copied.
-    ('from_path', asp.StringB()),
-    # Specifies the destination path, including the new name for the file or
-    # folder.
-    ('to_path', asp.StringB()),
+files_download_error_validator = asp.Variant(
+    ('disallowed', identity, files_sub_error_validator),
+    ('no_file', identity, files_sub_error_validator),
 )
 
-files_copy_error_validator = asp.Variant(
-    # The source file wasn't found at the specified path.
+files_upload_session_start_validator = asp.Record(
+    # A unique identifier for the upload session.
+
+    ('upload_id', asp.StringB()),
+)
+
+files_upload_append_validator = asp.Record(
+    # Identifies the upload session to append data to.
+
+    ('upload_id', asp.StringB()),
+    # The offset into the file of the current chunk of data being uploaded. It
+    # can also be thought of as the amount of data that has been uploaded so
+    # far. We use the offset as a sanity check.
+
+    ('offset', asp.Nat()),
+)
+
+files_incorrect_offset_error_validator = asp.Record(
+    ('correct_offset', asp.Nat()),
+)
+
+files_upload_append_error_validator = asp.Variant(
+    # :field:`upload_id` was not found.
+
     ('not_found', identity, object()),
-    # Trying to copy a shared folder.
-    ('invalid_source', identity, object()),
-    # There is already a file at the given destination.
-    ('invalid_destination', identity, object()),
-    # Too many files would be involved in the operation for it to complete
-    # successfully. The limit is currently 10,000 files and folders.
-    ('too_many_files', identity, object()),
+    # Upload session was closed.
+
+    ('closed', identity, object()),
+    ('incorrect_offset', identity, files_incorrect_offset_error_validator),
 )
 
-files_folder_create_request_validator = asp.Record(
-    # The path to the new folder to create.
+files_update_parent_rev_validator = asp.Record(
+    ('parent_rev', asp.StringB()),
+)
+
+files_conflict_policy_validator = asp.Variant(
+    # On a conflict, the target is overridden.
+
+    ('overwrite', identity, object()),
+    # On a conflict, the upload is rejected. You can call the :route:`Upload`
+    # endpoint again and attempt a different path.
+
+    ('add', identity, object()),
+    # On a conflict, only overwrite the target if the parent_rev matches.
+
+    ('update', identity, files_update_parent_rev_validator),
+)
+
+files_upload_commit_validator = asp.Record(
+    # Path in the user's Dropbox to save the file.
+
     ('path', asp.StringB()),
+    # The course of action to take if a file already exists at :field:`path`.
+
+    ('mode', files_conflict_policy_validator),
+    # If specified, the current chunk of data should be appended to an existing
+    # upload session.
+
+    ('append_to', files_upload_append_validator),
+    # Whether the file should be autorenamed in the event of a conflict.
+
+    ('autorename', asp.Boolean(), False),
+    # Self reported time of when this file was created or modified.
+
+    ('client_modified_utc', asp.Nullable(asp.Nat()), None),
+    # Whether the devices that the user has linked should notify them of the new
+    # or updated file.
+
+    ('mute', asp.Boolean(), False),
 )
 
-files_folder_create_error_validator = asp.Variant(
-    # There is already a file at the given destination.
-    ('invalid_destination', identity, object()),
+files_conflict_reason_validator = asp.Variant(
+    # Conflict with a folder.
+
+    ('folder', identity, object()),
+    # Conflict with a file.
+
+    ('file', identity, object()),
+    # Could not autorename.
+
+    ('autorename_failed', identity, object()),
 )
 
-files_delete_request_validator = asp.Record(
-    # The path to the file or folder to be deleted.
-    ('path', asp.StringB()),
+files_conflict_error_validator = asp.Record(
+    ('reason', files_conflict_reason_validator),
 )
 
-files_delete_error_validator = asp.Variant(
-    # The source file wasn't found at the specified path.
-    ('not_found', identity, object()),
-    # Too many files would be involved in the operation for it to complete
-    # successfully. The limit is currently 10,000 files and folders.
-    ('too_many_files', identity, object()),
-)
+files_upload_commit_error_validator = asp.Variant(
+    ('conflict', identity, files_conflict_error_validator),
+    # User does not have permission to write in the folder. An example of this
+    # is if the folder is a read-only shared folder.
 
-files_get_children_request_validator = asp.Record(
-    # The ID whose children are returned.
-    ('id', asp.StringB()),
-    # The maximum number of children that are returned.
-    ('limit', asp.Nat(), 100),
-)
+    ('no_write_permission', identity, object()),
+    # User does not have sufficient space quota to save the file.
 
-files_children_list_validator = asp.Record(
-    # The IDs that are descendants of the query ID.
-    ('results', asp.List(asp.StringB())),
+    ('insufficient_quota', identity, object()),
 )
 

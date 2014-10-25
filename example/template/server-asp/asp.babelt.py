@@ -14,7 +14,7 @@ from babelapi.data_type import (
     UInt64,
     Union,
 )
-from babelapi.generator.generator import CodeGeneratorMonoLingual
+from babelapi.generator.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
 base = """\
@@ -28,7 +28,7 @@ def identity(x):
 
 """
 
-class ASPGenerator(CodeGeneratorMonoLingual):
+class ASPGenerator(CodeGeneratorMonolingual):
     """A generator for arg_struct_parser definitions."""
 
     lang = PythonTargetLanguage()

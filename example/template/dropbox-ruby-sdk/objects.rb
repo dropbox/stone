@@ -12,54 +12,40 @@ module Dropbox
       DateTime.strptime(str, '%a, %d %b %Y %H:%M:%S +0000')
     end
 
-    # The space quota info for a user.
-    #
     # Fields:
-    # * +quota+ (+UInt64+):
-    #   The user's total quota allocation (bytes).
-    # * +normal+ (+UInt64+):
-    #   The user's used quota outside of shared folders (bytes).
-    # * +shared+ (+UInt64+):
-    #   The user's used quota in shared folders (bytes).
-    # * +datastores+ (+UInt64+):
-    #   The user's used quota in datastores (bytes).
-    class QuotaInfo
-      attr_accessor
-          :quota, 
-          :normal, 
-          :shared, 
-          :datastores
+    # * +path+ (+String+):
+    #   Path from root. Should be an empty string for root.
+    # * +rev+ (+String+):
+    #   Revision of target file.
+    class FileTarget
+      attr_accessor(
+          :path,
+          :rev
+      )
     
       def initialize(
-        quota,
-        normal,
-        shared,
-        datastores
+        path,
+        rev = nil
       )
-        @quota = quota
-        @normal = normal
-        @shared = shared
-        @datastores = datastores
+        @path = path
+        @rev = rev
       end
     
       def self.from_hash(hash)
         self.new(
-          hash['quota'],
-          hash['normal'],
-          hash['shared'],
-          hash['datastores'].nil? ? nil : hash['datastores'],
+          hash['path'],
+          !hash.include?('rev') ? nil : hash['rev'],
         )
       end
     end
     
-    # Information about a team.
-    #
     # Fields:
     # * +name+ (+String+):
-    #   The name of the team.
-    class Team
-      attr_accessor
+    #   Name of file.
+    class FileInfo
+      attr_accessor(
           :name
+      )
     
       def initialize(
         name
@@ -74,360 +60,411 @@ module Dropbox
       end
     end
     
-    # Information for a user's account.
-    #
     # Fields:
-    # * +referral_link+ (+String+):
-    #   The user's referral link.
-    # * +display_name+ (+String+):
-    #   The full name of a user.
-    # * +uid+ (+UInt64+):
-    #   The user's unique Dropbox ID.
-    # * +country+ (+String+):
-    #   The user's two-letter country code, if available.
-    # * +email+ (+String+):
-    #   The user's e-mail address.
-    # * +quota_info+ (+QuotaInfo+):
-    #   The user's quota.
-    # * +team+ (+Team+):
-    #   If this paired account is a member of a team.
-    class AccountInfo
-      attr_accessor
-          :referral_link, 
-          :display_name, 
-          :uid, 
-          :country, 
-          :email, 
-          :quota_info, 
-          :team
+    # * +reason+ (+String+):
+    #   A code indicating the type of error.
+    class SubError
+      attr_accessor(
+          :reason
+      )
     
       def initialize(
-        referral_link,
-        display_name,
-        uid,
-        country,
-        email,
-        quota_info,
-        team
+        reason
       )
-        @referral_link = referral_link
-        @display_name = display_name
-        @uid = uid
-        @country = country
-        @email = email
-        @quota_info = quota_info
-        @team = team
+        @reason = reason
       end
     
       def self.from_hash(hash)
         self.new(
-          hash['referral_link'],
-          hash['display_name'],
-          hash['uid'],
-          hash['country'],
-          hash['email'],
-          QuotaInfo.from_hash(hash['quota_info']),
-          hash['team'].nil? ? nil : Team.from_hash(hash['team']),
+          hash['reason'],
         )
       end
     end
     
 
-
-
-    # Photo-specific information derived from EXIF data.
-    #
     # Fields:
-    # * +time_taken+ (+Timestamp+):
-    #   When the photo was taken.
-    # * +lat_long+ (+List+):
-    #   The GPS coordinates where the photo was taken.
-    class PhotoInfo
-      attr_accessor
-          :time_taken, 
-          :lat_long
+    # * +upload_id+ (+String+):
+    #   A unique identifier for the upload session.
+    class UploadSessionStart
+      attr_accessor(
+          :upload_id
+      )
     
       def initialize(
-        time_taken,
-        lat_long
+        upload_id
       )
-        @time_taken = time_taken
-        @lat_long = lat_long
+        @upload_id = upload_id
       end
     
       def self.from_hash(hash)
         self.new(
-          convert_date(hash['time_taken']),
-          hash['lat_long'].nil? ? nil : hash['lat_long'],
+          hash['upload_id'],
         )
       end
     end
     
-    # Video-specific information derived from EXIF data.
-    #
     # Fields:
-    # * +time_taken+ (+Timestamp+):
-    #   When the photo was taken.
-    # * +lat_long+ (+List+):
-    #   The GPS coordinates where the photo was taken.
-    # * +duration+ (+Float+):
-    #   Length of video in milliseconds.
-    class VideoInfo
-      attr_accessor
-          :time_taken, 
-          :lat_long, 
-          :duration
+    # * +upload_id+ (+String+):
+    #   Identifies the upload session to append data to.
+    # * +offset+ (+UInt64+):
+    #   The offset into the file of the current chunk of data being uploaded.
+    #   It can also be thought of as the amount of data that has been uploaded
+    #   so far. We use the offset as a sanity check.
+    class UploadAppend
+      attr_accessor(
+          :upload_id,
+          :offset
+      )
     
       def initialize(
-        time_taken,
-        lat_long,
-        duration
+        upload_id,
+        offset
       )
-        @time_taken = time_taken
-        @lat_long = lat_long
-        @duration = duration
+        @upload_id = upload_id
+        @offset = offset
       end
     
       def self.from_hash(hash)
         self.new(
-          convert_date(hash['time_taken']),
-          hash['lat_long'].nil? ? nil : hash['lat_long'],
-          hash['duration'].nil? ? nil : hash['duration'],
+          hash['upload_id'],
+          hash['offset'],
         )
       end
     end
     
-    # A file or folder entry.
-    #
+    # Fields:
+    # * +correct_offset+ (+UInt64+):
+    #   
+    class IncorrectOffsetError
+      attr_accessor(
+          :correct_offset
+      )
+    
+      def initialize(
+        correct_offset
+      )
+        @correct_offset = correct_offset
+      end
+    
+      def self.from_hash(hash)
+        self.new(
+          hash['correct_offset'],
+        )
+      end
+    end
+    
+
+    # Fields:
+    # * +parent_rev+ (+String+):
+    #   
+    class UpdateParentRev
+      attr_accessor(
+          :parent_rev
+      )
+    
+      def initialize(
+        parent_rev
+      )
+        @parent_rev = parent_rev
+      end
+    
+      def self.from_hash(hash)
+        self.new(
+          hash['parent_rev'],
+        )
+      end
+    end
+    
+
     # Fields:
     # * +path+ (+String+):
-    #   Returns the canonical path to the file or directory.
-    # * +size+ (+String+):
-    #   A human-readable description of the file size (translated by locale).
-    # * +bytes+ (+UInt64+):
-    #   The file size in bytes.
-    # * +is_dir+ (+Boolean+):
-    #   Whether the given entry is a folder or not.
-    # * +thumb_exists+ (+Boolean+):
-    #   True if the file is an image that can be converted to a thumbnail via
-    #   the /thumbnails call.
-    # * +icon+ (+String+):
-    #   The name of the icon used to illustrate the file type in Dropbox's
-    #   icon library.
-    # * +root+ (+String+):
-    #   The root or top-level folder depending on your access level. All paths
-    #   returned are relative to this root level. Permitted values are either
-    #   dropbox or app_folder.
-    # * +rev+ (+String+):
-    #   A unique identifier for the current revision of a file. This field is
-    #   the same rev as elsewhere in the API and can be used to detect changes
-    #   and avoid conflicts.
-    # * +revision+ (+UInt64+):
-    #   A deprecated field that semi-uniquely identifies a file. Use rev
-    #   instead.
-    # * +modified+ (+Timestamp+):
-    #   The last time the file was modified on Dropbox, in the standard
-    #   Timestamp format (null for root folder).
-    # * +is_deleted+ (+Boolean+):
-    #   Whether the given entry is deleted.
-    # * +hash+ (+String+):
-    #   A folder's hash is useful for indicating changes to the folder's
-    #   contents in later calls to /metadata. This is roughly the folder
-    #   equivalent to a file's rev.
-    # * +client_mtime+ (+String+):
-    #   For files, this is the modification time set by the desktop client
-    #   when the file was added to Dropbox, in the standard date format. Since
-    #   this time is not verified (the Dropbox server stores whatever the
-    #   desktop client sends up), this should only be used for display
-    #   purposes (such as sorting) and not, for example, to determine if a
-    #   file has changed or not.
-    # * +photo_info+ (+PhotoInfo+):
-    #   Only returned when the include_media_info parameter is true and the
-    #   file is an image.
-    # * +video_info+ (+VideoInfo+):
-    #   Only returned when the include_media_info parameter is true and the
-    #   file is a video.
-    class EntryInfo
-      attr_accessor
-          :path, 
-          :size, 
-          :bytes, 
-          :is_dir, 
-          :thumb_exists, 
-          :icon, 
-          :root, 
-          :rev, 
-          :revision, 
-          :modified, 
-          :is_deleted, 
-          :hash, 
-          :client_mtime, 
-          :photo_info, 
-          :video_info
+    #   Path in the user's Dropbox to save the file.
+    # * +mode+ (+ConflictPolicy+):
+    #   The course of action to take if a file already exists at
+    #   :field:`path`.
+    # * +append_to+ (+UploadAppend+):
+    #   If specified, the current chunk of data should be appended to an
+    #   existing upload session.
+    # * +autorename+ (+Boolean+):
+    #   Whether the file should be autorenamed in the event of a conflict.
+    # * +client_modified_utc+ (+UInt64+):
+    #   Self reported time of when this file was created or modified.
+    # * +mute+ (+Boolean+):
+    #   Whether the devices that the user has linked should notify them of the
+    #   new or updated file.
+    class UploadCommit
+      attr_accessor(
+          :path,
+          :mode,
+          :append_to,
+          :autorename,
+          :client_modified_utc,
+          :mute
+      )
     
       def initialize(
         path,
-        size,
-        bytes,
-        is_dir,
-        thumb_exists,
-        icon,
-        root,
-        rev = nil,
-        revision = nil,
-        modified = nil,
-        is_deleted = nil,
-        hash = nil,
-        client_mtime = nil,
-        photo_info = nil,
-        video_info = nil
+        mode,
+        append_to = nil,
+        autorename = false,
+        client_modified_utc = None,
+        mute = false
       )
         @path = path
-        @size = size
-        @bytes = bytes
-        @is_dir = is_dir
-        @thumb_exists = thumb_exists
-        @icon = icon
-        @root = root
-        @rev = rev
-        @revision = revision
-        @modified = modified
-        @is_deleted = is_deleted
-        @hash = hash
-        @client_mtime = client_mtime
-        @photo_info = photo_info
-        @video_info = video_info
+        @mode = mode
+        @append_to = append_to
+        @autorename = autorename
+        @client_modified_utc = client_modified_utc
+        @mute = mute
       end
     
       def self.from_hash(hash)
         self.new(
           hash['path'],
-          hash['size'],
-          hash['bytes'],
-          hash['is_dir'],
-          hash['thumb_exists'],
-          hash['icon'],
-          hash['root'],
-          hash.include?('rev') ? nil : hash['rev'],
-          hash.include?('revision') ? nil : hash['revision'],
-          hash.include?('modified') ? nil : convert_date(hash['modified']),
-          hash.include?('is_deleted') ? nil : hash['is_deleted'],
-          hash.include?('hash') ? nil : hash['hash'],
-          hash.include?('client_mtime') ? nil : hash['client_mtime'],
-          hash['photo_info'].nil? ? nil : PhotoInfo.from_hash(hash['photo_info']),
-          hash['video_info'].nil? ? nil : VideoInfo.from_hash(hash['video_info']),
+          ConflictPolicy.from_hash(hash['mode']),
+          hash['append_to'].nil? ? nil : UploadAppend.from_hash(hash['append_to']),
+          !hash.include?('autorename') ? nil : hash['autorename'],
+          hash['client_modified_utc'].nil? ? nil : hash['client_modified_utc'],
+          !hash.include?('mute') ? nil : hash['mute'],
         )
       end
     end
     
-    # A file or folder entry.
+
+    # Fields:
+    # * +reason+ (+ConflictReason+):
+    #   
+    class ConflictError
+      attr_accessor(
+          :reason
+      )
+    
+      def initialize(
+        reason
+      )
+        @reason = reason
+      end
+    
+      def self.from_hash(hash)
+        self.new(
+          ConflictReason.from_hash(hash['reason']),
+        )
+      end
+    end
+    
+
+    # The space quota info for a user.
     #
     # Fields:
-    # * +contents+ (+List+):
-    #   Folder contents.
-    class FileOrFolderInfo < EntryInfo
-      attr_accessor
-          :contents
+    # * +quota+ (+UInt64+):
+    #   The user's total quota allocation (bytes).
+    # * +private+ (+UInt64+):
+    #   The user's used quota outside of shared folders (bytes).
+    # * +shared+ (+UInt64+):
+    #   The user's used quota in shared folders (bytes).
+    # * +datastores+ (+UInt64+):
+    #   The user's used quota in datastores (bytes).
+    class Space
+      attr_accessor(
+          :quota,
+          :private,
+          :shared,
+          :datastores
+      )
     
       def initialize(
-        path,
-        size,
-        bytes,
-        is_dir,
-        thumb_exists,
-        icon,
-        root,
-        rev = nil,
-        revision = nil,
-        modified = nil,
-        is_deleted = nil,
-        hash = nil,
-        client_mtime = nil,
-        photo_info = nil,
-        video_info = nil,
-        contents = nil
+        quota,
+        private,
+        shared,
+        datastores
       )
-        @path = path
-        @size = size
-        @bytes = bytes
-        @is_dir = is_dir
-        @thumb_exists = thumb_exists
-        @icon = icon
-        @root = root
-        @rev = rev
-        @revision = revision
-        @modified = modified
-        @is_deleted = is_deleted
-        @hash = hash
-        @client_mtime = client_mtime
-        @photo_info = photo_info
-        @video_info = video_info
-        @contents = contents
+        @quota = quota
+        @private = private
+        @shared = shared
+        @datastores = datastores
       end
     
       def self.from_hash(hash)
         self.new(
-          hash['path'],
-          hash['size'],
-          hash['bytes'],
-          hash['is_dir'],
-          hash['thumb_exists'],
-          hash['icon'],
-          hash['root'],
-          hash.include?('rev') ? nil : hash['rev'],
-          hash.include?('revision') ? nil : hash['revision'],
-          hash.include?('modified') ? nil : convert_date(hash['modified']),
-          hash.include?('is_deleted') ? nil : hash['is_deleted'],
-          hash.include?('hash') ? nil : hash['hash'],
-          hash.include?('client_mtime') ? nil : hash['client_mtime'],
-          hash['photo_info'].nil? ? nil : PhotoInfo.from_hash(hash['photo_info']),
-          hash['video_info'].nil? ? nil : VideoInfo.from_hash(hash['video_info']),
-          hash['contents'].nil? ? nil : hash['contents'].collect { |elem| EntryInfo.from_hash(elem) },
+          hash['quota'],
+          hash['private'],
+          hash['shared'],
+          hash['datastores'],
         )
       end
     end
     
-
-
-
+    # Information about a team.
+    #
     # Fields:
-    # * +reset+ (+Boolean+):
-    #   If true, clear your local state before processing the delta entries.
-    #   reset is always true on the initial call to /delta (i.e. when no
-    #   cursor is passed in). Otherwise, it is true in rare situations, such
-    #   as after server or account maintenance, or if a user deletes their app
-    #   folder.
-    # * +cursor+ (+String+):
-    #   A string that encodes the latest information that has been returned.
-    #   On the next call to /delta, pass in this value.
-    # * +has_more+ (+Boolean+):
-    #   If true, then there are more entries available; you can call /delta
-    #   again immediately to retrieve those entries. If 'false', then wait for
-    #   at least five minutes (preferably longer) before checking again.
-    class DeltaResponse
-      attr_accessor
-          :reset, 
-          :cursor, 
-          :has_more
+    # * +id+ (+String+):
+    #   The team's unique ID.
+    # * +name+ (+String+):
+    #   The name of the team.
+    class Team
+      attr_accessor(
+          :id,
+          :name
+      )
     
       def initialize(
-        reset,
-        cursor,
-        has_more
+        id,
+        name
       )
-        @reset = reset
-        @cursor = cursor
-        @has_more = has_more
+        @id = id
+        @name = name
       end
     
       def self.from_hash(hash)
         self.new(
-          hash['reset'],
-          hash['cursor'],
-          hash['has_more'],
+          hash['id'],
+          hash['name'],
         )
       end
     end
     
+    # Contains several ways a name might be represented to make
+    # internationalization more convenient.
+    #
+    # Fields:
+    # * +given_name+ (+String+):
+    #   Also known as a first name.
+    # * +surname+ (+String+):
+    #   Also known as a last name or family name.
+    # * +familiar_name+ (+String+):
+    #   Locale-dependent familiar name. Generally matches :field:`given_name`
+    #   or :field:`display_name`.
+    # * +display_name+ (+String+):
+    #   A name that can be used directly to represent the name of a user's
+    #   Dropbox account.
+    class Name
+      attr_accessor(
+          :given_name,
+          :surname,
+          :familiar_name,
+          :display_name
+      )
+    
+      def initialize(
+        given_name,
+        surname,
+        familiar_name,
+        display_name
+      )
+        @given_name = given_name
+        @surname = surname
+        @familiar_name = familiar_name
+        @display_name = display_name
+      end
+    
+      def self.from_hash(hash)
+        self.new(
+          hash['given_name'],
+          hash['surname'],
+          hash['familiar_name'],
+          hash['display_name'],
+        )
+      end
+    end
+    
+    # Basic information about a user's account.
+    #
+    # Fields:
+    # * +account_id+ (+String+):
+    #   The user's unique Dropbox ID.
+    # * +name+ (+Name+):
+    #   Details of a user's name.
+    class BasicAccountInfo
+      attr_accessor(
+          :account_id,
+          :name
+      )
+    
+      def initialize(
+        account_id,
+        name
+      )
+        @account_id = account_id
+        @name = name
+      end
+    
+      def self.from_hash(hash)
+        self.new(
+          hash['account_id'],
+          Name.from_hash(hash['name']),
+        )
+      end
+    end
+    
+    # Information about a user's account.
+    #
+    # Fields:
+    # * +email+ (+String+):
+    #   The user's e-mail address.
+    # * +country+ (+String+):
+    #   The user's two-letter country code, if available.
+    # * +locale+ (+String+):
+    #   The language setting that user specified.
+    # * +referral_link+ (+String+):
+    #   The user's :link:`referral link https://www.dropbox.com/referrals`.
+    # * +space+ (+Space+):
+    #   The user's quota.
+    # * +team+ (+Team+):
+    #   If this account is a member of a team.
+    # * +is_paired+ (+Boolean+):
+    #   Whether the user has a personal and work account. If the authorized
+    #   account is personal, then :field:`team` will always be :val:`Null`,
+    #   but :field:`is_paired` will indicate if a work account is linked.
+    class MeInfo < BasicAccountInfo
+      attr_accessor(
+          :email,
+          :country,
+          :locale,
+          :referral_link,
+          :space,
+          :team,
+          :is_paired
+      )
+    
+      def initialize(
+        account_id,
+        name,
+        email,
+        country,
+        locale,
+        referral_link,
+        space,
+        team,
+        is_paired
+      )
+        @account_id = account_id
+        @name = name
+        @email = email
+        @country = country
+        @locale = locale
+        @referral_link = referral_link
+        @space = space
+        @team = team
+        @is_paired = is_paired
+      end
+    
+      def self.from_hash(hash)
+        self.new(
+          hash['account_id'],
+          Name.from_hash(hash['name']),
+          hash['email'],
+          hash['country'].nil? ? nil : hash['country'],
+          hash['locale'],
+          hash['referral_link'],
+          Space.from_hash(hash['space']),
+          hash['team'].nil? ? nil : Team.from_hash(hash['team']),
+          hash['is_paired'],
+        )
+      end
+    end
+    
+
+
+
   end
 end

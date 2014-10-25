@@ -87,7 +87,7 @@ struct AccountInfoRequest
         A user's account identifier. Use "me" to get information for the
         current account.
 
-op Info
+route Info
     doc:
         Get information about a user's account.
 

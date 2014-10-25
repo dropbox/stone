@@ -20,4 +20,4 @@ Todo
 - Bug with indent/dedent token generation when comments, newlines, and
   superfluous indents are mixed together.
 - Add "Schema Evolution" section to README.
-- Add feature to generate one operation per file.
+- Add feature to generate one route per file.

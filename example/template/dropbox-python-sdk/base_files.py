@@ -328,7 +328,7 @@ class ConflictPolicy(object):
         Args:
             overwrite: On a conflict, the target is overridden.
             add: On a conflict, the upload is rejected. You can call the
-                :op:`Upload` endpoint again and attempt a different path.
+                :route:`Upload` endpoint again and attempt a different path.
             update: On a conflict, only overwrite the target if the parent_rev
                 matches.
         """
@@ -683,7 +683,7 @@ class Files(Namespace):
                mute=False):
         """
         Use this endpoint to either finish an ongoing upload session that was
-        begun with :op:`UploadStart` or upload a file in one shot.
+        begun with :route:`UploadStart` or upload a file in one shot.
 
         Args:
             f: A string or file-like obj of data.

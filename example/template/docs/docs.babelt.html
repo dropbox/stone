@@ -194,7 +194,7 @@ window.setTimeout(function() {
 {% for namespace_name, namespace in api.namespaces.items() %}
 <h4>{{ namespace_name|capitalize }}</h4>
     <ul>
-        {% for op in namespace.operations %}<li id="toc-{{op.name}}"><a href="#{{ namespace_name }}-{{op.name}}">{{ op.name }}</a></li>{% endfor %}
+        {% for op in namespace.routes %}<li id="toc-{{op.name}}"><a href="#{{ namespace_name }}-{{op.name}}">{{ op.name }}</a></li>{% endfor %}
     </ul>
 {% endfor %}
 
@@ -213,7 +213,7 @@ window.setTimeout(function() {
 {% for namespace_name, namespace in api.namespaces.items() %}
 <div id="{{ namespace_name }}" class="section toc-el">
     <h2>{{ namespace_name|capitalize }}</h2>
-    {% for op in namespace.operations %}
+    {% for op in namespace.routes %}
     <a name="{{ namespace_name }}-{{op.name}}"></a>
     <h3 class="method-title-first">{{ namespace_name }}/{{ op.name|lower }}
         <ul>

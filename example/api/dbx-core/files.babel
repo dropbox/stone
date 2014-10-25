@@ -18,7 +18,7 @@ union DownloadError
     disallowed SubError
     no_file SubError
 
-op Download
+route Download
     doc:
         Download a file in a user's Dropbox.
 
@@ -38,7 +38,7 @@ struct UploadSessionStart
     upload_id String:
         A unique identifier for the upload session.
 
-op UploadStart /upload/start
+route UploadStart /upload/start
     doc:
         Start an upload session.
 
@@ -71,7 +71,7 @@ union UploadAppendError
         Upload session was closed.
     incorrect_offset IncorrectOffsetError
 
-op UploadAppend /upload/append
+route UploadAppend /upload/append
     doc:
         Start an upload session.
 
@@ -93,7 +93,7 @@ union ConflictPolicy
     overwrite:
         On a conflict, the target is overridden.
     add:
-        On a conflict, the upload is rejected. You can call the :op:`Upload`
+        On a conflict, the upload is rejected. You can call the :route:`Upload`
         endpoint again and attempt a different path.
     update UpdateParentRev:
         On a conflict, only overwrite the target if the parent_rev matches.
@@ -133,10 +133,10 @@ union UploadCommitError
     insufficient_quota:
         User does not have sufficient space quota to save the file.
 
-op Upload
+route Upload
     doc:
         Use this endpoint to either finish an ongoing upload session that was
-        begun with :op:`UploadStart` or upload a file in one shot.
+        begun with :route:`UploadStart` or upload a file in one shot.
 
     request
         UploadCommit
