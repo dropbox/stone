@@ -444,7 +444,7 @@ in documentation. Stubs are of the following format::
 
     :tag:`value`
 
-Supported tags are ``route``, ``struct``, ``field``, and ``link``.
+Supported tags are ``route``, ``struct``, ``field``, ``link``, and ``val``.
 
 route
     A reference to a route. Template writers should make a reference to
@@ -458,6 +458,10 @@ field
 link
     A hyperlink. Template writers should convert this to the proper hyperlink
     format for the language.
+val
+    A value. Template writers should convert this to the native representation
+    of the value for the language. For example, a ``None`` would be converted
+    to ``null`` in Javascript.
 
 Defining a Code Generator
 =========================
