@@ -15,6 +15,7 @@ from babelapi.data_type import (
     Int32,
     Int64,
     List,
+    Null,
     String,
     Struct,
     SymbolField,
@@ -61,6 +62,7 @@ class TowerOfBabel(object):
 
     default_env = {data_type.__name__: data_type for data_type in data_types}
     default_env['Empty'] = Empty
+    default_env['Null'] = Null()
 
     # FIXME: Version should not have a default.
     def __init__(self, paths, version='0.1b1', debug=False):

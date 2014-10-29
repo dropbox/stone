@@ -6,6 +6,7 @@ description does not have any defacto RPC format.
 
 from babelapi.data_type import (
     Binary,
+    Null,
     Struct,
     Union,
 )
@@ -21,7 +22,7 @@ class Segment(object):
         :param DataType data_type: The data type of the segment. Must be either
             a Struct, Union, or Binary binary type..
         """
-        if not isinstance(data_type, (Binary, Struct, Union)):
+        if not isinstance(data_type, (Binary, Null, Struct, Union)):
             raise TypeError('Segment must be either a struct, union, or '
                             'binary -- not %r' % data_type)
         self.name = name

@@ -46,6 +46,11 @@ class DataType(object):
 class PrimitiveType(DataType):
     pass
 
+class Null(PrimitiveType):
+    def check(self, val):
+        if val is not None:
+            raise ValueError('%r is not a valid null type' % val)
+
 class Binary(PrimitiveType):
     def check(self, val):
         if not isinstance(val, str):
@@ -537,6 +542,24 @@ class Union(CompositeType):
 
     def add_example(self, label, example):
         raise NotImplemented
+
+    def unique_field_data_types(self):
+        """
+        Checks if all variants have different data types.
+
+        If so, the selected variant can be determined just by the data type of
+        the value without needing a field name / tag. In some languages, this
+        lets us make a shortcut
+        """
+        data_type_names = set()
+        for field in self.fields:
+            if not isinstance(field, SymbolField):
+                if field.data_type.name in data_type_names:
+                    return False
+                else:
+                    data_type_names.add(field.data_type.name)
+        else:
+            return True
 
     def __repr__(self):
         return 'Union(%r, %r)' % (self.name, self.fields)
