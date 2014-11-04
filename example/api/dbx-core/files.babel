@@ -90,6 +90,9 @@ struct UpdateParentRev
     parent_rev String
 
 union ConflictPolicy
+    doc:
+        The action to take when a file path conflict exists.
+
     overwrite:
         On a conflict, the target is overridden.
     add:

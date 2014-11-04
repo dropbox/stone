@@ -141,6 +141,6 @@ route InfoMe /info/me
     request
         Empty
     response
-        AccountInfo
+        MeInfo
     error
         Empty

@@ -51,6 +51,14 @@ class Null(PrimitiveType):
         if val is not None:
             raise ValueError('%r is not a valid null type' % val)
 
+class Symbol(PrimitiveType):
+    def __init__(self, symbol_name):
+        self.symbol_name = symbol_name
+    def check(self, val):
+        # FIXME: Uncertain whether val should be string or some Id class.
+        if val != self.symbol_name:
+            raise ValueError('val %r is not symbol %r' % (val, self.symbol_name))
+
 class Binary(PrimitiveType):
     def check(self, val):
         if not isinstance(val, str):
@@ -294,6 +302,7 @@ class SymbolField(object):
         :param str doc: Documentation for the field.
         """
         self.name = name
+        self.data_type = Symbol(name)
         self.doc = doc
 
     def check(self, val):
@@ -381,6 +390,12 @@ class CompositeType(DataType):
     @abstractmethod
     def add_example(self, label, text, example):
         pass
+
+    def copy(self):
+        return copy.deepcopy(self)
+
+    def prepend_field(self, field):
+        self.fields.insert(0, field)
 
 class OrderedExample(OrderedDict):
 
@@ -565,3 +580,14 @@ class Union(CompositeType):
         return 'Union(%r, %r)' % (self.name, self.fields)
 
 Empty = Struct('Empty', None, [])
+
+def is_binary_type(data_type):
+    return isinstance(data_type, Binary)
+def is_composite_type(data_type):
+    return isinstance(data_type, CompositeType)
+def is_null_type(data_type):
+    return isinstance(data_type, Null)
+def is_struct_type(data_type):
+    return isinstance(data_type, Struct)
+def is_union_type(data_type):
+    return isinstance(data_type, Union)

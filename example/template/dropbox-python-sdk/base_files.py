@@ -1,16 +1,15 @@
 import copy
-import types
+import numbers
+import six
 
-from .dropbox import assert_only_one, Dropbox, Namespace
+from .dropbox import Dropbox, Namespace
+from .util import assert_only_one
 
 class Empty(object):
 
     def __init__(self,
                  **kwargs):
         pass
-
-    def __repr__(self):
-        return 'Empty()'
 
     @classmethod
     def from_json(cls, obj):
@@ -20,6 +19,9 @@ class Empty(object):
         d = dict()
         return d
 
+    def __repr__(self):
+        return 'Empty()'
+
 class FileTarget(object):
 
     def __init__(self,
@@ -27,19 +29,15 @@ class FileTarget(object):
                  rev=None,
                  **kwargs):
         """
-        Args:
-            path (str): Path from root. Should be an empty string for root.
-            rev (str): Revision of target file.
+        :param str path: Path from root. Should be an empty string for root.
+        :param str rev: Revision of target file.
         """
-        assert isinstance(path, types.StringTypes), 'path must be of type types.StringTypes'
+        assert isinstance(path, six.string_types), 'path must be of type six.string_types'
         self.path = path
 
         if rev is not None:
-            assert isinstance(rev, types.StringTypes), 'rev must be of type types.StringTypes'
+            assert isinstance(rev, six.string_types), 'rev must be of type six.string_types'
         self.rev = rev
-
-    def __repr__(self):
-        return 'FileTarget(%r)' % self.path
 
     @classmethod
     def from_json(cls, obj):
@@ -52,20 +50,19 @@ class FileTarget(object):
             d['rev'] = self.rev
         return d
 
+    def __repr__(self):
+        return 'FileTarget(%r)' % self.path
+
 class FileInfo(object):
 
     def __init__(self,
                  name,
                  **kwargs):
         """
-        Args:
-            name (str): Name of file.
+        :param str name: Name of file.
         """
-        assert isinstance(name, types.StringTypes), 'name must be of type types.StringTypes'
+        assert isinstance(name, six.string_types), 'name must be of type six.string_types'
         self.name = name
-
-    def __repr__(self):
-        return 'FileInfo(%r)' % self.name
 
     @classmethod
     def from_json(cls, obj):
@@ -76,20 +73,19 @@ class FileInfo(object):
         d = dict(name=self.name)
         return d
 
+    def __repr__(self):
+        return 'FileInfo(%r)' % self.name
+
 class SubError(object):
 
     def __init__(self,
                  reason,
                  **kwargs):
         """
-        Args:
-            reason (str): A code indicating the type of error.
+        :param str reason: A code indicating the type of error.
         """
-        assert isinstance(reason, types.StringTypes), 'reason must be of type types.StringTypes'
+        assert isinstance(reason, six.string_types), 'reason must be of type six.string_types'
         self.reason = reason
-
-    def __repr__(self):
-        return 'SubError(%r)' % self.reason
 
     @classmethod
     def from_json(cls, obj):
@@ -100,6 +96,9 @@ class SubError(object):
         d = dict(reason=self.reason)
         return d
 
+    def __repr__(self):
+        return 'SubError(%r)' % self.reason
+
 class DownloadError(object):
 
     Disallowed = SubError
@@ -109,6 +108,12 @@ class DownloadError(object):
                  disallowed=None,
                  no_file=None,
                  **kwargs):
+        """
+        Only one argument can be set.
+
+        :type disallowed: :class:`SubError`
+        :type no_file: :class:`SubError`
+        """
         assert_only_one(disallowed=disallowed,
                         no_file=no_file,
                         **kwargs)
@@ -116,14 +121,20 @@ class DownloadError(object):
         self.no_file = None
 
         if disallowed is not None:
-            assert isinstance(disallowed, SubError), 'disallowed must be of type dropbox.data_types.SubError'
+            assert isinstance(disallowed, SubError), 'disallowed must be of type SubError'
             self.disallowed = disallowed
             self._tag = 'disallowed'
 
         if no_file is not None:
-            assert isinstance(no_file, SubError), 'no_file must be of type dropbox.data_types.SubError'
+            assert isinstance(no_file, SubError), 'no_file must be of type SubError'
             self.no_file = no_file
             self._tag = 'no_file'
+
+    def is_disallowed(self):
+        return self._tag == 'disallowed'
+
+    def is_no_file(self):
+        return self._tag == 'no_file'
 
     @classmethod
     def from_json(self, obj):
@@ -150,14 +161,10 @@ class UploadSessionStart(object):
                  upload_id,
                  **kwargs):
         """
-        Args:
-            upload_id (str): A unique identifier for the upload session.
+        :param str upload_id: A unique identifier for the upload session.
         """
-        assert isinstance(upload_id, types.StringTypes), 'upload_id must be of type types.StringTypes'
+        assert isinstance(upload_id, six.string_types), 'upload_id must be of type six.string_types'
         self.upload_id = upload_id
-
-    def __repr__(self):
-        return 'UploadSessionStart(%r)' % self.upload_id
 
     @classmethod
     def from_json(cls, obj):
@@ -168,6 +175,9 @@ class UploadSessionStart(object):
         d = dict(upload_id=self.upload_id)
         return d
 
+    def __repr__(self):
+        return 'UploadSessionStart(%r)' % self.upload_id
+
 class UploadAppend(object):
 
     def __init__(self,
@@ -175,21 +185,16 @@ class UploadAppend(object):
                  offset,
                  **kwargs):
         """
-        Args:
-            upload_id (str): Identifies the upload session to append data to.
-            offset (long): The offset into the file of the current chunk of data
-                being uploaded. It can also be thought of as the amount of data
-                that has been uploaded so far. We use the offset as a sanity
-                check.
+        :param str upload_id: Identifies the upload session to append data to.
+        :param long offset: The offset into the file of the current chunk of
+            data being uploaded. It can also be thought of as the amount of data
+            that has been uploaded so far. We use the offset as a sanity check.
         """
-        assert isinstance(upload_id, types.StringTypes), 'upload_id must be of type types.StringTypes'
+        assert isinstance(upload_id, six.string_types), 'upload_id must be of type six.string_types'
         self.upload_id = upload_id
 
-        assert isinstance(offset, (int, long)), 'offset must be of type (int, long)'
+        assert isinstance(offset, numbers.Integral), 'offset must be of type numbers.Integral'
         self.offset = offset
-
-    def __repr__(self):
-        return 'UploadAppend(%r)' % self.upload_id
 
     @classmethod
     def from_json(cls, obj):
@@ -201,19 +206,19 @@ class UploadAppend(object):
                  offset=self.offset)
         return d
 
+    def __repr__(self):
+        return 'UploadAppend(%r)' % self.upload_id
+
 class IncorrectOffsetError(object):
 
     def __init__(self,
                  correct_offset,
                  **kwargs):
         """
-        Args:
+        :type correct_offset: long
         """
-        assert isinstance(correct_offset, (int, long)), 'correct_offset must be of type (int, long)'
+        assert isinstance(correct_offset, numbers.Integral), 'correct_offset must be of type numbers.Integral'
         self.correct_offset = correct_offset
-
-    def __repr__(self):
-        return 'IncorrectOffsetError(%r)' % self.correct_offset
 
     @classmethod
     def from_json(cls, obj):
@@ -223,6 +228,9 @@ class IncorrectOffsetError(object):
     def to_json(self):
         d = dict(correct_offset=self.correct_offset)
         return d
+
+    def __repr__(self):
+        return 'IncorrectOffsetError(%r)' % self.correct_offset
 
 class UploadAppendError(object):
 
@@ -236,11 +244,11 @@ class UploadAppendError(object):
                  incorrect_offset=None,
                  **kwargs):
         """
-        Only one argument may be specified.
+        Only one argument can be set.
 
-        Args:
-            not_found: :field:`upload_id` was not found.
-            closed: Upload session was closed.
+        :param bool not_found: ``upload_id`` was not found.
+        :param bool closed: Upload session was closed.
+        :type incorrect_offset: :class:`IncorrectOffsetError`
         """
         assert_only_one(not_found=not_found,
                         closed=closed,
@@ -261,9 +269,18 @@ class UploadAppendError(object):
             self._tag = 'closed'
 
         if incorrect_offset is not None:
-            assert isinstance(incorrect_offset, IncorrectOffsetError), 'incorrect_offset must be of type dropbox.data_types.IncorrectOffsetError'
+            assert isinstance(incorrect_offset, IncorrectOffsetError), 'incorrect_offset must be of type IncorrectOffsetError'
             self.incorrect_offset = incorrect_offset
             self._tag = 'incorrect_offset'
+
+    def is_not_found(self):
+        return self._tag == 'not_found'
+
+    def is_closed(self):
+        return self._tag == 'closed'
+
+    def is_incorrect_offset(self):
+        return self._tag == 'incorrect_offset'
 
     @classmethod
     def from_json(self, obj):
@@ -294,13 +311,10 @@ class UpdateParentRev(object):
                  parent_rev,
                  **kwargs):
         """
-        Args:
+        :type parent_rev: str
         """
-        assert isinstance(parent_rev, types.StringTypes), 'parent_rev must be of type types.StringTypes'
+        assert isinstance(parent_rev, six.string_types), 'parent_rev must be of type six.string_types'
         self.parent_rev = parent_rev
-
-    def __repr__(self):
-        return 'UpdateParentRev(%r)' % self.parent_rev
 
     @classmethod
     def from_json(cls, obj):
@@ -311,7 +325,19 @@ class UpdateParentRev(object):
         d = dict(parent_rev=self.parent_rev)
         return d
 
+    def __repr__(self):
+        return 'UpdateParentRev(%r)' % self.parent_rev
+
 class ConflictPolicy(object):
+    """
+    The action to take when a file path conflict exists.
+
+    :ivar Overwrite: On a conflict, the target is overridden.
+    :ivar Add: On a conflict, the upload is rejected. You can call the
+        :meth:`upload` endpoint again and attempt a different path.
+    :ivar Update: On a conflict, only overwrite the target if the parent_rev
+        matches.
+    """
 
     Overwrite = object()
     Add = object()
@@ -323,14 +349,14 @@ class ConflictPolicy(object):
                  update=None,
                  **kwargs):
         """
-        Only one argument may be specified.
+        Only one argument can be set.
 
-        Args:
-            overwrite: On a conflict, the target is overridden.
-            add: On a conflict, the upload is rejected. You can call the
-                :route:`Upload` endpoint again and attempt a different path.
-            update: On a conflict, only overwrite the target if the parent_rev
-                matches.
+        :param bool overwrite: On a conflict, the target is overridden.
+        :param bool add: On a conflict, the upload is rejected. You can call the
+            :meth:`upload` endpoint again and attempt a different path.
+        :param update: On a conflict, only overwrite the target if the
+            parent_rev matches.
+        :type update: :class:`UpdateParentRev`
         """
         assert_only_one(overwrite=overwrite,
                         add=add,
@@ -351,9 +377,18 @@ class ConflictPolicy(object):
             self._tag = 'add'
 
         if update is not None:
-            assert isinstance(update, UpdateParentRev), 'update must be of type dropbox.data_types.UpdateParentRev'
+            assert isinstance(update, UpdateParentRev), 'update must be of type UpdateParentRev'
             self.update = update
             self._tag = 'update'
+
+    def is_overwrite(self):
+        return self._tag == 'overwrite'
+
+    def is_add(self):
+        return self._tag == 'add'
+
+    def is_update(self):
+        return self._tag == 'update'
 
     @classmethod
     def from_json(self, obj):
@@ -389,20 +424,21 @@ class UploadCommit(object):
                  mute=None,
                  **kwargs):
         """
-        Args:
-            path (str): Path in the user's Dropbox to save the file.
-            mode (ConflictPolicy): The course of action to take if a file
-                already exists at :field:`path`.
-            append_to (UploadAppend): If specified, the current chunk of data
-                should be appended to an existing upload session.
-            autorename (bool): Whether the file should be autorenamed in the
-                event of a conflict.
-            client_modified_utc (long): Self reported time of when this file was
-                created or modified.
-            mute (bool): Whether the devices that the user has linked should
-                notify them of the new or updated file.
+        :param str path: Path in the user's Dropbox to save the file.
+        :param mode: The course of action to take if a file already exists at
+            ``path``.
+        :type mode: :class:`ConflictPolicy`
+        :param append_to: If specified, the current chunk of data should be
+            appended to an existing upload session.
+        :type append_to: :class:`UploadAppend`
+        :param bool autorename: Whether the file should be autorenamed in the
+            event of a conflict.
+        :param long client_modified_utc: Self reported time of when this file
+            was created or modified.
+        :param bool mute: Whether the devices that the user has linked should
+            notify them of the new or updated file.
         """
-        assert isinstance(path, types.StringTypes), 'path must be of type types.StringTypes'
+        assert isinstance(path, six.string_types), 'path must be of type six.string_types'
         self.path = path
 
         if mode == ConflictPolicy.Overwrite:
@@ -411,8 +447,9 @@ class UploadCommit(object):
             self.mode = ConflictPolicy(add=True)
         if isinstance(mode, ConflictPolicy.Update):
             self.mode = ConflictPolicy(update=mode)
+
         if append_to is not None:
-            assert isinstance(append_to, UploadAppend), 'append_to must be of type dropbox.data_types.UploadAppend'
+            assert isinstance(append_to, UploadAppend), 'append_to must be of type UploadAppend'
         self.append_to = append_to
 
         if autorename is not None:
@@ -420,15 +457,12 @@ class UploadCommit(object):
         self.autorename = autorename
 
         if client_modified_utc is not None:
-            assert isinstance(client_modified_utc, (int, long)), 'client_modified_utc must be of type (int, long)'
+            assert isinstance(client_modified_utc, numbers.Integral), 'client_modified_utc must be of type numbers.Integral'
         self.client_modified_utc = client_modified_utc
 
         if mute is not None:
             assert isinstance(mute, bool), 'mute must be of type bool'
         self.mute = mute
-
-    def __repr__(self):
-        return 'UploadCommit(%r)' % self.path
 
     @classmethod
     def from_json(cls, obj):
@@ -441,7 +475,7 @@ class UploadCommit(object):
         d = dict(path=self.path,
                  mode=self.mode.to_json())
         if self.append_to:
-            d['append_to'] = self.append_to
+            d['append_to'] = self.append_to.to_json()
         if self.autorename:
             d['autorename'] = self.autorename
         if self.client_modified_utc:
@@ -449,6 +483,9 @@ class UploadCommit(object):
         if self.mute:
             d['mute'] = self.mute
         return d
+
+    def __repr__(self):
+        return 'UploadCommit(%r)' % self.path
 
 class ConflictReason(object):
 
@@ -462,12 +499,11 @@ class ConflictReason(object):
                  autorename_failed=None,
                  **kwargs):
         """
-        Only one argument may be specified.
+        Only one argument can be set.
 
-        Args:
-            folder: Conflict with a folder.
-            file: Conflict with a file.
-            autorename_failed: Could not autorename.
+        :param bool folder: Conflict with a folder.
+        :param bool file: Conflict with a file.
+        :param bool autorename_failed: Could not autorename.
         """
         assert_only_one(folder=folder,
                         file=file,
@@ -491,6 +527,15 @@ class ConflictReason(object):
             assert isinstance(autorename_failed, bool), 'autorename_failed must be of type bool'
             self.autorename_failed = autorename_failed
             self._tag = 'autorename_failed'
+
+    def is_folder(self):
+        return self._tag == 'folder'
+
+    def is_file(self):
+        return self._tag == 'file'
+
+    def is_autorename_failed(self):
+        return self._tag == 'autorename_failed'
 
     @classmethod
     def from_json(self, obj):
@@ -521,7 +566,7 @@ class ConflictError(object):
                  reason,
                  **kwargs):
         """
-        Args:
+        :type reason: :class:`ConflictReason`
         """
         if reason == ConflictReason.Folder:
             self.reason = ConflictReason(folder=True)
@@ -529,8 +574,6 @@ class ConflictError(object):
             self.reason = ConflictReason(file=True)
         if reason == ConflictReason.AutorenameFailed:
             self.reason = ConflictReason(autorename_failed=True)
-    def __repr__(self):
-        return 'ConflictError(%r)' % self.reason
 
     @classmethod
     def from_json(cls, obj):
@@ -541,6 +584,9 @@ class ConflictError(object):
     def to_json(self):
         d = dict(reason=self.reason.to_json())
         return d
+
+    def __repr__(self):
+        return 'ConflictError(%r)' % self.reason
 
 class UploadCommitError(object):
 
@@ -554,14 +600,14 @@ class UploadCommitError(object):
                  insufficient_quota=None,
                  **kwargs):
         """
-        Only one argument may be specified.
+        Only one argument can be set.
 
-        Args:
-            no_write_permission: User does not have permission to write in the
-                folder. An example of this is if the folder is a read-only
-                shared folder.
-            insufficient_quota: User does not have sufficient space quota to
-                save the file.
+        :type conflict: :class:`ConflictError`
+        :param bool no_write_permission: User does not have permission to write
+            in the folder. An example of this is if the folder is a read-only
+            shared folder.
+        :param bool insufficient_quota: User does not have sufficient space
+            quota to save the file.
         """
         assert_only_one(conflict=conflict,
                         no_write_permission=no_write_permission,
@@ -572,7 +618,7 @@ class UploadCommitError(object):
         self.insufficient_quota = None
 
         if conflict is not None:
-            assert isinstance(conflict, ConflictError), 'conflict must be of type dropbox.data_types.ConflictError'
+            assert isinstance(conflict, ConflictError), 'conflict must be of type ConflictError'
             self.conflict = conflict
             self._tag = 'conflict'
 
@@ -585,6 +631,15 @@ class UploadCommitError(object):
             assert isinstance(insufficient_quota, bool), 'insufficient_quota must be of type bool'
             self.insufficient_quota = insufficient_quota
             self._tag = 'insufficient_quota'
+
+    def is_conflict(self):
+        return self._tag == 'conflict'
+
+    def is_no_write_permission(self):
+        return self._tag == 'no_write_permission'
+
+    def is_insufficient_quota(self):
+        return self._tag == 'insufficient_quota'
 
     @classmethod
     def from_json(self, obj):
@@ -609,44 +664,76 @@ class UploadCommitError(object):
     def __repr__(self):
         return 'UploadCommitError(%r)' % self._tag
 
-class Files(Namespace):
+class BaseFiles(Namespace):
+    """Methods for routes in the files namespace"""
+
     def download(self,
                  path,
                  rev=None):
         """
         Download a file in a user's Dropbox.
 
-        Args:
-            path: Path from root. Should be an empty string for root.
-            rev: Revision of target file.
+        :param str path: Path from root. Should be an empty string for root.
+        :param str rev: Revision of target file.
+        :rtype: :class:`FileInfo`, :class:`requests.models.Response`
+        :raises: :class:`dropbox.exceptions.ApiError`
 
-        Raises:
-            ApiError with the following codes:
-                disallowed
-                no_file
+        Error codes:
+            disallowed
+            no_file
         """
         o = FileTarget(path,
-                       rev)
+                       rev).to_json()
         r = self._dropbox.request(Dropbox.Host.API_CONTENT,
                                   'files/download',
-                                  Dropbox.OpStyle.DOWNLOAD,
-                                  o.to_json(),
+                                  Dropbox.RouteStyle.DOWNLOAD,
+                                  o,
                                   None)
-        return FileInfo.from_json(r.obj_segment), r.binary_segment
+        return (FileInfo.from_json(r.obj_segment),
+                r.binary_segment)
+
+    def download_to_file(self,
+                         download_path,
+                         path,
+                         rev=None):
+        """
+        Download a file in a user's Dropbox.
+
+        :param str download_path: Path on local machine to save file.
+        :param str path: Path from root. Should be an empty string for root.
+        :param str rev: Revision of target file.
+        :rtype: :class:`FileInfo`
+        :raises: :class:`dropbox.exceptions.ApiError`
+
+        Error codes:
+            disallowed
+            no_file
+        """
+        o = FileTarget(path,
+                       rev).to_json()
+        r = self._dropbox.request(Dropbox.Host.API_CONTENT,
+                                  'files/download',
+                                  Dropbox.RouteStyle.DOWNLOAD,
+                                  o,
+                                  None)
+        with open(download_path, 'w') as f:
+            for c in r.binary_segment.iter_content(2**16):
+                f.write(c)
+        return FileInfo.from_json(r.obj_segment)
 
     def upload_start(self,
                      f):
         """
         Start an upload session.
 
-        Args:
-            f: A string or file-like obj of data.
+        :param f: A string or file-like obj of data.
+        :rtype: :class:`UploadSessionStart`
         """
-        o = Empty()
+        o = Empty().to_json()
         r = self._dropbox.request(Dropbox.Host.API_CONTENT,
                                   'files/upload/start',
-                                  Dropbox.OpStyle.UPLOAD,
-                                  o.to_json(),
+                                  Dropbox.RouteStyle.UPLOAD,
+                                  o,
                                   f)
         return UploadSessionStart.from_json(r.obj_segment)
 
@@ -657,19 +744,19 @@ class Files(Namespace):
         """
         Start an upload session.
 
-        Args:
-            f: A string or file-like obj of data.
-            upload_id: Identifies the upload session to append data to.
-            offset: The offset into the file of the current chunk of data being
-                uploaded. It can also be thought of as the amount of data that
-                has been uploaded so far. We use the offset as a sanity check.
+        :param f: A string or file-like obj of data.
+        :param str upload_id: Identifies the upload session to append data to.
+        :param long offset: The offset into the file of the current chunk of
+            data being uploaded. It can also be thought of as the amount of data
+            that has been uploaded so far. We use the offset as a sanity check.
+        :rtype: :class:`Empty`
         """
         o = UploadAppend(upload_id,
-                         offset)
+                         offset).to_json()
         r = self._dropbox.request(Dropbox.Host.API_CONTENT,
                                   'files/upload/append',
-                                  Dropbox.OpStyle.UPLOAD,
-                                  o.to_json(),
+                                  Dropbox.RouteStyle.UPLOAD,
+                                  o,
                                   f)
         return Empty.from_json(r.obj_segment)
 
@@ -683,41 +770,43 @@ class Files(Namespace):
                mute=False):
         """
         Use this endpoint to either finish an ongoing upload session that was
-        begun with :route:`UploadStart` or upload a file in one shot.
+        begun with :meth:`upload_start` or upload a file in one shot.
 
-        Args:
-            f: A string or file-like obj of data.
-            path: Path in the user's Dropbox to save the file.
-            mode: The course of action to take if a file already exists at
-                :field:`path`.
-            append_to: If specified, the current chunk of data should be
-                appended to an existing upload session.
-            autorename: Whether the file should be autorenamed in the event of a
-                conflict.
-            client_modified_utc: Self reported time of when this file was
-                created or modified.
-            mute: Whether the devices that the user has linked should notify
-                them of the new or updated file.
+        :param f: A string or file-like obj of data.
+        :param str path: Path in the user's Dropbox to save the file.
+        :param mode: The course of action to take if a file already exists at
+            ``path``.
+        :type mode: :class:`ConflictPolicy`
+        :param append_to: If specified, the current chunk of data should be
+            appended to an existing upload session.
+        :type append_to: :class:`UploadAppend`
+        :param bool autorename: Whether the file should be autorenamed in the
+            event of a conflict.
+        :param long client_modified_utc: Self reported time of when this file
+            was created or modified.
+        :param bool mute: Whether the devices that the user has linked should
+            notify them of the new or updated file.
+        :rtype: :class:`FileInfo`
+        :raises: :class:`dropbox.exceptions.ApiError`
 
-        Raises:
-            ApiError with the following codes:
-                conflict
-                no_write_permission: User does not have permission to write in
-                    the folder. An example of this is if the folder is a read-
-                    only shared folder.
-                insufficient_quota: User does not have sufficient space quota to
-                    save the file.
+        Error codes:
+            conflict
+            no_write_permission: User does not have permission to write in the
+                folder. An example of this is if the folder is a read-only
+                shared folder.
+            insufficient_quota: User does not have sufficient space quota to
+                save the file.
         """
         o = UploadCommit(path,
                          mode,
                          append_to,
                          autorename,
                          client_modified_utc,
-                         mute)
+                         mute).to_json()
         r = self._dropbox.request(Dropbox.Host.API_CONTENT,
                                   'files/upload',
-                                  Dropbox.OpStyle.UPLOAD,
-                                  o.to_json(),
+                                  Dropbox.RouteStyle.UPLOAD,
+                                  o,
                                   f)
         return FileInfo.from_json(r.obj_segment)
 

@@ -6,9 +6,6 @@ from dropbox import arg_struct_parser as asp
 def identity(x):
     return x
 
-users_empty_validator = asp.Record(
-)
-
 users_space_validator = asp.Record(
     # The user's total quota allocation (bytes).
 

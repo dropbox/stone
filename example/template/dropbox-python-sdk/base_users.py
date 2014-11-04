@@ -1,16 +1,15 @@
 import copy
-import types
+import numbers
+import six
 
-from .dropbox import assert_only_one, Dropbox, Namespace
+from .dropbox import Dropbox, Namespace
+from .util import assert_only_one
 
 class Empty(object):
 
     def __init__(self,
                  **kwargs):
         pass
-
-    def __repr__(self):
-        return 'Empty()'
 
     @classmethod
     def from_json(cls, obj):
@@ -19,6 +18,9 @@ class Empty(object):
     def to_json(self):
         d = dict()
         return d
+
+    def __repr__(self):
+        return 'Empty()'
 
 class Space(object):
     """
@@ -32,27 +34,23 @@ class Space(object):
                  datastores,
                  **kwargs):
         """
-        Args:
-            quota (long): The user's total quota allocation (bytes).
-            private (long): The user's used quota outside of shared folders
-                (bytes).
-            shared (long): The user's used quota in shared folders (bytes).
-            datastores (long): The user's used quota in datastores (bytes).
+        :param long quota: The user's total quota allocation (bytes).
+        :param long private: The user's used quota outside of shared folders
+            (bytes).
+        :param long shared: The user's used quota in shared folders (bytes).
+        :param long datastores: The user's used quota in datastores (bytes).
         """
-        assert isinstance(quota, (int, long)), 'quota must be of type (int, long)'
+        assert isinstance(quota, numbers.Integral), 'quota must be of type numbers.Integral'
         self.quota = quota
 
-        assert isinstance(private, (int, long)), 'private must be of type (int, long)'
+        assert isinstance(private, numbers.Integral), 'private must be of type numbers.Integral'
         self.private = private
 
-        assert isinstance(shared, (int, long)), 'shared must be of type (int, long)'
+        assert isinstance(shared, numbers.Integral), 'shared must be of type numbers.Integral'
         self.shared = shared
 
-        assert isinstance(datastores, (int, long)), 'datastores must be of type (int, long)'
+        assert isinstance(datastores, numbers.Integral), 'datastores must be of type numbers.Integral'
         self.datastores = datastores
-
-    def __repr__(self):
-        return 'Space(%r)' % self.quota
 
     @classmethod
     def from_json(cls, obj):
@@ -66,6 +64,9 @@ class Space(object):
                  datastores=self.datastores)
         return d
 
+    def __repr__(self):
+        return 'Space(%r)' % self.quota
+
 class Team(object):
     """
     Information about a team.
@@ -76,18 +77,14 @@ class Team(object):
                  name,
                  **kwargs):
         """
-        Args:
-            id (str): The team's unique ID.
-            name (str): The name of the team.
+        :param str id: The team's unique ID.
+        :param str name: The name of the team.
         """
-        assert isinstance(id, types.StringTypes), 'id must be of type types.StringTypes'
+        assert isinstance(id, six.string_types), 'id must be of type six.string_types'
         self.id = id
 
-        assert isinstance(name, types.StringTypes), 'name must be of type types.StringTypes'
+        assert isinstance(name, six.string_types), 'name must be of type six.string_types'
         self.name = name
-
-    def __repr__(self):
-        return 'Team(%r)' % self.id
 
     @classmethod
     def from_json(cls, obj):
@@ -98,6 +95,9 @@ class Team(object):
         d = dict(id=self.id,
                  name=self.name)
         return d
+
+    def __repr__(self):
+        return 'Team(%r)' % self.id
 
 class Name(object):
     """
@@ -112,28 +112,24 @@ class Name(object):
                  display_name,
                  **kwargs):
         """
-        Args:
-            given_name (str): Also known as a first name.
-            surname (str): Also known as a last name or family name.
-            familiar_name (str): Locale-dependent familiar name. Generally
-                matches :field:`given_name` or :field:`display_name`.
-            display_name (str): A name that can be used directly to represent
-                the name of a user's Dropbox account.
+        :param str given_name: Also known as a first name.
+        :param str surname: Also known as a last name or family name.
+        :param str familiar_name: Locale-dependent familiar name. Generally
+            matches ``given_name`` or ``display_name``.
+        :param str display_name: A name that can be used directly to represent
+            the name of a user's Dropbox account.
         """
-        assert isinstance(given_name, types.StringTypes), 'given_name must be of type types.StringTypes'
+        assert isinstance(given_name, six.string_types), 'given_name must be of type six.string_types'
         self.given_name = given_name
 
-        assert isinstance(surname, types.StringTypes), 'surname must be of type types.StringTypes'
+        assert isinstance(surname, six.string_types), 'surname must be of type six.string_types'
         self.surname = surname
 
-        assert isinstance(familiar_name, types.StringTypes), 'familiar_name must be of type types.StringTypes'
+        assert isinstance(familiar_name, six.string_types), 'familiar_name must be of type six.string_types'
         self.familiar_name = familiar_name
 
-        assert isinstance(display_name, types.StringTypes), 'display_name must be of type types.StringTypes'
+        assert isinstance(display_name, six.string_types), 'display_name must be of type six.string_types'
         self.display_name = display_name
-
-    def __repr__(self):
-        return 'Name(%r)' % self.given_name
 
     @classmethod
     def from_json(cls, obj):
@@ -147,6 +143,9 @@ class Name(object):
                  display_name=self.display_name)
         return d
 
+    def __repr__(self):
+        return 'Name(%r)' % self.given_name
+
 class BasicAccountInfo(object):
     """
     Basic information about a user's account.
@@ -157,18 +156,15 @@ class BasicAccountInfo(object):
                  name,
                  **kwargs):
         """
-        Args:
-            account_id (str): The user's unique Dropbox ID.
-            name (Name): Details of a user's name.
+        :param str account_id: The user's unique Dropbox ID.
+        :param name: Details of a user's name.
+        :type name: :class:`Name`
         """
-        assert isinstance(account_id, types.StringTypes), 'account_id must be of type types.StringTypes'
+        assert isinstance(account_id, six.string_types), 'account_id must be of type six.string_types'
         self.account_id = account_id
 
-        assert isinstance(name, Name), 'name must be of type dropbox.data_types.Name'
+        assert isinstance(name, Name), 'name must be of type Name'
         self.name = name
-
-    def __repr__(self):
-        return 'BasicAccountInfo(%r)' % self.account_id
 
     @classmethod
     def from_json(cls, obj):
@@ -180,6 +176,9 @@ class BasicAccountInfo(object):
         d = dict(account_id=self.account_id,
                  name=self.name.to_json())
         return d
+
+    def __repr__(self):
+        return 'BasicAccountInfo(%r)' % self.account_id
 
 class MeInfo(BasicAccountInfo):
     """
@@ -198,49 +197,46 @@ class MeInfo(BasicAccountInfo):
                  is_paired,
                  **kwargs):
         """
-        Args:
-            email (str): The user's e-mail address.
-            country (str): The user's two-letter country code, if available.
-            locale (str): The language setting that user specified.
-            referral_link (str): The user's :link:`referral link
-                https://www.dropbox.com/referrals`.
-            space (Space): The user's quota.
-            team (Team): If this account is a member of a team.
-            is_paired (bool): Whether the user has a personal and work account.
-                If the authorized account is personal, then :field:`team` will
-                always be :val:`Null`, but :field:`is_paired` will indicate if a
-                work account is linked.
+        :param str email: The user's e-mail address.
+        :param str country: The user's two-letter country code, if available.
+        :param str locale: The language setting that user specified.
+        :param str referral_link: The user's `referral link
+            <https://www.dropbox.com/referrals>`_.
+        :param space: The user's quota.
+        :type space: :class:`Space`
+        :param team: If this account is a member of a team.
+        :type team: :class:`Team`
+        :param bool is_paired: Whether the user has a personal and work account.
+            If the authorized account is personal, then ``team`` will always be
+            'Null', but ``is_paired`` will indicate if a work account is linked.
         """
         super(MeInfo, self).__init__(
             account_id,
             name,
         )
 
-        assert isinstance(email, types.StringTypes), 'email must be of type types.StringTypes'
+        assert isinstance(email, six.string_types), 'email must be of type six.string_types'
         self.email = email
 
         if country is not None:
-            assert isinstance(country, types.StringTypes), 'country must be of type types.StringTypes'
+            assert isinstance(country, six.string_types), 'country must be of type six.string_types'
         self.country = country
 
-        assert isinstance(locale, types.StringTypes), 'locale must be of type types.StringTypes'
+        assert isinstance(locale, six.string_types), 'locale must be of type six.string_types'
         self.locale = locale
 
-        assert isinstance(referral_link, types.StringTypes), 'referral_link must be of type types.StringTypes'
+        assert isinstance(referral_link, six.string_types), 'referral_link must be of type six.string_types'
         self.referral_link = referral_link
 
-        assert isinstance(space, Space), 'space must be of type dropbox.data_types.Space'
+        assert isinstance(space, Space), 'space must be of type Space'
         self.space = space
 
         if team is not None:
-            assert isinstance(team, Team), 'team must be of type dropbox.data_types.Team'
+            assert isinstance(team, Team), 'team must be of type Team'
         self.team = team
 
         assert isinstance(is_paired, bool), 'is_paired must be of type bool'
         self.is_paired = is_paired
-
-    def __repr__(self):
-        return 'MeInfo(%r)' % self.email
 
     @classmethod
     def from_json(cls, obj):
@@ -262,10 +258,17 @@ class MeInfo(BasicAccountInfo):
                  is_paired=self.is_paired)
         return d
 
+    def __repr__(self):
+        return 'MeInfo(%r)' % self.email
+
 class AccountInfo(object):
     """
     The amount of detail revealed about an account depends on the user being
     queried and the user making the query.
+
+    :ivar Me: None
+    :ivar Teammate: None
+    :ivar User: None
     """
 
     Me = MeInfo
@@ -278,11 +281,11 @@ class AccountInfo(object):
                  user=None,
                  **kwargs):
         """
-        The amount of detail revealed about an account depends on the user being
-        queried and the user making the query.
+        Only one argument can be set.
 
-        Only one argument may be specified.
-
+        :type me: :class:`MeInfo`
+        :type teammate: :class:`BasicAccountInfo`
+        :type user: :class:`BasicAccountInfo`
         """
         assert_only_one(me=me,
                         teammate=teammate,
@@ -293,19 +296,28 @@ class AccountInfo(object):
         self.user = None
 
         if me is not None:
-            assert isinstance(me, MeInfo), 'me must be of type dropbox.data_types.MeInfo'
+            assert isinstance(me, MeInfo), 'me must be of type MeInfo'
             self.me = me
             self._tag = 'me'
 
         if teammate is not None:
-            assert isinstance(teammate, BasicAccountInfo), 'teammate must be of type dropbox.data_types.BasicAccountInfo'
+            assert isinstance(teammate, BasicAccountInfo), 'teammate must be of type BasicAccountInfo'
             self.teammate = teammate
             self._tag = 'teammate'
 
         if user is not None:
-            assert isinstance(user, BasicAccountInfo), 'user must be of type dropbox.data_types.BasicAccountInfo'
+            assert isinstance(user, BasicAccountInfo), 'user must be of type BasicAccountInfo'
             self.user = user
             self._tag = 'user'
+
+    def is_me(self):
+        return self._tag == 'me'
+
+    def is_teammate(self):
+        return self._tag == 'teammate'
+
+    def is_user(self):
+        return self._tag == 'user'
 
     @classmethod
     def from_json(self, obj):
@@ -336,15 +348,11 @@ class InfoRequest(object):
                  account_id,
                  **kwargs):
         """
-        Args:
-            account_id (str): A user's account identifier. Use :val:`"me"` to
-                get information for the current account.
+        :param str account_id: A user's account identifier. Use '"me"' to get
+            information for the current account.
         """
-        assert isinstance(account_id, types.StringTypes), 'account_id must be of type types.StringTypes'
+        assert isinstance(account_id, six.string_types), 'account_id must be of type six.string_types'
         self.account_id = account_id
-
-    def __repr__(self):
-        return 'InfoRequest(%r)' % self.account_id
 
     @classmethod
     def from_json(cls, obj):
@@ -355,6 +363,9 @@ class InfoRequest(object):
         d = dict(account_id=self.account_id)
         return d
 
+    def __repr__(self):
+        return 'InfoRequest(%r)' % self.account_id
+
 class InfoError(object):
 
     NoAccount = object()
@@ -363,10 +374,9 @@ class InfoError(object):
                  no_account=None,
                  **kwargs):
         """
-        Only one argument may be specified.
+        Only one argument can be set.
 
-        Args:
-            no_account: The specified :field:`account_id` does not exist.
+        :param bool no_account: The specified ``account_id`` does not exist.
         """
         assert_only_one(no_account=no_account,
                         **kwargs)
@@ -376,6 +386,9 @@ class InfoError(object):
             assert isinstance(no_account, bool), 'no_account must be of type bool'
             self.no_account = no_account
             self._tag = 'no_account'
+
+    def is_no_account(self):
+        return self._tag == 'no_account'
 
     @classmethod
     def from_json(self, obj):
@@ -392,37 +405,41 @@ class InfoError(object):
     def __repr__(self):
         return 'InfoError(%r)' % self._tag
 
-class Users(Namespace):
+class BaseUsers(Namespace):
+    """Methods for routes in the users namespace"""
+
     def info(self,
              account_id):
         """
         Get information about a user's account.
 
-        Args:
-            account_id: A user's account identifier. Use :val:`"me"` to get
-                information for the current account.
+        :param str account_id: A user's account identifier. Use '"me"' to get
+            information for the current account.
+        :rtype: :class:`AccountInfo`
+        :raises: :class:`dropbox.exceptions.ApiError`
 
-        Raises:
-            ApiError with the following codes:
-                no_account: The specified :field:`account_id` does not exist.
+        Error codes:
+            no_account: The specified ``account_id`` does not exist.
         """
-        o = InfoRequest(account_id)
+        o = InfoRequest(account_id).to_json()
         r = self._dropbox.request(Dropbox.Host.API,
                                   'users/info',
-                                  Dropbox.OpStyle.RPC,
-                                  o.to_json(),
+                                  Dropbox.RouteStyle.RPC,
+                                  o,
                                   None)
         return AccountInfo.from_json(r.obj_segment)
 
     def info_me(self):
         """
         Get information about the authorized user's account.
+
+        :rtype: :class:`MeInfo`
         """
-        o = Empty()
+        o = Empty().to_json()
         r = self._dropbox.request(Dropbox.Host.API,
                                   'users/info/me',
-                                  Dropbox.OpStyle.RPC,
-                                  o.to_json(),
+                                  Dropbox.RouteStyle.RPC,
+                                  o,
                                   None)
-        return AccountInfo.from_json(r.obj_segment)
+        return MeInfo.from_json(r.obj_segment)
 
