@@ -1,88 +1,63 @@
 namespace files
 
 struct FileTarget
-    path String:
-        Path from root. Should be an empty string for root.
-    rev String optional:
-        Revision of target file.
+    path String
+        "Path from root. Should be an empty string for root."
+    rev String optional
+        "Revision of target file."
 
 struct FileInfo
-    name String:
-        Name of file.
+    name String
+        "Name of file."
 
 struct SubError
-    reason String:
-        A code indicating the type of error.
+    reason String
+        "A code indicating the type of error."
 
 union DownloadError
     disallowed SubError
     no_file SubError
 
-route Download
-    doc:
-        Download a file in a user's Dropbox.
+route Download (FileTarget, FileInfo, DownloadError)
+    "Download a file in a user's Dropbox."
 
-    request
-        FileTarget
-    response
-        FileInfo
-        Binary
-    error
-        DownloadError
-
-    extras
+    attrs
         host="content"
         style="download"
 
 struct UploadSessionStart
-    upload_id String:
-        A unique identifier for the upload session.
+    upload_id String
+        "A unique identifier for the upload session."
 
-route UploadStart /upload/start
-    doc:
-        Start an upload session.
+route UploadStart /upload/start (Empty, UploadSessionStart, Empty)
+    "Start an upload session."
 
-    request
-        Empty
-        Binary
-    response
-        UploadSessionStart
-    error
-        Empty
-    extras
+    attrs
         host="content"
         style="upload"
 
 struct UploadAppend
-    upload_id String:
-        Identifies the upload session to append data to.
-    offset UInt64:
-        The offset into the file of the current chunk of data being uploaded.
+    upload_id String
+        "Identifies the upload session to append data to."
+    offset UInt64
+        "The offset into the file of the current chunk of data being uploaded.
         It can also be thought of as the amount of data that has been uploaded
-        so far. We use the offset as a sanity check.
+        so far. We use the offset as a sanity check."
 
 struct IncorrectOffsetError
     correct_offset UInt64
 
 union UploadAppendError
-    not_found:
-        :field:`upload_id` was not found.
-    closed:
-        Upload session was closed.
+    not_found
+        ":field:`upload_id` was not found."
+    closed
+        "Upload session was closed."
     incorrect_offset IncorrectOffsetError
 
-route UploadAppend /upload/append
-    doc:
-        Start an upload session.
+route UploadAppend /upload/append (UploadAppend, Empty, Empty)
+    "Start an upload session."
 
-    request
-        UploadAppend
-        Binary
-    response
-        Empty
-    error
-        Empty
-    extras
+    attrs
         host="content"
         style="upload"
 
@@ -90,64 +65,55 @@ struct UpdateParentRev
     parent_rev String
 
 union ConflictPolicy
-    doc:
-        The action to take when a file path conflict exists.
+    "The action to take when a file path conflict exists."
 
-    overwrite:
-        On a conflict, the target is overridden.
-    add:
-        On a conflict, the upload is rejected. You can call the :route:`Upload`
-        endpoint again and attempt a different path.
-    update UpdateParentRev:
-        On a conflict, only overwrite the target if the parent_rev matches.
+    overwrite
+        "On a conflict, the target is overridden."
+    add
+        "On a conflict, the upload is rejected. You can call the :route:`Upload`
+        endpoint again and attempt a different path."
+    update UpdateParentRev
+        "On a conflict, only overwrite the target if the parent_rev matches."
 
 struct UploadCommit
-    path String:
-        Path in the user's Dropbox to save the file.
-    mode ConflictPolicy:
-        The course of action to take if a file already exists at :field:`path`.
-    append_to UploadAppend|Null optional:
-        If specified, the current chunk of data should be appended to an
-        existing upload session.
-    autorename Boolean = false optional:
-        Whether the file should be autorenamed in the event of a conflict.
-    client_modified_utc UInt64|Null = null optional:
-        Self reported time of when this file was created or modified.
-    mute Boolean = false optional:
-        Whether the devices that the user has linked should notify them of the
-        new or updated file.
+    path String
+        "Path in the user's Dropbox to save the file."
+    mode ConflictPolicy
+        "The course of action to take if a file already exists at :field:`path`."
+    append_to UploadAppend|Null optional
+        "If specified, the current chunk of data should be appended to an
+        existing upload session."
+    autorename Boolean = false optional
+        "Whether the file should be autorenamed in the event of a conflict."
+    client_modified_utc UInt64|Null = null optional
+        "Self reported time of when this file was created or modified."
+    mute Boolean = false optional
+        "Whether the devices that the user has linked should notify them of the
+        new or updated file."
 
 union ConflictReason
-    folder:
-        Conflict with a folder.
-    file:
-        Conflict with a file.
-    autorename_failed:
-        Could not autorename.
+    folder
+        "Conflict with a folder."
+    file
+        "Conflict with a file."
+    autorename_failed
+        "Could not autorename."
 
 struct ConflictError
     reason ConflictReason
 
 union UploadCommitError
     conflict ConflictError
-    no_write_permission:
-        User does not have permission to write in the folder. An example of
-        this is if the folder is a read-only shared folder.
-    insufficient_quota:
-        User does not have sufficient space quota to save the file.
+    no_write_permission
+        "User does not have permission to write in the folder. An example of
+        this is if the folder is a read-only shared folder."
+    insufficient_quota
+        "User does not have sufficient space quota to save the file."
 
-route Upload
-    doc:
-        Use this endpoint to either finish an ongoing upload session that was
-        begun with :route:`UploadStart` or upload a file in one shot.
+route Upload (UploadCommit, FileInfo, UploadCommitError)
+    "Use this endpoint to either finish an ongoing upload session that was
+    begun with :route:`UploadStart` or upload a file in one shot."
 
-    request
-        UploadCommit
-        Binary
-    response
-        FileInfo
-    error
-        UploadCommitError
-    extras
+    attrs
         host="content"
         style="upload"

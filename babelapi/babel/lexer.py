@@ -143,7 +143,7 @@ class BabelLexer(object):
         'example',
         'error',
         'extends',
-        'extras',
+        'attrs',
         'include',
         'namespace',
         'optional',
@@ -158,15 +158,12 @@ class BabelLexer(object):
 
     RESERVED = {
         'deprecated': 'DEPRECATED',
-        'error': 'ERROR',
         'extends': 'EXTENDS',
-        'extras': 'EXTRAS',
+        'attrs': 'ATTRS',
         'include': 'INCLUDE',
         'optional': 'OPTIONAL',
         'pass': 'PASS',
-        'request': 'REQUEST',
         'required': 'REQUIRED',
-        'response': 'RESPONSE',
         'route': 'ROUTE',
         'struct': 'STRUCT',
         'union': 'UNION',
@@ -254,10 +251,11 @@ class BabelLexer(object):
     def t_STRING(self, t):
         r'\"([^\\"]|(\\.))*\"'
         escaped = 0
-        str = t.value[1:-1]
+        # FIXME: Split on two or more newlines
+        s = '\n'.join([line.replace('\n', ' ') for line in t.value[1:-1].split('\n\n')])
         new_str = ""
-        for i in range(0, len(str)):
-            c = str[i]
+        for i in range(0, len(s)):
+            c = s[i]
             if escaped:
                 if c == 'n':
                     c = '\n'
@@ -270,6 +268,8 @@ class BabelLexer(object):
                     escaped = 1
                 else:
                     new_str += c
+        new_str = '\n'.join([line.replace(' ' * self.cur_indent, '')
+                             for line in new_str.splitlines()])
         t.value = new_str
         return t
 

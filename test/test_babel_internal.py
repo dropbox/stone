@@ -173,14 +173,14 @@ class TestBabelInternal(unittest.TestCase):
 
         # add a example that doesn't fit the definition of a struct
         with self.assertRaises(KeyError) as cm:
-            quota_info.add_example('default', {'bad_field': 'xyz123'})
+            quota_info.add_example('default', None, {'bad_field': 'xyz123'})
         self.assertIn('has invalid fields', cm.exception.args[0])
 
-        quota_info.add_example('default', {'quota': 64000})
+        quota_info.add_example('default', None, {'quota': 64000})
 
         # set null for a non-nullable field
         with self.assertRaises(ValueError) as cm:
-            quota_info.add_example('null', {'quota': None})
+            quota_info.add_example('null', None, {'quota': None})
         self.assertIn('field is not nullable', cm.exception.args[0])
 
         self.assertTrue(quota_info.has_example('default'))
@@ -195,7 +195,7 @@ class TestBabelInternal(unittest.TestCase):
             ],
         )
 
-        quota_info.add_example('default', {'account_id': 'xyz123'})
+        quota_info.add_example('default', None, {'account_id': 'xyz123'})
 
         # ensure that an example for quota_info is propagated up
         self.assertIn('quota_info', quota_info.get_example('default'))
@@ -209,7 +209,7 @@ class TestBabelInternal(unittest.TestCase):
                 Field('parent_rev', String(), 'The revision to be updated.')
             ]
         )
-        update_parent_rev.add_example('default', {'parent_rev': 'xyz123'})
+        update_parent_rev.add_example('default', None, {'parent_rev': 'xyz123'})
 
         # test variants with only tags, as well as those with structs.
         conflict = Union(

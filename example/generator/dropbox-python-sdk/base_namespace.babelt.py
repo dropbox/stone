@@ -595,12 +595,11 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line("return '{}()'".format(self._class_name_for_data_type(data_type)))
         self.emit_empty_line()
 
-    def _has_binary_segment(self, segmentation):
+    def _is_download_style(self, route):
         """If a route has Binary specified as the second segment of a request or response,
         the payload will be in the HTTP body. Binary should never appear anywhere else in a
         segmentation."""
-        return (len(segmentation.segments) == 2
-                and isinstance(segmentation.segments[1].data_type, Binary))
+        return route.attrs.get('style') == 'download'
 
     #
     # Routes
@@ -613,18 +612,18 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         specified by the user."""
         self._generate_route_canonical(namespace, route)
 
-        if self._has_binary_segment(route.response_segmentation):
+        if self._is_download_style(route):
             self._generate_route_download_to_file(namespace, route)
 
     def _generate_route_canonical(self, namespace, route):
         """Generate a Python method that corresponds to an route."""
-        request_data_type = route.request_segmentation.segments[0].data_type
-        response_data_type = route.response_segmentation.segments[0].data_type
+        request_data_type = route.request_data_type
+        response_data_type = route.response_data_type
 
-        request_binary_body = self._has_binary_segment(route.request_segmentation)
-        response_binary_body = self._has_binary_segment(route.response_segmentation)
-        host = self._generate_route_host(route.extras.get('host', 'api'))
-        style = self._generate_route_style(route.extras.get('style', 'rpc'))
+        host = self._generate_route_host(route.attrs.get('host', 'api'))
+        style = self._generate_route_style(route.attrs.get('style', 'rpc'))
+        request_binary_body = route.attrs.get('style') == 'upload'
+        response_binary_body = route.attrs.get('style') == 'download'
 
         self._generate_route_method_decl(route, request_data_type, request_binary_body)
 
@@ -690,13 +689,13 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         """Generate a Python method that corresponds to a route. This should only be called
         for routes that return binary data. The method will take a path that will it use to
         save the binary data to."""
-        request_data_type = route.request_segmentation.segments[0].data_type
-        response_data_type = route.response_segmentation.segments[0].data_type
+        request_data_type = route.request_data_type
+        response_data_type = route.response_data_type
 
-        request_binary_body = self._has_binary_segment(route.request_segmentation)
-        response_binary_body = self._has_binary_segment(route.response_segmentation)
-        host = self._generate_route_host(route.extras.get('host', 'api'))
-        style = self._generate_route_style(route.extras.get('style', 'rpc'))
+        host = self._generate_route_host(route.attrs.get('host', 'api'))
+        style = self._generate_route_style(route.attrs.get('style', 'rpc'))
+        request_binary_body = route.attrs.get('style') == 'upload'
+        response_binary_body = route.attrs.get('style') == 'download'
 
         self._generate_route_method_decl(route,
                                          request_data_type,

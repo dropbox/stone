@@ -348,8 +348,7 @@ class InfoRequest(object):
                  account_id,
                  **kwargs):
         """
-        :param str account_id: A user's account identifier. Use '"me"' to get
-            information for the current account.
+        :param str account_id: A user's account identifier.
         """
         assert isinstance(account_id, six.string_types), 'account_id must be of type six.string_types'
         self.account_id = account_id
@@ -413,8 +412,7 @@ class BaseUsers(Namespace):
         """
         Get information about a user's account.
 
-        :param str account_id: A user's account identifier. Use '"me"' to get
-            information for the current account.
+        :param str account_id: A user's account identifier.
         :rtype: :class:`AccountInfo`
         :raises: :class:`dropbox.exceptions.ApiError`
 

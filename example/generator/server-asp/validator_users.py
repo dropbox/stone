@@ -6,6 +6,9 @@ from dropbox import arg_struct_parser as asp
 def identity(x):
     return x
 
+users_empty_validator = asp.Record(
+)
+
 users_space_validator = asp.Record(
     # The user's total quota allocation (bytes).
 
@@ -89,8 +92,7 @@ users_account_info_validator = asp.Variant(
 )
 
 users_info_request_validator = asp.Record(
-    # A user's account identifier. Use :val:`"me"` to get information for the
-    # current account.
+    # A user's account identifier.
 
     ('account_id', asp.StringB(min_length=40, max_length=40)),
 )

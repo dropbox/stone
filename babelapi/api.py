@@ -56,9 +56,9 @@ class ApiNamespace(object):
 
         found_empty = False
         for route in self.routes:
-            for segment in (route.request_segmentation.segments
-                                + route.response_segmentation.segments):
-                if segment.data_type == Empty and not found_empty:
+            for data_type in (route.request_data_type, route.response_data_type,
+                              route.error_data_type):
+                if data_type == Empty and not found_empty:
                     linearized_data_types.append(Empty)
                     seen_data_types.add(Empty)
                     found_empty = True
@@ -86,25 +86,23 @@ class ApiRoute(object):
                  name,
                  path,
                  doc,
-                 request_segmentation,
-                 response_segmentation,
+                 request_data_type,
+                 response_data_type,
                  error_data_type,
-                 extras):
+                 attrs):
         """
         :param str name: Friendly name of the endpoint.
         :param str path: Request path.
         :param str doc: Description of the endpoint.
-        :param Segmentation request_segmentation: The segmentation of the
-            request.
-        :param Segmentation segmentation: The segmentation of the response.
-        :param DataType error_data_type: The data type that represents
-            possible errors.
+        :type request_data_type: :class:`babelapi.data_type.DataType`
+        :type response_data_type: :class:`babelapi.data_type.DataType`
+        :type error_data_type: :class:`babelapi.data_type.DataType`
         """
 
         self.name = name
         self.path = path
         self.doc = doc
-        self.request_segmentation = request_segmentation
-        self.response_segmentation = response_segmentation
+        self.request_data_type = request_data_type
+        self.response_data_type = response_data_type
         self.error_data_type = error_data_type
-        self.extras = extras
+        self.attrs = attrs

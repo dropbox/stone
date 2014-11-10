@@ -49,7 +49,7 @@ alias Rev = String
         text = """
 namespace files
 
-struct QuotaInfo:
+struct QuotaInfo
     quota UInt64
 """
         out = self.parser.parse(text)
@@ -61,9 +61,8 @@ struct QuotaInfo:
         text = """
 namespace files
 
-struct QuotaInfo:
-    doc::
-        The space quota info for a user.
+struct QuotaInfo
+    "The space quota info for a user."
     quota UInt64
 """
         out = self.parser.parse(text)
@@ -76,11 +75,10 @@ struct QuotaInfo:
         text = """
 namespace files
 
-struct QuotaInfo:
-    doc::
-        The space quota info for a user.
-    quota UInt64::
-        The user's total quota allocation (bytes).
+struct QuotaInfo
+    "The space quota info for a user."
+    quota UInt64
+        "The user's total quota allocation (bytes)."
 """
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
@@ -93,11 +91,11 @@ struct QuotaInfo:
         text = """
 namespace files
 
-struct QuotaInfo:
-    doc::
-        The space quota info for a user.
-    quota UInt64::
-        The user's total quota allocation (bytes)."""
+struct QuotaInfo
+    "The space quota info for a user."
+    quota UInt64
+        "The user's total quota allocation (bytes)."
+"""
 
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
@@ -110,12 +108,11 @@ struct QuotaInfo:
         text = """
 namespace files
 
-struct QuotaInfo:
-    doc::
-        The space quota info for a user.
-    quota UInt64::
-        The user's total quota allocation (bytes).
-    example default:
+struct QuotaInfo
+    "The space quota info for a user."
+    quota UInt64
+        "The user's total quota allocation (bytes)."
+    example default
         quota=64000
 """
 
@@ -127,14 +124,13 @@ struct QuotaInfo:
         text = """
 namespace files
 
-struct QuotaInfo:
-    doc::
-        The space quota info for a user.
-    quota UInt64::
-        The user's total quota allocation (bytes).
-    example default:
+struct QuotaInfo
+    "The space quota info for a user."
+    quota UInt64
+        "The user's total quota allocation (bytes)."
+    example default
         quota=2000000000
-    example pro:
+    example pro
         quota=100000000000
 """
         out = self.parser.parse(text)
@@ -147,16 +143,15 @@ struct QuotaInfo:
         text = """
 namespace files
 
-union Role:
-    doc::
-        The role a user may have in a shared folder.
+union Role
+    "The role a user may have in a shared folder."
 
-    owner::
-        Owner of a file.
-    viewer::
-        Read only permission.
-    editor::
-        Read and write permission.
+    owner
+        "Owner of a file."
+    viewer
+        "Read only permission."
+    editor
+        "Read and write permission."
 """
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'Role')

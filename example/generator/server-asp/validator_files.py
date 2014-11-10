@@ -6,6 +6,9 @@ from dropbox import arg_struct_parser as asp
 def identity(x):
     return x
 
+files_empty_validator = asp.Record(
+)
+
 files_file_target_validator = asp.Record(
     # Path from root. Should be an empty string for root.
 

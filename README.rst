@@ -70,16 +70,17 @@ you can replace ``babelapi`` with ``python -m babelapi.cli`` as follows::
 Simple Example
 --------------
 
-You can compile an example babel and apply it to a documentation template::
+You can compile an example spec describing the Dropbox API and apply it to a
+Python code generator::
 
-   $ babelapi example/api/v2_files.babel example/api/v2_users.babel example/template/docs
+   $ babelapi example/api/dbx-core/users.babel example/generator/dropbox-python-sdk/
 
-You can view the generated documentation using::
+You can view the generated code at::
 
-   $ google-chrome example/template/docs/docs.html
+   $ example/generator/dropbox-python-sdk/base_users.py
 
-Fundamentals
-============
+File Types
+==========
 
 There are three types of files.
 
@@ -104,7 +105,7 @@ has access to a ``self.api`` member variable which represents the spec as a
 Python object.
 
 Defining a Spec
-================
+===============
 
 A spec is composed of a namespace followed by zero or more includes and zero or more definitions::
 
@@ -151,29 +152,26 @@ Struct
 A struct is a type made up of other types::
 
    struct Space
-       doc:
-           The space quota info for a user.
+       "The space quota info for a user."
 
-       quota UInt64:
-           The user's total quota allocation (bytes).
-       private UInt64:
-           The user's used quota outside of shared folders (bytes).
-       shared UInt64:
-           The user's used quota in shared folders (bytes).
+       quota UInt64
+           "The user's total quota allocation (bytes)."
+       private UInt64
+           "The user's used quota outside of shared folders (bytes)."
+       shared UInt64
+           "The user's used quota in shared folders (bytes)."
 
        example default
            quota=1000000
            private=1000
            shared=500
 
-A struct can optionally define a documentation string by declaring ``doc:``.
-The colon enters documentation mode and indicates that the following
-text is free form. Documentation mode is terminated only by a line that has the
-same indentation as the original "doc:" string.
+A struct can optionally define a documentation string by having a specifying a
+string immediately following the struct declaration.
 
 After the documentation is a list of fields. Fields are formatted with the field
-name first followed by the field type. To provide documentation for a field, use
-``:`` again,otherwise end the line with the field type.
+name first followed by the field type. To provide documentation for a field,
+specify a string on a new indented line following the field declaration.
 
 Finally, examples can be declared. An example is declared by using the ``example``
 keyword followed by a label, and optionally text. By convention, "default" should
@@ -186,27 +184,25 @@ Type Composition
 Types can also be composed of other types::
 
    struct Team
-       doc:
-           Information relevant to a team.
+       "Information relevant to a team."
 
-       name String:
-           The name of the team.
+       name String
+           "The name of the team."
 
        example default
            name="Acme, Inc."
 
-   struct AccountInfo:
-       doc:
-           Information for a user's account.
+   struct AccountInfo
+       "Information for a user's account."
 
-       display_name String:
-           The full name of a user.
-       space Space:
-           The user's quota.
-       is_paired Boolean:
-           Whether the user has a personal and business account.
-       team Team|Null:
-           If this paired account is a member of a team.
+       display_name String
+           "The full name of a user."
+       space Space
+           "The user's quota."
+       is_paired Boolean
+           "Whether the user has a personal and business account."
+       team Team|Null
+           "If this paired account is a member of a team."
 
        example default "Paired account"
            display_name="Jon Snow"
@@ -231,29 +227,27 @@ Type Inheritance
 A struct can also inherit from another struct using the ``extends`` keyword::
 
     struct EntryInfo
-        doc:
-            A file or folder entry.
+        "A file or folder entry."
 
-        id String(max_length=40):
-            A unique identifier for the file.
-        path String:
-            Path to file or folder.
-        modified DbxTimestamp|Null:
-            The last time the file was modified on Dropbox, in the standard date
-            format (null for root folder).
-        is_deleted Boolean:
-            Whether the given entry is deleted.
+        id String(max_length=40)
+            "A unique identifier for the file."
+        path String
+            "Path to file or folder."
+        modified DbxTimestamp|Null
+            "The last time the file was modified on Dropbox, in the standard date
+            format (null for root folder)."
+        is_deleted Boolean
+            "Whether the given entry is deleted."
 
     struct FileInfo extends EntryInfo
-        doc:
-            Describes a file.
+        "Describes a file."
 
-        size UInt64:
-            File size in bytes.
-        mime_type String|Null:
-            The Internet media type determined by the file extension.
-        media_info MediaInfo optional:
-            Information specific to photo and video media.
+        size UInt64
+            "File size in bytes."
+        mime_type String|Null
+            "The Internet media type determined by the file extension."
+        media_info MediaInfo optional
+            "Information specific to photo and video media."
 
         example default
             id="xyz123"
@@ -283,28 +277,26 @@ A union in Babel is a tagged union. In its field declarations, a tag name is fol
 a data type::
 
    struct PhotoInfo
-       doc:
-           Photo-specific information derived from EXIF data.
+       "Photo-specific information derived from EXIF data."
 
-       time_taken DbxTimestamp:
-           When the photo was taken.
-       lat_long List(data_type=Float32)|null:
-           The GPS coordinates where the photo was taken.
+       time_taken DbxTimestamp
+           "When the photo was taken."
+       lat_long List(data_type=Float32)|Null
+           "The GPS coordinates where the photo was taken."
 
        example default
            time_taken="Sat, 28 Jun 2014 18:23:21"
            lat_long=null
 
    struct VideoInfo
-       doc:
-           Video-specific information derived from EXIF data.
+       "Video-specific information derived from EXIF data."
 
-       time_taken DbxTimestamp:
-           When the photo was taken.
-       lat_long List(data_type=Float32)|null:
-           The GPS coordinates where the photo was taken.
-       duration Float32:
-           Length of video in milliseconds.
+       time_taken DbxTimestamp
+           "When the photo was taken."
+       lat_long List(data_type=Float32)|Null
+           "The GPS coordinates where the photo was taken."
+       duration Float32
+           "Length of video in milliseconds."
 
        example default
            time_taken="Sat, 28 Jun 2014 18:23:21"
@@ -312,8 +304,7 @@ a data type::
            duration=3
 
    union MediaInfo
-       doc:
-           Media specific information.
+       "Media specific information."
 
        photo PhotoInfo
        video VideoInfo
@@ -322,30 +313,29 @@ Tags that do not map to a type can be declared. The following example
 illustrates::
 
     struct UpdateParentRev
-        doc:
-            On a write conflict, overwrite the existing file if the parent rev matches.
+        "On a write conflict, overwrite the existing file if the parent rev
+        matches."
 
-        parent_rev String:
-            The revision to be updated.
-        auto_rename Boolean:
-            Whether the new file should be renamed on a conflict.
+        parent_rev String
+            "The revision to be updated."
+        auto_rename Boolean
+            "Whether the new file should be renamed on a conflict."
 
         example default
             parent_rev="abc123"
             auto_rename=false
 
     union WriteConflictPolicy
-        doc:
-            Policy for managing write conflicts.
+        "Policy for managing write conflicts."
 
-        reject:
-            On a write conflict, reject the new file.
-        overwrite:
-            On a write conflict, overwrite the existing file.
-        rename:
-            On a write conflict, rename the new file with a numerical suffix.
-        update_if_matching_parent_rev UpdateParentRev:
-            On a write conflict, overwrite the existing file.
+        reject
+            "On a write conflict, reject the new file."
+        overwrite
+            "On a write conflict, overwrite the existing file."
+        rename
+            "On a write conflict, rename the new file with a numerical suffix."
+        update_if_matching_parent_rev UpdateParentRev
+            "On a write conflict, overwrite the existing file."
 
 
 Primitives
@@ -376,65 +366,57 @@ DbxTimestamp, which sets this format, and can be used in struct and union defini
    alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S")
 
    struct Example
-       doc:
-           An example.
+       "An example."
 
-       created DbxTimestamp:
-           When this example was created.
+       created DbxTimestamp
+           "When this example was created."
 
 Routes
 ------
 
-Routes map to your API endpoints. You specify a list of data types for the request,
-and a list of data types for the response::
+Routes map to your API endpoints. You specify a data type that represents the
+input data in a request. Equivalently, a data type is set to represent the
+response of a endpoint. Lastly, a data type for errors can be listed.::
 
     struct AccountInfoRequest
-        doc:
-            Input to request.
+        "Input to request."
 
-        account_id String = "me":
-            A user's account identifier. Use "me" to get information for the
-            current account.
+        account_id String = "me"
+            "A user's account identifier. Use "me" to get information for the
+            current account."
 
-    route GetInfo
-        doc:
-            Get user account information.
-
-        request
-            AccountInfoRequest
-        response
-            AccountInfo
+    route GetInfo (AccountInfoRequest, AccountInfo)
+        "Get user account information"
 
 .. _default_value_example:
 
 Note that ``account_id`` was given a default value of ``"me"``. This is useful
 for including in generated SDKs.
 
-The following is an example of an endpoint with two request segments::
+A full description of an API route tends to require vocabulary that is specific
+to a service. For example, the Dropbox API needs a way to specify some routes
+as including a binary body (uploads) for requests. Another example is specifying
+some routes as requiring authentication while others do not.
+
+To cover this open ended use case, routes can have an ``attrs`` section declared
+followed by an arbitrary set of ``key=value`` pairs::
 
     struct FileUploadRequest
-        doc:
-            Stub.
+        path String
+            "The full path to the file you want to write to. It should not point
+            to a folder."
 
-        path String:
-            The full path to the file you want to write to. It should not point
-            to a folder.
-        write_conflict_policy WriteConflictPolicy:
-            Action to take if a file already exists at the specified path.
+    route Upload (FileUploadRequest, FileInfo)
+        "Upload a file to Dropbox."
 
-        example default
-            path="Documents/plan.docx"
+        attrs
+            style="upload"
 
-    route Upload
-        doc:
-            Upload a file to dropbox.
-
-        request
-            FileUploadRequest
-            Binary
-
-        response
-            FileInfo
+The code generator we've written for our API will check a route's ``style``
+attribute and ensure that it constructs an HTTP request where the body is
+the file contents. As an aside, we've chosen to encode the ``FileUploadRequest``
+struct in a JSON-encoded header though others may prefer to encode it in query
+parameters.
 
 Documentation
 -------------

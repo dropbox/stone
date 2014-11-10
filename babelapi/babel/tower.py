@@ -230,15 +230,15 @@ class TowerOfBabel(object):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
             elif isinstance(item, BabelRouteDef):
-                request_segmentation = self._babel_field_to_segments(
+                request_data_type = self._resolve_data_type(
                     env,
-                    item.request_segmentation,
+                    item.request_data_type_name,
                 )
-                response_segmentation = self._babel_field_to_segments(
+                response_data_type = self._resolve_data_type(
                     env,
-                    item.response_segmentation,
+                    item.response_data_type_name,
                 )
-                error_data_type = self._resolve_error_data_type(
+                error_data_type = self._resolve_data_type(
                     env,
                     item.error_data_type_name,
                 )
@@ -251,10 +251,10 @@ class TowerOfBabel(object):
                     item.name,
                     path,
                     item.doc,
-                    request_segmentation,
-                    response_segmentation,
+                    request_data_type,
+                    response_data_type,
                     error_data_type,
-                    item.extras,
+                    item.attrs,
                 )
                 namespace.add_route(route)
             else:
@@ -305,12 +305,11 @@ class TowerOfBabel(object):
             segments.append(segment)
         return Segmentation(segments)
 
-    def _resolve_error_data_type(self, env, data_type_name):
+    def _resolve_data_type(self, env, data_type_name):
         if not data_type_name:
+            # FIXME: We should think through whether the name should always be present
             return None
-
         if data_type_name not in env:
             raise Exception('Symbol %r is undefined' % data_type_name)
-
         data_type = env.get(data_type_name)
         return data_type

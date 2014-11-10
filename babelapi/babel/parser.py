@@ -8,20 +8,20 @@ class BabelRouteDef(object):
     def __init__(self, name, path=None):
         self.name = name
         self.path = path
-        self.request_segmentation = []
-        self.response_segmentation = []
+        self.request_data_type_name = None
+        self.response_data_type_name = None
         self.error_data_type_name = None
-        self.extras = {}
+        self.attrs = {}
     def set_doc(self, docstring):
         self.doc = docstring
-    def set_request_segmentation(self, segments):
-        self.request_segmentation = segments
-    def set_response_segmentation(self, segments):
-        self.response_segmentation = segments
+    def set_request_data_type_name(self, data_type_name):
+        self.request_data_type_name = data_type_name
+    def set_response_data_type_name(self, data_type_name):
+        self.response_data_type_name = data_type_name
     def set_error_data_type_name(self, data_type_name):
         self.error_data_type_name = data_type_name
-    def set_extras(self, extras):
-        self.extras = extras
+    def set_attrs(self, attrs):
+        self.attrs = attrs
 
 class BabelTypeDef(object):
     def __init__(self, composite_type, name, extends=None):
@@ -271,41 +271,8 @@ class BabelParser(object):
             for label, text, example in p[8]:
                 p[0].add_example(label, text, example)
 
-    def p_segment(self, p):
-        """segment : ID ID NEWLINE
-                   | ID NEWLINE"""
-        if p[2].strip() == '':
-            p[0] = BabelSegment(p[1], None)
-        else:
-            p[0] = BabelSegment(p[2], p[1])
-
-    def p_segment_list_create(self, p):
-        """segment_list : segment
-                        | empty"""
-        if p[1] is not None:
-            p[0] = [p[1]]
-
-    def p_segment_list_extend(self, p):
-        'segment_list : segment_list segment'
-        p[0] = p[1]
-        p[0].append(p[2])
-
-    def p_statement_request_section(self, p):
-        """reqsection : REQUEST NEWLINE INDENT segment_list DEDENT"""
-        p[0] = p[4]
-
-    def p_statement_response_section(self, p):
-        """respsection : RESPONSE NEWLINE INDENT segment_list DEDENT"""
-        p[0] = p[4]
-
-    def p_statement_error_section(self, p):
-        """errorsection : ERROR NEWLINE INDENT ID NEWLINE DEDENT
-                        | empty"""
-        if p[1]:
-            p[0] = p[4]
-
-    def p_statement_extras_section(self, p):
-        """extrassection : EXTRAS NEWLINE INDENT example_field_list DEDENT
+    def p_statement_attrs_section(self, p):
+        """attrssection : ATTRS NEWLINE INDENT example_field_list DEDENT
                          | empty"""
         if p[1]:
             p[0] = p[4]
@@ -316,31 +283,41 @@ class BabelParser(object):
         p[0] = p[1]
 
     def p_statement_routedef(self, p):
-        'routedef : ROUTE ID path_option NEWLINE INDENT docsection reqsection respsection errorsection extrassection DEDENT'
+        """routedef : ROUTE ID path_option attributes_group NEWLINE INDENT docsection attrssection DEDENT"""
         p[0] = BabelRouteDef(p[2], p[3])
-        p[0].set_doc(self._normalize_docstring(p[6]))
-        p[0].set_request_segmentation(p[7])
-        p[0].set_response_segmentation(p[8])
-        if p[9]:
-            p[0].set_error_data_type_name(p[9])
-        if p[10]:
-            p[0].set_extras(dict(p[10]))
+        p[0].set_doc(self._normalize_docstring(p[7]))
+        p[0].set_request_data_type_name(p[4][0][0])
+        p[0].set_response_data_type_name(p[4][1][0])
+        p[0].set_error_data_type_name(p[4][2][0])
+        if p[8]:
+            p[0].set_attrs(dict(p[8]))
 
     def p_statement_add_doc(self, p):
         """docsection : KEYWORD COLON docstring DEDENT
+                      | docstring NEWLINE
                       | empty"""
         if p[1]:
-            if p[1] != 'doc':
-                raise Exception('Wrong keyword in doc section...')
-            # Convert a lone newline to a space, and two consecutive newlines
-            # to a single newline.
-            p[0] = p[3]
+            if p[2] == ':':
+                if p[1] != 'doc':
+                    raise Exception('Wrong keyword in doc section...')
+                else:
+                    # Convert a lone newline to a space, and two consecutive newlines
+                    # to a single newline.
+                    p[0] = p[3]
+            else:
+                p[0] = p[1]
 
     def _normalize_docstring(self, docstring):
         """We convert double newlines to single newlines, and single newlines
         to a single whitespace."""
         lines = docstring.strip().split('\n\n')
         return '\n'.join([line.replace('\n', ' ') for line in lines]).strip()
+
+    def p_docstring_string(self, p):
+        'docstring : STRING'
+        lines = p[1].strip().split('\n\n')
+        p[0] = '\n'.join([line.replace('\n' + ' ' * self.lexer.cur_indent, ' ')
+                          for line in lines]).strip()
 
     def p_statement_docstring_create(self, p):
         'docstring : LINE'
@@ -401,22 +378,32 @@ class BabelParser(object):
 
     def p_statement_field(self, p):
         """field : ID ID attributes_group nullable default_option presence deprecation COLON docstring DEDENT
+                 | ID ID attributes_group nullable default_option presence deprecation NEWLINE INDENT docstring NEWLINE DEDENT
                  | ID ID attributes_group nullable default_option presence deprecation NEWLINE"""
-        has_docstring = (p[8] == ':')
+
+        has_old_style_docstring = (p[8] == ':')
+        has_new_style_docstring = not has_old_style_docstring and len(p) > 9
         p[0] = BabelField(p[1], p[2], p[3], p[4], p[6], p[7])
         if p[5] is not None:
             if p[5] is BabelNull:
                 p[0].set_default(None)
             else:
                 p[0].set_default(p[5])
-        if has_docstring:
+        if has_old_style_docstring:
             p[0].set_doc(self._normalize_docstring(p[9]))
+        elif has_new_style_docstring:
+            p[0].set_doc(p[10])
 
     def p_statement_field_symbol(self, p):
-        'field : ID COLON docstring DEDENT'
+        """field : ID COLON docstring DEDENT
+                 | ID NEWLINE INDENT docstring NEWLINE DEDENT"""
         p[0] = BabelSymbol(p[1])
-        if p[3]:
-            p[0].set_doc(self._normalize_docstring(p[3]))
+        if p[2] == ':':
+            # old style docstring
+            if p[3]:
+                p[0].set_doc(self._normalize_docstring(p[3]))
+        else:
+            p[0].set_doc(p[4])
 
     def p_statement_example(self, p):
         """example : KEYWORD ID STRING NEWLINE INDENT example_field_list DEDENT
