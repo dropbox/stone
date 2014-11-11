@@ -286,9 +286,17 @@ class BabelParser(object):
         """routedef : ROUTE ID path_option attributes_group NEWLINE INDENT docsection attrssection DEDENT"""
         p[0] = BabelRouteDef(p[2], p[3])
         p[0].set_doc(self._normalize_docstring(p[7]))
-        p[0].set_request_data_type_name(p[4][0][0])
-        p[0].set_response_data_type_name(p[4][1][0])
-        p[0].set_error_data_type_name(p[4][2][0])
+        data_types = p[4]
+        if len(data_types) == 2:
+            request, response = data_types
+            error = (None, None)
+        elif len(data_types) == 3:
+            request, response, error = data_types
+        else:
+            raise ValueError('Incorrect number of arguments to route %d' % len(data_types))
+        p[0].set_request_data_type_name(request[0])
+        p[0].set_response_data_type_name(response[0])
+        p[0].set_error_data_type_name(error[0])
         if p[8]:
             p[0].set_attrs(dict(p[8]))
 
