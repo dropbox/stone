@@ -123,7 +123,9 @@ Example::
    namespace users
 
 This is the namespace for all the routes and data types in the Spec file. It
-helps us separate different parts of the API like "files", "users", and "photos".
+helps us separate different logical groups of the API. For example, the Dropbox
+API has a namespace devoted to all file operations (uploading, downloading, ...),
+and another namespace for all operations relevant to user accounts.
 
 Include
 -------
@@ -152,7 +154,9 @@ Struct
 A struct is a type made up of other types::
 
    struct Space
-       "The space quota info for a user."
+       "The space quota info for a user.
+
+       This can be multi-line."
 
        quota UInt64
            "The user's total quota allocation (bytes)."
@@ -166,8 +170,9 @@ A struct is a type made up of other types::
            private=1000
            shared=500
 
-A struct can optionally define a documentation string by having a specifying a
-string immediately following the struct declaration.
+A struct can be documented by specifying a string immediately following the
+struct declaration. The string can be multiple lines, as long as each
+subsequent line is at least at the indentation of the starting quote.
 
 After the documentation is a list of fields. Fields are formatted with the field
 name first followed by the field type. To provide documentation for a field,
@@ -212,7 +217,6 @@ Types can also be composed of other types::
            display_name="Jon Snow"
            is_paired=false
            team=null
-
 
 Nullability
 ^^^^^^^^^^^
