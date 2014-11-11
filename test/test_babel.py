@@ -164,3 +164,20 @@ union Role
         self.assertEqual(out[1].fields[2].name, 'editor')
 
         # TODO: Test a union that includes a struct.
+
+    def test_route_decl(self):
+        text = """
+namespace users
+
+struct AccountInfo
+    email String
+
+route GetAccountInfo(AccountInfo, Null, Null)
+    "Gets the account info for a user"
+"""
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'AccountInfo')
+        self.assertEqual(out[2].name, 'GetAccountInfo')
+        self.assertEqual(out[2].request_data_type_name, 'AccountInfo')
+        self.assertEqual(out[2].response_data_type_name, 'Null')
+        self.assertEqual(out[2].error_data_type_name, 'Null')
