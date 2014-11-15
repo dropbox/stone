@@ -505,6 +505,10 @@ class Union(CompositeType):
 
     composite_type = 'union'
 
+    def __init__(self, name, doc, fields, super_type=None, open_field=None):
+        super(CompositeType, self).__init__(name, doc, fields, super_type=super_type)
+        self.open_field = open_field
+
     def check(self, val):
         if isinstance(val, dict):
             assert isinstance(val, dict), 'val must be a dict'

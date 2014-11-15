@@ -30,6 +30,7 @@ from babelapi.api import (
 )
 from babelapi.babel.parser import (
     BabelAlias,
+    BabelCatchAllSymbol,
     BabelInclude,
     BabelNamespace,
     BabelRouteDef,
@@ -132,8 +133,11 @@ class TowerOfBabel(object):
                              % item.composite_type)
         api_type_fields = []
         for babel_field in item.fields:
-            api_type_field = self._create_field(env, babel_field)
-            api_type_fields.append(api_type_field)
+            if isinstance(babel_field, BabelCatchAllSymbol):
+                pass
+            else:
+                api_type_field = self._create_field(env, babel_field)
+                api_type_fields.append(api_type_field)
         api_type = composite_type_obj(item.name, item.doc, api_type_fields, super_type)
         for example_label, (example_text, example) in item.examples.items():
             api_type.add_example(example_label, example_text, dict(example))
@@ -150,6 +154,8 @@ class TowerOfBabel(object):
         """
         if isinstance(babel_field, BabelSymbol):
             api_type_field = SymbolField(babel_field.name, babel_field.doc)
+        #elif isinstance(babel_field, BabelCatchAllSymbol):
+        #    pass
         elif babel_field.data_type_name not in env:
             raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
         else:
