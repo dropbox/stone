@@ -63,6 +63,16 @@ class BabelSymbol(object):
             self.name,
         )
 
+class BabelCatchAllSymbol(object):
+    def __init__(self, name):
+        self.name = name
+    def __str__(self):
+        return self.__repr__()
+    def __repr__(self):
+        return 'BabelCatchAllSymbol({!r})'.format(
+            self.name,
+        )
+
 class BabelNamespace(object):
     def __init__(self, name):
         self.name = name
@@ -412,6 +422,10 @@ class BabelParser(object):
                 p[0].set_doc(self._normalize_docstring(p[3]))
         else:
             p[0].set_doc(p[4])
+
+    def p_statement_field_catchall(self, p):
+        """field : ASTERIX ID NEWLINE"""
+        p[0] = BabelCatchAllSymbol(p[2])
 
     def p_statement_example(self, p):
         """example : KEYWORD ID STRING NEWLINE INDENT example_field_list DEDENT

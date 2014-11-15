@@ -98,6 +98,7 @@ union ConflictReason
         "Conflict with a file."
     autorename_failed
         "Could not autorename."
+    *unknown
 
 struct ConflictError
     reason ConflictReason

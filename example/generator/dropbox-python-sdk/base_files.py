@@ -492,11 +492,13 @@ class ConflictReason(object):
     Folder = object()
     File = object()
     AutorenameFailed = object()
+    Unknown = object()
 
     def __init__(self,
                  folder=None,
                  file=None,
                  autorename_failed=None,
+                 unknown=None,
                  **kwargs):
         """
         Only one argument can be set.
@@ -504,14 +506,17 @@ class ConflictReason(object):
         :param bool folder: Conflict with a folder.
         :param bool file: Conflict with a file.
         :param bool autorename_failed: Could not autorename.
+        :type unknown: bool
         """
         assert_only_one(folder=folder,
                         file=file,
                         autorename_failed=autorename_failed,
+                        unknown=unknown,
                         **kwargs)
         self.folder = None
         self.file = None
         self.autorename_failed = None
+        self.unknown = None
 
         if folder is not None:
             assert isinstance(folder, bool), 'folder must be of type bool'
@@ -528,6 +533,11 @@ class ConflictReason(object):
             self.autorename_failed = autorename_failed
             self._tag = 'autorename_failed'
 
+        if unknown is not None:
+            assert isinstance(unknown, bool), 'unknown must be of type bool'
+            self.unknown = unknown
+            self._tag = 'unknown'
+
     def is_folder(self):
         return self._tag == 'folder'
 
@@ -536,6 +546,9 @@ class ConflictReason(object):
 
     def is_autorename_failed(self):
         return self._tag == 'autorename_failed'
+
+    def is_unknown(self):
+        return self._tag == 'unknown'
 
     @classmethod
     def from_json(self, obj):
@@ -547,6 +560,8 @@ class ConflictReason(object):
             return obj
         if obj == 'autorename_failed':
             return obj
+        if obj == 'unknown':
+            return obj
         return ConflictReason(**obj)
 
     def to_json(self):
@@ -555,6 +570,8 @@ class ConflictReason(object):
         if self._tag == 'file':
             return self._tag
         if self._tag == 'autorename_failed':
+            return self._tag
+        if self._tag == 'unknown':
             return self._tag
 
     def __repr__(self):
@@ -574,6 +591,8 @@ class ConflictError(object):
             self.reason = ConflictReason(file=True)
         if reason == ConflictReason.AutorenameFailed:
             self.reason = ConflictReason(autorename_failed=True)
+        if reason == ConflictReason.Unknown:
+            self.reason = ConflictReason(unknown=True)
 
     @classmethod
     def from_json(cls, obj):

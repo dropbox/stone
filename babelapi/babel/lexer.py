@@ -129,12 +129,17 @@ class BabelLexer(object):
         'STRING',
     )
 
+    tokens += (
+        'ASTERIX',
+    )
+
     # Regular expression rules for simple tokens
     t_LPAR  = r'\('
     t_RPAR  = r'\)'
     t_EQ = r'='
     t_COMMA = r','
     t_PIPE = r'\|'
+    t_ASTERIX = r'\*'
 
     KEYWORDS = [
         'alias',
