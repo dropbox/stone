@@ -1,0 +1,123 @@
+namespace users
+
+alias AccountId = String(min_length=40, max_length=40)
+
+struct Space
+    "The space quota info for a user."
+
+    quota UInt64
+        "The user's total quota allocation (bytes)."
+    private UInt64
+        "The user's used quota outside of shared folders (bytes)."
+    shared UInt64
+        "The user's used quota in shared folders (bytes)."
+    datastores UInt64
+        "The user's used quota in datastores (bytes)."
+
+    example default
+        quota=1000000
+        private=1000
+        shared=500
+        datastores=42
+
+struct Team
+    "Information about a team."
+
+    id String
+        "The team's unique ID."
+    name String
+        "The name of the team."
+
+    example default
+        id="dbtid:AAFdgehTzw7WlXhZJsbGCLePe8RvQGYDr-I"
+        name="Acme, Inc."
+
+# TODO(kelkabany): Consider moving display_name to BasicAccountInfo as account_name
+
+struct Name
+    "Contains several ways a name might be represented to make
+    internationalization more convenient."
+
+    given_name String
+        "Also known as a first name."
+    surname String
+        "Also known as a last name or family name."
+    familiar_name String
+        "Locale-dependent familiar name. Generally matches :field:`given_name` or
+        :field:`display_name`."
+    display_name String
+        "A name that can be used directly to represent the name of a user's
+        Dropbox account."
+
+    example default
+        given_name="Franz"
+        surname="Ferdinand"
+        familiar_name="Franz Ferdinand"
+        display_name="Franz Ferdinand (Personal)"
+
+struct BasicAccountInfo
+    "Basic information about a user's account."
+
+    account_id AccountId
+        "The user's unique Dropbox ID."
+    name Name
+        "Details of a user's name."
+
+struct MeInfo extends BasicAccountInfo
+    "Information about a user's account."
+
+    email String
+        "The user's e-mail address."
+    country String(min_length=2, max_length=2)|Null
+        "The user's two-letter country code, if available."
+    locale String(min_length=2, max_length=2)
+        "The language setting that user specified."
+    referral_link String
+        "The user's :link:`referral link https://www.dropbox.com/referrals`."
+    space Space
+        "The user's quota."
+    team Team|Null
+        "If this account is a member of a team."
+    is_paired Boolean
+        "Whether the user has a personal and work account. If the authorized
+        account is personal, then :field:`team` will always be :val:`Null`,
+        but :field:`is_paired` will indicate if a work account is linked."
+
+    example default "Paired account"
+        account_id="dbid:AAH4f99T0taONIb-OurWxbNQ6ywGRopQngc"
+        email="franz@dropbox.com"
+        country="US"
+        locale="en"
+        referral_link="https://db.tt/ZITNuhtI"
+        is_paired=true
+
+    example unpaired "Unpaired account"
+        account_id="dbid:AAH4f99T0taONIb-OurWxbNQ6ywGRopQngc"
+        email="franz@gmail.com"
+        country="US"
+        locale="en"
+        referral_link="https://db.tt/ZITNuhtI"
+        team=null
+        is_paired=false
+
+union AccountInfo
+    "The amount of detail revealed about an account depends on the user
+    being queried and the user making the query."
+
+    me MeInfo
+    teammate BasicAccountInfo
+    user BasicAccountInfo
+
+struct InfoRequest
+    account_id AccountId
+        "A user's account identifier."
+
+union InfoError
+    no_account
+        "The specified :field:`account_id` does not exist."
+
+route Info (InfoRequest, AccountInfo, InfoError)
+    "Get information about a user's account."
+
+route InfoMe /info/me (Empty, MeInfo, Empty)
+    "Get information about the authorized user's account."

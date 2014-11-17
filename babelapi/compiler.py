@@ -55,13 +55,20 @@ class Compiler(object):
         )
 
     def build(self):
-        """Replicates the file tree in the source path into the build path, but
-        also renders each templated file."""
+        """Creates outputs. Outputs may be renderings of templates or files
+        made by a code generator."""
+        if os.path.exists(self.build_path) and not os.path.isdir(self.build_path):
+            self._logger.error('Output path must be a folder if it already exists')
+            return
 
         if os.path.exists(self.generator_path):
-            self._logger.info('Found generator at %s', self.generator_path)
-            Compiler._mkdir(self.build_path)
-            self._process_file(self.generator_path, self.build_path)
+            if os.path.isdir(self.generator_path):
+                self._logger.error('Folder specified as generator at %s',
+                                   self.generator_path)
+            else:
+                self._logger.info('Found generator at %s', self.generator_path)
+                Compiler._mkdir(self.build_path)
+                self._process_file(self.generator_path, self.build_path)
         else:
             self._logger.error('Could not find generator at %s', self.generator_path)
 
