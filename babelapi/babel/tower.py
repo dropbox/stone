@@ -120,25 +120,30 @@ class TowerOfBabel(object):
     def _create_type(self, env, item):
         super_type = None
         if item.composite_type == 'struct':
-            composite_type_obj = Struct
             if item.extends:
                 if item.extends not in env:
                     raise Exception('Data type %r is undefined' % item.extends)
                 else:
                     super_type = env.get(item.extends)
+            api_type_fields = []
+            for babel_field in item.fields:
+                api_type_field = self._create_field(env, babel_field)
+                api_type_fields.append(api_type_field)
+            api_type = Struct(item.name, item.doc, api_type_fields, super_type)
         elif item.composite_type == 'union':
-            composite_type_obj = Union
+            catch_all_field = None
+            api_type_fields = []
+            for babel_field in item.fields:
+                if isinstance(babel_field, BabelCatchAllSymbol):
+                    catch_all_field = babel_field.name
+                else:
+                    api_type_field = self._create_field(env, babel_field)
+                    api_type_fields.append(api_type_field)
+            api_type = Union(item.name, item.doc, api_type_fields, super_type,
+                             catch_all_field)
         else:
             raise ValueError('Unknown composite_type %r'
                              % item.composite_type)
-        api_type_fields = []
-        for babel_field in item.fields:
-            if isinstance(babel_field, BabelCatchAllSymbol):
-                pass
-            else:
-                api_type_field = self._create_field(env, babel_field)
-                api_type_fields.append(api_type_field)
-        api_type = composite_type_obj(item.name, item.doc, api_type_fields, super_type)
         for example_label, (example_text, example) in item.examples.items():
             api_type.add_example(example_label, example_text, dict(example))
         env[item.name] = api_type

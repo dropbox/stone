@@ -5,6 +5,7 @@ from babelapi.babel.parser import (
     BabelAlias,
     BabelField,
     BabelParser,
+    BabelCatchAllSymbol,
     BabelSymbol,
     BabelTypeDef,
 )
@@ -164,6 +165,19 @@ union Role
         self.assertEqual(out[1].fields[2].name, 'editor')
 
         # TODO: Test a union that includes a struct.
+
+        text = """
+namespace files
+
+union Error
+    A
+        "Variant A"
+    B
+        "Variant B"
+    *UNK
+"""
+        out = self.parser.parse(text)
+        self.assertTrue(isinstance(out[1].fields[2], BabelCatchAllSymbol))
 
     def test_route_decl(self):
         text = """

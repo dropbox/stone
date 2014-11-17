@@ -17,6 +17,7 @@ struct SubError
 union DownloadError
     disallowed SubError
     no_file SubError
+    *unknown
 
 route Download (FileTarget, FileInfo, DownloadError)
     "Download a file in a user's Dropbox."
@@ -98,7 +99,6 @@ union ConflictReason
         "Conflict with a file."
     autorename_failed
         "Could not autorename."
-    *unknown
 
 struct ConflictError
     reason ConflictReason
