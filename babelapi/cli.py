@@ -19,19 +19,25 @@ def main():
         '-v',
         '--verbose',
         action='store_true',
-        help='Print debugging statements.'
+        help='Print debugging statements.',
     )
     cmdline_parser.add_argument(
-        '-t',
-        '--target-path',
+        'generator',
         type=str,
-        help='The path to save compiled source files to.'
+        help='The path to the generator (*.py).',
     )
-    cmdline_parser.add_argument('api', nargs='+', type=str, help='Babel files describing the API.')
     cmdline_parser.add_argument(
-        'path',
-        help='The path to the template SDK for the target language.',
+        'spec',
+        nargs='+',
+        type=str,
+        help='Path to API specifications (*.babel).',
     )
+    cmdline_parser.add_argument(
+        'output',
+        type=str,
+        help='The folder to save generated files to.',
+    )
+
     cmdline_parser.add_argument(
         '--clean-build',
         action='store_true',
@@ -46,11 +52,8 @@ def main():
         logging_level = logging.INFO
     logging.basicConfig(level=logging_level)
 
-    logging.info('Analyzing these API specifications: %r', args.api)
-
-    if args.api[0].endswith('.py'):
-        # Special case if the API description file ends in .py
-        # Assume it's an internal representation used for testing.
+    if args.spec[0].startswith('+') and args.spec[0].endswith('.py'):
+        # Hack: Special case for defining a spec in Python for testing purposes
         try:
             api = imp.load_source('api', args.api[0]).api
         except ImportError as e:
@@ -58,18 +61,13 @@ def main():
             sys.exit(1)
     else:
         # TODO: Needs version
-        tower = TowerOfBabel(args.api, debug=debug)
+        tower = TowerOfBabel(args.spec, debug=debug)
         api = tower.parse()
-
-    if args.target_path:
-        build_path = os.path.join(args.target_path, os.path.basename(args.path))
-    else:
-        build_path = None
 
     c = Compiler(
         api,
-        args.path,
-        build_path,
+        args.generator,
+        args.output,
         clean_build=args.clean_build,
     )
     c.build()

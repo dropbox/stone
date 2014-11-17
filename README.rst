@@ -70,14 +70,14 @@ you can replace ``babelapi`` with ``python -m babelapi.cli`` as follows::
 Simple Example
 --------------
 
-You can compile an example spec describing the Dropbox API and apply it to a
-Python code generator::
+You can compile an example spec, ``users.babel`` describing the Dropbox API and
+generate Python code using ``base_namespace.babelg.py``::
 
-   $ babelapi example/api/dbx-core/users.babel example/generator/dropbox-python-sdk/
+   $ babelapi example/generator/dropbox-python-sdk/dbx_python_json.babelg.py example/api/dbx-core/users.babel output/
 
 You can view the generated code at::
 
-   $ example/generator/dropbox-python-sdk/base_users.py
+   $ output/base_users.py
 
 File Types
 ==========
@@ -95,7 +95,7 @@ Header (.babelh extension)
 Headers define only data types available in an API. Headers can be included
 in spec files so that common data types can be re-used.
 
-Code Generator (.babelt.py extension)
+Code Generator (.babelg.py extension)
 --------------------------------------
 
 Code generators are Python modules that implement the abstract
@@ -455,8 +455,8 @@ Defining a Code Generator
 A code generator is a Python class which will generate code for a target language
 given an API description. A code generator must satisfy the following conditions:
 
-1. The filename must have ``.babelt.py`` as its extension. For example,
-   ``example.babelt.py``
+1. The filename must have ``.babelg.py`` as its extension. For example,
+   ``example.babelg.py``
 
 2. A class must exist in the file that extends the
    ``babelapi.generator.generator.CodeGenerator`` class and implements the
@@ -480,7 +480,7 @@ folder.
 Example 1: List All Namespaces
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We'll create a generator ``ex1.babelt.py`` that generates a file called
+We'll create a generator ``ex1.babelg.py`` that generates a file called
 ``ex1.out``. Each line in the file will be the name of a defined namespace::
 
     from babelapi.generator.generator import CodeGenerator
@@ -499,6 +499,7 @@ Run the generator from the root of the BabelAPI folder using the example specs
 we've provided::
 
     $ babelapi example/api/dbx-core*.babel example/generator/ex1
+    $ babelapi example/generator/ex1/ex1.babelg.py example/api/dbx-core/*.babel output/ex1
 
 Now examine the contents of the output::
 
@@ -566,14 +567,14 @@ class to ``True``.
 Run the generator from the root of the BabelAPI folder using the example specs
 we've provided::
 
-    $ babelapi example/api/dbx-core*.babel example/generator/ex2
+    $ babelapi example/generator/ex2/ex2.babelg.py example/api/dbx-core/*.babel output/ex2
 
 Now examine the contents of the output::
 
-    $ cat example/generator/ex2/files.py
+    $ cat output/ex2/files.py
     def noop():
         pass
-    $ cat example/generator/ex2/users.py
+    $ cat output/ex2/users.py
     def noop():
         pass
 

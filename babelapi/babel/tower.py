@@ -70,7 +70,7 @@ class TowerOfBabel(object):
         """Creates a new tower of babel."""
 
         self._debug = debug
-        self._logger = logging.getLogger('babelapi.dsl.tower')
+        self._logger = logging.getLogger('babelapi.idl')
 
         self.api = Api(version=version)
 
@@ -86,6 +86,7 @@ class TowerOfBabel(object):
     def parse(self):
         """Parses each Babel file and returns an API description."""
         for path, scripture in self._scriptures:
+            self._logger.info('Parsing spec %s', path)
             res = self.parse_scripture(scripture)
             if res:
                 self.add_to_api(path, res)

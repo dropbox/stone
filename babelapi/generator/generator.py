@@ -145,7 +145,7 @@ class CodeGenerator(object):
         Clears output buffer on enter, and on exit.
         """
         full_path = os.path.join(self.target_folder_path, relative_path)
-        self._logger.info('Auto-generating %s', full_path)
+        self._logger.info('Generating %s', full_path)
         self.output = []
         yield
         with open(full_path, 'w') as f:
