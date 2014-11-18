@@ -378,9 +378,9 @@ DbxTimestamp, which sets this format, and can be used in struct and union defini
 Routes
 ------
 
-Routes map to your API endpoints. You specify a data type that represents the
-input data in a request. Equivalently, a data type is set to represent the
-response of a endpoint. Lastly, a data type for errors can be listed.::
+Routes map to your API endpoints. You specify data types that represent the
+input and output of a request. An optional third argument is a data type for
+representing errors that may be returned::
 
     struct AccountInfoRequest
         "Input to request."
@@ -389,7 +389,13 @@ response of a endpoint. Lastly, a data type for errors can be listed.::
             "A user's account identifier. Use "me" to get information for the
             current account."
 
-    route GetInfo (AccountInfoRequest, AccountInfo)
+    union AccountInfoError
+        no_account
+            "If the requested account could not be found"
+        no_access
+            "Information cannot be retrieved due to access permissions"
+
+    route GetInfo (AccountInfoRequest, AccountInfo, AccountInfoError)
         "Get user account information"
 
 .. _default_value_example:
