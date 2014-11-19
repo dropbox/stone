@@ -190,12 +190,12 @@ class MeInfo(BasicAccountInfo):
                  account_id,
                  name,
                  email,
-                 country,
                  locale,
                  referral_link,
                  space,
-                 team,
                  is_paired,
+                 country=None,
+                 team=None,
                  **kwargs):
         """
         :param str email: The user's e-mail address.
@@ -251,12 +251,14 @@ class MeInfo(BasicAccountInfo):
         d = dict(account_id=self.account_id,
                  name=self.name.to_json(),
                  email=self.email,
-                 country=self.country,
                  locale=self.locale,
                  referral_link=self.referral_link,
                  space=self.space.to_json(),
-                 team=self.team.to_json(),
                  is_paired=self.is_paired)
+        if self.country:
+            d['country'] = self.country
+        if self.team:
+            d['team'] = self.team.to_json()
         return d
 
     def __repr__(self):

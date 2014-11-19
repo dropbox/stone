@@ -244,7 +244,6 @@ class Field(object):
                  name,
                  data_type,
                  doc,
-                 nullable=False,
                  optional=False,
                  deprecated=False):
         """
@@ -253,14 +252,12 @@ class Field(object):
         :param str name: Name of the field.
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
-        :param bool nullable: Whether the field can be null.
         :param bool optional: Whether the field can be absent.
         :param bool deprecated: Whether the field is deprecated.
         """
         self.name = name
         self.data_type = data_type
         self.doc = doc
-        self.nullable = nullable
         self.optional = optional
         self.deprecated = deprecated
         self.has_default = False
@@ -279,18 +276,17 @@ class Field(object):
 
     def check(self, val):
         if val is None:
-            if self.nullable:
+            if self.optional:
                 return None
             else:
-                raise ValueError('val is None but field is not nullable')
+                raise ValueError('val is None but field is not optional')
         else:
             return self.data_type.check(val)
 
     def __repr__(self):
-        return 'Field(%r, %r, %r, %r)' % (self.name,
-                                          self.data_type,
-                                          self.nullable,
-                                          self.optional)
+        return 'Field(%r, %r, %r)' % (self.name,
+                                      self.data_type,
+                                      self.optional)
 
 class SymbolField(object):
     symbol = True
@@ -473,7 +469,7 @@ class Struct(CompositeType):
                 if isinstance(field.data_type, CompositeType):
                     # An example that specifies the key as null is okay if the
                     # field permits it.
-                    if field.nullable and example[field.name] is None:
+                    if field.optional and example[field.name] is None:
                         ordered_example[field.name] = None
                     else:
                         raise KeyError('Field %r should not be specified since '

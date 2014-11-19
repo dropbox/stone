@@ -342,7 +342,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                                 field.name,
                                 self._is_instance_type(field.data_type),
                             )
-                            if field.nullable or field.optional:
+                            if field.optional:
                                 # We conflate nullability and optionality in Python
                                 self.emit_line('if {} is not None:'.format(field.name))
                                 with self.indent():
@@ -356,7 +356,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                             field.name,
                             self._is_instance_type(field.data_type),
                         )
-                        if field.nullable or field.optional:
+                        if field.optional:
                             # We conflate nullability and optionality in Python
                             self.emit_line('if {} is not None:'.format(field.name))
                             with self.indent():
@@ -828,7 +828,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
             args.append('f')
         if not is_null_type(request_data_type):
             for field in request_data_type.all_fields:
-                if field.optional or field.nullable:
+                if field.optional:
                     if field.has_default:
                         arg = '{}={}'.format(field.name, self.lang.format_obj(field.default))
                         args.append(arg)

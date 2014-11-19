@@ -102,7 +102,7 @@ class BabelLexer(object):
 
     # Tokens related to free text
     tokens += (
-       'LINE',
+        'LINE',
     )
 
     # Whitespace tokens
@@ -131,6 +131,7 @@ class BabelLexer(object):
 
     tokens += (
         'ASTERIX',
+        'Q',
     )
 
     # Regular expression rules for simple tokens
@@ -140,6 +141,7 @@ class BabelLexer(object):
     t_COMMA = r','
     t_PIPE = r'\|'
     t_ASTERIX = r'\*'
+    t_Q = r'\?'
 
     KEYWORDS = [
         'alias',
@@ -152,10 +154,8 @@ class BabelLexer(object):
         'include',
         'namespace',
         'of',
-        'optional',
         'pass',
         'request',
-        'required',
         'response',
         'route',
         'struct',
@@ -168,9 +168,7 @@ class BabelLexer(object):
         'attrs': 'ATTRS',
         'include': 'INCLUDE',
         'of': 'OF',
-        'optional': 'OPTIONAL',
         'pass': 'PASS',
-        'required': 'REQUIRED',
         'route': 'ROUTE',
         'struct': 'STRUCT',
         'union': 'UNION',

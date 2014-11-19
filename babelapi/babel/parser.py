@@ -115,7 +115,6 @@ class BabelField(object):
                  name,
                  data_type_name,
                  data_type_attrs,
-                 nullable,
                  optional,
                  deprecated):
         """
@@ -125,7 +124,6 @@ class BabelField(object):
         self.data_type_name = data_type_name
         self.data_type_attrs = data_type_attrs
         self.doc = None
-        self.nullable = nullable
         self.has_default = False
         self.default = None
         self.optional = optional
@@ -372,25 +370,10 @@ class BabelParser(object):
         p[0] = p[1]
         p[0].append(p[2])
 
-    def p_field_nullable(self, p):
-        """nullable : PIPE ID
+    def p_field_optional(self, p):
+        """optional : Q
                     | empty"""
-        if p[1] is not None:
-            if p[2] != 'Null':
-                raise ValueError('Only Null can be specified in a union')
-            else:
-                p[0] = True
-        else:
-            p[0] = False
-
-    def p_field_presence(self, p):
-        """presence : REQUIRED
-                    | OPTIONAL
-                    | empty"""
-        if bool(p[1]):
-            p[0] = (p[1] == 'optional')
-        else:
-            p[0] = False
+        p[0] = p[1] == '?'
 
     def p_field_deprecation(self, p):
         """deprecation : DEPRECATED
@@ -411,22 +394,17 @@ class BabelParser(object):
         p[0] = p[1]
 
     def p_statement_field(self, p):
-        """field : ID ID attributes_group nullable default_option presence deprecation COLON docstring DEDENT
-                 | ID ID attributes_group nullable default_option presence deprecation NEWLINE INDENT docstring NEWLINE DEDENT
-                 | ID ID attributes_group nullable default_option presence deprecation NEWLINE"""
-
-        has_old_style_docstring = (p[8] == ':')
-        has_new_style_docstring = not has_old_style_docstring and len(p) > 9
-        p[0] = BabelField(p[1], p[2], p[3], p[4], p[6], p[7])
+        """field : ID ID attributes_group optional default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT
+                 | ID ID attributes_group optional default_option deprecation NEWLINE"""
+        has_docstring = len(p) > 9
+        p[0] = BabelField(p[1], p[2], p[3], p[4], p[6])
         if p[5] is not None:
             if p[5] is BabelNull:
                 p[0].set_default(None)
             else:
                 p[0].set_default(p[5])
-        if has_old_style_docstring:
-            p[0].set_doc(self._normalize_docstring(p[9]))
-        elif has_new_style_docstring:
-            p[0].set_doc(p[10])
+        elif has_docstring:
+            p[0].set_doc(p[9])
 
     def p_statement_field_symbol(self, p):
         """field : ID COLON docstring DEDENT

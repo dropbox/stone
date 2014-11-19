@@ -218,12 +218,14 @@ Types can also be composed of other types::
            is_paired=false
            team=null
 
-Nullability
+Optionality
 ^^^^^^^^^^^
 
-Note in the preceding example that the ``AccountInfo.team`` field can be a
-``Team`` struct or ``Null``. By default, fields do not accept ``null`` as a
-valid value unless explicitly indicated.
+Note in the preceding example that the ``AccountInfo.team`` field has a data
+type of ``Team`` followed by ``?``. ``?`` indicates that the field is optional.
+To specify that the field is absent, you can use ``null`` in the example
+definitions. By default, fields do not accept ``null`` as a valid value unless
+the field is marked optional.
 
 Type Inheritance
 ^^^^^^^^^^^^^^^^
@@ -250,7 +252,7 @@ A struct can also inherit from another struct using the ``extends`` keyword::
             "File size in bytes."
         mime_type String|Null
             "The Internet media type determined by the file extension."
-        media_info MediaInfo optional
+        media_info MediaInfo?
             "Information specific to photo and video media."
 
         example default
@@ -260,13 +262,6 @@ A struct can also inherit from another struct using the ``extends`` keyword::
             mime_type="image/jpg"
             modified="Sat, 28 Jun 2014 18:23:21"
             is_deleted=false
-
-Optional Fields
-^^^^^^^^^^^^^^^
-Note in the preceding example the use of the ``optional`` keyword which denotes
-that the field may not be present. We do not conflate the optionality of a field
-with the nullability of a field's data_type. However, these concepts may be
-intentionally conflated in languages that don't maintain a strict difference.
 
 Default Values
 ^^^^^^^^^^^^^^

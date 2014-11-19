@@ -68,7 +68,7 @@ struct MeInfo extends BasicAccountInfo
 
     email String
         "The user's e-mail address."
-    country String(min_length=2, max_length=2)|Null
+    country String(min_length=2, max_length=2)?
         "The user's two-letter country code, if available."
     locale String(min_length=2, max_length=2)
         "The language setting that user specified."
@@ -76,7 +76,7 @@ struct MeInfo extends BasicAccountInfo
         "The user's :link:`referral link https://www.dropbox.com/referrals`."
     space Space
         "The user's quota."
-    team Team|Null
+    team Team?
         "If this account is a member of a team."
     is_paired Boolean
         "Whether the user has a personal and work account. If the authorized

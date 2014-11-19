@@ -81,12 +81,12 @@ struct UploadCommit
         "Path in the user's Dropbox to save the file."
     mode ConflictPolicy
         "The course of action to take if a file already exists at :field:`path`."
-    append_to UploadAppend|Null optional
+    append_to UploadAppend?
         "If specified, the current chunk of data should be appended to an
         existing upload session."
     autorename Boolean = false optional
         "Whether the file should be autorenamed in the event of a conflict."
-    client_modified_utc UInt64|Null = null optional
+    client_modified_utc UInt64? = null
         "Self reported time of when this file was created or modified."
     mute Boolean = false optional
         "Whether the devices that the user has linked should notify them of the

@@ -455,12 +455,9 @@ class UploadCommit(object):
         :param append_to: If specified, the current chunk of data should be
             appended to an existing upload session.
         :type append_to: :class:`UploadAppend`
-        :param bool autorename: Whether the file should be autorenamed in the
-            event of a conflict.
-        :param long client_modified_utc: Self reported time of when this file
-            was created or modified.
-        :param bool mute: Whether the devices that the user has linked should
-            notify them of the new or updated file.
+        :type autorename: bool
+        :type client_modified_utc: long
+        :type mute: bool
         """
         assert isinstance(path, six.string_types), 'path must be of type six.string_types'
         self.path = path
@@ -1001,12 +998,9 @@ class BaseFiles(Namespace):
         :param append_to: If specified, the current chunk of data should be
             appended to an existing upload session.
         :type append_to: :class:`UploadAppend`
-        :param bool autorename: Whether the file should be autorenamed in the
-            event of a conflict.
-        :param long client_modified_utc: Self reported time of when this file
-            was created or modified.
-        :param bool mute: Whether the devices that the user has linked should
-            notify them of the new or updated file.
+        :type autorename: bool
+        :type client_modified_utc: long
+        :type mute: bool
         :rtype: :class:`FileInfo`
         :raises: :class:`dropbox.exceptions.ApiError`
 
