@@ -703,10 +703,18 @@ class File(object):
                  size,
                  **kwargs):
         """
-        :type client_modified: datetime
-        :type server_modified: datetime
-        :type rev: str
-        :type size: long
+        :param datetime client_modified: For files, this is the modification
+            time set by the desktop client when the file was added to Dropbox.
+            Since this time is not verified (the Dropbox server stores whatever
+            the desktop client sends up), this should only be used for display
+            purposes (such as sorting) and not, for example, to determine if a
+            file has changed or not.
+        :param datetime server_modified: The last time the file was modified on
+            Dropbox.
+        :param str rev: A unique identifier for the current revision of a file.
+            This field is the same rev as elsewhere in the API and can be used
+            to detect changes and avoid conflicts.
+        :param long size: The file size in bytes.
         """
         assert isinstance(client_modified, datetime.datetime), 'client_modified must be of type datetime.datetime'
         self.client_modified = client_modified
