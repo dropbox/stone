@@ -1,4 +1,5 @@
 import copy
+import datetime
 import numbers
 import six
 
@@ -22,18 +23,41 @@ class Empty(object):
     def __repr__(self):
         return 'Empty()'
 
-class FileTarget(object):
+class PathTarget(object):
+
+    def __init__(self,
+                 path,
+                 **kwargs):
+        """
+        :param str path: Path from root. Should be an empty string for root.
+        """
+        assert isinstance(path, six.string_types), 'path must be of type six.string_types'
+        self.path = path
+
+    @classmethod
+    def from_json(cls, obj):
+        obj = copy.copy(obj)
+        return PathTarget(**obj)
+
+    def to_json(self):
+        d = dict(path=self.path)
+        return d
+
+    def __repr__(self):
+        return 'PathTarget(%r)' % self.path
+
+class FileTarget(PathTarget):
 
     def __init__(self,
                  path,
                  rev=None,
                  **kwargs):
         """
-        :param str path: Path from root. Should be an empty string for root.
         :param str rev: Revision of target file.
         """
-        assert isinstance(path, six.string_types), 'path must be of type six.string_types'
-        self.path = path
+        super(FileTarget, self).__init__(
+            path,
+        )
 
         if rev is not None:
             assert isinstance(rev, six.string_types), 'rev must be of type six.string_types'
@@ -51,7 +75,7 @@ class FileTarget(object):
         return d
 
     def __repr__(self):
-        return 'FileTarget(%r)' % self.path
+        return 'FileTarget(%r)' % self.rev
 
 class FileInfo(object):
 
@@ -332,60 +356,60 @@ class ConflictPolicy(object):
     """
     The action to take when a file path conflict exists.
 
-    :ivar Overwrite: On a conflict, the target is overridden.
     :ivar Add: On a conflict, the upload is rejected. You can call the
-        :meth:`upload` endpoint again and attempt a different path.
+        :meth:`upload` endpoint again and try a different path.
+    :ivar Overwrite: On a conflict, the target is overridden.
     :ivar Update: On a conflict, only overwrite the target if the parent_rev
         matches.
     """
 
-    Overwrite = object()
     Add = object()
+    Overwrite = object()
     Update = UpdateParentRev
 
     def __init__(self,
-                 overwrite=None,
                  add=None,
+                 overwrite=None,
                  update=None,
                  **kwargs):
         """
         Only one argument can be set.
 
-        :param bool overwrite: On a conflict, the target is overridden.
         :param bool add: On a conflict, the upload is rejected. You can call the
-            :meth:`upload` endpoint again and attempt a different path.
+            :meth:`upload` endpoint again and try a different path.
+        :param bool overwrite: On a conflict, the target is overridden.
         :param update: On a conflict, only overwrite the target if the
             parent_rev matches.
         :type update: :class:`UpdateParentRev`
         """
-        assert_only_one(overwrite=overwrite,
-                        add=add,
+        assert_only_one(add=add,
+                        overwrite=overwrite,
                         update=update,
                         **kwargs)
-        self.overwrite = None
         self.add = None
+        self.overwrite = None
         self.update = None
-
-        if overwrite is not None:
-            assert isinstance(overwrite, bool), 'overwrite must be of type bool'
-            self.overwrite = overwrite
-            self._tag = 'overwrite'
 
         if add is not None:
             assert isinstance(add, bool), 'add must be of type bool'
             self.add = add
             self._tag = 'add'
 
+        if overwrite is not None:
+            assert isinstance(overwrite, bool), 'overwrite must be of type bool'
+            self.overwrite = overwrite
+            self._tag = 'overwrite'
+
         if update is not None:
             assert isinstance(update, UpdateParentRev), 'update must be of type UpdateParentRev'
             self.update = update
             self._tag = 'update'
 
-    def is_overwrite(self):
-        return self._tag == 'overwrite'
-
     def is_add(self):
         return self._tag == 'add'
+
+    def is_overwrite(self):
+        return self._tag == 'overwrite'
 
     def is_update(self):
         return self._tag == 'update'
@@ -394,18 +418,18 @@ class ConflictPolicy(object):
     def from_json(self, obj):
         obj = copy.copy(obj)
         assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
-        if obj == 'overwrite':
-            return obj
         if obj == 'add':
+            return obj
+        if obj == 'overwrite':
             return obj
         if 'update' in obj:
             obj['update'] = UpdateParentRev.from_json(obj['update'])
         return ConflictPolicy(**obj)
 
     def to_json(self):
-        if self._tag == 'overwrite':
-            return self._tag
         if self._tag == 'add':
+            return self._tag
+        if self._tag == 'overwrite':
             return self._tag
         if self._tag == 'update':
             return dict(update=self.update.to_json())
@@ -441,12 +465,15 @@ class UploadCommit(object):
         assert isinstance(path, six.string_types), 'path must be of type six.string_types'
         self.path = path
 
-        if mode == ConflictPolicy.Overwrite:
-            self.mode = ConflictPolicy(overwrite=True)
         if mode == ConflictPolicy.Add:
             self.mode = ConflictPolicy(add=True)
-        if isinstance(mode, ConflictPolicy.Update):
+        elif mode == ConflictPolicy.Overwrite:
+            self.mode = ConflictPolicy(overwrite=True)
+        elif isinstance(mode, ConflictPolicy.Update):
             self.mode = ConflictPolicy(update=mode)
+        else:
+            assert isinstance(mode, ConflictPolicy), 'mode must be of type ConflictPolicy'
+            self.mode = mode
 
         if append_to is not None:
             assert isinstance(append_to, UploadAppend), 'append_to must be of type UploadAppend'
@@ -570,10 +597,13 @@ class ConflictError(object):
         """
         if reason == ConflictReason.Folder:
             self.reason = ConflictReason(folder=True)
-        if reason == ConflictReason.File:
+        elif reason == ConflictReason.File:
             self.reason = ConflictReason(file=True)
-        if reason == ConflictReason.AutorenameFailed:
+        elif reason == ConflictReason.AutorenameFailed:
             self.reason = ConflictReason(autorename_failed=True)
+        else:
+            assert isinstance(reason, ConflictReason), 'reason must be of type ConflictReason'
+            self.reason = reason
 
     @classmethod
     def from_json(cls, obj):
@@ -664,6 +694,199 @@ class UploadCommitError(object):
     def __repr__(self):
         return 'UploadCommitError(%r)' % self._tag
 
+class File(object):
+    """
+    A file resource
+    """
+
+    def __init__(self,
+                 client_modified,
+                 server_modified,
+                 rev,
+                 size,
+                 **kwargs):
+        """
+        :type client_modified: datetime
+        :type server_modified: datetime
+        :type rev: str
+        :type size: long
+        """
+        assert isinstance(client_modified, datetime.datetime), 'client_modified must be of type datetime.datetime'
+        self.client_modified = client_modified
+
+        assert isinstance(server_modified, datetime.datetime), 'server_modified must be of type datetime.datetime'
+        self.server_modified = server_modified
+
+        assert isinstance(rev, six.string_types), 'rev must be of type six.string_types'
+        self.rev = rev
+
+        assert isinstance(size, numbers.Integral), 'size must be of type numbers.Integral'
+        self.size = size
+
+    @classmethod
+    def from_json(cls, obj):
+        obj = copy.copy(obj)
+        obj['client_modified'] = datetime.datetime.strptime(obj['client_modified'], '%a, %d %b %Y %H:%M:%S +0000')
+        obj['server_modified'] = datetime.datetime.strptime(obj['server_modified'], '%a, %d %b %Y %H:%M:%S +0000')
+        return File(**obj)
+
+    def to_json(self):
+        d = dict(client_modified=self.client_modified,
+                 server_modified=self.server_modified,
+                 rev=self.rev,
+                 size=self.size)
+        return d
+
+    def __repr__(self):
+        return 'File(%r)' % self.client_modified
+
+class Folder(object):
+    """
+    A folder resource
+    """
+
+    def __init__(self,
+                 **kwargs):
+        pass
+
+    @classmethod
+    def from_json(cls, obj):
+        return Folder(**obj)
+
+    def to_json(self):
+        d = dict()
+        return d
+
+    def __repr__(self):
+        return 'Folder()'
+
+class Metadata(object):
+
+    File = File
+    Folder = Folder
+
+    def __init__(self,
+                 file=None,
+                 folder=None,
+                 **kwargs):
+        """
+        Only one argument can be set.
+
+        :type file: :class:`File`
+        :type folder: :class:`Folder`
+        """
+        assert_only_one(file=file,
+                        folder=folder,
+                        **kwargs)
+        self.file = None
+        self.folder = None
+
+        if file is not None:
+            assert isinstance(file, File), 'file must be of type File'
+            self.file = file
+            self._tag = 'file'
+
+        if folder is not None:
+            assert isinstance(folder, Folder), 'folder must be of type Folder'
+            self.folder = folder
+            self._tag = 'folder'
+
+    def is_file(self):
+        return self._tag == 'file'
+
+    def is_folder(self):
+        return self._tag == 'folder'
+
+    @classmethod
+    def from_json(self, obj):
+        obj = copy.copy(obj)
+        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
+        if 'file' in obj:
+            obj['file'] = File.from_json(obj['file'])
+        if 'folder' in obj:
+            obj['folder'] = Folder.from_json(obj['folder'])
+        return Metadata(**obj)
+
+    def to_json(self):
+        if self._tag == 'file':
+            return dict(file=self.file.to_json())
+        if self._tag == 'folder':
+            return dict(folder=self.folder.to_json())
+
+    def __repr__(self):
+        return 'Metadata(%r)' % self._tag
+
+class Entry(object):
+
+    def __init__(self,
+                 metadata,
+                 name,
+                 **kwargs):
+        """
+        :type metadata: :class:`Metadata`
+        :type name: str
+        """
+        if isinstance(metadata, Metadata.File):
+            self.metadata = Metadata(file=metadata)
+        elif isinstance(metadata, Metadata.Folder):
+            self.metadata = Metadata(folder=metadata)
+        else:
+            assert isinstance(metadata, Metadata), 'metadata must be of type Metadata'
+            self.metadata = metadata
+
+        assert isinstance(name, six.string_types), 'name must be of type six.string_types'
+        self.name = name
+
+    @classmethod
+    def from_json(cls, obj):
+        obj = copy.copy(obj)
+        obj['metadata'] = Metadata.from_json(obj['metadata'])
+        return Entry(**obj)
+
+    def to_json(self):
+        d = dict(metadata=self.metadata.to_json(),
+                 name=self.name)
+        return d
+
+    def __repr__(self):
+        return 'Entry(%r)' % self.metadata
+
+class ListFolderResponse(object):
+
+    def __init__(self,
+                 cursor,
+                 has_more,
+                 entries,
+                 **kwargs):
+        """
+        :type cursor: str
+        :type has_more: bool
+        :type entries: list
+        """
+        assert isinstance(cursor, six.string_types), 'cursor must be of type six.string_types'
+        self.cursor = cursor
+
+        assert isinstance(has_more, bool), 'has_more must be of type bool'
+        self.has_more = has_more
+
+        assert isinstance(entries, list), 'entries must be of type list'
+        self.entries = entries
+
+    @classmethod
+    def from_json(cls, obj):
+        obj = copy.copy(obj)
+        obj['entries'] = [Entry.from_json(e) for e in obj['entries']]
+        return ListFolderResponse(**obj)
+
+    def to_json(self):
+        d = dict(cursor=self.cursor,
+                 has_more=self.has_more,
+                 entries=self.entries)
+        return d
+
+    def __repr__(self):
+        return 'ListFolderResponse(%r)' % self.cursor
+
 class BaseFiles(Namespace):
     """Methods for routes in the files namespace"""
 
@@ -673,7 +896,6 @@ class BaseFiles(Namespace):
         """
         Download a file in a user's Dropbox.
 
-        :param str path: Path from root. Should be an empty string for root.
         :param str rev: Revision of target file.
         :rtype: :class:`FileInfo`, :class:`requests.models.Response`
         :raises: :class:`dropbox.exceptions.ApiError`
@@ -700,7 +922,6 @@ class BaseFiles(Namespace):
         Download a file in a user's Dropbox.
 
         :param str download_path: Path on local machine to save file.
-        :param str path: Path from root. Should be an empty string for root.
         :param str rev: Revision of target file.
         :rtype: :class:`FileInfo`
         :raises: :class:`dropbox.exceptions.ApiError`
@@ -809,4 +1030,38 @@ class BaseFiles(Namespace):
                                   o,
                                   f)
         return FileInfo.from_json(r.obj_segment)
+
+    def get_metadata(self,
+                     path,
+                     rev=None):
+        """
+        Returns the metadata for a file or folder.
+
+        :param str rev: Revision of target file.
+        :rtype: :class:`Entry`
+        """
+        o = FileTarget(path,
+                       rev).to_json()
+        r = self._dropbox.request(Dropbox.Host.API,
+                                  'files/get_metadata',
+                                  Dropbox.RouteStyle.RPC,
+                                  o,
+                                  None)
+        return Entry.from_json(r.obj_segment)
+
+    def list_folder(self,
+                    path):
+        """
+        Returns the contents of a folder.
+
+        :param str path: Path from root. Should be an empty string for root.
+        :rtype: :class:`ListFolderResponse`
+        """
+        o = PathTarget(path).to_json()
+        r = self._dropbox.request(Dropbox.Host.API,
+                                  'files/list_folder',
+                                  Dropbox.RouteStyle.RPC,
+                                  o,
+                                  None)
+        return ListFolderResponse.from_json(r.obj_segment)
 

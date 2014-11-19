@@ -60,7 +60,7 @@ class Jinja2Generator(Generator):
         self.template_env.filters['is_union'] = lambda s: isinstance(s, Union)
         self.template_env.filters['is_composite'] = lambda s: isinstance(s, Union)
         def formalize(s):
-            return ' '.join(word.capitalize() for word in TargetLanguage._split_words(s))
+            return ' '.join(word.capitalize() for word in TargetLanguage.split_words(s))
         self.template_env.filters['formal'] = lambda s: formalize(s)
 
         # Filters for making it easier to render code (as opposed to HTML)

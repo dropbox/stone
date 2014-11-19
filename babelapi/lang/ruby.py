@@ -48,10 +48,10 @@ class RubyTargetLanguage(TargetLanguage):
         return pprint.pformat(o, width=1)
 
     def format_variable(self, name):
-        return '_'.join([word.lower() for word in self._split_words(name)])
+        return '_'.join([word.lower() for word in self.split_words(name)])
 
     def format_class(self, name):
-        return ''.join([word.capitalize() for word in self._split_words(name)])
+        return ''.join([word.capitalize() for word in self.split_words(name)])
 
     def format_method(self, name):
-        return '_'.join([word.lower() for word in self._split_words(name)])
+        return '_'.join([word.lower() for word in self.split_words(name)])

@@ -2,7 +2,7 @@ from .base_files import (
     BaseFiles,
     ConflictPolicy as _ConflictPolicy,
     UpdateParentRev as _UpdateParentRev,
-    Append,
+    UploadAppend,
 )
 
 ConflictPolicy = _ConflictPolicy
@@ -88,7 +88,7 @@ class ChunkedUploader(object):
                 insufficient_quota: User does not have sufficient space quota to
                     save the file.
         """
-        append_to = Append(self.upload_id, self.offset)
+        append_to = UploadAppend(self.upload_id, self.offset)
 
         return self.files_client.upload_session_finish(
             None,

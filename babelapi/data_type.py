@@ -615,9 +615,13 @@ def is_binary_type(data_type):
     return isinstance(data_type, Binary)
 def is_composite_type(data_type):
     return isinstance(data_type, CompositeType)
+def is_list_type(data_type):
+    return isinstance(data_type, List)
 def is_null_type(data_type):
     return isinstance(data_type, Null)
 def is_struct_type(data_type):
     return isinstance(data_type, Struct)
+def is_timestamp_type(data_type):
+    return isinstance(data_type, Timestamp)
 def is_union_type(data_type):
     return isinstance(data_type, Union)

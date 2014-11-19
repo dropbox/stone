@@ -28,8 +28,10 @@ from babelapi.data_type import (
 )
 from babelapi.data_type import (
     is_composite_type,
+    is_list_type,
     is_null_type,
     is_struct_type,
+    is_timestamp_type,
     is_union_type,
 )
 from babelapi.generator.generator import CodeGeneratorMonolingual
@@ -37,6 +39,7 @@ from babelapi.lang.python import PythonTargetLanguage
 
 base = """\
 import copy
+import datetime
 import numbers
 import six
 
@@ -304,9 +307,11 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                         # dbx.files.upload(mode=UploadMode(overwrite=UploadMode.Overwrite))
                         # and
                         # dbx.files.upload(mode=UploadMode.Overwrite)
+                        if_stmt = 'if'
                         for variant in field.data_type.fields:
                             if isinstance(variant, SymbolField):
-                                self.emit_line('if {0} == {1}.{2}:'.format(
+                                self.emit_line('{} {} == {}.{}:'.format(
+                                    if_stmt,
                                     field.name,
                                     self._class_name_for_data_type(field.data_type),
                                     self.lang.format_class(variant.name),
@@ -318,7 +323,8 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                                         self.lang.format_variable(variant.name),
                                     ))
                             else:
-                                self.emit_line('if isinstance({0}, {1}.{2}):'.format(
+                                self.emit_line('{} isinstance({}, {}.{}):'.format(
+                                    if_stmt,
                                     field.name,
                                     self._class_name_for_data_type(field.data_type),
                                     self.lang.format_class(variant.name),
@@ -329,6 +335,21 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                                         self._class_name_for_data_type(field.data_type),
                                         self.lang.format_variable(variant.name),
                                     ))
+                            if_stmt = 'elif'
+                        self.emit_line('else:')
+                        with self.indent():
+                            assert_type = "assert isinstance({0}, {1}), '{0} must be of type {1}'".format(
+                                field.name,
+                                self._is_instance_type(field.data_type),
+                            )
+                            if field.nullable or field.optional:
+                                # We conflate nullability and optionality in Python
+                                self.emit_line('if {} is not None:'.format(field.name))
+                                with self.indent():
+                                    self.emit_line(assert_type)
+                            else:
+                                self.emit_line(assert_type)
+                            self.emit_line('self.{0} = {0}'.format(field.name))
                         self.emit_empty_line()
                     else:
                         assert_type = "assert isinstance({0}, {1}), '{0} must be of type {1}'".format(
@@ -378,6 +399,18 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                         self._class_name_for_data_type(field.data_type),
                     )
                     self.emit_line(composite_assignment)
+                elif is_list_type(field.data_type) and is_composite_type(field.data_type.data_type):
+                    assignment = "obj['{0}'] = [{1}.from_json(e) for e in obj['{0}']]".format(
+                        field.name,
+                        self._class_name_for_data_type(field.data_type.data_type),
+                    )
+                    self.emit_line(assignment)
+                elif is_timestamp_type(field.data_type):
+                    assignment = "obj['{0}'] = datetime.datetime.strptime(obj['{0}'], {1!r})".format(
+                        field.name,
+                        field.data_type.format,
+                    )
+                    self.emit_line(assignment)
             self.emit_line('return {}(**obj)'.format(self._class_name_for_data_type(data_type)))
         self.emit_empty_line()
 
@@ -424,6 +457,8 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
             return 'numbers.Integral'
         elif isinstance(data_type, String):
             return 'six.string_types'
+        elif is_timestamp_type(data_type):
+            return 'datetime.datetime'
         else:
             return self.lang.format_type(data_type)
 

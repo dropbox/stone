@@ -37,6 +37,7 @@ from babelapi.babel.parser import (
     BabelSymbol,
     BabelTypeDef,
 )
+from babelapi.lang.lang import TargetLanguage
 from babelapi.segmentation import (
     Segment,
     SegmentList,
@@ -257,8 +258,8 @@ class TowerOfBabel(object):
                 if item.path:
                     path = item.path.lstrip('/')
                 else:
-                    # TODO: Split and add dashes
-                    path = item.name.lower()
+                    path = '_'.join([w.lower()
+                                     for w in TargetLanguage.split_words(item.name)])
                 route = ApiRoute(
                     item.name,
                     path,

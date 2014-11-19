@@ -1,8 +1,14 @@
 namespace files
 
-struct FileTarget
+# Python doesn't support %z so we hardcode +0000 here.
+# TODO(kelkabany): Handle this in the Python code generator
+alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S +0000")
+
+struct PathTarget
     path String
         "Path from root. Should be an empty string for root."
+
+struct FileTarget extends PathTarget
     rev String optional
         "Revision of target file."
 
@@ -68,11 +74,11 @@ struct UpdateParentRev
 union ConflictPolicy
     "The action to take when a file path conflict exists."
 
-    overwrite
-        "On a conflict, the target is overridden."
     add
         "On a conflict, the upload is rejected. You can call the :route:`Upload`
-        endpoint again and attempt a different path."
+        endpoint again and try a different path."
+    overwrite
+        "On a conflict, the target is overridden."
     update UpdateParentRev
         "On a conflict, only overwrite the target if the parent_rev matches."
 
@@ -118,3 +124,32 @@ route Upload (UploadCommit, FileInfo, UploadCommitError)
     attrs
         host="content"
         style="upload"
+
+struct File
+    "A file resource"
+    client_modified DbxTimestamp
+    server_modified DbxTimestamp
+    rev String
+    size UInt64
+
+struct Folder
+    "A folder resource"
+
+union Metadata
+    file File
+    folder Folder
+
+struct Entry
+    metadata Metadata
+    name String
+
+route GetMetadata (FileTarget, Entry, Empty)
+    "Returns the metadata for a file or folder."
+
+struct ListFolderResponse
+    cursor String
+    has_more Boolean
+    entries List(data_type=Entry)
+
+route ListFolder (PathTarget, ListFolderResponse, Empty)
+    "Returns the contents of a folder."

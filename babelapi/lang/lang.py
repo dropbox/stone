@@ -47,7 +47,7 @@ class TargetLanguage(object):
         return ', '.join([self.format_obj(value) for value in values])
 
     @staticmethod
-    def _split_words(name):
+    def split_words(name):
         """
         Splits a word based on capitalization, dashes, or underscores.
             Example: 'GetFile' -> ['Get', 'File']
