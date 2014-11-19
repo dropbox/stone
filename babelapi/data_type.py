@@ -410,6 +410,32 @@ class Struct(CompositeType):
 
     composite_type = 'struct'
 
+    def __init__(self, name, doc, fields, super_type=None, coverage_names=None):
+        super(Struct, self).__init__(name, doc, fields, super_type=super_type)
+        self.coverage_names = coverage_names
+        self.coverage = []
+
+    def has_coverage(self):
+        return bool(self.coverage_names)
+
+    def resolve_coverage(self, env):
+        """
+        Struct is defined before types that it covers are defined. So use an
+        env to resolve the name of those data types into data type objects.
+        """
+        for coverage_name in self.coverage_names:
+            if coverage_name in env:
+                data_type = env[coverage_name]
+                if data_type.super_type is None:
+                    raise ValueError('All coverage must be subtypes of %r'
+                                     % self.name)
+                if data_type.super_type != self:
+                    raise ValueError('All coverage must subtype %r not %r'
+                                     % (self.name, data_type.super_type.name))
+                self.coverage.append(data_type)
+            else:
+                raise KeyError('No data type named %s' % coverage_name)
+
     def check(self, val):
         # Enforce the existence of all fields
         if not isinstance(val, dict):

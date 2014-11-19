@@ -139,6 +139,22 @@ struct QuotaInfo
         self.assertIn('default', out[1].examples)
         self.assertIn('pro', out[1].examples)
 
+        # test with coverage
+        text = """
+namespace files
+
+struct Entry of Folder | File
+    id String
+
+struct Folder
+    children UInt64
+
+struct File
+    size UInt64
+"""
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].coverage, ['Folder', 'File'])
+
     def test_union_decl(self):
         # test union with only symbols
         text = """

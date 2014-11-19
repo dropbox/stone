@@ -24,13 +24,14 @@ class BabelRouteDef(object):
         self.attrs = attrs
 
 class BabelTypeDef(object):
-    def __init__(self, composite_type, name, extends=None):
+    def __init__(self, composite_type, name, extends=None, coverage=None):
         self.composite_type = composite_type
         self.name = name
         self.extends = extends
         self.doc = None
         self.fields = []
         self.examples = OrderedDict()
+        self.coverage = coverage
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -270,15 +271,30 @@ class BabelParser(object):
         if p[1]:
             p[0] = p[2]
 
+    def p_coverage_list_create(self, p):
+        'coverage_list : ID'
+        p[0] = [p[1]]
+
+    def p_coverage_list_extend(self, p):
+        'coverage_list : coverage_list PIPE ID'
+        p[0] = p[1]
+        p[0].append(p[3])
+
+    def p_coverage(self, p):
+        """coverage : OF coverage_list
+                    | empty"""
+        if p[1]:
+            p[0] = p[2]
+
     def p_statement_typedef_struct(self, p):
-        'typedef : STRUCT ID inheritance NEWLINE INDENT docsection field_list example_list DEDENT'
-        p[0] = BabelTypeDef(p[1], p[2], extends=p[3])
-        if p[6]:
-            p[0].set_doc(self._normalize_docstring(p[6]))
-        if p[7] is not None:
-            p[0].set_fields(p[7])
+        'typedef : STRUCT ID inheritance coverage NEWLINE INDENT docsection field_list example_list DEDENT'
+        p[0] = BabelTypeDef(p[1], p[2], extends=p[3], coverage=p[4])
+        if p[7]:
+            p[0].set_doc(self._normalize_docstring(p[7]))
         if p[8] is not None:
-            for label, text, example in p[8]:
+            p[0].set_fields(p[8])
+        if p[9] is not None:
+            for label, text, example in p[9]:
                 p[0].add_example(label, text, example)
 
     def p_statement_attrs_section(self, p):

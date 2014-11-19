@@ -130,7 +130,7 @@ class TowerOfBabel(object):
             for babel_field in item.fields:
                 api_type_field = self._create_field(env, babel_field)
                 api_type_fields.append(api_type_field)
-            api_type = Struct(item.name, item.doc, api_type_fields, super_type)
+            api_type = Struct(item.name, item.doc, api_type_fields, super_type, item.coverage)
         elif item.composite_type == 'union':
             catch_all_field = None
             api_type_fields = []
@@ -233,7 +233,7 @@ class TowerOfBabel(object):
         namespace = self.api.ensure_namespace(namespace_decl.name)
         env = copy.copy(self.default_env)
 
-        for item in desc[:]:
+        for item in desc:
             if isinstance(item, BabelInclude):
                 self._include_babelh(env, os.path.dirname(path), item.target)
             elif isinstance(item, BabelAlias):
@@ -272,6 +272,14 @@ class TowerOfBabel(object):
             else:
                 raise Exception('Unknown Babel Declaration Type %r'
                                 % item.__class__.__name__)
+
+        # Coverage is specified as a forward declaration so here's where we
+        # resolve the symbols.
+        for data_type in namespace.data_types:
+            if isinstance(data_type, Struct) and data_type.has_coverage():
+                data_type.resolve_coverage(env)
+        # TODO(kelkabany): Check to make sure that no other type that is not
+        # covered extends a data type that enforces coverage.
 
     def _include_babelh(self, env, path, name):
         babelh_path = os.path.join(path, name) + '.babelh'
