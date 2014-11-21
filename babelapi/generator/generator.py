@@ -34,6 +34,7 @@ class CodeGenerator(object):
         # Output is a list of strings that should be concatenated together for
         # the final output.
         self.output = []
+        self.lineno = 1
         self.cur_indent = 0
 
     @contextmanager
@@ -84,6 +85,7 @@ class CodeGenerator(object):
 
     def emit(self, s):
         """Adds the input string to the output buffer."""
+        self.lineno += s.count('\n')
         self.output.append(s)
 
     def emit_indent(self):
