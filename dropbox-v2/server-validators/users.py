@@ -15,6 +15,7 @@ class Empty(object):
 
     def validate(self):
         return all(())
+
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
@@ -67,6 +68,7 @@ class Space(object):
                     self.__has_private,
                     self.__has_shared,
                     self.__has_datastores))
+
     @property
     def quota(self):
         if self.__has_quota:
@@ -194,6 +196,7 @@ class Team(object):
     def validate(self):
         return all((self.__has_id,
                     self.__has_name))
+
     @property
     def id(self):
         if self.__has_id:
@@ -292,6 +295,7 @@ class Name(object):
                     self.__has_surname,
                     self.__has_familiar_name,
                     self.__has_display_name))
+
     @property
     def given_name(self):
         if self.__has_given_name:
@@ -418,6 +422,7 @@ class BasicAccountInfo(object):
     def validate(self):
         return all((self.__has_account_id,
                     self.__has_name))
+
     @property
     def account_id(self):
         if self.__has_account_id:
@@ -537,6 +542,7 @@ class MeInfo(BasicAccountInfo):
                     self.__has_referral_link,
                     self.__has_space,
                     self.__has_is_paired))
+
     @property
     def email(self):
         if self.__has_email:
@@ -734,6 +740,60 @@ class AccountInfo(object):
         self._me = None
         self._teammate = None
         self._user = None
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_me(self):
+        return self.__tag == 'me'
+
+    def is_teammate(self):
+        return self.__tag == 'teammate'
+
+    def is_user(self):
+        return self.__tag == 'user'
+
+    @property
+    def me(self):
+        if not self.is_me():
+            raise KeyError("tag 'me' not set")
+        return self._me
+
+    @me.setter
+    def me(self, val):
+        if not isinstance(val, MeInfo):
+            raise TypeError('me is of type %r but must be of type MeInfo' % type(val).__name__)
+        val.validate()
+        self._me = val
+        self.__tag = 'me'
+
+    @property
+    def teammate(self):
+        if not self.is_teammate():
+            raise KeyError("tag 'teammate' not set")
+        return self._teammate
+
+    @teammate.setter
+    def teammate(self, val):
+        if not isinstance(val, BasicAccountInfo):
+            raise TypeError('teammate is of type %r but must be of type BasicAccountInfo' % type(val).__name__)
+        val.validate()
+        self._teammate = val
+        self.__tag = 'teammate'
+
+    @property
+    def user(self):
+        if not self.is_user():
+            raise KeyError("tag 'user' not set")
+        return self._user
+
+    @user.setter
+    def user(self, val):
+        if not isinstance(val, BasicAccountInfo):
+            raise TypeError('user is of type %r but must be of type BasicAccountInfo' % type(val).__name__)
+        val.validate()
+        self._user = val
         self.__tag = 'user'
 
     @classmethod
@@ -748,16 +808,16 @@ class AccountInfo(object):
             obj['user'] = BasicAccountInfo.from_json(obj['user'])
         return AccountInfo(**obj)
 
-    def to_json(self):
-        if self._tag == 'me':
-            return dict(me=self.me.to_json())
-        if self._tag == 'teammate':
-            return dict(teammate=self.teammate.to_json())
-        if self._tag == 'user':
-            return dict(user=self.user.to_json())
+    def to_dict(self, transformer):
+        if self.is_me():
+            return dict(me=self.me.to_dict(transformer))
+        if self.is_teammate():
+            return dict(teammate=self.teammate.to_dict(transformer))
+        if self.is_user():
+            return dict(user=self.user.to_dict(transformer))
 
     def __repr__(self):
-        return 'AccountInfo(%r)' % self._tag
+        return 'AccountInfo(%r)' % self.__tag
 
 class InfoRequest(object):
 
@@ -773,6 +833,7 @@ class InfoRequest(object):
 
     def validate(self):
         return all((self.__has_account_id))
+
     @property
     def account_id(self):
         if self.__has_account_id:
@@ -814,7 +875,22 @@ class InfoError(object):
     NoAccount = object()
 
     def __init__(self):
-        self._no_account = None
+        pass
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_no_account(self):
+        return self.__tag == 'no_account'
+
+    @property
+    def no_account(self):
+        if not self.is_no_account():
+            raise KeyError("tag 'no_account' not set")
+        return 'no_account'
+
+    def set_no_account(self):
         self.__tag = 'no_account'
 
     @classmethod
@@ -825,10 +901,10 @@ class InfoError(object):
             return obj
         return InfoError(**obj)
 
-    def to_json(self):
-        if self._tag == 'no_account':
-            return self._tag
+    def to_dict(self, transformer):
+        if self.is_no_account():
+            return self.no_account
 
     def __repr__(self):
-        return 'InfoError(%r)' % self._tag
+        return 'InfoError(%r)' % self.__tag
 

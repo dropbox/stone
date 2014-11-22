@@ -15,6 +15,7 @@ class Empty(object):
 
     def validate(self):
         return all(())
+
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
@@ -44,6 +45,7 @@ class PathTarget(object):
 
     def validate(self):
         return all((self.__has_path))
+
     @property
     def path(self):
         if self.__has_path:
@@ -96,6 +98,7 @@ class FileTarget(PathTarget):
 
     def validate(self):
         return all((self.__has_path))
+
     @property
     def rev(self):
         if self.__has_rev:
@@ -149,6 +152,7 @@ class FileInfo(object):
 
     def validate(self):
         return all((self.__has_name))
+
     @property
     def name(self):
         if self.__has_name:
@@ -199,6 +203,7 @@ class SubError(object):
 
     def validate(self):
         return all((self.__has_reason))
+
     @property
     def reason(self):
         if self.__has_reason:
@@ -243,6 +248,43 @@ class DownloadError(object):
     def __init__(self):
         self._disallowed = None
         self._no_file = None
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_disallowed(self):
+        return self.__tag == 'disallowed'
+
+    def is_no_file(self):
+        return self.__tag == 'no_file'
+
+    @property
+    def disallowed(self):
+        if not self.is_disallowed():
+            raise KeyError("tag 'disallowed' not set")
+        return self._disallowed
+
+    @disallowed.setter
+    def disallowed(self, val):
+        if not isinstance(val, SubError):
+            raise TypeError('disallowed is of type %r but must be of type SubError' % type(val).__name__)
+        val.validate()
+        self._disallowed = val
+        self.__tag = 'disallowed'
+
+    @property
+    def no_file(self):
+        if not self.is_no_file():
+            raise KeyError("tag 'no_file' not set")
+        return self._no_file
+
+    @no_file.setter
+    def no_file(self, val):
+        if not isinstance(val, SubError):
+            raise TypeError('no_file is of type %r but must be of type SubError' % type(val).__name__)
+        val.validate()
+        self._no_file = val
         self.__tag = 'no_file'
 
     @classmethod
@@ -255,14 +297,14 @@ class DownloadError(object):
             obj['no_file'] = SubError.from_json(obj['no_file'])
         return DownloadError(**obj)
 
-    def to_json(self):
-        if self._tag == 'disallowed':
-            return dict(disallowed=self.disallowed.to_json())
-        if self._tag == 'no_file':
-            return dict(no_file=self.no_file.to_json())
+    def to_dict(self, transformer):
+        if self.is_disallowed():
+            return dict(disallowed=self.disallowed.to_dict(transformer))
+        if self.is_no_file():
+            return dict(no_file=self.no_file.to_dict(transformer))
 
     def __repr__(self):
-        return 'DownloadError(%r)' % self._tag
+        return 'DownloadError(%r)' % self.__tag
 
 class UploadSessionStart(object):
 
@@ -278,6 +320,7 @@ class UploadSessionStart(object):
 
     def validate(self):
         return all((self.__has_upload_id))
+
     @property
     def upload_id(self):
         if self.__has_upload_id:
@@ -333,6 +376,7 @@ class UploadAppend(object):
     def validate(self):
         return all((self.__has_upload_id,
                     self.__has_offset))
+
     @property
     def upload_id(self):
         if self.__has_upload_id:
@@ -405,6 +449,7 @@ class IncorrectOffsetError(object):
 
     def validate(self):
         return all((self.__has_correct_offset))
+
     @property
     def correct_offset(self):
         if self.__has_correct_offset:
@@ -448,9 +493,51 @@ class UploadAppendError(object):
     IncorrectOffset = IncorrectOffsetError
 
     def __init__(self):
-        self._not_found = None
-        self._closed = None
         self._incorrect_offset = None
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_not_found(self):
+        return self.__tag == 'not_found'
+
+    def is_closed(self):
+        return self.__tag == 'closed'
+
+    def is_incorrect_offset(self):
+        return self.__tag == 'incorrect_offset'
+
+    @property
+    def not_found(self):
+        if not self.is_not_found():
+            raise KeyError("tag 'not_found' not set")
+        return 'not_found'
+
+    def set_not_found(self):
+        self.__tag = 'not_found'
+
+    @property
+    def closed(self):
+        if not self.is_closed():
+            raise KeyError("tag 'closed' not set")
+        return 'closed'
+
+    def set_closed(self):
+        self.__tag = 'closed'
+
+    @property
+    def incorrect_offset(self):
+        if not self.is_incorrect_offset():
+            raise KeyError("tag 'incorrect_offset' not set")
+        return self._incorrect_offset
+
+    @incorrect_offset.setter
+    def incorrect_offset(self, val):
+        if not isinstance(val, IncorrectOffsetError):
+            raise TypeError('incorrect_offset is of type %r but must be of type IncorrectOffsetError' % type(val).__name__)
+        val.validate()
+        self._incorrect_offset = val
         self.__tag = 'incorrect_offset'
 
     @classmethod
@@ -465,16 +552,16 @@ class UploadAppendError(object):
             obj['incorrect_offset'] = IncorrectOffsetError.from_json(obj['incorrect_offset'])
         return UploadAppendError(**obj)
 
-    def to_json(self):
-        if self._tag == 'not_found':
-            return self._tag
-        if self._tag == 'closed':
-            return self._tag
-        if self._tag == 'incorrect_offset':
-            return dict(incorrect_offset=self.incorrect_offset.to_json())
+    def to_dict(self, transformer):
+        if self.is_not_found():
+            return self.not_found
+        if self.is_closed():
+            return self.closed
+        if self.is_incorrect_offset():
+            return dict(incorrect_offset=self.incorrect_offset.to_dict(transformer))
 
     def __repr__(self):
-        return 'UploadAppendError(%r)' % self._tag
+        return 'UploadAppendError(%r)' % self.__tag
 
 class UpdateParentRev(object):
 
@@ -490,6 +577,7 @@ class UpdateParentRev(object):
 
     def validate(self):
         return all((self.__has_parent_rev))
+
     @property
     def parent_rev(self):
         if self.__has_parent_rev:
@@ -542,9 +630,51 @@ class ConflictPolicy(object):
     Update = UpdateParentRev
 
     def __init__(self):
-        self._add = None
-        self._overwrite = None
         self._update = None
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_add(self):
+        return self.__tag == 'add'
+
+    def is_overwrite(self):
+        return self.__tag == 'overwrite'
+
+    def is_update(self):
+        return self.__tag == 'update'
+
+    @property
+    def add(self):
+        if not self.is_add():
+            raise KeyError("tag 'add' not set")
+        return 'add'
+
+    def set_add(self):
+        self.__tag = 'add'
+
+    @property
+    def overwrite(self):
+        if not self.is_overwrite():
+            raise KeyError("tag 'overwrite' not set")
+        return 'overwrite'
+
+    def set_overwrite(self):
+        self.__tag = 'overwrite'
+
+    @property
+    def update(self):
+        if not self.is_update():
+            raise KeyError("tag 'update' not set")
+        return self._update
+
+    @update.setter
+    def update(self, val):
+        if not isinstance(val, UpdateParentRev):
+            raise TypeError('update is of type %r but must be of type UpdateParentRev' % type(val).__name__)
+        val.validate()
+        self._update = val
         self.__tag = 'update'
 
     @classmethod
@@ -559,16 +689,16 @@ class ConflictPolicy(object):
             obj['update'] = UpdateParentRev.from_json(obj['update'])
         return ConflictPolicy(**obj)
 
-    def to_json(self):
-        if self._tag == 'add':
-            return self._tag
-        if self._tag == 'overwrite':
-            return self._tag
-        if self._tag == 'update':
-            return dict(update=self.update.to_json())
+    def to_dict(self, transformer):
+        if self.is_add():
+            return self.add
+        if self.is_overwrite():
+            return self.overwrite
+        if self.is_update():
+            return dict(update=self.update.to_dict(transformer))
 
     def __repr__(self):
-        return 'ConflictPolicy(%r)' % self._tag
+        return 'ConflictPolicy(%r)' % self.__tag
 
 class UploadCommit(object):
 
@@ -603,6 +733,7 @@ class UploadCommit(object):
     def validate(self):
         return all((self.__has_path,
                     self.__has_mode))
+
     @property
     def path(self):
         if self.__has_path:
@@ -757,9 +888,46 @@ class ConflictReason(object):
     AutorenameFailed = object()
 
     def __init__(self):
-        self._folder = None
-        self._file = None
-        self._autorename_failed = None
+        pass
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_folder(self):
+        return self.__tag == 'folder'
+
+    def is_file(self):
+        return self.__tag == 'file'
+
+    def is_autorename_failed(self):
+        return self.__tag == 'autorename_failed'
+
+    @property
+    def folder(self):
+        if not self.is_folder():
+            raise KeyError("tag 'folder' not set")
+        return 'folder'
+
+    def set_folder(self):
+        self.__tag = 'folder'
+
+    @property
+    def file(self):
+        if not self.is_file():
+            raise KeyError("tag 'file' not set")
+        return 'file'
+
+    def set_file(self):
+        self.__tag = 'file'
+
+    @property
+    def autorename_failed(self):
+        if not self.is_autorename_failed():
+            raise KeyError("tag 'autorename_failed' not set")
+        return 'autorename_failed'
+
+    def set_autorename_failed(self):
         self.__tag = 'autorename_failed'
 
     @classmethod
@@ -774,16 +942,16 @@ class ConflictReason(object):
             return obj
         return ConflictReason(**obj)
 
-    def to_json(self):
-        if self._tag == 'folder':
-            return self._tag
-        if self._tag == 'file':
-            return self._tag
-        if self._tag == 'autorename_failed':
-            return self._tag
+    def to_dict(self, transformer):
+        if self.is_folder():
+            return self.folder
+        if self.is_file():
+            return self.file
+        if self.is_autorename_failed():
+            return self.autorename_failed
 
     def __repr__(self):
-        return 'ConflictReason(%r)' % self._tag
+        return 'ConflictReason(%r)' % self.__tag
 
 class ConflictError(object):
 
@@ -797,6 +965,7 @@ class ConflictError(object):
 
     def validate(self):
         return all((self.__has_reason))
+
     @property
     def reason(self):
         if self.__has_reason:
@@ -843,8 +1012,50 @@ class UploadCommitError(object):
 
     def __init__(self):
         self._conflict = None
-        self._no_write_permission = None
-        self._insufficient_quota = None
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_conflict(self):
+        return self.__tag == 'conflict'
+
+    def is_no_write_permission(self):
+        return self.__tag == 'no_write_permission'
+
+    def is_insufficient_quota(self):
+        return self.__tag == 'insufficient_quota'
+
+    @property
+    def conflict(self):
+        if not self.is_conflict():
+            raise KeyError("tag 'conflict' not set")
+        return self._conflict
+
+    @conflict.setter
+    def conflict(self, val):
+        if not isinstance(val, ConflictError):
+            raise TypeError('conflict is of type %r but must be of type ConflictError' % type(val).__name__)
+        val.validate()
+        self._conflict = val
+        self.__tag = 'conflict'
+
+    @property
+    def no_write_permission(self):
+        if not self.is_no_write_permission():
+            raise KeyError("tag 'no_write_permission' not set")
+        return 'no_write_permission'
+
+    def set_no_write_permission(self):
+        self.__tag = 'no_write_permission'
+
+    @property
+    def insufficient_quota(self):
+        if not self.is_insufficient_quota():
+            raise KeyError("tag 'insufficient_quota' not set")
+        return 'insufficient_quota'
+
+    def set_insufficient_quota(self):
         self.__tag = 'insufficient_quota'
 
     @classmethod
@@ -859,16 +1070,16 @@ class UploadCommitError(object):
             return obj
         return UploadCommitError(**obj)
 
-    def to_json(self):
-        if self._tag == 'conflict':
-            return dict(conflict=self.conflict.to_json())
-        if self._tag == 'no_write_permission':
-            return self._tag
-        if self._tag == 'insufficient_quota':
-            return self._tag
+    def to_dict(self, transformer):
+        if self.is_conflict():
+            return dict(conflict=self.conflict.to_dict(transformer))
+        if self.is_no_write_permission():
+            return self.no_write_permission
+        if self.is_insufficient_quota():
+            return self.insufficient_quota
 
     def __repr__(self):
-        return 'UploadCommitError(%r)' % self._tag
+        return 'UploadCommitError(%r)' % self.__tag
 
 class File(object):
     """
@@ -914,6 +1125,7 @@ class File(object):
                     self.__has_server_modified,
                     self.__has_rev,
                     self.__has_size))
+
     @property
     def client_modified(self):
         if self.__has_client_modified:
@@ -1030,6 +1242,7 @@ class Folder(object):
 
     def validate(self):
         return all(())
+
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
@@ -1053,6 +1266,43 @@ class Metadata(object):
     def __init__(self):
         self._file = None
         self._folder = None
+        self.__tag = None
+
+    def validate(self):
+        return self.__tag is not None
+
+    def is_file(self):
+        return self.__tag == 'file'
+
+    def is_folder(self):
+        return self.__tag == 'folder'
+
+    @property
+    def file(self):
+        if not self.is_file():
+            raise KeyError("tag 'file' not set")
+        return self._file
+
+    @file.setter
+    def file(self, val):
+        if not isinstance(val, File):
+            raise TypeError('file is of type %r but must be of type File' % type(val).__name__)
+        val.validate()
+        self._file = val
+        self.__tag = 'file'
+
+    @property
+    def folder(self):
+        if not self.is_folder():
+            raise KeyError("tag 'folder' not set")
+        return self._folder
+
+    @folder.setter
+    def folder(self, val):
+        if not isinstance(val, Folder):
+            raise TypeError('folder is of type %r but must be of type Folder' % type(val).__name__)
+        val.validate()
+        self._folder = val
         self.__tag = 'folder'
 
     @classmethod
@@ -1065,14 +1315,14 @@ class Metadata(object):
             obj['folder'] = Folder.from_json(obj['folder'])
         return Metadata(**obj)
 
-    def to_json(self):
-        if self._tag == 'file':
-            return dict(file=self.file.to_json())
-        if self._tag == 'folder':
-            return dict(folder=self.folder.to_json())
+    def to_dict(self, transformer):
+        if self.is_file():
+            return dict(file=self.file.to_dict(transformer))
+        if self.is_folder():
+            return dict(folder=self.folder.to_dict(transformer))
 
     def __repr__(self):
-        return 'Metadata(%r)' % self._tag
+        return 'Metadata(%r)' % self.__tag
 
 class Entry(object):
 
@@ -1092,6 +1342,7 @@ class Entry(object):
     def validate(self):
         return all((self.__has_metadata,
                     self.__has_name))
+
     @property
     def metadata(self):
         if self.__has_metadata:
@@ -1176,6 +1427,7 @@ class ListFolderResponse(object):
         return all((self.__has_cursor,
                     self.__has_has_more,
                     self.__has_entries))
+
     @property
     def cursor(self):
         if self.__has_cursor:

@@ -247,6 +247,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self._generate_func_arg_list(args)
             self.emit(')')
             self.emit_empty_line()
+            self.emit_empty_line()
 
     def _generate_struct_class_properties(self, data_type):
         for field in data_type.fields:
@@ -335,7 +336,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                                 self.lang.format_class(field.data_type.name),
                             ))
                     else:
-                        self.emit_line("{0}.{1} = transformer.convert_from({0}.__{1}_data_type, obj.get('{1}'))".format(var_name, field_name))
+                        self.emit_line("{0}.{1} = transformer.convert_from({0}.__{1}_data_type, obj.get('{1}'))".format( var_name, field_name))
                 else:
                     self.emit_line("if '{}' not in obj:".format(field_name))
                     with self.indent():
@@ -434,8 +435,11 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
             self._generate_union_class_init(data_type)
+            self._generate_union_class_validate(data_type)
+            self._generate_union_class_is_set(data_type)
+            self._generate_union_class_properties(data_type)
             self._generate_union_class_from_json(data_type)
-            self._generate_union_class_to_json(data_type)
+            self._generate_union_class_to_dict(data_type)
             self._generate_union_class_repr(data_type)
 
     def _generate_union_class_init(self, data_type):
@@ -451,10 +455,65 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
 
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name)
-                self.emit_line('self._{} = None'.format(field_var_name))
+                if not isinstance(field, SymbolField):
+                    self.emit_line('self._{} = None'.format(field_var_name))
             if lineno == self.lineno:
                 self.emit_line('pass')
-            self.emit_line("self.__tag = '{}'".format(field.name))
+            self.emit_line('self.__tag = None')
+            self.emit_empty_line()
+
+    def _generate_union_class_validate(self, data_type):
+        self.emit_line('def validate(self):')
+        with self.indent():
+            self.emit_line('return self.__tag is not None')
+        self.emit_empty_line()
+
+    def _generate_union_class_is_set(self, data_type):
+        for field in data_type.fields:
+            field_name = self.lang.format_method(field.name)
+            self.emit_line('def is_{}(self):'.format(field_name))
+            with self.indent():
+                self.emit_line('return self.__tag == {!r}'.format(field_name))
+            self.emit_empty_line()
+
+    def _generate_union_class_properties(self, data_type):
+        for field in data_type.fields:
+            field_name = self.lang.format_method(field.name)
+
+            # generate getter for field
+            self.emit_line('@property')
+            self.emit_line('def {}(self):'.format(field_name))
+            with self.indent():
+                self.emit_line('if not self.is_{}():'.format(field_name))
+                with self.indent():
+                    self.emit_line('raise KeyError("tag {!r} not set")'.format(field_name))
+                if isinstance(field, SymbolField):
+                    self.emit_line('return {!r}'.format(field_name))
+                else:
+                    self.emit_line('return self._{}'.format(field_name))
+            self.emit_empty_line()
+
+            if isinstance(field, SymbolField):
+                self.emit_line('def set_{}(self):'.format(field_name))
+                with self.indent():
+                    self.emit_line('self.__tag = {!r}'.format(field_name))
+                self.emit_empty_line()
+                continue
+
+            # generate setter for field
+            self.emit_line('@{}.setter'.format(field_name))
+            self.emit_line('def {}(self, val):'.format(field_name))
+            with self.indent():
+                if is_composite_type(field.data_type):
+                    class_name = self.lang.format_class(field.data_type.name)
+                    self.emit_line('if not isinstance(val, {}):'.format(class_name))
+                    with self.indent():
+                        self.emit_line("raise TypeError('{} is of type %r but must be of type {}' % type(val).__name__)".format(field_name, class_name))
+                    self.emit_line('val.validate()'.format(field_name))
+                else:
+                    self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
+                self.emit_line('self._{} = val'.format(field_name))
+                self.emit_line('self.__tag = {!r}'.format(field_name))
             self.emit_empty_line()
 
     def _generate_union_class_from_json(self, data_type):
@@ -485,18 +544,20 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('return {}(**obj)'.format(self._class_name_for_data_type(data_type)))
             self.emit_empty_line()
 
-    def _generate_union_class_to_json(self, data_type):
-        """The to_json() function will convert a Python object into a
+    def _generate_union_class_to_dict(self, data_type):
+        """The to_dict() function will convert a Python object into a
         dictionary that can be serialized into JSON."""
-        self.emit_line('def to_json(self):')
+        self.emit_line('def to_dict(self, transformer):')
         with self.indent():
             for field in data_type.all_fields:
-                self.emit_line("if self._tag == '{}':".format(field.name))
+                self.emit_line("if self.is_{}():".format(field.name))
                 with self.indent():
                     if isinstance(field, SymbolField):
-                        self.emit_line('return self._tag')
+                        self.emit_line('return self.{}'.format(field.name))
+                    elif is_composite_type(field.data_type):
+                        self.emit_line('return dict({0}=self.{0}.to_dict(transformer))'.format(field.name))
                     else:
-                        self.emit_line('return dict({0}=self.{0}.to_json())'.format(field.name))
+                        self.emit_line('return dict({0}=transformer.convert_to(self.__{0}_data_type, self._{0})'.format(field.name))
         self.emit_empty_line()
 
     def _generate_union_class_repr(self, data_type):
@@ -505,7 +566,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         self.emit_line('def __repr__(self):')
         with self.indent():
             if data_type.fields:
-                self.emit_line("return '{}(%r)' % self._tag".format(
+                self.emit_line("return '{}(%r)' % self.__tag".format(
                     self._class_name_for_data_type(data_type),
                 ))
             else:
