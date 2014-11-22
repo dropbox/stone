@@ -14,7 +14,8 @@ class Empty(object):
         pass
 
     def validate(self):
-        return all(())
+        return all([
+        ])
 
     @classmethod
     def from_dict(cls, transformer, obj):
@@ -44,7 +45,9 @@ class PathTarget(object):
         self.__has_path = False
 
     def validate(self):
-        return all((self.__has_path))
+        return all([
+            self.__has_path,
+        ])
 
     @property
     def path(self):
@@ -97,7 +100,9 @@ class FileTarget(PathTarget):
         self.__has_rev = False
 
     def validate(self):
-        return all((self.__has_path))
+        return all([
+            self.__has_path,
+        ])
 
     @property
     def rev(self):
@@ -151,7 +156,9 @@ class FileInfo(object):
         self.__has_name = False
 
     def validate(self):
-        return all((self.__has_name))
+        return all([
+            self.__has_name,
+        ])
 
     @property
     def name(self):
@@ -202,7 +209,9 @@ class SubError(object):
         self.__has_reason = False
 
     def validate(self):
-        return all((self.__has_reason))
+        return all([
+            self.__has_reason,
+        ])
 
     @property
     def reason(self):
@@ -288,14 +297,15 @@ class DownloadError(object):
         self.__tag = 'no_file'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
-        if 'disallowed' in obj:
-            obj['disallowed'] = SubError.from_json(obj['disallowed'])
-        if 'no_file' in obj:
-            obj['no_file'] = SubError.from_json(obj['no_file'])
-        return DownloadError(**obj)
+    def from_dict(cls, transformer, obj):
+        download_error = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
+        if isinstance(obj, dict) and 'disallowed' == obj.keys()[0]:
+            download_error.disallowed = SubError.from_dict(transformer, obj['disallowed'])
+        if isinstance(obj, dict) and 'no_file' == obj.keys()[0]:
+            download_error.no_file = SubError.from_dict(transformer, obj['no_file'])
+        return download_error
 
     def to_dict(self, transformer):
         if self.is_disallowed():
@@ -319,7 +329,9 @@ class UploadSessionStart(object):
         self.__has_upload_id = False
 
     def validate(self):
-        return all((self.__has_upload_id))
+        return all([
+            self.__has_upload_id,
+        ])
 
     @property
     def upload_id(self):
@@ -374,8 +386,10 @@ class UploadAppend(object):
         self.__has_offset = False
 
     def validate(self):
-        return all((self.__has_upload_id,
-                    self.__has_offset))
+        return all([
+            self.__has_upload_id,
+            self.__has_offset,
+        ])
 
     @property
     def upload_id(self):
@@ -448,7 +462,9 @@ class IncorrectOffsetError(object):
         self.__has_correct_offset = False
 
     def validate(self):
-        return all((self.__has_correct_offset))
+        return all([
+            self.__has_correct_offset,
+        ])
 
     @property
     def correct_offset(self):
@@ -508,20 +524,8 @@ class UploadAppendError(object):
     def is_incorrect_offset(self):
         return self.__tag == 'incorrect_offset'
 
-    @property
-    def not_found(self):
-        if not self.is_not_found():
-            raise KeyError("tag 'not_found' not set")
-        return 'not_found'
-
     def set_not_found(self):
         self.__tag = 'not_found'
-
-    @property
-    def closed(self):
-        if not self.is_closed():
-            raise KeyError("tag 'closed' not set")
-        return 'closed'
 
     def set_closed(self):
         self.__tag = 'closed'
@@ -541,22 +545,23 @@ class UploadAppendError(object):
         self.__tag = 'incorrect_offset'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
+    def from_dict(cls, transformer, obj):
+        upload_append_error = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
         if obj == 'not_found':
-            return obj
+            upload_append_error.set_not_found()
         if obj == 'closed':
-            return obj
-        if 'incorrect_offset' in obj:
-            obj['incorrect_offset'] = IncorrectOffsetError.from_json(obj['incorrect_offset'])
-        return UploadAppendError(**obj)
+            upload_append_error.set_closed()
+        if isinstance(obj, dict) and 'incorrect_offset' == obj.keys()[0]:
+            upload_append_error.incorrect_offset = IncorrectOffsetError.from_dict(transformer, obj['incorrect_offset'])
+        return upload_append_error
 
     def to_dict(self, transformer):
         if self.is_not_found():
-            return self.not_found
+            return 'not_found'
         if self.is_closed():
-            return self.closed
+            return 'closed'
         if self.is_incorrect_offset():
             return dict(incorrect_offset=self.incorrect_offset.to_dict(transformer))
 
@@ -576,7 +581,9 @@ class UpdateParentRev(object):
         self.__has_parent_rev = False
 
     def validate(self):
-        return all((self.__has_parent_rev))
+        return all([
+            self.__has_parent_rev,
+        ])
 
     @property
     def parent_rev(self):
@@ -645,20 +652,8 @@ class ConflictPolicy(object):
     def is_update(self):
         return self.__tag == 'update'
 
-    @property
-    def add(self):
-        if not self.is_add():
-            raise KeyError("tag 'add' not set")
-        return 'add'
-
     def set_add(self):
         self.__tag = 'add'
-
-    @property
-    def overwrite(self):
-        if not self.is_overwrite():
-            raise KeyError("tag 'overwrite' not set")
-        return 'overwrite'
 
     def set_overwrite(self):
         self.__tag = 'overwrite'
@@ -678,22 +673,23 @@ class ConflictPolicy(object):
         self.__tag = 'update'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
+    def from_dict(cls, transformer, obj):
+        conflict_policy = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
         if obj == 'add':
-            return obj
+            conflict_policy.set_add()
         if obj == 'overwrite':
-            return obj
-        if 'update' in obj:
-            obj['update'] = UpdateParentRev.from_json(obj['update'])
-        return ConflictPolicy(**obj)
+            conflict_policy.set_overwrite()
+        if isinstance(obj, dict) and 'update' == obj.keys()[0]:
+            conflict_policy.update = UpdateParentRev.from_dict(transformer, obj['update'])
+        return conflict_policy
 
     def to_dict(self, transformer):
         if self.is_add():
-            return self.add
+            return 'add'
         if self.is_overwrite():
-            return self.overwrite
+            return 'overwrite'
         if self.is_update():
             return dict(update=self.update.to_dict(transformer))
 
@@ -731,8 +727,10 @@ class UploadCommit(object):
         self.__has_mute = False
 
     def validate(self):
-        return all((self.__has_path,
-                    self.__has_mode))
+        return all([
+            self.__has_path,
+            self.__has_mode,
+        ])
 
     @property
     def path(self):
@@ -903,52 +901,35 @@ class ConflictReason(object):
     def is_autorename_failed(self):
         return self.__tag == 'autorename_failed'
 
-    @property
-    def folder(self):
-        if not self.is_folder():
-            raise KeyError("tag 'folder' not set")
-        return 'folder'
-
     def set_folder(self):
         self.__tag = 'folder'
 
-    @property
-    def file(self):
-        if not self.is_file():
-            raise KeyError("tag 'file' not set")
-        return 'file'
-
     def set_file(self):
         self.__tag = 'file'
-
-    @property
-    def autorename_failed(self):
-        if not self.is_autorename_failed():
-            raise KeyError("tag 'autorename_failed' not set")
-        return 'autorename_failed'
 
     def set_autorename_failed(self):
         self.__tag = 'autorename_failed'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
+    def from_dict(cls, transformer, obj):
+        conflict_reason = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
         if obj == 'folder':
-            return obj
+            conflict_reason.set_folder()
         if obj == 'file':
-            return obj
+            conflict_reason.set_file()
         if obj == 'autorename_failed':
-            return obj
-        return ConflictReason(**obj)
+            conflict_reason.set_autorename_failed()
+        return conflict_reason
 
     def to_dict(self, transformer):
         if self.is_folder():
-            return self.folder
+            return 'folder'
         if self.is_file():
-            return self.file
+            return 'file'
         if self.is_autorename_failed():
-            return self.autorename_failed
+            return 'autorename_failed'
 
     def __repr__(self):
         return 'ConflictReason(%r)' % self.__tag
@@ -964,7 +945,9 @@ class ConflictError(object):
         self.__has_reason = False
 
     def validate(self):
-        return all((self.__has_reason))
+        return all([
+            self.__has_reason,
+        ])
 
     @property
     def reason(self):
@@ -1040,43 +1023,32 @@ class UploadCommitError(object):
         self._conflict = val
         self.__tag = 'conflict'
 
-    @property
-    def no_write_permission(self):
-        if not self.is_no_write_permission():
-            raise KeyError("tag 'no_write_permission' not set")
-        return 'no_write_permission'
-
     def set_no_write_permission(self):
         self.__tag = 'no_write_permission'
-
-    @property
-    def insufficient_quota(self):
-        if not self.is_insufficient_quota():
-            raise KeyError("tag 'insufficient_quota' not set")
-        return 'insufficient_quota'
 
     def set_insufficient_quota(self):
         self.__tag = 'insufficient_quota'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
-        if 'conflict' in obj:
-            obj['conflict'] = ConflictError.from_json(obj['conflict'])
+    def from_dict(cls, transformer, obj):
+        upload_commit_error = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
+        if isinstance(obj, dict) and 'conflict' == obj.keys()[0]:
+            upload_commit_error.conflict = ConflictError.from_dict(transformer, obj['conflict'])
         if obj == 'no_write_permission':
-            return obj
+            upload_commit_error.set_no_write_permission()
         if obj == 'insufficient_quota':
-            return obj
-        return UploadCommitError(**obj)
+            upload_commit_error.set_insufficient_quota()
+        return upload_commit_error
 
     def to_dict(self, transformer):
         if self.is_conflict():
             return dict(conflict=self.conflict.to_dict(transformer))
         if self.is_no_write_permission():
-            return self.no_write_permission
+            return 'no_write_permission'
         if self.is_insufficient_quota():
-            return self.insufficient_quota
+            return 'insufficient_quota'
 
     def __repr__(self):
         return 'UploadCommitError(%r)' % self.__tag
@@ -1121,10 +1093,12 @@ class File(object):
         self.__has_size = False
 
     def validate(self):
-        return all((self.__has_client_modified,
-                    self.__has_server_modified,
-                    self.__has_rev,
-                    self.__has_size))
+        return all([
+            self.__has_client_modified,
+            self.__has_server_modified,
+            self.__has_rev,
+            self.__has_size,
+        ])
 
     @property
     def client_modified(self):
@@ -1241,7 +1215,8 @@ class Folder(object):
         pass
 
     def validate(self):
-        return all(())
+        return all([
+        ])
 
     @classmethod
     def from_dict(cls, transformer, obj):
@@ -1306,14 +1281,15 @@ class Metadata(object):
         self.__tag = 'folder'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
-        if 'file' in obj:
-            obj['file'] = File.from_json(obj['file'])
-        if 'folder' in obj:
-            obj['folder'] = Folder.from_json(obj['folder'])
-        return Metadata(**obj)
+    def from_dict(cls, transformer, obj):
+        metadata = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
+        if isinstance(obj, dict) and 'file' == obj.keys()[0]:
+            metadata.file = File.from_dict(transformer, obj['file'])
+        if isinstance(obj, dict) and 'folder' == obj.keys()[0]:
+            metadata.folder = Folder.from_dict(transformer, obj['folder'])
+        return metadata
 
     def to_dict(self, transformer):
         if self.is_file():
@@ -1340,8 +1316,10 @@ class Entry(object):
         self.__has_name = False
 
     def validate(self):
-        return all((self.__has_metadata,
-                    self.__has_name))
+        return all([
+            self.__has_metadata,
+            self.__has_name,
+        ])
 
     @property
     def metadata(self):
@@ -1424,9 +1402,11 @@ class ListFolderResponse(object):
         self.__has_entries = False
 
     def validate(self):
-        return all((self.__has_cursor,
-                    self.__has_has_more,
-                    self.__has_entries))
+        return all([
+            self.__has_cursor,
+            self.__has_has_more,
+            self.__has_entries,
+        ])
 
     @property
     def cursor(self):

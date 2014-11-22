@@ -239,14 +239,12 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
     def _generate_struct_class_validate(self, data_type):
         self.emit_line('def validate(self):')
         with self.indent():
-            args = []
-            for field in data_type.all_required_fields:
-                field_name = self.lang.format_method(field.name)
-                args.append('self.__has_{}'.format(field_name))
-            self.emit_line('return all(', trailing_newline=False)
-            self._generate_func_arg_list(args)
-            self.emit(')')
-            self.emit_empty_line()
+            self.emit_line('return all([')
+            with self.indent():
+                for field in data_type.all_required_fields:
+                    field_name = self.lang.format_method(field.name)
+                    self.emit_line('self.__has_{},'.format(field_name))
+            self.emit_line('])')
             self.emit_empty_line()
 
     def _generate_struct_class_properties(self, data_type):
@@ -438,7 +436,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self._generate_union_class_validate(data_type)
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_properties(data_type)
-            self._generate_union_class_from_json(data_type)
+            self._generate_union_class_from_dict(data_type)
             self._generate_union_class_to_dict(data_type)
             self._generate_union_class_repr(data_type)
 
@@ -480,6 +478,13 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
 
+            if isinstance(field, SymbolField):
+                self.emit_line('def set_{}(self):'.format(field_name))
+                with self.indent():
+                    self.emit_line('self.__tag = {!r}'.format(field_name))
+                self.emit_empty_line()
+                continue
+
             # generate getter for field
             self.emit_line('@property')
             self.emit_line('def {}(self):'.format(field_name))
@@ -492,13 +497,6 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 else:
                     self.emit_line('return self._{}'.format(field_name))
             self.emit_empty_line()
-
-            if isinstance(field, SymbolField):
-                self.emit_line('def set_{}(self):'.format(field_name))
-                with self.indent():
-                    self.emit_line('self.__tag = {!r}'.format(field_name))
-                self.emit_empty_line()
-                continue
 
             # generate setter for field
             self.emit_line('@{}.setter'.format(field_name))
@@ -516,32 +514,43 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line('self.__tag = {!r}'.format(field_name))
             self.emit_empty_line()
 
-    def _generate_union_class_from_json(self, data_type):
+    def _generate_union_class_from_dict(self, data_type):
         """The from_json() function will convert a Python dictionary object
         that presumably was constructed from JSON into a Python object
         of the correct type."""
         self.emit_line('@classmethod')
-        self.emit_line('def from_json(self, obj):')
+        self.emit_line('def from_dict(cls, transformer, obj):')
         with self.indent():
-            if data_type.all_fields:
-                self.emit_line('obj = copy.copy(obj)')
-            self.emit_line("assert len(obj) == 1, 'One key must be set, not %d' % len(obj)")
+            var_name = self.lang.format_variable(data_type.name)
+            self.emit_line('{} = cls()'.format(var_name))
+            self.emit_line('if isinstance(obj, dict) and len(obj) != 1:')
+            with self.indent():
+                self.emit_line('raise KeyError("Union can only have one key set not %d" % len(obj))')
             for field in data_type.all_fields:
                 if isinstance(field, SymbolField):
                     self.emit_line("if obj == '{}':".format(field.name))
                     with self.indent():
-                        self.emit_line('return obj')
+                        self.emit_line('{}.set_{}()'.format(var_name, self.lang.format_method(field.name)))
                 elif is_composite_type(field.data_type):
-                    self.emit_line("if '{}' in obj:".format(field.name))
+                    self.emit_line("if isinstance(obj, dict) and '{}' == obj.keys()[0]:".format(field.name))
                     with self.indent():
-                        composite_assignment = "obj['{0}'] = {1}.from_json(obj['{0}'])".format(
-                            field.name,
+                        composite_assignment = "{0}.{1} = {2}.from_dict(transformer, obj['{1}'])".format(
+                            var_name,
+                            self.lang.format_variable(field.name),
                             self._class_name_for_data_type(field.data_type),
                         )
                         self.emit_line(composite_assignment)
                 else:
-                    raise ValueError('Did not recognize field %r', field)
-            self.emit_line('return {}(**obj)'.format(self._class_name_for_data_type(data_type)))
+                    self.emit_line("if isinstance(obj, dict) and '{}' == obj.keys()[0]:".format(field.name))
+                    with self.indent():
+                        composite_assignment = "{0}.{1} = transformer.convert_from(self.__{1}_data_type, obj['{1}'])".format(
+                            var_name,
+                            self.lang.format_variable(field.name),
+                            self._class_name_for_data_type(field.data_type),
+                        )
+                        self.emit_line(composite_assignment)
+
+            self.emit_line('return {}'.format(var_name))
             self.emit_empty_line()
 
     def _generate_union_class_to_dict(self, data_type):
@@ -553,7 +562,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line("if self.is_{}():".format(field.name))
                 with self.indent():
                     if isinstance(field, SymbolField):
-                        self.emit_line('return self.{}'.format(field.name))
+                        self.emit_line('return {!r}'.format(self.lang.format_variable(field.name)))
                     elif is_composite_type(field.data_type):
                         self.emit_line('return dict({0}=self.{0}.to_dict(transformer))'.format(field.name))
                     else:

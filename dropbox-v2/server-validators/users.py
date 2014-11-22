@@ -14,7 +14,8 @@ class Empty(object):
         pass
 
     def validate(self):
-        return all(())
+        return all([
+        ])
 
     @classmethod
     def from_dict(cls, transformer, obj):
@@ -64,10 +65,12 @@ class Space(object):
         self.__has_datastores = False
 
     def validate(self):
-        return all((self.__has_quota,
-                    self.__has_private,
-                    self.__has_shared,
-                    self.__has_datastores))
+        return all([
+            self.__has_quota,
+            self.__has_private,
+            self.__has_shared,
+            self.__has_datastores,
+        ])
 
     @property
     def quota(self):
@@ -194,8 +197,10 @@ class Team(object):
         self.__has_name = False
 
     def validate(self):
-        return all((self.__has_id,
-                    self.__has_name))
+        return all([
+            self.__has_id,
+            self.__has_name,
+        ])
 
     @property
     def id(self):
@@ -291,10 +296,12 @@ class Name(object):
         self.__has_display_name = False
 
     def validate(self):
-        return all((self.__has_given_name,
-                    self.__has_surname,
-                    self.__has_familiar_name,
-                    self.__has_display_name))
+        return all([
+            self.__has_given_name,
+            self.__has_surname,
+            self.__has_familiar_name,
+            self.__has_display_name,
+        ])
 
     @property
     def given_name(self):
@@ -420,8 +427,10 @@ class BasicAccountInfo(object):
         self.__has_name = False
 
     def validate(self):
-        return all((self.__has_account_id,
-                    self.__has_name))
+        return all([
+            self.__has_account_id,
+            self.__has_name,
+        ])
 
     @property
     def account_id(self):
@@ -535,13 +544,15 @@ class MeInfo(BasicAccountInfo):
         self.__has_is_paired = False
 
     def validate(self):
-        return all((self.__has_account_id,
-                    self.__has_name,
-                    self.__has_email,
-                    self.__has_locale,
-                    self.__has_referral_link,
-                    self.__has_space,
-                    self.__has_is_paired))
+        return all([
+            self.__has_account_id,
+            self.__has_name,
+            self.__has_email,
+            self.__has_locale,
+            self.__has_referral_link,
+            self.__has_space,
+            self.__has_is_paired,
+        ])
 
     @property
     def email(self):
@@ -797,16 +808,17 @@ class AccountInfo(object):
         self.__tag = 'user'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
-        if 'me' in obj:
-            obj['me'] = MeInfo.from_json(obj['me'])
-        if 'teammate' in obj:
-            obj['teammate'] = BasicAccountInfo.from_json(obj['teammate'])
-        if 'user' in obj:
-            obj['user'] = BasicAccountInfo.from_json(obj['user'])
-        return AccountInfo(**obj)
+    def from_dict(cls, transformer, obj):
+        account_info = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
+        if isinstance(obj, dict) and 'me' == obj.keys()[0]:
+            account_info.me = MeInfo.from_dict(transformer, obj['me'])
+        if isinstance(obj, dict) and 'teammate' == obj.keys()[0]:
+            account_info.teammate = BasicAccountInfo.from_dict(transformer, obj['teammate'])
+        if isinstance(obj, dict) and 'user' == obj.keys()[0]:
+            account_info.user = BasicAccountInfo.from_dict(transformer, obj['user'])
+        return account_info
 
     def to_dict(self, transformer):
         if self.is_me():
@@ -832,7 +844,9 @@ class InfoRequest(object):
         self.__has_account_id = False
 
     def validate(self):
-        return all((self.__has_account_id))
+        return all([
+            self.__has_account_id,
+        ])
 
     @property
     def account_id(self):
@@ -884,26 +898,21 @@ class InfoError(object):
     def is_no_account(self):
         return self.__tag == 'no_account'
 
-    @property
-    def no_account(self):
-        if not self.is_no_account():
-            raise KeyError("tag 'no_account' not set")
-        return 'no_account'
-
     def set_no_account(self):
         self.__tag = 'no_account'
 
     @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
+    def from_dict(cls, transformer, obj):
+        info_error = cls()
+        if isinstance(obj, dict) and len(obj) != 1:
+            raise KeyError("Union can only have one key set not %d" % len(obj))
         if obj == 'no_account':
-            return obj
-        return InfoError(**obj)
+            info_error.set_no_account()
+        return info_error
 
     def to_dict(self, transformer):
         if self.is_no_account():
-            return self.no_account
+            return 'no_account'
 
     def __repr__(self):
         return 'InfoError(%r)' % self.__tag
