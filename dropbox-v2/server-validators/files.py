@@ -32,7 +32,7 @@ class Empty(object):
 
 class PathTarget(object):
 
-    __path_data_type = dt.String()
+    __path_data_type = dt.String(pattern=None)
 
     __fields = {
         'path',
@@ -70,7 +70,7 @@ class PathTarget(object):
         path_target = PathTarget()
         if 'path' not in obj:
             raise KeyError("missing required field 'path'")
-        path_target.path = obj['path']
+        path_target.path = transformer.convert_from(path_target.__path_data_type, obj['path'])
         return path_target
 
     def to_dict(self, transformer):
@@ -82,7 +82,7 @@ class PathTarget(object):
 
 class FileTarget(PathTarget):
 
-    __rev_data_type = dt.String()
+    __rev_data_type = dt.String(pattern=None)
 
     __fields = {
         'path',
@@ -122,8 +122,8 @@ class FileTarget(PathTarget):
         file_target = FileTarget()
         if 'path' not in obj:
             raise KeyError("missing required field 'path'")
-        file_target.path = obj['path']
-        file_target.rev = obj.get('rev')
+        file_target.path = transformer.convert_from(file_target.__path_data_type, obj['path'])
+        file_target.rev = transformer.convert_from(file_target.__rev_data_type, obj.get('rev'))
         return file_target
 
     def to_dict(self, transformer):
@@ -137,7 +137,7 @@ class FileTarget(PathTarget):
 
 class FileInfo(object):
 
-    __name_data_type = dt.String()
+    __name_data_type = dt.String(pattern=None)
 
     __fields = {
         'name',
@@ -175,7 +175,7 @@ class FileInfo(object):
         file_info = FileInfo()
         if 'name' not in obj:
             raise KeyError("missing required field 'name'")
-        file_info.name = obj['name']
+        file_info.name = transformer.convert_from(file_info.__name_data_type, obj['name'])
         return file_info
 
     def to_dict(self, transformer):
@@ -187,7 +187,7 @@ class FileInfo(object):
 
 class SubError(object):
 
-    __reason_data_type = dt.String()
+    __reason_data_type = dt.String(pattern=None)
 
     __fields = {
         'reason',
@@ -225,7 +225,7 @@ class SubError(object):
         sub_error = SubError()
         if 'reason' not in obj:
             raise KeyError("missing required field 'reason'")
-        sub_error.reason = obj['reason']
+        sub_error.reason = transformer.convert_from(sub_error.__reason_data_type, obj['reason'])
         return sub_error
 
     def to_dict(self, transformer):
@@ -266,7 +266,7 @@ class DownloadError(object):
 
 class UploadSessionStart(object):
 
-    __upload_id_data_type = dt.String()
+    __upload_id_data_type = dt.String(pattern=None)
 
     __fields = {
         'upload_id',
@@ -304,7 +304,7 @@ class UploadSessionStart(object):
         upload_session_start = UploadSessionStart()
         if 'upload_id' not in obj:
             raise KeyError("missing required field 'upload_id'")
-        upload_session_start.upload_id = obj['upload_id']
+        upload_session_start.upload_id = transformer.convert_from(upload_session_start.__upload_id_data_type, obj['upload_id'])
         return upload_session_start
 
     def to_dict(self, transformer):
@@ -316,7 +316,7 @@ class UploadSessionStart(object):
 
 class UploadAppend(object):
 
-    __upload_id_data_type = dt.String()
+    __upload_id_data_type = dt.String(pattern=None)
     __offset_data_type = dt.UInt64()
 
     __fields = {
@@ -377,10 +377,10 @@ class UploadAppend(object):
         upload_append = UploadAppend()
         if 'upload_id' not in obj:
             raise KeyError("missing required field 'upload_id'")
-        upload_append.upload_id = obj['upload_id']
+        upload_append.upload_id = transformer.convert_from(upload_append.__upload_id_data_type, obj['upload_id'])
         if 'offset' not in obj:
             raise KeyError("missing required field 'offset'")
-        upload_append.offset = obj['offset']
+        upload_append.offset = transformer.convert_from(upload_append.__offset_data_type, obj['offset'])
         return upload_append
 
     def to_dict(self, transformer):
@@ -431,7 +431,7 @@ class IncorrectOffsetError(object):
         incorrect_offset_error = IncorrectOffsetError()
         if 'correct_offset' not in obj:
             raise KeyError("missing required field 'correct_offset'")
-        incorrect_offset_error.correct_offset = obj['correct_offset']
+        incorrect_offset_error.correct_offset = transformer.convert_from(incorrect_offset_error.__correct_offset_data_type, obj['correct_offset'])
         return incorrect_offset_error
 
     def to_dict(self, transformer):
@@ -478,7 +478,7 @@ class UploadAppendError(object):
 
 class UpdateParentRev(object):
 
-    __parent_rev_data_type = dt.String()
+    __parent_rev_data_type = dt.String(pattern=None)
 
     __fields = {
         'parent_rev',
@@ -516,7 +516,7 @@ class UpdateParentRev(object):
         update_parent_rev = UpdateParentRev()
         if 'parent_rev' not in obj:
             raise KeyError("missing required field 'parent_rev'")
-        update_parent_rev.parent_rev = obj['parent_rev']
+        update_parent_rev.parent_rev = transformer.convert_from(update_parent_rev.__parent_rev_data_type, obj['parent_rev'])
         return update_parent_rev
 
     def to_dict(self, transformer):
@@ -572,7 +572,7 @@ class ConflictPolicy(object):
 
 class UploadCommit(object):
 
-    __path_data_type = dt.String()
+    __path_data_type = dt.String(pattern=None)
     __autorename_data_type = dt.Boolean()
     __client_modified_utc_data_type = dt.UInt64()
     __mute_data_type = dt.Boolean()
@@ -723,15 +723,15 @@ class UploadCommit(object):
         upload_commit = UploadCommit()
         if 'path' not in obj:
             raise KeyError("missing required field 'path'")
-        upload_commit.path = obj['path']
+        upload_commit.path = transformer.convert_from(upload_commit.__path_data_type, obj['path'])
         if 'mode' not in obj:
             raise KeyError("missing required field 'mode'")
         upload_commit.mode = ConflictPolicy.from_dict(transformer, obj['mode'])
         if obj.get('append_to') is not None:
             upload_commit.append_to = UploadAppend.from_dict(transformer, obj['append_to'])
-        upload_commit.autorename = obj.get('autorename')
-        upload_commit.client_modified_utc = obj.get('client_modified_utc')
-        upload_commit.mute = obj.get('mute')
+        upload_commit.autorename = transformer.convert_from(upload_commit.__autorename_data_type, obj.get('autorename'))
+        upload_commit.client_modified_utc = transformer.convert_from(upload_commit.__client_modified_utc_data_type, obj.get('client_modified_utc'))
+        upload_commit.mute = transformer.convert_from(upload_commit.__mute_data_type, obj.get('mute'))
         return upload_commit
 
     def to_dict(self, transformer):
@@ -887,9 +887,9 @@ class File(object):
     :ivar size: The file size in bytes.
     """
 
-    __client_modified_data_type = dt.Timestamp()
-    __server_modified_data_type = dt.Timestamp()
-    __rev_data_type = dt.String()
+    __client_modified_data_type = dt.Timestamp(format='%a, %d %b %Y %H:%M:%S +0000')
+    __server_modified_data_type = dt.Timestamp(format='%a, %d %b %Y %H:%M:%S +0000')
+    __rev_data_type = dt.String(pattern=None)
     __size_data_type = dt.UInt64()
 
     __fields = {
@@ -994,16 +994,16 @@ class File(object):
         file = File()
         if 'client_modified' not in obj:
             raise KeyError("missing required field 'client_modified'")
-        file.client_modified = obj['client_modified']
+        file.client_modified = transformer.convert_from(file.__client_modified_data_type, obj['client_modified'])
         if 'server_modified' not in obj:
             raise KeyError("missing required field 'server_modified'")
-        file.server_modified = obj['server_modified']
+        file.server_modified = transformer.convert_from(file.__server_modified_data_type, obj['server_modified'])
         if 'rev' not in obj:
             raise KeyError("missing required field 'rev'")
-        file.rev = obj['rev']
+        file.rev = transformer.convert_from(file.__rev_data_type, obj['rev'])
         if 'size' not in obj:
             raise KeyError("missing required field 'size'")
-        file.size = obj['size']
+        file.size = transformer.convert_from(file.__size_data_type, obj['size'])
         return file
 
     def to_dict(self, transformer):
@@ -1076,7 +1076,7 @@ class Metadata(object):
 
 class Entry(object):
 
-    __name_data_type = dt.String()
+    __name_data_type = dt.String(pattern=None)
 
     __fields = {
         'metadata',
@@ -1141,7 +1141,7 @@ class Entry(object):
         entry.metadata = Metadata.from_dict(transformer, obj['metadata'])
         if 'name' not in obj:
             raise KeyError("missing required field 'name'")
-        entry.name = obj['name']
+        entry.name = transformer.convert_from(entry.__name_data_type, obj['name'])
         return entry
 
     def to_dict(self, transformer):
@@ -1154,9 +1154,9 @@ class Entry(object):
 
 class ListFolderResponse(object):
 
-    __cursor_data_type = dt.String()
+    __cursor_data_type = dt.String(pattern=None)
     __has_more_data_type = dt.Boolean()
-    __entries_data_type = dt.List()
+    __entries_data_type = dt.List(data_type=Entry)
 
     __fields = {
         'cursor',
@@ -1238,13 +1238,13 @@ class ListFolderResponse(object):
         list_folder_response = ListFolderResponse()
         if 'cursor' not in obj:
             raise KeyError("missing required field 'cursor'")
-        list_folder_response.cursor = obj['cursor']
+        list_folder_response.cursor = transformer.convert_from(list_folder_response.__cursor_data_type, obj['cursor'])
         if 'has_more' not in obj:
             raise KeyError("missing required field 'has_more'")
-        list_folder_response.has_more = obj['has_more']
+        list_folder_response.has_more = transformer.convert_from(list_folder_response.__has_more_data_type, obj['has_more'])
         if 'entries' not in obj:
             raise KeyError("missing required field 'entries'")
-        list_folder_response.entries = obj['entries']
+        list_folder_response.entries = transformer.convert_from(list_folder_response.__entries_data_type, obj['entries'])
         return list_folder_response
 
     def to_dict(self, transformer):

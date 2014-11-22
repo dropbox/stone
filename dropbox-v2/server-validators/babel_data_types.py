@@ -1,35 +1,56 @@
+"""
+Basic data types that should be re-usable by all Python code generators.
+"""
+
+from abc import ABCMeta, abstractmethod
 import numbers
 import re
 import types
 
-class Boolean(object):
+class DataType(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def validate(self, val):
+        """Checks if val is a valid value for this type."""
+        pass
+
+class Boolean(DataType):
     def validate(self, val):
         if not isinstance(val, bool):
             raise ValueError('%r is not a valid boolean' % val)
 
-class _BoundedInteger(object):
+class _Integer(DataType):
     """
-    When extending, specify 'minimum' and 'maximum' as class variables.
+    Do not use this class directly. Extend it and specify a 'minimum' and
+    'maximum' value as class variables for the more restrictive integer range.
     """
+    minimum = None
+    maximum = None
+
     def __init__(self, min_value=None, max_value=None):
         """
         A more restrictive minimum or maximum value can be specified than the
         range inherent to the defined type.
         """
         if min_value is not None:
-            if min_value >= self.minimum:
-                self.minimum = min_value
-            else:
+            assert isinstance(max_value, numbers.Integral), (
+                'min_value must be an integral number'
+            )
+            if min_value < self.minimum:
                 raise ValueError('min_value cannot be less than the minimum '
                                  'value for this type (%s < %s)'
                                  % (min_value, self.minimum))
         if max_value is not None:
-            if max_value <= self.maximum:
-                self.maximum = max_value
-            else:
+            assert isinstance(max_value, numbers.Integral), (
+                'max_value must be an integral number'
+            )
+            if max_value > self.maximum:
                 raise ValueError('max_value cannot be greater than the maximum '
                                  'value for this type (%s < %s)'
                                  % (max_value, self.maximum))
+        self.min_value = min_value
+        self.max_value = max_value
 
     def validate(self, val):
         if not isinstance(val, numbers.Integral):
@@ -40,25 +61,25 @@ class _BoundedInteger(object):
                              % (val, self.minimum, self.maximum))
 
     def __repr__(self):
-        return '%s()' % self.name
+        return '%s()' % self.__name__
 
-class Int32(_BoundedInteger):
+class Int32(_Integer):
     minimum = -2**31
     maximum = 2**31 - 1
 
-class UInt32(_BoundedInteger):
+class UInt32(_Integer):
     minimum = 0
     maximum = 2**32 - 1
 
-class Int64(_BoundedInteger):
+class Int64(_Integer):
     minimum = -2**63
     maximum = 2**63 - 1
 
-class UInt64(_BoundedInteger):
+class UInt64(_Integer):
     minimum = 0
     maximum = 2**64 - 1
 
-class String(object):
+class String(DataType):
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
             assert isinstance(min_length, numbers.Integral), (
@@ -98,8 +119,65 @@ class String(object):
             raise ValueError('%r did not match pattern %r'
                              % (val, self.pattern))
 
-class Timestamp(object):
-    pass
+import datetime
+
+class Timestamp(DataType):
+    def __init__(self, format):
+        assert isinstance(format, str), (
+            'format must be a string'
+        )
+        self.format = format
+
+    def validate(self, val):
+        if not isinstance(val, datetime.datetime):
+            raise ValueError('%r is of type %r and is not a valid timestamp'
+                             % (val, type(val).__name__))
+        """
+        if isinstance(val, types.StringTypes):
+            # Raises a ValueError if val is the incorrect format
+            datetime.datetime.strptime(val, self.format)
+        elif isinstance(val, datetime.datetime):
+            pass
+        else:
+            raise ValueError('%r is of type %r and is not a valid string'
+                             % (val, type(val).__name__))
+        """
+
+class List(DataType):
+    """Assumes list contents are homogeneous with respect to types."""
+
+    def __init__(self, data_type, min_items=None, max_items=None):
+        self.data_type = data_type
+
+        if min_items is not None:
+            assert min_items >= 0, 'min_items must be >= 0'
+        if max_items is not None:
+            assert max_items > 0, 'max_items must be > 0'
+        if min_items and max_items:
+            assert max_items >= min_items, 'max_length must be >= min_length'
+
+        self.min_items = min_items
+        self.max_items = max_items
+
+    def validate(self, val):
+        if not isinstance(val, types.ListType):
+            raise ValueError('%r is not a valid list' % val)
+        elif self.max_items is not None and len(val) > self.max_items:
+            raise ValueError('%r has more than %s items'
+                             % (val, self.max_items))
+        elif self.min_items is not None and len(val) < self.min_items:
+            raise ValueError('%r has fewer than %s items'
+                             % (val, self.min_items))
+
+        if isinstance(self.data_type, DataType):
+            for item in val:
+                self.data_type.validate(item)
+        else:
+            for item in val:
+                if not isinstance(item, self.data_type):
+                    raise TypeError('%r is of type %r rather than %r'
+                    % (val, type(item).__name__, self.data_type.__name__))
+                item.validate()
 
 class Name(object):
     __familiar_name_data_type = String()
@@ -160,17 +238,24 @@ class JsonCompatibleDictTransformer(DictTransformer):
     """
     @staticmethod
     def convert_to(data_type, val):
-        if isinstance(data_type, (Timestamp,)):
-            return str(val)
+        if val is None:
+            return val
+        elif isinstance(data_type, (Timestamp,)):
+            return val.strftime(data_type.format)
         else:
             return val
 
     @staticmethod
     def convert_from(data_type, val):
-        if isinstance(data_type, (Timestamp,)):
-            import datetime
-            return datetime.datetime.utcnow()
+        #print '1', data_type, val
+        if val is None:
+            #print '2', data_type, val
+            return val
+        elif isinstance(data_type, (Timestamp,)):
+            #print '3', data_type, val
+            return datetime.datetime.strptime(val, data_type.format)
         else:
+            #print '4', data_type, val
             return val
 
 class MeInfo(object):

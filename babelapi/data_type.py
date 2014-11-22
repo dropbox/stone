@@ -82,19 +82,23 @@ class _BoundedInteger(PrimitiveType):
         range inherent to the defined type.
         """
         if min_value is not None:
-            if min_value >= self.minimum:
-                self.minimum = min_value
-            else:
+            assert isinstance(max_value, numbers.Integral), (
+                'min_value must be an integral number'
+            )
+            if min_value < self.minimum:
                 raise ValueError('min_value cannot be less than the minimum '
                                  'value for this type (%s < %s)'
                                  % (min_value, self.minimum))
         if max_value is not None:
-            if max_value <= self.maximum:
-                self.maximum = max_value
-            else:
+            assert isinstance(max_value, numbers.Integral), (
+                'max_value must be an integral number'
+            )
+            if max_value > self.maximum:
                 raise ValueError('max_value cannot be greater than the maximum '
                                  'value for this type (%s < %s)'
                                  % (max_value, self.maximum))
+        self.min_value = min_value
+        self.max_value = max_value
 
     def check(self, val):
         if not isinstance(val, numbers.Integral):
@@ -611,10 +615,14 @@ def is_binary_type(data_type):
     return isinstance(data_type, Binary)
 def is_composite_type(data_type):
     return isinstance(data_type, CompositeType)
+def is_integer_type(data_type):
+    return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
 def is_list_type(data_type):
     return isinstance(data_type, List)
 def is_null_type(data_type):
     return isinstance(data_type, Null)
+def is_string_type(data_type):
+    return isinstance(data_type, String)
 def is_struct_type(data_type):
     return isinstance(data_type, Struct)
 def is_timestamp_type(data_type):

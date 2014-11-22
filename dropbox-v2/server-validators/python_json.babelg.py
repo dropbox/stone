@@ -28,8 +28,10 @@ from babelapi.data_type import (
 )
 from babelapi.data_type import (
     is_composite_type,
+    is_integer_type,
     is_list_type,
     is_null_type,
+    is_string_type,
     is_struct_type,
     is_timestamp_type,
     is_union_type,
@@ -50,7 +52,7 @@ import babel_data_types as dt
 # Matches format of Babel doc tags
 doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>.*?)`')
 
-class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
+class PythonSDKGenerator(CodeGeneratorMonolingual):
     """Generates Python modules for the Dropbox Python v2 SDK that implement
     the data types defined in the spec."""
 
@@ -152,6 +154,10 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         else:
             return self.lang.format_type(data_type)
 
+    def _func_args_from_dict(self, d):
+        filtered_d = self._filter_out_none_valued_keys(d)
+        return ', '.join(['%s=%s' % (k, v) for k, v in filtered_d.items()])
+
     def _generate_struct_class_vars(self, data_type):
         """
         Each class has a class attribute for each field that is a primitive type.
@@ -160,10 +166,46 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         lineno = self.lineno
         for field in data_type.fields:
             if not is_composite_type(field.data_type):
-                self.emit_line('__{}_data_type = dt.{}()'.format(
-                    self.lang.format_variable(field.name),
-                    field.data_type.name,
-                ))
+                if is_list_type(field.data_type):
+                    # TODO: Support embedded lists
+                    self.emit_line('__{}_data_type = dt.List({})'.format(
+                        self.lang.format_variable(field.name),
+                        self._func_args_from_dict({
+                            'data_type': field.data_type.data_type.name,
+                            'min_length': field.data_type.min_items,
+                            'max_length': field.data_type.max_items,
+                        })
+                    ))
+                elif is_integer_type(field.data_type):
+                    self.emit_line('__{}_data_type = dt.{}({})'.format(
+                        self.lang.format_variable(field.name),
+                        field.data_type.name,
+                        self._func_args_from_dict({
+                            'min_value': field.data_type.min_value,
+                            'max_value': field.data_type.max_value,
+                        })
+                    ))
+                elif is_string_type(field.data_type):
+                    self.emit_line('__{}_data_type = dt.String({})'.format(
+                        self.lang.format_variable(field.name),
+                        self._func_args_from_dict({
+                            'min_length': field.data_type.min_length,
+                            'max_length': field.data_type.max_length,
+                            'pattern': repr(field.data_type.pattern),
+                        })
+                    ))
+                elif is_timestamp_type(field.data_type):
+                    self.emit_line('__{}_data_type = dt.Timestamp({})'.format(
+                        self.lang.format_variable(field.name),
+                        self._func_args_from_dict({
+                            'format': repr(field.data_type.format),
+                        })
+                    ))
+                else:
+                    self.emit_line('__{}_data_type = dt.{}()'.format(
+                        self.lang.format_variable(field.name),
+                        field.data_type.name,
+                    ))
         if lineno != self.lineno:
             self.emit_empty_line()
 
@@ -293,7 +335,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                                 self.lang.format_class(field.data_type.name),
                             ))
                     else:
-                        self.emit_line("{0}.{1} = obj.get('{1}')".format(var_name, field_name))
+                        self.emit_line("{0}.{1} = transformer.convert_from({0}.__{1}_data_type, obj.get('{1}'))".format(var_name, field_name))
                 else:
                     self.emit_line("if '{}' not in obj:".format(field_name))
                     with self.indent():
@@ -305,7 +347,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                             self.lang.format_class(field.data_type.name),
                         ))
                     else:
-                        self.emit_line("{0}.{1} = obj['{1}']".format(var_name, field_name))
+                        self.emit_line("{0}.{1} = transformer.convert_from({0}.__{1}_data_type, obj['{1}'])".format(var_name, field_name))
 
             self.emit_line('return {}'.format(var_name))
         self.emit_empty_line()

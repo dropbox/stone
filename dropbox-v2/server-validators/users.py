@@ -147,16 +147,16 @@ class Space(object):
         space = Space()
         if 'quota' not in obj:
             raise KeyError("missing required field 'quota'")
-        space.quota = obj['quota']
+        space.quota = transformer.convert_from(space.__quota_data_type, obj['quota'])
         if 'private' not in obj:
             raise KeyError("missing required field 'private'")
-        space.private = obj['private']
+        space.private = transformer.convert_from(space.__private_data_type, obj['private'])
         if 'shared' not in obj:
             raise KeyError("missing required field 'shared'")
-        space.shared = obj['shared']
+        space.shared = transformer.convert_from(space.__shared_data_type, obj['shared'])
         if 'datastores' not in obj:
             raise KeyError("missing required field 'datastores'")
-        space.datastores = obj['datastores']
+        space.datastores = transformer.convert_from(space.__datastores_data_type, obj['datastores'])
         return space
 
     def to_dict(self, transformer):
@@ -177,8 +177,8 @@ class Team(object):
     :ivar name: The name of the team.
     """
 
-    __id_data_type = dt.String()
-    __name_data_type = dt.String()
+    __id_data_type = dt.String(pattern=None)
+    __name_data_type = dt.String(pattern=None)
 
     __fields = {
         'id',
@@ -238,10 +238,10 @@ class Team(object):
         team = Team()
         if 'id' not in obj:
             raise KeyError("missing required field 'id'")
-        team.id = obj['id']
+        team.id = transformer.convert_from(team.__id_data_type, obj['id'])
         if 'name' not in obj:
             raise KeyError("missing required field 'name'")
-        team.name = obj['name']
+        team.name = transformer.convert_from(team.__name_data_type, obj['name'])
         return team
 
     def to_dict(self, transformer):
@@ -265,10 +265,10 @@ class Name(object):
         of a user's Dropbox account.
     """
 
-    __given_name_data_type = dt.String()
-    __surname_data_type = dt.String()
-    __familiar_name_data_type = dt.String()
-    __display_name_data_type = dt.String()
+    __given_name_data_type = dt.String(pattern=None)
+    __surname_data_type = dt.String(pattern=None)
+    __familiar_name_data_type = dt.String(pattern=None)
+    __display_name_data_type = dt.String(pattern=None)
 
     __fields = {
         'given_name',
@@ -372,16 +372,16 @@ class Name(object):
         name = Name()
         if 'given_name' not in obj:
             raise KeyError("missing required field 'given_name'")
-        name.given_name = obj['given_name']
+        name.given_name = transformer.convert_from(name.__given_name_data_type, obj['given_name'])
         if 'surname' not in obj:
             raise KeyError("missing required field 'surname'")
-        name.surname = obj['surname']
+        name.surname = transformer.convert_from(name.__surname_data_type, obj['surname'])
         if 'familiar_name' not in obj:
             raise KeyError("missing required field 'familiar_name'")
-        name.familiar_name = obj['familiar_name']
+        name.familiar_name = transformer.convert_from(name.__familiar_name_data_type, obj['familiar_name'])
         if 'display_name' not in obj:
             raise KeyError("missing required field 'display_name'")
-        name.display_name = obj['display_name']
+        name.display_name = transformer.convert_from(name.__display_name_data_type, obj['display_name'])
         return name
 
     def to_dict(self, transformer):
@@ -402,7 +402,7 @@ class BasicAccountInfo(object):
     :ivar name: Details of a user's name.
     """
 
-    __account_id_data_type = dt.String()
+    __account_id_data_type = dt.String(min_length=40, max_length=40, pattern=None)
 
     __fields = {
         'account_id',
@@ -464,7 +464,7 @@ class BasicAccountInfo(object):
         basic_account_info = BasicAccountInfo()
         if 'account_id' not in obj:
             raise KeyError("missing required field 'account_id'")
-        basic_account_info.account_id = obj['account_id']
+        basic_account_info.account_id = transformer.convert_from(basic_account_info.__account_id_data_type, obj['account_id'])
         if 'name' not in obj:
             raise KeyError("missing required field 'name'")
         basic_account_info.name = Name.from_dict(transformer, obj['name'])
@@ -494,10 +494,10 @@ class MeInfo(BasicAccountInfo):
         ``is_paired`` will indicate if a work account is linked.
     """
 
-    __email_data_type = dt.String()
-    __country_data_type = dt.String()
-    __locale_data_type = dt.String()
-    __referral_link_data_type = dt.String()
+    __email_data_type = dt.String(pattern=None)
+    __country_data_type = dt.String(min_length=2, max_length=2, pattern=None)
+    __locale_data_type = dt.String(min_length=2, max_length=2, pattern=None)
+    __referral_link_data_type = dt.String(pattern=None)
     __is_paired_data_type = dt.Boolean()
 
     __fields = {
@@ -675,26 +675,26 @@ class MeInfo(BasicAccountInfo):
         me_info = MeInfo()
         if 'account_id' not in obj:
             raise KeyError("missing required field 'account_id'")
-        me_info.account_id = obj['account_id']
+        me_info.account_id = transformer.convert_from(me_info.__account_id_data_type, obj['account_id'])
         if 'name' not in obj:
             raise KeyError("missing required field 'name'")
         me_info.name = Name.from_dict(transformer, obj['name'])
         if 'email' not in obj:
             raise KeyError("missing required field 'email'")
-        me_info.email = obj['email']
+        me_info.email = transformer.convert_from(me_info.__email_data_type, obj['email'])
         if 'locale' not in obj:
             raise KeyError("missing required field 'locale'")
-        me_info.locale = obj['locale']
+        me_info.locale = transformer.convert_from(me_info.__locale_data_type, obj['locale'])
         if 'referral_link' not in obj:
             raise KeyError("missing required field 'referral_link'")
-        me_info.referral_link = obj['referral_link']
+        me_info.referral_link = transformer.convert_from(me_info.__referral_link_data_type, obj['referral_link'])
         if 'space' not in obj:
             raise KeyError("missing required field 'space'")
         me_info.space = Space.from_dict(transformer, obj['space'])
         if 'is_paired' not in obj:
             raise KeyError("missing required field 'is_paired'")
-        me_info.is_paired = obj['is_paired']
-        me_info.country = obj.get('country')
+        me_info.is_paired = transformer.convert_from(me_info.__is_paired_data_type, obj['is_paired'])
+        me_info.country = transformer.convert_from(me_info.__country_data_type, obj.get('country'))
         if obj.get('team') is not None:
             me_info.team = Team.from_dict(transformer, obj['team'])
         return me_info
@@ -761,7 +761,7 @@ class AccountInfo(object):
 
 class InfoRequest(object):
 
-    __account_id_data_type = dt.String()
+    __account_id_data_type = dt.String(min_length=40, max_length=40, pattern=None)
 
     __fields = {
         'account_id',
@@ -799,7 +799,7 @@ class InfoRequest(object):
         info_request = InfoRequest()
         if 'account_id' not in obj:
             raise KeyError("missing required field 'account_id'")
-        info_request.account_id = obj['account_id']
+        info_request.account_id = transformer.convert_from(info_request.__account_id_data_type, obj['account_id'])
         return info_request
 
     def to_dict(self, transformer):
