@@ -51,6 +51,9 @@ class PathTarget(object):
 
     @property
     def path(self):
+        """
+        Path from root. Should be an empty string for root.
+        """
         if self.__has_path:
             return self._path
         else:
@@ -106,6 +109,9 @@ class FileTarget(PathTarget):
 
     @property
     def rev(self):
+        """
+        Revision of target file.
+        """
         if self.__has_rev:
             return self._rev
         else:
@@ -162,6 +168,9 @@ class FileInfo(object):
 
     @property
     def name(self):
+        """
+        Name of file.
+        """
         if self.__has_name:
             return self._name
         else:
@@ -215,6 +224,9 @@ class SubError(object):
 
     @property
     def reason(self):
+        """
+        A code indicating the type of error.
+        """
         if self.__has_reason:
             return self._reason
         else:
@@ -335,6 +347,9 @@ class UploadSessionStart(object):
 
     @property
     def upload_id(self):
+        """
+        A unique identifier for the upload session.
+        """
         if self.__has_upload_id:
             return self._upload_id
         else:
@@ -393,6 +408,9 @@ class UploadAppend(object):
 
     @property
     def upload_id(self):
+        """
+        Identifies the upload session to append data to.
+        """
         if self.__has_upload_id:
             return self._upload_id
         else:
@@ -411,6 +429,11 @@ class UploadAppend(object):
 
     @property
     def offset(self):
+        """
+        The offset into the file of the current chunk of data being uploaded. It
+        can also be thought of as the amount of data that has been uploaded so
+        far. We use the offset as a sanity check.
+        """
         if self.__has_offset:
             return self._offset
         else:
@@ -621,6 +644,36 @@ class UpdateParentRev(object):
     def __repr__(self):
         return 'UpdateParentRev(%r)' % self._parent_rev
 
+class A(object):
+    """
+    Boo
+
+    :ivar top: This is blah.
+    """
+
+    def __init__(self, top):
+        """
+        :param str top: asdfa
+        """
+        # asdfa
+        self.top = top # yes
+
+    @property
+    def junk(self):
+        """hello2"""
+        return 'halleluja'
+
+    def hi(self):
+        """test"""
+        return 3
+
+
+a = A()
+a.hi()
+print a.junk
+print a.top
+
+
 class ConflictPolicy(object):
     """
     The action to take when a file path conflict exists.
@@ -734,6 +787,9 @@ class UploadCommit(object):
 
     @property
     def path(self):
+        """
+        Path in the user's Dropbox to save the file.
+        """
         if self.__has_path:
             return self._path
         else:
@@ -752,6 +808,9 @@ class UploadCommit(object):
 
     @property
     def mode(self):
+        """
+        The course of action to take if a file already exists at ``path``.
+        """
         if self.__has_mode:
             return self._mode
         else:
@@ -772,6 +831,10 @@ class UploadCommit(object):
 
     @property
     def append_to(self):
+        """
+        If specified, the current chunk of data should be appended to an
+        existing upload session.
+        """
         if self.__has_append_to:
             return self._append_to
         else:
@@ -1102,6 +1165,13 @@ class File(object):
 
     @property
     def client_modified(self):
+        """
+        For files, this is the modification time set by the desktop client when
+        the file was added to Dropbox. Since this time is not verified (the
+        Dropbox server stores whatever the desktop client sends up), this should
+        only be used for display purposes (such as sorting) and not, for
+        example, to determine if a file has changed or not.
+        """
         if self.__has_client_modified:
             return self._client_modified
         else:
@@ -1120,6 +1190,9 @@ class File(object):
 
     @property
     def server_modified(self):
+        """
+        The last time the file was modified on Dropbox.
+        """
         if self.__has_server_modified:
             return self._server_modified
         else:
@@ -1138,6 +1211,11 @@ class File(object):
 
     @property
     def rev(self):
+        """
+        A unique identifier for the current revision of a file. This field is
+        the same rev as elsewhere in the API and can be used to detect changes
+        and avoid conflicts.
+        """
         if self.__has_rev:
             return self._rev
         else:
@@ -1156,6 +1234,9 @@ class File(object):
 
     @property
     def size(self):
+        """
+        The file size in bytes.
+        """
         if self.__has_size:
             return self._size
         else:

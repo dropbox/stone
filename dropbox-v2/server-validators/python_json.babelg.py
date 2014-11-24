@@ -255,6 +255,10 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('@property')
             self.emit_line('def {}(self):'.format(field_name))
             with self.indent():
+                if field.doc:
+                    self.emit_line('"""')
+                    self.emit_wrapped_lines(self.docf(field.doc))
+                    self.emit_line('"""')
                 self.emit_line('if self.__has_{}:'.format(field_name))
                 with self.indent():
                     self.emit_line('return self._{}'.format(field_name))

@@ -74,6 +74,9 @@ class Space(object):
 
     @property
     def quota(self):
+        """
+        The user's total quota allocation (bytes).
+        """
         if self.__has_quota:
             return self._quota
         else:
@@ -92,6 +95,9 @@ class Space(object):
 
     @property
     def private(self):
+        """
+        The user's used quota outside of shared folders (bytes).
+        """
         if self.__has_private:
             return self._private
         else:
@@ -110,6 +116,9 @@ class Space(object):
 
     @property
     def shared(self):
+        """
+        The user's used quota in shared folders (bytes).
+        """
         if self.__has_shared:
             return self._shared
         else:
@@ -128,6 +137,9 @@ class Space(object):
 
     @property
     def datastores(self):
+        """
+        The user's used quota in datastores (bytes).
+        """
         if self.__has_datastores:
             return self._datastores
         else:
@@ -204,6 +216,9 @@ class Team(object):
 
     @property
     def id(self):
+        """
+        The team's unique ID.
+        """
         if self.__has_id:
             return self._id
         else:
@@ -222,6 +237,9 @@ class Team(object):
 
     @property
     def name(self):
+        """
+        The name of the team.
+        """
         if self.__has_name:
             return self._name
         else:
@@ -305,6 +323,9 @@ class Name(object):
 
     @property
     def given_name(self):
+        """
+        Also known as a first name.
+        """
         if self.__has_given_name:
             return self._given_name
         else:
@@ -323,6 +344,9 @@ class Name(object):
 
     @property
     def surname(self):
+        """
+        Also known as a last name or family name.
+        """
         if self.__has_surname:
             return self._surname
         else:
@@ -341,6 +365,10 @@ class Name(object):
 
     @property
     def familiar_name(self):
+        """
+        Locale-dependent familiar name. Generally matches ``given_name`` or
+        ``display_name``.
+        """
         if self.__has_familiar_name:
             return self._familiar_name
         else:
@@ -359,6 +387,10 @@ class Name(object):
 
     @property
     def display_name(self):
+        """
+        A name that can be used directly to represent the name of a user's
+        Dropbox account.
+        """
         if self.__has_display_name:
             return self._display_name
         else:
@@ -434,6 +466,9 @@ class BasicAccountInfo(object):
 
     @property
     def account_id(self):
+        """
+        The user's unique Dropbox ID.
+        """
         if self.__has_account_id:
             return self._account_id
         else:
@@ -452,6 +487,9 @@ class BasicAccountInfo(object):
 
     @property
     def name(self):
+        """
+        Details of a user's name.
+        """
         if self.__has_name:
             return self._name
         else:
@@ -556,6 +594,9 @@ class MeInfo(BasicAccountInfo):
 
     @property
     def email(self):
+        """
+        The user's e-mail address.
+        """
         if self.__has_email:
             return self._email
         else:
@@ -574,6 +615,9 @@ class MeInfo(BasicAccountInfo):
 
     @property
     def country(self):
+        """
+        The user's two-letter country code, if available.
+        """
         if self.__has_country:
             return self._country
         else:
@@ -592,6 +636,9 @@ class MeInfo(BasicAccountInfo):
 
     @property
     def locale(self):
+        """
+        The language setting that user specified.
+        """
         if self.__has_locale:
             return self._locale
         else:
@@ -610,6 +657,9 @@ class MeInfo(BasicAccountInfo):
 
     @property
     def referral_link(self):
+        """
+        The user's `referral link <https://www.dropbox.com/referrals>`_.
+        """
         if self.__has_referral_link:
             return self._referral_link
         else:
@@ -628,6 +678,9 @@ class MeInfo(BasicAccountInfo):
 
     @property
     def space(self):
+        """
+        The user's quota.
+        """
         if self.__has_space:
             return self._space
         else:
@@ -648,6 +701,9 @@ class MeInfo(BasicAccountInfo):
 
     @property
     def team(self):
+        """
+        If this account is a member of a team.
+        """
         if self.__has_team:
             return self._team
         else:
@@ -668,6 +724,11 @@ class MeInfo(BasicAccountInfo):
 
     @property
     def is_paired(self):
+        """
+        Whether the user has a personal and work account. If the authorized
+        account is personal, then ``team`` will always be 'Null', but
+        ``is_paired`` will indicate if a work account is linked.
+        """
         if self.__has_is_paired:
             return self._is_paired
         else:
@@ -850,6 +911,9 @@ class InfoRequest(object):
 
     @property
     def account_id(self):
+        """
+        A user's account identifier.
+        """
         if self.__has_account_id:
             return self._account_id
         else:
