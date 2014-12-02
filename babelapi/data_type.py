@@ -613,6 +613,8 @@ Empty = Struct('Empty', None, [])
 
 def is_binary_type(data_type):
     return isinstance(data_type, Binary)
+def is_boolean_type(data_type):
+    return isinstance(data_type, Boolean)
 def is_composite_type(data_type):
     return isinstance(data_type, CompositeType)
 def is_integer_type(data_type):

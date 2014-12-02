@@ -153,14 +153,19 @@ union Metadata
 struct Entry
     metadata Metadata
     name String
+        "The name of the resource as seen by the user in their Dropbox."
 
 route GetMetadata (FileTarget, Entry, Empty)
     "Returns the metadata for a file or folder."
 
 struct ListFolderResponse
     cursor String
+        "Pass the cursor into :route:`ListFolderContinue` to see what's changed
+        in the folder since your previous query."
     has_more Boolean
+        "If true, then there are more entries available."
     entries List(data_type=Entry)
+        "Each entry is a resource in the folder."
 
 route ListFolder (PathTarget, ListFolderResponse, Empty)
     "Returns the contents of a folder."

@@ -27,6 +27,7 @@ from babelapi.data_type import (
     Union,
 )
 from babelapi.data_type import (
+    is_boolean_type,
     is_composite_type,
     is_integer_type,
     is_list_type,
@@ -209,11 +210,37 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         if lineno != self.lineno:
             self.emit_empty_line()
 
-        self.emit_line('__fields = {')
+        if data_type.super_type:
+            super_type_class_name = self._class_name_for_data_type(data_type.super_type)
+        else:
+            super_type_class_name = None
+
+        if super_type_class_name:
+            self.emit_line('_field_names_ = %s._field_names_.union({' % super_type_class_name)
+        else:
+            self.emit_line('_field_names_ = {')
         with self.indent():
-            for field in data_type.all_fields:
+            for field in data_type.fields:
                 self.emit_line("'{}',".format(self.lang.format_variable(field.name)))
-        self.emit_line('}')
+        if super_type_class_name:
+            self.emit_line('})')
+        else:
+            self.emit_line('}')
+        self.emit_empty_line()
+
+        if super_type_class_name:
+            self.emit_line('_fields_ = {}._fields_ + ['.format(super_type_class_name))
+        else:
+            self.emit_line('_fields_ = [')
+        with self.indent():
+            for field in data_type.fields:
+                var_name = self.lang.format_variable(field.name)
+                if not is_composite_type(field.data_type):
+                    validator_name = '__{0}_data_type'.format(var_name)
+                else:
+                    validator_name = self._class_name_for_data_type(field.data_type)
+                self.emit_line("('{}', {}, {}),".format(var_name, field.optional, validator_name))
+        self.emit_line(']')
         self.emit_empty_line()
 
     def _generate_struct_class_init(self, data_type):
@@ -247,6 +274,24 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('])')
             self.emit_empty_line()
 
+    def _python_type_mapping(self, data_type):
+        if is_string_type(data_type):
+            return 'str'
+        elif is_boolean_type(data_type):
+            return 'bool'
+        elif is_integer_type(data_type):
+            return 'long'
+        elif is_null_type(data_type):
+            return 'None'
+        elif is_timestamp_type(data_type):
+            return 'datetime.datetime'
+        elif is_composite_type(data_type):
+            return self._class_name_for_data_type(data_type)
+        elif is_list_type(data_type):
+            return 'list of [{}]'.format(self._python_type_mapping(data_type.data_type))
+        else:
+            raise TypeError('Unknown data type %r' % data_type)
+
     def _generate_struct_class_properties(self, data_type):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
@@ -255,10 +300,11 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('@property')
             self.emit_line('def {}(self):'.format(field_name))
             with self.indent():
+                self.emit_line('"""')
                 if field.doc:
-                    self.emit_line('"""')
                     self.emit_wrapped_lines(self.docf(field.doc))
-                    self.emit_line('"""')
+                self.emit_line(':rtype: {}'.format(self._python_type_mapping(field.data_type)))
+                self.emit_line('"""')
                 self.emit_line('if self.__has_{}:'.format(field_name))
                 with self.indent():
                     self.emit_line('return self._{}'.format(field_name))
@@ -321,7 +367,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         with self.indent():
             self.emit_line('for key in obj:')
             with self.indent():
-                self.emit_line('if key not in cls.__fields:')
+                self.emit_line('if key not in cls._field_names_:')
                 with self.indent():
                     self.emit_line('raise KeyError("Unknown key: %r" % key)')
             var_name = self.lang.format_variable(data_type.name)
@@ -386,7 +432,12 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         if data_type.super_type:
             extends = self._class_name_for_data_type(data_type.super_type)
         else:
-            extends = 'object'
+            if is_struct_type(data_type):
+                extends = 'dt.Struct'
+            elif is_union_type(data_type):
+                extends = 'dt.Union'
+            else:
+                extends = 'object'
         return 'class {}({}):'.format(self._class_name_for_data_type(data_type), extends)
 
     def _is_instance_type(self, data_type):

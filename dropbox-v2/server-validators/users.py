@@ -5,10 +5,13 @@ import six
 
 import babel_data_types as dt
 
-class Empty(object):
+class Empty(dt.Struct):
 
-    __fields = {
+    _field_names_ = {
     }
+
+    _fields_ = [
+    ]
 
     def __init__(self):
         pass
@@ -20,7 +23,7 @@ class Empty(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         empty = Empty()
         return empty
@@ -32,7 +35,7 @@ class Empty(object):
     def __repr__(self):
         return 'Empty()'
 
-class Space(object):
+class Space(dt.Struct):
     """
     The space quota info for a user.
 
@@ -47,12 +50,19 @@ class Space(object):
     __shared_data_type = dt.UInt64()
     __datastores_data_type = dt.UInt64()
 
-    __fields = {
+    _field_names_ = {
         'quota',
         'private',
         'shared',
         'datastores',
     }
+
+    _fields_ = [
+        ('quota', False, __quota_data_type),
+        ('private', False, __private_data_type),
+        ('shared', False, __shared_data_type),
+        ('datastores', False, __datastores_data_type),
+    ]
 
     def __init__(self):
         self._quota = None
@@ -76,6 +86,7 @@ class Space(object):
     def quota(self):
         """
         The user's total quota allocation (bytes).
+        :rtype: long
         """
         if self.__has_quota:
             return self._quota
@@ -97,6 +108,7 @@ class Space(object):
     def private(self):
         """
         The user's used quota outside of shared folders (bytes).
+        :rtype: long
         """
         if self.__has_private:
             return self._private
@@ -118,6 +130,7 @@ class Space(object):
     def shared(self):
         """
         The user's used quota in shared folders (bytes).
+        :rtype: long
         """
         if self.__has_shared:
             return self._shared
@@ -139,6 +152,7 @@ class Space(object):
     def datastores(self):
         """
         The user's used quota in datastores (bytes).
+        :rtype: long
         """
         if self.__has_datastores:
             return self._datastores
@@ -159,7 +173,7 @@ class Space(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         space = Space()
         if 'quota' not in obj:
@@ -186,7 +200,7 @@ class Space(object):
     def __repr__(self):
         return 'Space(%r)' % self._quota
 
-class Team(object):
+class Team(dt.Struct):
     """
     Information about a team.
 
@@ -197,10 +211,15 @@ class Team(object):
     __id_data_type = dt.String(pattern=None)
     __name_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'id',
         'name',
     }
+
+    _fields_ = [
+        ('id', False, __id_data_type),
+        ('name', False, __name_data_type),
+    ]
 
     def __init__(self):
         self._id = None
@@ -218,6 +237,7 @@ class Team(object):
     def id(self):
         """
         The team's unique ID.
+        :rtype: str
         """
         if self.__has_id:
             return self._id
@@ -239,6 +259,7 @@ class Team(object):
     def name(self):
         """
         The name of the team.
+        :rtype: str
         """
         if self.__has_name:
             return self._name
@@ -259,7 +280,7 @@ class Team(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         team = Team()
         if 'id' not in obj:
@@ -278,7 +299,7 @@ class Team(object):
     def __repr__(self):
         return 'Team(%r)' % self._id
 
-class Name(object):
+class Name(dt.Struct):
     """
     Contains several ways a name might be represented to make
     internationalization more convenient.
@@ -296,12 +317,19 @@ class Name(object):
     __familiar_name_data_type = dt.String(pattern=None)
     __display_name_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'given_name',
         'surname',
         'familiar_name',
         'display_name',
     }
+
+    _fields_ = [
+        ('given_name', False, __given_name_data_type),
+        ('surname', False, __surname_data_type),
+        ('familiar_name', False, __familiar_name_data_type),
+        ('display_name', False, __display_name_data_type),
+    ]
 
     def __init__(self):
         self._given_name = None
@@ -325,6 +353,7 @@ class Name(object):
     def given_name(self):
         """
         Also known as a first name.
+        :rtype: str
         """
         if self.__has_given_name:
             return self._given_name
@@ -346,6 +375,7 @@ class Name(object):
     def surname(self):
         """
         Also known as a last name or family name.
+        :rtype: str
         """
         if self.__has_surname:
             return self._surname
@@ -368,6 +398,7 @@ class Name(object):
         """
         Locale-dependent familiar name. Generally matches ``given_name`` or
         ``display_name``.
+        :rtype: str
         """
         if self.__has_familiar_name:
             return self._familiar_name
@@ -390,6 +421,7 @@ class Name(object):
         """
         A name that can be used directly to represent the name of a user's
         Dropbox account.
+        :rtype: str
         """
         if self.__has_display_name:
             return self._display_name
@@ -410,7 +442,7 @@ class Name(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         name = Name()
         if 'given_name' not in obj:
@@ -437,7 +469,7 @@ class Name(object):
     def __repr__(self):
         return 'Name(%r)' % self._given_name
 
-class BasicAccountInfo(object):
+class BasicAccountInfo(dt.Struct):
     """
     Basic information about a user's account.
 
@@ -447,10 +479,15 @@ class BasicAccountInfo(object):
 
     __account_id_data_type = dt.String(min_length=40, max_length=40, pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'account_id',
         'name',
     }
+
+    _fields_ = [
+        ('account_id', False, __account_id_data_type),
+        ('name', False, Name),
+    ]
 
     def __init__(self):
         self._account_id = None
@@ -468,6 +505,7 @@ class BasicAccountInfo(object):
     def account_id(self):
         """
         The user's unique Dropbox ID.
+        :rtype: str
         """
         if self.__has_account_id:
             return self._account_id
@@ -489,6 +527,7 @@ class BasicAccountInfo(object):
     def name(self):
         """
         Details of a user's name.
+        :rtype: Name
         """
         if self.__has_name:
             return self._name
@@ -511,7 +550,7 @@ class BasicAccountInfo(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         basic_account_info = BasicAccountInfo()
         if 'account_id' not in obj:
@@ -552,17 +591,25 @@ class MeInfo(BasicAccountInfo):
     __referral_link_data_type = dt.String(pattern=None)
     __is_paired_data_type = dt.Boolean()
 
-    __fields = {
-        'account_id',
-        'name',
+    _field_names_ = BasicAccountInfo._field_names_.union({
         'email',
+        'country',
         'locale',
         'referral_link',
         'space',
-        'is_paired',
-        'country',
         'team',
-    }
+        'is_paired',
+    })
+
+    _fields_ = BasicAccountInfo._fields_ + [
+        ('email', False, __email_data_type),
+        ('country', True, __country_data_type),
+        ('locale', False, __locale_data_type),
+        ('referral_link', False, __referral_link_data_type),
+        ('space', False, Space),
+        ('team', True, Team),
+        ('is_paired', False, __is_paired_data_type),
+    ]
 
     def __init__(self):
         super(MeInfo, self).__init__()
@@ -596,6 +643,7 @@ class MeInfo(BasicAccountInfo):
     def email(self):
         """
         The user's e-mail address.
+        :rtype: str
         """
         if self.__has_email:
             return self._email
@@ -617,6 +665,7 @@ class MeInfo(BasicAccountInfo):
     def country(self):
         """
         The user's two-letter country code, if available.
+        :rtype: str
         """
         if self.__has_country:
             return self._country
@@ -638,6 +687,7 @@ class MeInfo(BasicAccountInfo):
     def locale(self):
         """
         The language setting that user specified.
+        :rtype: str
         """
         if self.__has_locale:
             return self._locale
@@ -659,6 +709,7 @@ class MeInfo(BasicAccountInfo):
     def referral_link(self):
         """
         The user's `referral link <https://www.dropbox.com/referrals>`_.
+        :rtype: str
         """
         if self.__has_referral_link:
             return self._referral_link
@@ -680,6 +731,7 @@ class MeInfo(BasicAccountInfo):
     def space(self):
         """
         The user's quota.
+        :rtype: Space
         """
         if self.__has_space:
             return self._space
@@ -703,6 +755,7 @@ class MeInfo(BasicAccountInfo):
     def team(self):
         """
         If this account is a member of a team.
+        :rtype: Team
         """
         if self.__has_team:
             return self._team
@@ -728,6 +781,7 @@ class MeInfo(BasicAccountInfo):
         Whether the user has a personal and work account. If the authorized
         account is personal, then ``team`` will always be 'Null', but
         ``is_paired`` will indicate if a work account is linked.
+        :rtype: bool
         """
         if self.__has_is_paired:
             return self._is_paired
@@ -748,7 +802,7 @@ class MeInfo(BasicAccountInfo):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         me_info = MeInfo()
         if 'account_id' not in obj:
@@ -794,7 +848,7 @@ class MeInfo(BasicAccountInfo):
     def __repr__(self):
         return 'MeInfo(%r)' % self._email
 
-class AccountInfo(object):
+class AccountInfo(dt.Union):
     """
     The amount of detail revealed about an account depends on the user being
     queried and the user making the query.
@@ -892,13 +946,17 @@ class AccountInfo(object):
     def __repr__(self):
         return 'AccountInfo(%r)' % self.__tag
 
-class InfoRequest(object):
+class InfoRequest(dt.Struct):
 
     __account_id_data_type = dt.String(min_length=40, max_length=40, pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'account_id',
     }
+
+    _fields_ = [
+        ('account_id', False, __account_id_data_type),
+    ]
 
     def __init__(self):
         self._account_id = None
@@ -913,6 +971,7 @@ class InfoRequest(object):
     def account_id(self):
         """
         A user's account identifier.
+        :rtype: str
         """
         if self.__has_account_id:
             return self._account_id
@@ -933,7 +992,7 @@ class InfoRequest(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         info_request = InfoRequest()
         if 'account_id' not in obj:
@@ -948,7 +1007,7 @@ class InfoRequest(object):
     def __repr__(self):
         return 'InfoRequest(%r)' % self._account_id
 
-class InfoError(object):
+class InfoError(dt.Union):
 
     NoAccount = object()
 

@@ -15,6 +15,10 @@ class DataType(object):
         """Checks if val is a valid value for this type."""
         pass
 
+class CompositeType(object): pass
+class Struct(CompositeType): pass
+class Union(CompositeType): pass
+
 class Boolean(DataType):
     def validate(self, val):
         if not isinstance(val, bool):
@@ -257,6 +261,45 @@ class JsonCompatibleDictTransformer(DictTransformer):
         else:
             #print '4', data_type, val
             return val
+
+class JsonCompatDictEncoder(object):
+    @classmethod
+    def encode(cls, obj):
+        """Babel struct"""
+        # TODO: Consider adding an assert.
+        #assert isinstance(obj, (DataType))
+        d = {}
+        for name, optional, data_type  in obj._fields_:
+            val = getattr(obj, name)
+            if val is not None:
+                if isinstance(data_type, DataType):
+                    d[name] = cls._make_json_friendly(data_type, val)
+                else:
+                    d[name] = cls.encode(val)
+            elif val is None and not optional:
+                # FIXME: MAKE THIS BETTER
+                raise Exception('required field missing')
+        return d
+
+    @classmethod
+    def _make_json_friendly(cls, data_type, val):
+        if val is None:
+            return val
+        elif isinstance(data_type, (Timestamp,)):
+            return val.strftime(data_type.format)
+        else:
+            return val
+
+import json
+
+class BabelJsonEncoder(json.JSONEncoder):
+    def default(self, obj):
+        return obj
+
+class JsonCompatDictDecoder(object):
+    def decode(self, obj):
+        """Python dict"""
+        pass
 
 class MeInfo(object):
     """

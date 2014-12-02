@@ -5,10 +5,13 @@ import six
 
 import babel_data_types as dt
 
-class Empty(object):
+class Empty(dt.Struct):
 
-    __fields = {
+    _field_names_ = {
     }
+
+    _fields_ = [
+    ]
 
     def __init__(self):
         pass
@@ -20,7 +23,7 @@ class Empty(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         empty = Empty()
         return empty
@@ -32,13 +35,17 @@ class Empty(object):
     def __repr__(self):
         return 'Empty()'
 
-class PathTarget(object):
+class PathTarget(dt.Struct):
 
     __path_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'path',
     }
+
+    _fields_ = [
+        ('path', False, __path_data_type),
+    ]
 
     def __init__(self):
         self._path = None
@@ -53,6 +60,7 @@ class PathTarget(object):
     def path(self):
         """
         Path from root. Should be an empty string for root.
+        :rtype: str
         """
         if self.__has_path:
             return self._path
@@ -73,7 +81,7 @@ class PathTarget(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         path_target = PathTarget()
         if 'path' not in obj:
@@ -92,10 +100,13 @@ class FileTarget(PathTarget):
 
     __rev_data_type = dt.String(pattern=None)
 
-    __fields = {
-        'path',
+    _field_names_ = PathTarget._field_names_.union({
         'rev',
-    }
+    })
+
+    _fields_ = PathTarget._fields_ + [
+        ('rev', True, __rev_data_type),
+    ]
 
     def __init__(self):
         super(FileTarget, self).__init__()
@@ -111,6 +122,7 @@ class FileTarget(PathTarget):
     def rev(self):
         """
         Revision of target file.
+        :rtype: str
         """
         if self.__has_rev:
             return self._rev
@@ -131,7 +143,7 @@ class FileTarget(PathTarget):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         file_target = FileTarget()
         if 'path' not in obj:
@@ -149,13 +161,17 @@ class FileTarget(PathTarget):
     def __repr__(self):
         return 'FileTarget(%r)' % self._rev
 
-class FileInfo(object):
+class FileInfo(dt.Struct):
 
     __name_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'name',
     }
+
+    _fields_ = [
+        ('name', False, __name_data_type),
+    ]
 
     def __init__(self):
         self._name = None
@@ -170,6 +186,7 @@ class FileInfo(object):
     def name(self):
         """
         Name of file.
+        :rtype: str
         """
         if self.__has_name:
             return self._name
@@ -190,7 +207,7 @@ class FileInfo(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         file_info = FileInfo()
         if 'name' not in obj:
@@ -205,13 +222,17 @@ class FileInfo(object):
     def __repr__(self):
         return 'FileInfo(%r)' % self._name
 
-class SubError(object):
+class SubError(dt.Struct):
 
     __reason_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'reason',
     }
+
+    _fields_ = [
+        ('reason', False, __reason_data_type),
+    ]
 
     def __init__(self):
         self._reason = None
@@ -226,6 +247,7 @@ class SubError(object):
     def reason(self):
         """
         A code indicating the type of error.
+        :rtype: str
         """
         if self.__has_reason:
             return self._reason
@@ -246,7 +268,7 @@ class SubError(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         sub_error = SubError()
         if 'reason' not in obj:
@@ -261,7 +283,7 @@ class SubError(object):
     def __repr__(self):
         return 'SubError(%r)' % self._reason
 
-class DownloadError(object):
+class DownloadError(dt.Union):
 
     Disallowed = SubError
     NoFile = SubError
@@ -328,13 +350,17 @@ class DownloadError(object):
     def __repr__(self):
         return 'DownloadError(%r)' % self.__tag
 
-class UploadSessionStart(object):
+class UploadSessionStart(dt.Struct):
 
     __upload_id_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'upload_id',
     }
+
+    _fields_ = [
+        ('upload_id', False, __upload_id_data_type),
+    ]
 
     def __init__(self):
         self._upload_id = None
@@ -349,6 +375,7 @@ class UploadSessionStart(object):
     def upload_id(self):
         """
         A unique identifier for the upload session.
+        :rtype: str
         """
         if self.__has_upload_id:
             return self._upload_id
@@ -369,7 +396,7 @@ class UploadSessionStart(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         upload_session_start = UploadSessionStart()
         if 'upload_id' not in obj:
@@ -384,15 +411,20 @@ class UploadSessionStart(object):
     def __repr__(self):
         return 'UploadSessionStart(%r)' % self._upload_id
 
-class UploadAppend(object):
+class UploadAppend(dt.Struct):
 
     __upload_id_data_type = dt.String(pattern=None)
     __offset_data_type = dt.UInt64()
 
-    __fields = {
+    _field_names_ = {
         'upload_id',
         'offset',
     }
+
+    _fields_ = [
+        ('upload_id', False, __upload_id_data_type),
+        ('offset', False, __offset_data_type),
+    ]
 
     def __init__(self):
         self._upload_id = None
@@ -410,6 +442,7 @@ class UploadAppend(object):
     def upload_id(self):
         """
         Identifies the upload session to append data to.
+        :rtype: str
         """
         if self.__has_upload_id:
             return self._upload_id
@@ -433,6 +466,7 @@ class UploadAppend(object):
         The offset into the file of the current chunk of data being uploaded. It
         can also be thought of as the amount of data that has been uploaded so
         far. We use the offset as a sanity check.
+        :rtype: long
         """
         if self.__has_offset:
             return self._offset
@@ -453,7 +487,7 @@ class UploadAppend(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         upload_append = UploadAppend()
         if 'upload_id' not in obj:
@@ -472,13 +506,17 @@ class UploadAppend(object):
     def __repr__(self):
         return 'UploadAppend(%r)' % self._upload_id
 
-class IncorrectOffsetError(object):
+class IncorrectOffsetError(dt.Struct):
 
     __correct_offset_data_type = dt.UInt64()
 
-    __fields = {
+    _field_names_ = {
         'correct_offset',
     }
+
+    _fields_ = [
+        ('correct_offset', False, __correct_offset_data_type),
+    ]
 
     def __init__(self):
         self._correct_offset = None
@@ -491,6 +529,9 @@ class IncorrectOffsetError(object):
 
     @property
     def correct_offset(self):
+        """
+        :rtype: long
+        """
         if self.__has_correct_offset:
             return self._correct_offset
         else:
@@ -510,7 +551,7 @@ class IncorrectOffsetError(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         incorrect_offset_error = IncorrectOffsetError()
         if 'correct_offset' not in obj:
@@ -525,7 +566,7 @@ class IncorrectOffsetError(object):
     def __repr__(self):
         return 'IncorrectOffsetError(%r)' % self._correct_offset
 
-class UploadAppendError(object):
+class UploadAppendError(dt.Union):
 
     NotFound = object()
     Closed = object()
@@ -591,13 +632,17 @@ class UploadAppendError(object):
     def __repr__(self):
         return 'UploadAppendError(%r)' % self.__tag
 
-class UpdateParentRev(object):
+class UpdateParentRev(dt.Struct):
 
     __parent_rev_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'parent_rev',
     }
+
+    _fields_ = [
+        ('parent_rev', False, __parent_rev_data_type),
+    ]
 
     def __init__(self):
         self._parent_rev = None
@@ -610,6 +655,9 @@ class UpdateParentRev(object):
 
     @property
     def parent_rev(self):
+        """
+        :rtype: str
+        """
         if self.__has_parent_rev:
             return self._parent_rev
         else:
@@ -629,7 +677,7 @@ class UpdateParentRev(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         update_parent_rev = UpdateParentRev()
         if 'parent_rev' not in obj:
@@ -644,37 +692,7 @@ class UpdateParentRev(object):
     def __repr__(self):
         return 'UpdateParentRev(%r)' % self._parent_rev
 
-class A(object):
-    """
-    Boo
-
-    :ivar top: This is blah.
-    """
-
-    def __init__(self, top):
-        """
-        :param str top: asdfa
-        """
-        # asdfa
-        self.top = top # yes
-
-    @property
-    def junk(self):
-        """hello2"""
-        return 'halleluja'
-
-    def hi(self):
-        """test"""
-        return 3
-
-
-a = A()
-a.hi()
-print a.junk
-print a.top
-
-
-class ConflictPolicy(object):
+class ConflictPolicy(dt.Union):
     """
     The action to take when a file path conflict exists.
 
@@ -749,14 +767,14 @@ class ConflictPolicy(object):
     def __repr__(self):
         return 'ConflictPolicy(%r)' % self.__tag
 
-class UploadCommit(object):
+class UploadCommit(dt.Struct):
 
     __path_data_type = dt.String(pattern=None)
     __autorename_data_type = dt.Boolean()
     __client_modified_utc_data_type = dt.UInt64()
     __mute_data_type = dt.Boolean()
 
-    __fields = {
+    _field_names_ = {
         'path',
         'mode',
         'append_to',
@@ -764,6 +782,15 @@ class UploadCommit(object):
         'client_modified_utc',
         'mute',
     }
+
+    _fields_ = [
+        ('path', False, __path_data_type),
+        ('mode', False, ConflictPolicy),
+        ('append_to', True, UploadAppend),
+        ('autorename', True, __autorename_data_type),
+        ('client_modified_utc', True, __client_modified_utc_data_type),
+        ('mute', True, __mute_data_type),
+    ]
 
     def __init__(self):
         self._path = None
@@ -789,6 +816,7 @@ class UploadCommit(object):
     def path(self):
         """
         Path in the user's Dropbox to save the file.
+        :rtype: str
         """
         if self.__has_path:
             return self._path
@@ -810,6 +838,7 @@ class UploadCommit(object):
     def mode(self):
         """
         The course of action to take if a file already exists at ``path``.
+        :rtype: ConflictPolicy
         """
         if self.__has_mode:
             return self._mode
@@ -834,6 +863,7 @@ class UploadCommit(object):
         """
         If specified, the current chunk of data should be appended to an
         existing upload session.
+        :rtype: UploadAppend
         """
         if self.__has_append_to:
             return self._append_to
@@ -855,6 +885,9 @@ class UploadCommit(object):
 
     @property
     def autorename(self):
+        """
+        :rtype: bool
+        """
         if self.__has_autorename:
             return self._autorename
         else:
@@ -873,6 +906,9 @@ class UploadCommit(object):
 
     @property
     def client_modified_utc(self):
+        """
+        :rtype: long
+        """
         if self.__has_client_modified_utc:
             return self._client_modified_utc
         else:
@@ -891,6 +927,9 @@ class UploadCommit(object):
 
     @property
     def mute(self):
+        """
+        :rtype: bool
+        """
         if self.__has_mute:
             return self._mute
         else:
@@ -910,7 +949,7 @@ class UploadCommit(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         upload_commit = UploadCommit()
         if 'path' not in obj:
@@ -942,7 +981,7 @@ class UploadCommit(object):
     def __repr__(self):
         return 'UploadCommit(%r)' % self._path
 
-class ConflictReason(object):
+class ConflictReason(dt.Union):
 
     Folder = object()
     File = object()
@@ -997,11 +1036,15 @@ class ConflictReason(object):
     def __repr__(self):
         return 'ConflictReason(%r)' % self.__tag
 
-class ConflictError(object):
+class ConflictError(dt.Struct):
 
-    __fields = {
+    _field_names_ = {
         'reason',
     }
+
+    _fields_ = [
+        ('reason', False, ConflictReason),
+    ]
 
     def __init__(self):
         self._reason = None
@@ -1014,6 +1057,9 @@ class ConflictError(object):
 
     @property
     def reason(self):
+        """
+        :rtype: ConflictReason
+        """
         if self.__has_reason:
             return self._reason
         else:
@@ -1035,7 +1081,7 @@ class ConflictError(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         conflict_error = ConflictError()
         if 'reason' not in obj:
@@ -1050,7 +1096,7 @@ class ConflictError(object):
     def __repr__(self):
         return 'ConflictError(%r)' % self._reason
 
-class UploadCommitError(object):
+class UploadCommitError(dt.Union):
 
     Conflict = ConflictError
     NoWritePermission = object()
@@ -1116,7 +1162,7 @@ class UploadCommitError(object):
     def __repr__(self):
         return 'UploadCommitError(%r)' % self.__tag
 
-class File(object):
+class File(dt.Struct):
     """
     A file resource
 
@@ -1138,12 +1184,19 @@ class File(object):
     __rev_data_type = dt.String(pattern=None)
     __size_data_type = dt.UInt64()
 
-    __fields = {
+    _field_names_ = {
         'client_modified',
         'server_modified',
         'rev',
         'size',
     }
+
+    _fields_ = [
+        ('client_modified', False, __client_modified_data_type),
+        ('server_modified', False, __server_modified_data_type),
+        ('rev', False, __rev_data_type),
+        ('size', False, __size_data_type),
+    ]
 
     def __init__(self):
         self._client_modified = None
@@ -1171,6 +1224,7 @@ class File(object):
         Dropbox server stores whatever the desktop client sends up), this should
         only be used for display purposes (such as sorting) and not, for
         example, to determine if a file has changed or not.
+        :rtype: datetime.datetime
         """
         if self.__has_client_modified:
             return self._client_modified
@@ -1192,6 +1246,7 @@ class File(object):
     def server_modified(self):
         """
         The last time the file was modified on Dropbox.
+        :rtype: datetime.datetime
         """
         if self.__has_server_modified:
             return self._server_modified
@@ -1215,6 +1270,7 @@ class File(object):
         A unique identifier for the current revision of a file. This field is
         the same rev as elsewhere in the API and can be used to detect changes
         and avoid conflicts.
+        :rtype: str
         """
         if self.__has_rev:
             return self._rev
@@ -1236,6 +1292,7 @@ class File(object):
     def size(self):
         """
         The file size in bytes.
+        :rtype: long
         """
         if self.__has_size:
             return self._size
@@ -1256,7 +1313,7 @@ class File(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         file = File()
         if 'client_modified' not in obj:
@@ -1283,14 +1340,17 @@ class File(object):
     def __repr__(self):
         return 'File(%r)' % self._client_modified
 
-class Folder(object):
+class Folder(dt.Struct):
     """
     A folder resource
 
     """
 
-    __fields = {
+    _field_names_ = {
     }
+
+    _fields_ = [
+    ]
 
     def __init__(self):
         pass
@@ -1302,7 +1362,7 @@ class Folder(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         folder = Folder()
         return folder
@@ -1314,7 +1374,7 @@ class Folder(object):
     def __repr__(self):
         return 'Folder()'
 
-class Metadata(object):
+class Metadata(dt.Union):
 
     File = File
     Folder = Folder
@@ -1381,14 +1441,19 @@ class Metadata(object):
     def __repr__(self):
         return 'Metadata(%r)' % self.__tag
 
-class Entry(object):
+class Entry(dt.Struct):
 
     __name_data_type = dt.String(pattern=None)
 
-    __fields = {
+    _field_names_ = {
         'metadata',
         'name',
     }
+
+    _fields_ = [
+        ('metadata', False, Metadata),
+        ('name', False, __name_data_type),
+    ]
 
     def __init__(self):
         self._metadata = None
@@ -1404,6 +1469,9 @@ class Entry(object):
 
     @property
     def metadata(self):
+        """
+        :rtype: Metadata
+        """
         if self.__has_metadata:
             return self._metadata
         else:
@@ -1424,6 +1492,10 @@ class Entry(object):
 
     @property
     def name(self):
+        """
+        The name of the resource as seen by the user in their Dropbox.
+        :rtype: str
+        """
         if self.__has_name:
             return self._name
         else:
@@ -1443,7 +1515,7 @@ class Entry(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         entry = Entry()
         if 'metadata' not in obj:
@@ -1462,17 +1534,23 @@ class Entry(object):
     def __repr__(self):
         return 'Entry(%r)' % self._metadata
 
-class ListFolderResponse(object):
+class ListFolderResponse(dt.Struct):
 
     __cursor_data_type = dt.String(pattern=None)
     __has_more_data_type = dt.Boolean()
     __entries_data_type = dt.List(data_type=Entry)
 
-    __fields = {
+    _field_names_ = {
         'cursor',
         'has_more',
         'entries',
     }
+
+    _fields_ = [
+        ('cursor', False, __cursor_data_type),
+        ('has_more', False, __has_more_data_type),
+        ('entries', False, __entries_data_type),
+    ]
 
     def __init__(self):
         self._cursor = None
@@ -1491,6 +1569,11 @@ class ListFolderResponse(object):
 
     @property
     def cursor(self):
+        """
+        Pass the cursor into ListFolderContinue to see what's changed in the
+        folder since your previous query.
+        :rtype: str
+        """
         if self.__has_cursor:
             return self._cursor
         else:
@@ -1509,6 +1592,10 @@ class ListFolderResponse(object):
 
     @property
     def has_more(self):
+        """
+        If true, then there are more entries available.
+        :rtype: bool
+        """
         if self.__has_has_more:
             return self._has_more
         else:
@@ -1527,6 +1614,10 @@ class ListFolderResponse(object):
 
     @property
     def entries(self):
+        """
+        Each entry is a resource in the folder.
+        :rtype: list of [Entry]
+        """
         if self.__has_entries:
             return self._entries
         else:
@@ -1546,7 +1637,7 @@ class ListFolderResponse(object):
     @classmethod
     def from_dict(cls, transformer, obj):
         for key in obj:
-            if key not in cls.__fields:
+            if key not in cls._field_names_:
                 raise KeyError("Unknown key: %r" % key)
         list_folder_response = ListFolderResponse()
         if 'cursor' not in obj:
