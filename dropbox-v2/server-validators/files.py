@@ -1,4 +1,3 @@
-import copy
 import datetime
 import numbers
 import six
@@ -19,18 +18,6 @@ class Empty(dt.Struct):
     def validate(self):
         return all([
         ])
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        empty = Empty()
-        return empty
-
-    def to_dict(self, transformer):
-        d = dict()
-        return d
 
     def __repr__(self):
         return 'Empty()'
@@ -77,21 +64,6 @@ class PathTarget(dt.Struct):
     def path(self, val):
         self._path = None
         self.__has_path = False
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        path_target = PathTarget()
-        if 'path' not in obj:
-            raise KeyError("missing required field 'path'")
-        path_target.path = transformer.convert_from(path_target.__path_data_type, obj['path'])
-        return path_target
-
-    def to_dict(self, transformer):
-        d = dict(path=transformer.convert_to(self.__path_data_type, self._path))
-        return d
 
     def __repr__(self):
         return 'PathTarget(%r)' % self._path
@@ -140,24 +112,6 @@ class FileTarget(PathTarget):
         self._rev = None
         self.__has_rev = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        file_target = FileTarget()
-        if 'path' not in obj:
-            raise KeyError("missing required field 'path'")
-        file_target.path = transformer.convert_from(file_target.__path_data_type, obj['path'])
-        file_target.rev = transformer.convert_from(file_target.__rev_data_type, obj.get('rev'))
-        return file_target
-
-    def to_dict(self, transformer):
-        d = dict(path=transformer.convert_to(self.__path_data_type, self._path))
-        if self._rev is not None:
-            d['rev'] = transformer.convert_to(self.__rev_data_type, self._rev)
-        return d
-
     def __repr__(self):
         return 'FileTarget(%r)' % self._rev
 
@@ -203,21 +157,6 @@ class FileInfo(dt.Struct):
     def name(self, val):
         self._name = None
         self.__has_name = False
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        file_info = FileInfo()
-        if 'name' not in obj:
-            raise KeyError("missing required field 'name'")
-        file_info.name = transformer.convert_from(file_info.__name_data_type, obj['name'])
-        return file_info
-
-    def to_dict(self, transformer):
-        d = dict(name=transformer.convert_to(self.__name_data_type, self._name))
-        return d
 
     def __repr__(self):
         return 'FileInfo(%r)' % self._name
@@ -265,21 +204,6 @@ class SubError(dt.Struct):
         self._reason = None
         self.__has_reason = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        sub_error = SubError()
-        if 'reason' not in obj:
-            raise KeyError("missing required field 'reason'")
-        sub_error.reason = transformer.convert_from(sub_error.__reason_data_type, obj['reason'])
-        return sub_error
-
-    def to_dict(self, transformer):
-        d = dict(reason=transformer.convert_to(self.__reason_data_type, self._reason))
-        return d
-
     def __repr__(self):
         return 'SubError(%r)' % self._reason
 
@@ -288,19 +212,29 @@ class DownloadError(dt.Union):
     Disallowed = SubError
     NoFile = SubError
 
+    _field_names_ = {
+        'disallowed',
+        'no_file',
+    }
+
+    _fields_ = {
+        'disallowed': SubError,
+        'no_file': SubError,
+    }
+
     def __init__(self):
         self._disallowed = None
         self._no_file = None
-        self.__tag = None
+        self._tag = None
 
     def validate(self):
-        return self.__tag is not None
+        return self._tag is not None
 
     def is_disallowed(self):
-        return self.__tag == 'disallowed'
+        return self._tag == 'disallowed'
 
     def is_no_file(self):
-        return self.__tag == 'no_file'
+        return self._tag == 'no_file'
 
     @property
     def disallowed(self):
@@ -314,7 +248,7 @@ class DownloadError(dt.Union):
             raise TypeError('disallowed is of type %r but must be of type SubError' % type(val).__name__)
         val.validate()
         self._disallowed = val
-        self.__tag = 'disallowed'
+        self._tag = 'disallowed'
 
     @property
     def no_file(self):
@@ -328,27 +262,10 @@ class DownloadError(dt.Union):
             raise TypeError('no_file is of type %r but must be of type SubError' % type(val).__name__)
         val.validate()
         self._no_file = val
-        self.__tag = 'no_file'
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        download_error = cls()
-        if isinstance(obj, dict) and len(obj) != 1:
-            raise KeyError("Union can only have one key set not %d" % len(obj))
-        if isinstance(obj, dict) and 'disallowed' == obj.keys()[0]:
-            download_error.disallowed = SubError.from_dict(transformer, obj['disallowed'])
-        if isinstance(obj, dict) and 'no_file' == obj.keys()[0]:
-            download_error.no_file = SubError.from_dict(transformer, obj['no_file'])
-        return download_error
-
-    def to_dict(self, transformer):
-        if self.is_disallowed():
-            return dict(disallowed=self.disallowed.to_dict(transformer))
-        if self.is_no_file():
-            return dict(no_file=self.no_file.to_dict(transformer))
+        self._tag = 'no_file'
 
     def __repr__(self):
-        return 'DownloadError(%r)' % self.__tag
+        return 'DownloadError(%r)' % self._tag
 
 class UploadSessionStart(dt.Struct):
 
@@ -392,21 +309,6 @@ class UploadSessionStart(dt.Struct):
     def upload_id(self, val):
         self._upload_id = None
         self.__has_upload_id = False
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        upload_session_start = UploadSessionStart()
-        if 'upload_id' not in obj:
-            raise KeyError("missing required field 'upload_id'")
-        upload_session_start.upload_id = transformer.convert_from(upload_session_start.__upload_id_data_type, obj['upload_id'])
-        return upload_session_start
-
-    def to_dict(self, transformer):
-        d = dict(upload_id=transformer.convert_to(self.__upload_id_data_type, self._upload_id))
-        return d
 
     def __repr__(self):
         return 'UploadSessionStart(%r)' % self._upload_id
@@ -484,25 +386,6 @@ class UploadAppend(dt.Struct):
         self._offset = None
         self.__has_offset = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        upload_append = UploadAppend()
-        if 'upload_id' not in obj:
-            raise KeyError("missing required field 'upload_id'")
-        upload_append.upload_id = transformer.convert_from(upload_append.__upload_id_data_type, obj['upload_id'])
-        if 'offset' not in obj:
-            raise KeyError("missing required field 'offset'")
-        upload_append.offset = transformer.convert_from(upload_append.__offset_data_type, obj['offset'])
-        return upload_append
-
-    def to_dict(self, transformer):
-        d = dict(upload_id=transformer.convert_to(self.__upload_id_data_type, self._upload_id),
-                 offset=transformer.convert_to(self.__offset_data_type, self._offset))
-        return d
-
     def __repr__(self):
         return 'UploadAppend(%r)' % self._upload_id
 
@@ -548,21 +431,6 @@ class IncorrectOffsetError(dt.Struct):
         self._correct_offset = None
         self.__has_correct_offset = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        incorrect_offset_error = IncorrectOffsetError()
-        if 'correct_offset' not in obj:
-            raise KeyError("missing required field 'correct_offset'")
-        incorrect_offset_error.correct_offset = transformer.convert_from(incorrect_offset_error.__correct_offset_data_type, obj['correct_offset'])
-        return incorrect_offset_error
-
-    def to_dict(self, transformer):
-        d = dict(correct_offset=transformer.convert_to(self.__correct_offset_data_type, self._correct_offset))
-        return d
-
     def __repr__(self):
         return 'IncorrectOffsetError(%r)' % self._correct_offset
 
@@ -572,27 +440,39 @@ class UploadAppendError(dt.Union):
     Closed = object()
     IncorrectOffset = IncorrectOffsetError
 
+    _field_names_ = {
+        'not_found',
+        'closed',
+        'incorrect_offset',
+    }
+
+    _fields_ = {
+        'not_found': None,
+        'closed': None,
+        'incorrect_offset': IncorrectOffsetError,
+    }
+
     def __init__(self):
         self._incorrect_offset = None
-        self.__tag = None
+        self._tag = None
 
     def validate(self):
-        return self.__tag is not None
+        return self._tag is not None
 
     def is_not_found(self):
-        return self.__tag == 'not_found'
+        return self._tag == 'not_found'
 
     def is_closed(self):
-        return self.__tag == 'closed'
+        return self._tag == 'closed'
 
     def is_incorrect_offset(self):
-        return self.__tag == 'incorrect_offset'
+        return self._tag == 'incorrect_offset'
 
     def set_not_found(self):
-        self.__tag = 'not_found'
+        self._tag = 'not_found'
 
     def set_closed(self):
-        self.__tag = 'closed'
+        self._tag = 'closed'
 
     @property
     def incorrect_offset(self):
@@ -606,31 +486,10 @@ class UploadAppendError(dt.Union):
             raise TypeError('incorrect_offset is of type %r but must be of type IncorrectOffsetError' % type(val).__name__)
         val.validate()
         self._incorrect_offset = val
-        self.__tag = 'incorrect_offset'
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        upload_append_error = cls()
-        if isinstance(obj, dict) and len(obj) != 1:
-            raise KeyError("Union can only have one key set not %d" % len(obj))
-        if obj == 'not_found':
-            upload_append_error.set_not_found()
-        if obj == 'closed':
-            upload_append_error.set_closed()
-        if isinstance(obj, dict) and 'incorrect_offset' == obj.keys()[0]:
-            upload_append_error.incorrect_offset = IncorrectOffsetError.from_dict(transformer, obj['incorrect_offset'])
-        return upload_append_error
-
-    def to_dict(self, transformer):
-        if self.is_not_found():
-            return 'not_found'
-        if self.is_closed():
-            return 'closed'
-        if self.is_incorrect_offset():
-            return dict(incorrect_offset=self.incorrect_offset.to_dict(transformer))
+        self._tag = 'incorrect_offset'
 
     def __repr__(self):
-        return 'UploadAppendError(%r)' % self.__tag
+        return 'UploadAppendError(%r)' % self._tag
 
 class UpdateParentRev(dt.Struct):
 
@@ -674,21 +533,6 @@ class UpdateParentRev(dt.Struct):
         self._parent_rev = None
         self.__has_parent_rev = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        update_parent_rev = UpdateParentRev()
-        if 'parent_rev' not in obj:
-            raise KeyError("missing required field 'parent_rev'")
-        update_parent_rev.parent_rev = transformer.convert_from(update_parent_rev.__parent_rev_data_type, obj['parent_rev'])
-        return update_parent_rev
-
-    def to_dict(self, transformer):
-        d = dict(parent_rev=transformer.convert_to(self.__parent_rev_data_type, self._parent_rev))
-        return d
-
     def __repr__(self):
         return 'UpdateParentRev(%r)' % self._parent_rev
 
@@ -707,27 +551,39 @@ class ConflictPolicy(dt.Union):
     Overwrite = object()
     Update = UpdateParentRev
 
+    _field_names_ = {
+        'add',
+        'overwrite',
+        'update',
+    }
+
+    _fields_ = {
+        'add': None,
+        'overwrite': None,
+        'update': UpdateParentRev,
+    }
+
     def __init__(self):
         self._update = None
-        self.__tag = None
+        self._tag = None
 
     def validate(self):
-        return self.__tag is not None
+        return self._tag is not None
 
     def is_add(self):
-        return self.__tag == 'add'
+        return self._tag == 'add'
 
     def is_overwrite(self):
-        return self.__tag == 'overwrite'
+        return self._tag == 'overwrite'
 
     def is_update(self):
-        return self.__tag == 'update'
+        return self._tag == 'update'
 
     def set_add(self):
-        self.__tag = 'add'
+        self._tag = 'add'
 
     def set_overwrite(self):
-        self.__tag = 'overwrite'
+        self._tag = 'overwrite'
 
     @property
     def update(self):
@@ -741,31 +597,10 @@ class ConflictPolicy(dt.Union):
             raise TypeError('update is of type %r but must be of type UpdateParentRev' % type(val).__name__)
         val.validate()
         self._update = val
-        self.__tag = 'update'
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        conflict_policy = cls()
-        if isinstance(obj, dict) and len(obj) != 1:
-            raise KeyError("Union can only have one key set not %d" % len(obj))
-        if obj == 'add':
-            conflict_policy.set_add()
-        if obj == 'overwrite':
-            conflict_policy.set_overwrite()
-        if isinstance(obj, dict) and 'update' == obj.keys()[0]:
-            conflict_policy.update = UpdateParentRev.from_dict(transformer, obj['update'])
-        return conflict_policy
-
-    def to_dict(self, transformer):
-        if self.is_add():
-            return 'add'
-        if self.is_overwrite():
-            return 'overwrite'
-        if self.is_update():
-            return dict(update=self.update.to_dict(transformer))
+        self._tag = 'update'
 
     def __repr__(self):
-        return 'ConflictPolicy(%r)' % self.__tag
+        return 'ConflictPolicy(%r)' % self._tag
 
 class UploadCommit(dt.Struct):
 
@@ -946,38 +781,6 @@ class UploadCommit(dt.Struct):
         self._mute = None
         self.__has_mute = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        upload_commit = UploadCommit()
-        if 'path' not in obj:
-            raise KeyError("missing required field 'path'")
-        upload_commit.path = transformer.convert_from(upload_commit.__path_data_type, obj['path'])
-        if 'mode' not in obj:
-            raise KeyError("missing required field 'mode'")
-        upload_commit.mode = ConflictPolicy.from_dict(transformer, obj['mode'])
-        if obj.get('append_to') is not None:
-            upload_commit.append_to = UploadAppend.from_dict(transformer, obj['append_to'])
-        upload_commit.autorename = transformer.convert_from(upload_commit.__autorename_data_type, obj.get('autorename'))
-        upload_commit.client_modified_utc = transformer.convert_from(upload_commit.__client_modified_utc_data_type, obj.get('client_modified_utc'))
-        upload_commit.mute = transformer.convert_from(upload_commit.__mute_data_type, obj.get('mute'))
-        return upload_commit
-
-    def to_dict(self, transformer):
-        d = dict(path=transformer.convert_to(self.__path_data_type, self._path),
-                 mode=self._mode.to_dict(transformer))
-        if self._append_to is not None:
-            d['append_to'] = self._append_to.to_dict(transformer)
-        if self._autorename is not None:
-            d['autorename'] = transformer.convert_to(self.__autorename_data_type, self._autorename)
-        if self._client_modified_utc is not None:
-            d['client_modified_utc'] = transformer.convert_to(self.__client_modified_utc_data_type, self._client_modified_utc)
-        if self._mute is not None:
-            d['mute'] = transformer.convert_to(self.__mute_data_type, self._mute)
-        return d
-
     def __repr__(self):
         return 'UploadCommit(%r)' % self._path
 
@@ -987,54 +790,45 @@ class ConflictReason(dt.Union):
     File = object()
     AutorenameFailed = object()
 
+    _field_names_ = {
+        'folder',
+        'file',
+        'autorename_failed',
+    }
+
+    _fields_ = {
+        'folder': None,
+        'file': None,
+        'autorename_failed': None,
+    }
+
     def __init__(self):
         pass
-        self.__tag = None
+        self._tag = None
 
     def validate(self):
-        return self.__tag is not None
+        return self._tag is not None
 
     def is_folder(self):
-        return self.__tag == 'folder'
+        return self._tag == 'folder'
 
     def is_file(self):
-        return self.__tag == 'file'
+        return self._tag == 'file'
 
     def is_autorename_failed(self):
-        return self.__tag == 'autorename_failed'
+        return self._tag == 'autorename_failed'
 
     def set_folder(self):
-        self.__tag = 'folder'
+        self._tag = 'folder'
 
     def set_file(self):
-        self.__tag = 'file'
+        self._tag = 'file'
 
     def set_autorename_failed(self):
-        self.__tag = 'autorename_failed'
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        conflict_reason = cls()
-        if isinstance(obj, dict) and len(obj) != 1:
-            raise KeyError("Union can only have one key set not %d" % len(obj))
-        if obj == 'folder':
-            conflict_reason.set_folder()
-        if obj == 'file':
-            conflict_reason.set_file()
-        if obj == 'autorename_failed':
-            conflict_reason.set_autorename_failed()
-        return conflict_reason
-
-    def to_dict(self, transformer):
-        if self.is_folder():
-            return 'folder'
-        if self.is_file():
-            return 'file'
-        if self.is_autorename_failed():
-            return 'autorename_failed'
+        self._tag = 'autorename_failed'
 
     def __repr__(self):
-        return 'ConflictReason(%r)' % self.__tag
+        return 'ConflictReason(%r)' % self._tag
 
 class ConflictError(dt.Struct):
 
@@ -1078,21 +872,6 @@ class ConflictError(dt.Struct):
         self._reason = None
         self.__has_reason = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        conflict_error = ConflictError()
-        if 'reason' not in obj:
-            raise KeyError("missing required field 'reason'")
-        conflict_error.reason = ConflictReason.from_dict(transformer, obj['reason'])
-        return conflict_error
-
-    def to_dict(self, transformer):
-        d = dict(reason=self._reason.to_dict(transformer))
-        return d
-
     def __repr__(self):
         return 'ConflictError(%r)' % self._reason
 
@@ -1102,21 +881,33 @@ class UploadCommitError(dt.Union):
     NoWritePermission = object()
     InsufficientQuota = object()
 
+    _field_names_ = {
+        'conflict',
+        'no_write_permission',
+        'insufficient_quota',
+    }
+
+    _fields_ = {
+        'conflict': ConflictError,
+        'no_write_permission': None,
+        'insufficient_quota': None,
+    }
+
     def __init__(self):
         self._conflict = None
-        self.__tag = None
+        self._tag = None
 
     def validate(self):
-        return self.__tag is not None
+        return self._tag is not None
 
     def is_conflict(self):
-        return self.__tag == 'conflict'
+        return self._tag == 'conflict'
 
     def is_no_write_permission(self):
-        return self.__tag == 'no_write_permission'
+        return self._tag == 'no_write_permission'
 
     def is_insufficient_quota(self):
-        return self.__tag == 'insufficient_quota'
+        return self._tag == 'insufficient_quota'
 
     @property
     def conflict(self):
@@ -1130,37 +921,16 @@ class UploadCommitError(dt.Union):
             raise TypeError('conflict is of type %r but must be of type ConflictError' % type(val).__name__)
         val.validate()
         self._conflict = val
-        self.__tag = 'conflict'
+        self._tag = 'conflict'
 
     def set_no_write_permission(self):
-        self.__tag = 'no_write_permission'
+        self._tag = 'no_write_permission'
 
     def set_insufficient_quota(self):
-        self.__tag = 'insufficient_quota'
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        upload_commit_error = cls()
-        if isinstance(obj, dict) and len(obj) != 1:
-            raise KeyError("Union can only have one key set not %d" % len(obj))
-        if isinstance(obj, dict) and 'conflict' == obj.keys()[0]:
-            upload_commit_error.conflict = ConflictError.from_dict(transformer, obj['conflict'])
-        if obj == 'no_write_permission':
-            upload_commit_error.set_no_write_permission()
-        if obj == 'insufficient_quota':
-            upload_commit_error.set_insufficient_quota()
-        return upload_commit_error
-
-    def to_dict(self, transformer):
-        if self.is_conflict():
-            return dict(conflict=self.conflict.to_dict(transformer))
-        if self.is_no_write_permission():
-            return 'no_write_permission'
-        if self.is_insufficient_quota():
-            return 'insufficient_quota'
+        self._tag = 'insufficient_quota'
 
     def __repr__(self):
-        return 'UploadCommitError(%r)' % self.__tag
+        return 'UploadCommitError(%r)' % self._tag
 
 class File(dt.Struct):
     """
@@ -1310,33 +1080,6 @@ class File(dt.Struct):
         self._size = None
         self.__has_size = False
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        file = File()
-        if 'client_modified' not in obj:
-            raise KeyError("missing required field 'client_modified'")
-        file.client_modified = transformer.convert_from(file.__client_modified_data_type, obj['client_modified'])
-        if 'server_modified' not in obj:
-            raise KeyError("missing required field 'server_modified'")
-        file.server_modified = transformer.convert_from(file.__server_modified_data_type, obj['server_modified'])
-        if 'rev' not in obj:
-            raise KeyError("missing required field 'rev'")
-        file.rev = transformer.convert_from(file.__rev_data_type, obj['rev'])
-        if 'size' not in obj:
-            raise KeyError("missing required field 'size'")
-        file.size = transformer.convert_from(file.__size_data_type, obj['size'])
-        return file
-
-    def to_dict(self, transformer):
-        d = dict(client_modified=transformer.convert_to(self.__client_modified_data_type, self._client_modified),
-                 server_modified=transformer.convert_to(self.__server_modified_data_type, self._server_modified),
-                 rev=transformer.convert_to(self.__rev_data_type, self._rev),
-                 size=transformer.convert_to(self.__size_data_type, self._size))
-        return d
-
     def __repr__(self):
         return 'File(%r)' % self._client_modified
 
@@ -1359,18 +1102,6 @@ class Folder(dt.Struct):
         return all([
         ])
 
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        folder = Folder()
-        return folder
-
-    def to_dict(self, transformer):
-        d = dict()
-        return d
-
     def __repr__(self):
         return 'Folder()'
 
@@ -1379,19 +1110,29 @@ class Metadata(dt.Union):
     File = File
     Folder = Folder
 
+    _field_names_ = {
+        'file',
+        'folder',
+    }
+
+    _fields_ = {
+        'file': File,
+        'folder': Folder,
+    }
+
     def __init__(self):
         self._file = None
         self._folder = None
-        self.__tag = None
+        self._tag = None
 
     def validate(self):
-        return self.__tag is not None
+        return self._tag is not None
 
     def is_file(self):
-        return self.__tag == 'file'
+        return self._tag == 'file'
 
     def is_folder(self):
-        return self.__tag == 'folder'
+        return self._tag == 'folder'
 
     @property
     def file(self):
@@ -1405,7 +1146,7 @@ class Metadata(dt.Union):
             raise TypeError('file is of type %r but must be of type File' % type(val).__name__)
         val.validate()
         self._file = val
-        self.__tag = 'file'
+        self._tag = 'file'
 
     @property
     def folder(self):
@@ -1419,27 +1160,10 @@ class Metadata(dt.Union):
             raise TypeError('folder is of type %r but must be of type Folder' % type(val).__name__)
         val.validate()
         self._folder = val
-        self.__tag = 'folder'
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        metadata = cls()
-        if isinstance(obj, dict) and len(obj) != 1:
-            raise KeyError("Union can only have one key set not %d" % len(obj))
-        if isinstance(obj, dict) and 'file' == obj.keys()[0]:
-            metadata.file = File.from_dict(transformer, obj['file'])
-        if isinstance(obj, dict) and 'folder' == obj.keys()[0]:
-            metadata.folder = Folder.from_dict(transformer, obj['folder'])
-        return metadata
-
-    def to_dict(self, transformer):
-        if self.is_file():
-            return dict(file=self.file.to_dict(transformer))
-        if self.is_folder():
-            return dict(folder=self.folder.to_dict(transformer))
+        self._tag = 'folder'
 
     def __repr__(self):
-        return 'Metadata(%r)' % self.__tag
+        return 'Metadata(%r)' % self._tag
 
 class Entry(dt.Struct):
 
@@ -1511,25 +1235,6 @@ class Entry(dt.Struct):
     def name(self, val):
         self._name = None
         self.__has_name = False
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        entry = Entry()
-        if 'metadata' not in obj:
-            raise KeyError("missing required field 'metadata'")
-        entry.metadata = Metadata.from_dict(transformer, obj['metadata'])
-        if 'name' not in obj:
-            raise KeyError("missing required field 'name'")
-        entry.name = transformer.convert_from(entry.__name_data_type, obj['name'])
-        return entry
-
-    def to_dict(self, transformer):
-        d = dict(metadata=self._metadata.to_dict(transformer),
-                 name=transformer.convert_to(self.__name_data_type, self._name))
-        return d
 
     def __repr__(self):
         return 'Entry(%r)' % self._metadata
@@ -1633,29 +1338,6 @@ class ListFolderResponse(dt.Struct):
     def entries(self, val):
         self._entries = None
         self.__has_entries = False
-
-    @classmethod
-    def from_dict(cls, transformer, obj):
-        for key in obj:
-            if key not in cls._field_names_:
-                raise KeyError("Unknown key: %r" % key)
-        list_folder_response = ListFolderResponse()
-        if 'cursor' not in obj:
-            raise KeyError("missing required field 'cursor'")
-        list_folder_response.cursor = transformer.convert_from(list_folder_response.__cursor_data_type, obj['cursor'])
-        if 'has_more' not in obj:
-            raise KeyError("missing required field 'has_more'")
-        list_folder_response.has_more = transformer.convert_from(list_folder_response.__has_more_data_type, obj['has_more'])
-        if 'entries' not in obj:
-            raise KeyError("missing required field 'entries'")
-        list_folder_response.entries = transformer.convert_from(list_folder_response.__entries_data_type, obj['entries'])
-        return list_folder_response
-
-    def to_dict(self, transformer):
-        d = dict(cursor=transformer.convert_to(self.__cursor_data_type, self._cursor),
-                 has_more=transformer.convert_to(self.__has_more_data_type, self._has_more),
-                 entries=transformer.convert_to(self.__entries_data_type, self._entries))
-        return d
 
     def __repr__(self):
         return 'ListFolderResponse(%r)' % self._cursor

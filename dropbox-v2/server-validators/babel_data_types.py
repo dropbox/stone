@@ -3,6 +3,7 @@ Basic data types that should be re-usable by all Python code generators.
 """
 
 from abc import ABCMeta, abstractmethod
+import datetime
 import numbers
 import re
 import types
@@ -15,16 +16,15 @@ class DataType(object):
         """Checks if val is a valid value for this type."""
         pass
 
-class CompositeType(object): pass
-class Struct(CompositeType): pass
-class Union(CompositeType): pass
+class PrimitiveType(object):
+    pass
 
-class Boolean(DataType):
+class Boolean(PrimitiveType):
     def validate(self, val):
         if not isinstance(val, bool):
             raise ValueError('%r is not a valid boolean' % val)
 
-class _Integer(DataType):
+class _Integer(PrimitiveType):
     """
     Do not use this class directly. Extend it and specify a 'minimum' and
     'maximum' value as class variables for the more restrictive integer range.
@@ -65,7 +65,7 @@ class _Integer(DataType):
                              % (val, self.minimum, self.maximum))
 
     def __repr__(self):
-        return '%s()' % self.__name__
+        return '%s()' % self.__class__.__name__
 
 class Int32(_Integer):
     minimum = -2**31
@@ -83,7 +83,7 @@ class UInt64(_Integer):
     minimum = 0
     maximum = 2**64 - 1
 
-class String(DataType):
+class String(PrimitiveType):
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
             assert isinstance(min_length, numbers.Integral), (
@@ -123,9 +123,7 @@ class String(DataType):
             raise ValueError('%r did not match pattern %r'
                              % (val, self.pattern))
 
-import datetime
-
-class Timestamp(DataType):
+class Timestamp(PrimitiveType):
     def __init__(self, format):
         assert isinstance(format, str), (
             'format must be a string'
@@ -136,18 +134,8 @@ class Timestamp(DataType):
         if not isinstance(val, datetime.datetime):
             raise ValueError('%r is of type %r and is not a valid timestamp'
                              % (val, type(val).__name__))
-        """
-        if isinstance(val, types.StringTypes):
-            # Raises a ValueError if val is the incorrect format
-            datetime.datetime.strptime(val, self.format)
-        elif isinstance(val, datetime.datetime):
-            pass
-        else:
-            raise ValueError('%r is of type %r and is not a valid string'
-                             % (val, type(val).__name__))
-        """
 
-class List(DataType):
+class List(PrimitiveType):
     """Assumes list contents are homogeneous with respect to types."""
 
     def __init__(self, data_type, min_items=None, max_items=None):
@@ -183,103 +171,52 @@ class List(DataType):
                     % (val, type(item).__name__, self.data_type.__name__))
                 item.validate()
 
-class Name(object):
-    __familiar_name_data_type = String()
-
-    def __init__(self):
-        self._familiar_name = None
-        self.__has_familiar_name = False
-
-    def validate(self):
-        if not self.__has_familiar_name:
-            raise KeyError('missing familiar_name')
-
-    @property
-    def familiar_name(self):
-        if self.__has_familiar_name:
-            return self._familiar_name
-        elif self.__familiar_name_optional:
-            return self.__familiar_name_default
-        else:
-            raise KeyError('familiar_name has not been set')
-
-    @familiar_name.setter
-    def familiar_name(self, val):
-        self.__familiar_name_data_type.validate(val)
-        self._familiar_name = val
-        self.__has_familiar_name = True
-
-    @familiar_name.deleter
-    def familiar_name(self):
-        self._familiar_name = None
-        self.__has_familiar_name = False
-
-    @classmethod
-    def from_json_serializable_dict(cls, obj):
-        name = cls()
-        if 'familiar_name' not in obj:
-            raise KeyError('familiar_name missing')
-        name.familiar_name = obj['familiar_name']
-        return name
-
-    def to_dict(self, transformer):
-        return {
-            'familiar_name': self._familiar_name,
-        }
-
-class DictTransformer(object):
-    @staticmethod
-    def convert_to(data_type, val):
-        raise NotImplemented
-    @staticmethod
-    def convert_from(self):
-        raise NotImplemented
-
-class JsonCompatibleDictTransformer(DictTransformer):
-    """
-    Converts a Python dictionary to one that is compatible with
-    JSON.
-    """
-    @staticmethod
-    def convert_to(data_type, val):
-        if val is None:
-            return val
-        elif isinstance(data_type, (Timestamp,)):
-            return val.strftime(data_type.format)
-        else:
-            return val
-
-    @staticmethod
-    def convert_from(data_type, val):
-        #print '1', data_type, val
-        if val is None:
-            #print '2', data_type, val
-            return val
-        elif isinstance(data_type, (Timestamp,)):
-            #print '3', data_type, val
-            return datetime.datetime.strptime(val, data_type.format)
-        else:
-            #print '4', data_type, val
-            return val
+class CompositeType(DataType): pass
+class Struct(CompositeType): pass
+class Union(CompositeType): pass
 
 class JsonCompatDictEncoder(object):
     @classmethod
-    def encode(cls, obj):
-        """Babel struct"""
-        # TODO: Consider adding an assert.
-        #assert isinstance(obj, (DataType))
-        d = {}
-        for name, optional, data_type  in obj._fields_:
-            val = getattr(obj, name)
-            if val is not None:
-                if isinstance(data_type, DataType):
-                    d[name] = cls._make_json_friendly(data_type, val)
+    def encode(cls, obj, data_type=None):
+        """
+        Encodes a Babel Struct or Union into a JSON-compatible dictionary.
+        """
+        assert data_type or isinstance(obj, (Struct, Union)), (
+            'No data_type is provided -> obj must be a Struct or Union'
+        )
+        if isinstance(obj, Struct):
+            d = {}
+            for name, optional, field_data_type  in obj._fields_:
+                val = getattr(obj, name)
+                if val is not None:
+                    d[name] = cls.encode(val, field_data_type)
+                elif val is None and not optional:
+                    raise KeyError('missing required field {!r}'.format(name))
+            return d
+        elif isinstance(obj, Union):
+            field_data_type = obj._fields_[obj._tag]
+            if field_data_type:
+                val = getattr(obj, obj._tag)
+                if isinstance(field_data_type, PrimitiveType):
+                    return cls._make_json_friendly(field_data_type, val)
                 else:
-                    d[name] = cls.encode(val)
-            elif val is None and not optional:
-                # FIXME: MAKE THIS BETTER
-                raise Exception('required field missing')
-        return d
+                    return {obj._tag: cls.encode(val)}
+            else:
+                return obj._tag
+        elif isinstance(data_type, List):
+            if not isinstance(obj, list):
+                # TODO: We want to say the field name
+                raise ValueError(
+                    'field is of type $r rather than a list'
+                    % (type(obj).__name__)
+                )
+            return [cls.encode(item, data_type.data_type) for item in obj]
+        elif isinstance(data_type, PrimitiveType):
+            return cls._make_json_friendly(data_type, obj)
+        else:
+            raise AssertionError('Unsupported data type %r'
+                                 % type(data_type).__name__)
+
 
     @classmethod
     def _make_json_friendly(cls, data_type, val):
@@ -290,112 +227,53 @@ class JsonCompatDictEncoder(object):
         else:
             return val
 
-import json
-
-class BabelJsonEncoder(json.JSONEncoder):
-    def default(self, obj):
-        return obj
-
 class JsonCompatDictDecoder(object):
-    def decode(self, obj):
-        """Python dict"""
-        pass
-
-class MeInfo(object):
-    """
-    This is a test
-    :ivar account_id: The account!
-    """
-
-    __account_id_data_type = String()
-    __account_id_optional = False
-    __account_id_default = None
-
-    def __init__(self):
-        """Hello"""
-        self._account_id = None
-        self._name = None
-
-        self.__has_account_id = False
-        self.__has_name = False
-
-    def validate(self):
-        """Checks for missing fields."""
-        if not self.__has_account_id:
-            raise KeyError('missing account_id')
-        if not self.__has_name:
-            raise KeyError('missing name')
+    @classmethod
+    def decode(cls, data_type, obj):
+        """
+        Decodes a JSON-compatible object into an instance of a Babel data type.
+        """
+        if issubclass(data_type, Struct):
+            for key in obj:
+                if key not in data_type._field_names_:
+                    raise KeyError('unknown field {!r}'.format(key))
+            o = data_type()
+            for name, optional, field_data_type in data_type._fields_:
+                if name in obj:
+                    if isinstance(field_data_type, PrimitiveType):
+                        val = cls._make_babel_friendly(field_data_type, obj[name])
+                        setattr(o, name, val)
+                    else:
+                        setattr(o, name, cls.decode(field_data_type, obj[name]))
+                elif not optional:
+                    raise KeyError('missing required field {!r}'.format(name))
+        elif issubclass(data_type, Union):
+            o = data_type()
+            if isinstance(obj, str):
+                # The variant is a symbol
+                tag = obj
+                if tag not in data_type._fields_:
+                    raise KeyError('Unknown tag %r' % tag)
+                getattr(o, 'set_' + tag)()
+            elif isinstance(obj, dict):
+                assert len(obj) == 1, 'obj must only have 1 key specified'
+                tag, val = obj.items()[0]
+                if tag not in data_type._fields_:
+                    raise KeyError('Unknown option %r' % tag)
+                setattr(o, tag, cls.decode(data_type._fields_[tag], val))
+            else:
+                raise AssertionError('obj type %r != str or dict'
+                                     % type(obj).__name__)
         else:
-            self._name.validate()
-
-    @property
-    def account_id(self):
-        if self.__has_account_id:
-            return self._account_id
-        elif self.__account_id_optional:
-            return self.__account_id_default
-        else:
-            raise KeyError('account_id has not been set')
-
-    @account_id.setter
-    def account_id(self, val):
-        self.__account_id_data_type.validate(val)
-        self._account_id = val
-        self.__has_account_id = True
-
-    @account_id.deleter
-    def account_id(self):
-        self._account_id = None
-        self.__has_account_id = False
-
-    @property
-    def name(self):
-        """GET NAME"""
-        if self.__has_name:
-            return self._name
-        else:
-            raise KeyError('name has not been set')
-
-    @name.setter
-    def name(self, val):
-        """SET NAME"""
-        if isinstance(val, Name):
-            # TODO: Do we want to validate here, or later?
-            self._name = val
-            self.__has_name = True
-        else:
-            raise TypeError('name is of type %r but must be of type Name'
-                            % type(val).__name__)
+            raise AssertionError('obj type %r != Struct or Union'
+                                 % type(obj).__name__)
+        return o
 
     @classmethod
-    def from_dict(cls, transformer, obj):
-        # TODO: Blow up on extra fields
-        me_info = cls()
-        if 'account_id' not in obj:
-            raise KeyError("'account_id' is missing")
-        me_info.account_id = transformer.untransform(cls.__account_id_data_type, obj['account_id'])
-        if 'name' not in obj:
-            raise KeyError("'name' is missing")
-        me_info.name = Name.from_dict(transformer, obj['name'])
-        return me_info
-
-    def to_dict(self, transformer):
-        return {
-            'account_id': transformer.transform(self.__account_id_data_type, self._account_id),
-            'name': self._name.to_dict(transformer),
-        }
-
-me = MeInfo()
-n = Name()
-
-#me.validate()
-import os
-
-#print me.account_id
-#print MeInfo.zero
-
-MeInfo.account_id
-
-print MeInfo.name
-
-
+    def _make_babel_friendly(cls, data_type, val):
+        if val is None:
+            return val
+        elif isinstance(data_type, (Timestamp,)):
+            return datetime.datetime.strptime(val, data_type.format)
+        else:
+            return val

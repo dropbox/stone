@@ -41,7 +41,6 @@ from babelapi.generator.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
 base = """\
-import copy
 import datetime
 import numbers
 import six
@@ -143,8 +142,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self._generate_struct_class_init(data_type)
             self._generate_struct_class_validate(data_type)
             self._generate_struct_class_properties(data_type)
-            self._generate_struct_class_from_dict(data_type)
-            self._generate_struct_class_to_dict(data_type)
+            #self._generate_struct_class_from_dict(data_type)
+            #self._generate_struct_class_to_dict(data_type)
             self._generate_struct_class_repr(data_type)
 
     def _format_type_in_doc(self, data_type):
@@ -210,6 +209,9 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         if lineno != self.lineno:
             self.emit_empty_line()
 
+        self._generate_fields_for_reflection(data_type)
+
+    def _generate_fields_for_reflection(self, data_type):
         if data_type.super_type:
             super_type_class_name = self._class_name_for_data_type(data_type.super_type)
         else:
@@ -241,6 +243,32 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                     validator_name = self._class_name_for_data_type(field.data_type)
                 self.emit_line("('{}', {}, {}),".format(var_name, field.optional, validator_name))
         self.emit_line(']')
+        self.emit_empty_line()
+
+    def _generate_union_class_fields_for_reflection(self, data_type):
+
+        assert not data_type.super_type, 'Unsupported: Inheritance of unions'
+
+        self.emit_line('_field_names_ = {')
+        with self.indent():
+            for field in data_type.fields:
+                self.emit_line("'{}',".format(self.lang.format_variable(field.name)))
+        self.emit_line('}')
+        self.emit_empty_line()
+
+        self.emit_line('_fields_ = {')
+        with self.indent():
+            for field in data_type.fields:
+                var_name = self.lang.format_variable(field.name)
+                if isinstance(field, SymbolField):
+                    self.emit_line("'{}': None,".format(var_name))
+                else:
+                    if not is_composite_type(field.data_type):
+                        validator_name = '__{0}_data_type'.format(var_name)
+                    else:
+                        validator_name = self._class_name_for_data_type(field.data_type)
+                    self.emit_line("'{}': {},".format(var_name, validator_name))
+        self.emit_line('}')
         self.emit_empty_line()
 
     def _generate_struct_class_init(self, data_type):
@@ -487,12 +515,13 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                     raise ValueError('Only symbols and composite types for union fields.')
             self.emit_empty_line()
 
+            self._generate_union_class_fields_for_reflection(data_type)
             self._generate_union_class_init(data_type)
             self._generate_union_class_validate(data_type)
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_properties(data_type)
-            self._generate_union_class_from_dict(data_type)
-            self._generate_union_class_to_dict(data_type)
+            #self._generate_union_class_from_dict(data_type)
+            #self._generate_union_class_to_dict(data_type)
             self._generate_union_class_repr(data_type)
 
     def _generate_union_class_init(self, data_type):
@@ -512,13 +541,13 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                     self.emit_line('self._{} = None'.format(field_var_name))
             if lineno == self.lineno:
                 self.emit_line('pass')
-            self.emit_line('self.__tag = None')
+            self.emit_line('self._tag = None')
             self.emit_empty_line()
 
     def _generate_union_class_validate(self, data_type):
         self.emit_line('def validate(self):')
         with self.indent():
-            self.emit_line('return self.__tag is not None')
+            self.emit_line('return self._tag is not None')
         self.emit_empty_line()
 
     def _generate_union_class_is_set(self, data_type):
@@ -526,7 +555,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             field_name = self.lang.format_method(field.name)
             self.emit_line('def is_{}(self):'.format(field_name))
             with self.indent():
-                self.emit_line('return self.__tag == {!r}'.format(field_name))
+                self.emit_line('return self._tag == {!r}'.format(field_name))
             self.emit_empty_line()
 
     def _generate_union_class_properties(self, data_type):
@@ -536,7 +565,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             if isinstance(field, SymbolField):
                 self.emit_line('def set_{}(self):'.format(field_name))
                 with self.indent():
-                    self.emit_line('self.__tag = {!r}'.format(field_name))
+                    self.emit_line('self._tag = {!r}'.format(field_name))
                 self.emit_empty_line()
                 continue
 
@@ -566,7 +595,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 else:
                     self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))
-                self.emit_line('self.__tag = {!r}'.format(field_name))
+                self.emit_line('self._tag = {!r}'.format(field_name))
             self.emit_empty_line()
 
     def _generate_union_class_from_dict(self, data_type):
@@ -630,7 +659,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         self.emit_line('def __repr__(self):')
         with self.indent():
             if data_type.fields:
-                self.emit_line("return '{}(%r)' % self.__tag".format(
+                self.emit_line("return '{}(%r)' % self._tag".format(
                     self._class_name_for_data_type(data_type),
                 ))
             else:
