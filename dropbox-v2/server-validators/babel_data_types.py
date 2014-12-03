@@ -1,5 +1,13 @@
 """
-Basic data types that should be re-usable by all Python code generators.
+Defines all of Babel's primitive types in Python. Also provides the high-level
+classes that should be extended when defining composite data types.
+
+The data types defined here should not be specific to an RPC or serialization
+format.
+
+This module should be dropped into a project that requires the use of Babel. In
+the future, this could be imported from a pre-installed Python package, rather
+than being added to a project.
 """
 
 from abc import ABCMeta, abstractmethod
@@ -9,6 +17,7 @@ import re
 import types
 
 class DataType(object):
+    """All primitive and composite data types should extend this."""
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -17,6 +26,7 @@ class DataType(object):
         pass
 
 class PrimitiveType(object):
+    """A basic type that is defined by Babel."""
     pass
 
 class Boolean(PrimitiveType):
@@ -123,7 +133,41 @@ class String(PrimitiveType):
             raise ValueError('%r did not match pattern %r'
                              % (val, self.pattern))
 
+class Binary(PrimitiveType):
+    def __init__(self, min_length=None, max_length=None):
+        if min_length is not None:
+            assert isinstance(min_length, numbers.Integral), (
+                'min_length must be an integral number'
+            )
+            assert min_length >= 0, 'min_length must be >= 0'
+        if max_length is not None:
+            assert isinstance(max_length, numbers.Integral), (
+                'max_length must be an integral number'
+            )
+            assert max_length > 0, 'max_length must be > 0'
+        if min_length and max_length:
+            assert max_length >= min_length, 'max_length must be >= min_length'
+
+        self.min_length = min_length
+        self.max_length = max_length
+
+    def validate(self, val):
+        if not isinstance(val, str):
+            # TODO: Add support for buffer and file objects.
+            raise ValueError('%r is of type %r and is not a valid binary type'
+                             % (val, type(val).__name__))
+        elif self.max_length is not None and len(val) > self.max_length:
+            raise ValueError('%r has more than %s characters'
+                             % (val, self.max_length))
+        elif self.min_length is not None and len(val) < self.min_length:
+            raise ValueError('%r has fewer than %s characters'
+                             % (val, self.min_length))
+
 class Timestamp(PrimitiveType):
+    """Note that while a format is specified, it isn't used in validation
+    since a native Python datetime object is preferred. The format, however,
+    can and should be used by serializers."""
+
     def __init__(self, format):
         assert isinstance(format, str), (
             'format must be a string'
@@ -174,106 +218,3 @@ class List(PrimitiveType):
 class CompositeType(DataType): pass
 class Struct(CompositeType): pass
 class Union(CompositeType): pass
-
-class JsonCompatDictEncoder(object):
-    @classmethod
-    def encode(cls, obj, data_type=None):
-        """
-        Encodes a Babel Struct or Union into a JSON-compatible dictionary.
-        """
-        assert data_type or isinstance(obj, (Struct, Union)), (
-            'No data_type is provided -> obj must be a Struct or Union'
-        )
-        if isinstance(obj, Struct):
-            d = {}
-            for name, optional, field_data_type  in obj._fields_:
-                val = getattr(obj, name)
-                if val is not None:
-                    d[name] = cls.encode(val, field_data_type)
-                elif val is None and not optional:
-                    raise KeyError('missing required field {!r}'.format(name))
-            return d
-        elif isinstance(obj, Union):
-            field_data_type = obj._fields_[obj._tag]
-            if field_data_type:
-                val = getattr(obj, obj._tag)
-                if isinstance(field_data_type, PrimitiveType):
-                    return cls._make_json_friendly(field_data_type, val)
-                else:
-                    return {obj._tag: cls.encode(val)}
-            else:
-                return obj._tag
-        elif isinstance(data_type, List):
-            if not isinstance(obj, list):
-                # TODO: We want to say the field name
-                raise ValueError(
-                    'field is of type $r rather than a list'
-                    % (type(obj).__name__)
-                )
-            return [cls.encode(item, data_type.data_type) for item in obj]
-        elif isinstance(data_type, PrimitiveType):
-            return cls._make_json_friendly(data_type, obj)
-        else:
-            raise AssertionError('Unsupported data type %r'
-                                 % type(data_type).__name__)
-
-
-    @classmethod
-    def _make_json_friendly(cls, data_type, val):
-        if val is None:
-            return val
-        elif isinstance(data_type, (Timestamp,)):
-            return val.strftime(data_type.format)
-        else:
-            return val
-
-class JsonCompatDictDecoder(object):
-    @classmethod
-    def decode(cls, data_type, obj):
-        """
-        Decodes a JSON-compatible object into an instance of a Babel data type.
-        """
-        if issubclass(data_type, Struct):
-            for key in obj:
-                if key not in data_type._field_names_:
-                    raise KeyError('unknown field {!r}'.format(key))
-            o = data_type()
-            for name, optional, field_data_type in data_type._fields_:
-                if name in obj:
-                    if isinstance(field_data_type, PrimitiveType):
-                        val = cls._make_babel_friendly(field_data_type, obj[name])
-                        setattr(o, name, val)
-                    else:
-                        setattr(o, name, cls.decode(field_data_type, obj[name]))
-                elif not optional:
-                    raise KeyError('missing required field {!r}'.format(name))
-        elif issubclass(data_type, Union):
-            o = data_type()
-            if isinstance(obj, str):
-                # The variant is a symbol
-                tag = obj
-                if tag not in data_type._fields_:
-                    raise KeyError('Unknown tag %r' % tag)
-                getattr(o, 'set_' + tag)()
-            elif isinstance(obj, dict):
-                assert len(obj) == 1, 'obj must only have 1 key specified'
-                tag, val = obj.items()[0]
-                if tag not in data_type._fields_:
-                    raise KeyError('Unknown option %r' % tag)
-                setattr(o, tag, cls.decode(data_type._fields_[tag], val))
-            else:
-                raise AssertionError('obj type %r != str or dict'
-                                     % type(obj).__name__)
-        else:
-            raise AssertionError('obj type %r != Struct or Union'
-                                 % type(obj).__name__)
-        return o
-
-    @classmethod
-    def _make_babel_friendly(cls, data_type, val):
-        if val is None:
-            return val
-        elif isinstance(data_type, (Timestamp,)):
-            return datetime.datetime.strptime(val, data_type.format)
-        else:
-            return val

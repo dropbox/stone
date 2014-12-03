@@ -27,6 +27,7 @@ from babelapi.data_type import (
     Union,
 )
 from babelapi.data_type import (
+    is_binary_type,
     is_boolean_type,
     is_composite_type,
     is_integer_type,
@@ -304,6 +305,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
 
     def _python_type_mapping(self, data_type):
         if is_string_type(data_type):
+            return 'str'
+        elif is_binary_type(data_type):
             return 'str'
         elif is_boolean_type(data_type):
             return 'bool'
