@@ -157,10 +157,10 @@ class Binary(PrimitiveType):
             raise ValueError('%r is of type %r and is not a valid binary type'
                              % (val, type(val).__name__))
         elif self.max_length is not None and len(val) > self.max_length:
-            raise ValueError('%r has more than %s characters'
+            raise ValueError('%r has more than %s bytes'
                              % (val, self.max_length))
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValueError('%r has fewer than %s characters'
+            raise ValueError('%r has fewer than %s bytes'
                              % (val, self.min_length))
 
 class Timestamp(PrimitiveType):
