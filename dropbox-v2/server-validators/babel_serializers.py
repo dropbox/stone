@@ -24,7 +24,7 @@ from babel_data_types import (
 
 class JsonEncoder(object):
     """
-    Example of struct serialization:
+    Example of serializing a struct to JSON:
 
     struct FileRef
        path String
@@ -37,7 +37,7 @@ class JsonEncoder(object):
     {'path': 'a/b/c',
      'rev': '1234'}
 
-    Example of union serialization:
+    Example of serializing a union to JSON:
 
     union UploadMode
         add
