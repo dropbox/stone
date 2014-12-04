@@ -7,8 +7,8 @@ struct Space
 
     quota UInt64
         "The user's total quota allocation (bytes)."
-    private UInt64
-        "The user's used quota outside of shared folders (bytes)."
+    individual UInt64
+        "The user's used quota not including shared folders (bytes)."
     shared UInt64
         "The user's used quota in shared folders (bytes)."
     datastores UInt64
@@ -16,7 +16,7 @@ struct Space
 
     example default
         quota=1000000
-        private=1000
+        individual=1000
         shared=500
         datastores=42
 
@@ -55,16 +55,23 @@ struct Name
         familiar_name="Franz Ferdinand"
         display_name="Franz Ferdinand (Personal)"
 
-struct BasicAccountInfo
-    "Basic information about a user's account."
+struct AccountInfo
+    "The amount of detail revealed about an account depends on the user
+    being queried and the user making the query."
 
     account_id AccountId
         "The user's unique Dropbox ID."
     name Name
         "Details of a user's name."
 
-struct MeInfo extends BasicAccountInfo
-    "Information about a user's account."
+struct BasicInfo extends AccountInfo
+    "Minimal information about other accounts."
+
+    is_teammate Boolean
+        "Whether this user is a teammate of the authorized user."
+
+struct MeInfo extends AccountInfo
+    "Detailed information about the authorized user's account."
 
     email String
         "The user's e-mail address."
@@ -100,24 +107,16 @@ struct MeInfo extends BasicAccountInfo
         team=null
         is_paired=false
 
-union AccountInfo
-    "The amount of detail revealed about an account depends on the user
-    being queried and the user making the query."
-
-    me MeInfo
-    teammate BasicAccountInfo
-    user BasicAccountInfo
-
-struct InfoRequest
+struct GetInfoReq
     account_id AccountId
         "A user's account identifier."
 
-union InfoError
+union GetInfoError
     no_account
         "The specified :field:`account_id` does not exist."
 
-route Info (InfoRequest, AccountInfo, InfoError)
+route GetInfo (GetInfoReq, AccountInfo, GetInfoError)
     "Get information about a user's account."
 
-route InfoMe /info/me (Empty, MeInfo, Empty)
+route GetMyInfo (Empty, MeInfo, Empty)
     "Get information about the authorized user's account."

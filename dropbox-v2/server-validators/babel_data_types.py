@@ -14,6 +14,7 @@ from abc import ABCMeta, abstractmethod
 import datetime
 import numbers
 import re
+import six
 import types
 
 class DataType(object):
@@ -22,7 +23,11 @@ class DataType(object):
 
     @abstractmethod
     def validate(self, val):
-        """Checks if val is a valid value for this type."""
+        """Validates that val is of this data type.
+
+        Returns: None if validation succeeds.
+        Raises: A KeyError or ValueError if validation fails.
+        """
         pass
 
 class PrimitiveType(object):
@@ -120,17 +125,17 @@ class String(PrimitiveType):
                 raise ValueError('Regex {!r} failed: {}'.format(pattern, e.args[0]))
 
     def validate(self, val):
-        if not isinstance(val, types.StringTypes):
-            raise ValueError('%r is of type %r and is not a valid string'
+        if not isinstance(val, six.string_types):
+            raise ValueError("'%s' is of type %r and is not a valid string"
                              % (val, type(val).__name__))
         elif self.max_length is not None and len(val) > self.max_length:
-            raise ValueError('%r has more than %s characters'
-                             % (val, self.max_length))
+            raise ValueError("'%s' must be at most %d characters, got %d"
+                             % (val, self.max_length, len(val)))
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValueError('%r has fewer than %s characters'
-                             % (val, self.min_length))
+            raise ValueError("'%s' must be at least %d characters, got %d"
+                             % (val, self.min_length, len(val)))
         elif self.pattern and not self.pattern_re.match(val):
-            raise ValueError('%r did not match pattern %r'
+            raise ValueError("'%s' did not match pattern '%s'"
                              % (val, self.pattern))
 
 class Binary(PrimitiveType):
@@ -154,13 +159,13 @@ class Binary(PrimitiveType):
     def validate(self, val):
         if not isinstance(val, str):
             # TODO: Add support for buffer and file objects.
-            raise ValueError('%r is of type %r and is not a valid binary type'
+            raise ValueError("'%s' is of type %r and is not a valid binary type"
                              % (val, type(val).__name__))
         elif self.max_length is not None and len(val) > self.max_length:
-            raise ValueError('%r has more than %s bytes'
+            raise ValueError("'%s' must have at most %d bytes, got %d"
                              % (val, self.max_length))
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValueError('%r has fewer than %s bytes'
+            raise ValueError("'%s' has fewer than %d bytes"
                              % (val, self.min_length))
 
 class Timestamp(PrimitiveType):
@@ -215,6 +220,37 @@ class List(PrimitiveType):
                     % (val, type(item).__name__, self.data_type.__name__))
                 item.validate()
 
-class CompositeType(DataType): pass
-class Struct(CompositeType): pass
-class Union(CompositeType): pass
+class CompositeType(DataType):
+    pass
+
+class Struct(CompositeType):
+    """
+    Extend this when defining a Python class that represents a
+    Babel IDL Struct.
+
+    You must specify a _fields_ class variable structured as:
+        _fields_ = [(field_name, optional, data_type), ...]
+
+        field_name: Name of the field (str).
+        optional: Whether the field is optional (bool).
+        data_type: DataType object.
+    """
+    def validate(self):
+        for field_name, optional, data_type in self._fields_:
+            # Any absent field that's required will raise an exception
+            getattr(self, field_name)
+
+class Union(CompositeType):
+    """
+    Extend this when defining a Python class that represents a
+    Babel IDL Union.
+
+    You must specify a _fields_ class variable structured as:
+        _fields_ = [(field_name, data_type), ...]
+
+        field_name: Name of the tag (str).
+        data_type: DataType object. None if it's a symbol field.
+    """
+    def validate(self):
+        if self._tag is None:
+            raise ValueError('No tag selected')

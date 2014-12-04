@@ -42,10 +42,6 @@ from babelapi.generator.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
 base = """\
-import datetime
-import numbers
-import six
-
 import babel_data_types as dt
 
 """
@@ -141,10 +137,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
 
             self._generate_struct_class_vars(data_type)
             self._generate_struct_class_init(data_type)
-            self._generate_struct_class_validate(data_type)
             self._generate_struct_class_properties(data_type)
-            #self._generate_struct_class_from_dict(data_type)
-            #self._generate_struct_class_to_dict(data_type)
             self._generate_struct_class_repr(data_type)
 
     def _format_type_in_doc(self, data_type):
@@ -292,18 +285,9 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line('pass')
             self.emit_empty_line()
 
-    def _generate_struct_class_validate(self, data_type):
-        self.emit_line('def validate(self):')
-        with self.indent():
-            self.emit_line('return all([')
-            with self.indent():
-                for field in data_type.all_required_fields:
-                    field_name = self.lang.format_method(field.name)
-                    self.emit_line('self.__has_{},'.format(field_name))
-            self.emit_line('])')
-            self.emit_empty_line()
-
     def _python_type_mapping(self, data_type):
+        """Map Babel data types to their most natural equivalent in Python
+        for documentation purposes."""
         if is_string_type(data_type):
             return 'str'
         elif is_binary_type(data_type):
@@ -355,12 +339,21 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('@{}.setter'.format(field_name))
             self.emit_line('def {}(self, val):'.format(field_name))
             with self.indent():
+                if field.optional:
+                    self.emit_line('if val is None:')
+                    with self.indent():
+                        self.emit_line('del self.{}'.format(field_name))
+                        self.emit_line('return')
                 if is_composite_type(field.data_type):
                     class_name = self.lang.format_class(field.data_type.name)
-                    self.emit_line('if not isinstance(val, {}):'.format(class_name))
+                    if field.data_type.has_coverage():
+                        self.emit_line('if not isinstance(val, {}):'.format(class_name))
+                    else:
+                        self.emit_line('if type(val) is not {}:'.format(class_name))
                     with self.indent():
                         self.emit_line("raise TypeError('{} is of type %r but must be of type {}' % type(val).__name__)".format(field_name, class_name))
-                    self.emit_line('val.validate()'.format(field_name))
+                    # TODO(kelkabany): Should we re-enable this validation?
+                    #self.emit_line('val.validate()'.format(field_name))
                 else:
                     self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))
@@ -369,7 +362,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
 
             # generate deleter for field
             self.emit_line('@{}.deleter'.format(field_name))
-            self.emit_line('def {}(self, val):'.format(field_name))
+            self.emit_line('def {}(self):'.format(field_name))
             with self.indent():
                 self.emit_line('self._{} = None'.format(field_name))
                 self.emit_line('self.__has_{} = False'.format(field_name))
@@ -387,73 +380,6 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 ))
             else:
                 self.emit_line("return '{}()'".format(self._class_name_for_data_type(data_type)))
-        self.emit_empty_line()
-
-    def _generate_struct_class_from_dict(self, data_type):
-        """The from_json() function will convert a Python dictionary object
-        that presumably was constructed from JSON into a Python object
-        of the correct type."""
-        self.emit_line('@classmethod')
-        self.emit_line('def from_dict(cls, transformer, obj):')
-        with self.indent():
-            self.emit_line('for key in obj:')
-            with self.indent():
-                self.emit_line('if key not in cls._field_names_:')
-                with self.indent():
-                    self.emit_line('raise KeyError("Unknown key: %r" % key)')
-            var_name = self.lang.format_variable(data_type.name)
-            self.emit_line('{} = {}()'.format(var_name, self.lang.format_class(data_type.name)))
-            for field in data_type.all_fields:
-                field_name = self.lang.format_variable(field.name)
-                if field.optional:
-                    if is_composite_type(field.data_type):
-                        self.emit_line("if obj.get('{}') is not None:".format(field_name))
-                        with self.indent():
-                            self.emit_line("{0}.{1} = {2}.from_dict(transformer, obj['{1}'])".format(
-                                var_name,
-                                field_name,
-                                self.lang.format_class(field.data_type.name),
-                            ))
-                    else:
-                        self.emit_line("{0}.{1} = transformer.convert_from({0}.__{1}_data_type, obj.get('{1}'))".format( var_name, field_name))
-                else:
-                    self.emit_line("if '{}' not in obj:".format(field_name))
-                    with self.indent():
-                        self.emit_line('raise KeyError("missing required field {!r}")'.format(field_name))
-                    if is_composite_type(field.data_type):
-                        self.emit_line("{0}.{1} = {2}.from_dict(transformer, obj['{1}'])".format(
-                            var_name,
-                            field_name,
-                            self.lang.format_class(field.data_type.name),
-                        ))
-                    else:
-                        self.emit_line("{0}.{1} = transformer.convert_from({0}.__{1}_data_type, obj['{1}'])".format(var_name, field_name))
-
-            self.emit_line('return {}'.format(var_name))
-        self.emit_empty_line()
-
-    def _generate_struct_class_to_dict(self, data_type):
-        """The to_json() function will convert a Python object into a
-        dictionary that can be serialized into JSON."""
-        self.emit_line('def to_dict(self, transformer):')
-        with self.indent():
-            self.emit_line('d = dict', trailing_newline=False)
-            args = []
-            for field in data_type.all_required_fields:
-                if is_composite_type(field.data_type):
-                    args.append('{0}=self._{0}.to_dict(transformer)'.format(field.name))
-                else:
-                    args.append('{0}=transformer.convert_to(self.__{0}_data_type, self._{0})'.format(field.name))
-            self._generate_func_arg_list(args, compact=True)
-            self.emit_empty_line()
-            for field in data_type.all_optional_fields:
-                self.emit_line('if self._{} is not None:'.format(field.name))
-                with self.indent():
-                    if is_composite_type(field.data_type):
-                        self.emit_line("d['{0}'] = self._{0}.to_dict(transformer)".format(field.name))
-                    else:
-                        self.emit_line("d['{0}'] = transformer.convert_to(self.__{0}_data_type, self._{0})".format(field.name))
-            self.emit_line('return d')
         self.emit_empty_line()
 
     def _class_name_for_data_type(self, data_type):
@@ -508,31 +434,16 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line('"""')
             self.emit_empty_line()
 
-            for field in data_type.fields:
-                if isinstance(field, SymbolField):
-                    self.emit_line('{} = object()'.format(self.lang.format_class(field.name)))
-                elif is_composite_type(field.data_type):
-                    self.emit_line('{0} = {1}'.format(self.lang.format_class(field.name),
-                                                      self._class_name_for_data_type(field.data_type)))
-                else:
-                    raise ValueError('Only symbols and composite types for union fields.')
-            self.emit_empty_line()
-
             self._generate_union_class_fields_for_reflection(data_type)
             self._generate_union_class_init(data_type)
-            self._generate_union_class_validate(data_type)
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_properties(data_type)
-            #self._generate_union_class_from_dict(data_type)
-            #self._generate_union_class_to_dict(data_type)
             self._generate_union_class_repr(data_type)
 
     def _generate_union_class_init(self, data_type):
         """Generates the __init__ method for the class."""
         self.emit_line('def __init__(self):')
         with self.indent():
-            lineno = self.lineno
-
             # Call the parent constructor if a super type exists
             if data_type.super_type:
                 class_name = self._class_name_for_data_type(data_type)
@@ -542,16 +453,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 field_var_name = self.lang.format_variable(field.name)
                 if not isinstance(field, SymbolField):
                     self.emit_line('self._{} = None'.format(field_var_name))
-            if lineno == self.lineno:
-                self.emit_line('pass')
             self.emit_line('self._tag = None')
             self.emit_empty_line()
-
-    def _generate_union_class_validate(self, data_type):
-        self.emit_line('def validate(self):')
-        with self.indent():
-            self.emit_line('return self._tag is not None')
-        self.emit_empty_line()
 
     def _generate_union_class_is_set(self, data_type):
         for field in data_type.fields:
@@ -591,70 +494,19 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             with self.indent():
                 if is_composite_type(field.data_type):
                     class_name = self.lang.format_class(field.data_type.name)
-                    self.emit_line('if not isinstance(val, {}):'.format(class_name))
+                    if field.data_type.has_coverage():
+                        self.emit_line('if not isinstance(val, {}):'.format(class_name))
+                    else:
+                        self.emit_line('if type(val) is not {}:'.format(class_name))
                     with self.indent():
                         self.emit_line("raise TypeError('{} is of type %r but must be of type {}' % type(val).__name__)".format(field_name, class_name))
-                    self.emit_line('val.validate()'.format(field_name))
+                    # TODO(kelkabany): Re-enable this validation?
+                    #self.emit_line('val.validate()'.format(field_name))
                 else:
                     self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))
                 self.emit_line('self._tag = {!r}'.format(field_name))
             self.emit_empty_line()
-
-    def _generate_union_class_from_dict(self, data_type):
-        """The from_json() function will convert a Python dictionary object
-        that presumably was constructed from JSON into a Python object
-        of the correct type."""
-        self.emit_line('@classmethod')
-        self.emit_line('def from_dict(cls, transformer, obj):')
-        with self.indent():
-            var_name = self.lang.format_variable(data_type.name)
-            self.emit_line('{} = cls()'.format(var_name))
-            self.emit_line('if isinstance(obj, dict) and len(obj) != 1:')
-            with self.indent():
-                self.emit_line('raise KeyError("Union can only have one key set not %d" % len(obj))')
-            for field in data_type.all_fields:
-                if isinstance(field, SymbolField):
-                    self.emit_line("if obj == '{}':".format(field.name))
-                    with self.indent():
-                        self.emit_line('{}.set_{}()'.format(var_name, self.lang.format_method(field.name)))
-                elif is_composite_type(field.data_type):
-                    self.emit_line("if isinstance(obj, dict) and '{}' == obj.keys()[0]:".format(field.name))
-                    with self.indent():
-                        composite_assignment = "{0}.{1} = {2}.from_dict(transformer, obj['{1}'])".format(
-                            var_name,
-                            self.lang.format_variable(field.name),
-                            self._class_name_for_data_type(field.data_type),
-                        )
-                        self.emit_line(composite_assignment)
-                else:
-                    self.emit_line("if isinstance(obj, dict) and '{}' == obj.keys()[0]:".format(field.name))
-                    with self.indent():
-                        composite_assignment = "{0}.{1} = transformer.convert_from(self.__{1}_data_type, obj['{1}'])".format(
-                            var_name,
-                            self.lang.format_variable(field.name),
-                            self._class_name_for_data_type(field.data_type),
-                        )
-                        self.emit_line(composite_assignment)
-
-            self.emit_line('return {}'.format(var_name))
-            self.emit_empty_line()
-
-    def _generate_union_class_to_dict(self, data_type):
-        """The to_dict() function will convert a Python object into a
-        dictionary that can be serialized into JSON."""
-        self.emit_line('def to_dict(self, transformer):')
-        with self.indent():
-            for field in data_type.all_fields:
-                self.emit_line("if self.is_{}():".format(field.name))
-                with self.indent():
-                    if isinstance(field, SymbolField):
-                        self.emit_line('return {!r}'.format(self.lang.format_variable(field.name)))
-                    elif is_composite_type(field.data_type):
-                        self.emit_line('return dict({0}=self.{0}.to_dict(transformer))'.format(field.name))
-                    else:
-                        self.emit_line('return dict({0}=transformer.convert_to(self.__{0}_data_type, self._{0})'.format(field.name))
-        self.emit_empty_line()
 
     def _generate_union_class_repr(self, data_type):
         # The special __repr__() function will return a string of the class

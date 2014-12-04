@@ -33,9 +33,8 @@ class JsonEncoder(object):
     >>> fr = FileRef()
     >>> fr.path = 'a/b/c'
     >>> fr.rev = '1234'
-    >>> JsonEncoder.encode_helper(fr)
-    {'path': 'a/b/c',
-     'rev': '1234'}
+    >>> JsonEncoder.encode(fr)
+    "{'path': 'a/b/c', 'rev': '1234'}"
 
     Example of serializing a union to JSON:
 
@@ -46,20 +45,20 @@ class JsonEncoder(object):
 
     >>> um = UploadMode()
     >>> um.set_add()
-    >>> JsonEncoder.encode_helper(um)
-    'add'
+    >>> JsonEncoder.encode(um)
+    '"add"'
     >>> um.update = fr
-    >>> JsonEncoder.encode_helper(um)
-    {'update': {'path': 'a/b/c', 'rev': '1234'}}
+    >>> JsonEncoder.encode(um)
+    "{'update': {'path': 'a/b/c', 'rev': '1234'}}"
     """
 
     @classmethod
-    def encode_helper(cls, obj, data_type=None):
+    def encode(cls, obj, data_type=None):
         """Encodes a Babel data type into JSON."""
-        return json.dumps(cls.encode_helper(obj, data_type))
+        return json.dumps(cls._encode_helper(obj, data_type))
 
     @classmethod
-    def encode_helper(cls, obj, data_type=None):
+    def _encode_helper(cls, obj, data_type=None):
         """Encodes a Babel data type into a JSON-compatible dict."""
 
         # We can derive the data type of a struct or union since it's included
@@ -73,7 +72,7 @@ class JsonEncoder(object):
             for name, optional, field_data_type  in obj._fields_:
                 val = getattr(obj, name)
                 if val is not None:
-                    d[name] = cls.encode_helper(val, field_data_type)
+                    d[name] = cls._encode_helper(val, field_data_type)
                 elif val is None and not optional:
                     raise KeyError('missing required field {!r}'.format(name))
             return d
@@ -84,17 +83,17 @@ class JsonEncoder(object):
                 if isinstance(field_data_type, PrimitiveType):
                     return cls._make_json_friendly(field_data_type, val)
                 else:
-                    return {obj._tag: cls.encode_helper(val)}
+                    return {obj._tag: cls._encode_helper(val)}
             else:
                 return obj._tag
         elif isinstance(data_type, List):
             if not isinstance(obj, list):
-                # TODO: We want to say the field name
+                # TODO: Specify the field name in the error message
                 raise ValueError(
                     'field is of type %r rather than a list'
                     % (type(obj).__name__)
                 )
-            return [cls.encode_helper(item, data_type.data_type) for item in obj]
+            return [cls._encode_helper(item, data_type.data_type) for item in obj]
         elif isinstance(data_type, PrimitiveType):
             return cls._make_json_friendly(data_type, obj)
         else:
@@ -118,11 +117,11 @@ class JsonDecoder(object):
     """Performs the reverse operation of JsonEncoder."""
 
     @classmethod
-    def decode_helper(cls, data_type, obj):
-        return json.loads(cls.decode(data_type, obj))
+    def decode(cls, data_type, serialized_obj):
+        return cls._decode_helper(data_type, json.loads(serialized_obj))
 
     @classmethod
-    def decode(cls, data_type, obj):
+    def _decode_helper(cls, data_type, obj):
         """
         Decodes a JSON-compatible object into an instance of a Babel data type.
         """
@@ -133,7 +132,7 @@ class JsonDecoder(object):
             o = data_type()
             for name, optional, field_data_type in data_type._fields_:
                 if name in obj:
-                    setattr(o, name, cls.decode(field_data_type, obj[name]))
+                    setattr(o, name, cls._decode_helper(field_data_type, obj[name]))
                 elif not optional:
                     raise KeyError('missing required field {!r}'.format(name))
         elif issubclass(data_type, Union):
@@ -149,7 +148,7 @@ class JsonDecoder(object):
                 tag, val = obj.items()[0]
                 if tag not in data_type._fields_:
                     raise KeyError('Unknown option %r' % tag)
-                setattr(o, tag, cls.decode(data_type._fields_[tag], val))
+                setattr(o, tag, cls._decode_helper(data_type._fields_[tag], val))
             else:
                 raise AssertionError('obj type %r != str or dict'
                                      % type(obj).__name__)
@@ -159,7 +158,7 @@ class JsonDecoder(object):
                     'field is of type %r rather than a list'
                     % (type(obj).__name__)
                 )
-            return [cls.decode(data_type.data_type, item) for item in obj]
+            return [cls._decode_helper(data_type.data_type, item) for item in obj]
         elif isinstance(data_type, PrimitiveType):
             return cls._make_babel_friendly(data_type, obj)
         else:
