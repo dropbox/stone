@@ -829,7 +829,8 @@ class Entry(object):
                  **kwargs):
         """
         :type metadata: :class:`Metadata`
-        :type name: str
+        :param str name: The name of the resource as seen by the user in their
+            Dropbox.
         """
         if isinstance(metadata, Metadata.File):
             self.metadata = Metadata(file=metadata)
@@ -864,9 +865,10 @@ class ListFolderResponse(object):
                  entries,
                  **kwargs):
         """
-        :type cursor: str
-        :type has_more: bool
-        :type entries: list
+        :param str cursor: Pass the cursor into :meth:`list_folder_continue` to
+            see what's changed in the folder since your previous query.
+        :param bool has_more: If true, then there are more entries available.
+        :param list entries: Each entry is a resource in the folder.
         """
         assert isinstance(cursor, six.string_types), 'cursor must be of type six.string_types'
         self.cursor = cursor

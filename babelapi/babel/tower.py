@@ -38,11 +38,6 @@ from babelapi.babel.parser import (
     BabelTypeDef,
 )
 from babelapi.lang.lang import TargetLanguage
-from babelapi.segmentation import (
-    Segment,
-    SegmentList,
-    Segmentation,
-)
 
 class TowerOfBabel(object):
 
@@ -302,28 +297,6 @@ class TowerOfBabel(object):
             else:
                 raise Exception('Unknown Babel Declaration Type %r'
                                 % item.__class__.__name__)
-
-    def _babel_field_to_segments(self, env, fields):
-        segments = []
-        for field in fields:
-            if field.data_type_name == 'SList':
-                data_type_name = dict(field.data_type_attrs)['data_type'].name
-                segment_cls = SegmentList
-            else:
-                data_type_name = field.data_type_name
-                segment_cls = Segment
-
-            obj = env.get(data_type_name)
-            if not obj:
-                raise Exception('Symbol %r is undefined' % data_type_name)
-            elif inspect.isclass(obj):
-                data_type = obj()
-            else:
-                data_type = obj
-
-            segment = segment_cls(field.name, data_type)
-            segments.append(segment)
-        return Segmentation(segments)
 
     def _resolve_data_type(self, env, data_type_name):
         if not data_type_name:

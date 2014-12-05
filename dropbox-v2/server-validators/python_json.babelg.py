@@ -436,6 +436,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
 
             self._generate_union_class_fields_for_reflection(data_type)
             self._generate_union_class_init(data_type)
+            self._generate_union_class_symbol_creators(data_type)
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_properties(data_type)
             self._generate_union_class_repr(data_type)
@@ -443,6 +444,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
     def _generate_union_class_init(self, data_type):
         """Generates the __init__ method for the class."""
         self.emit_line('def __init__(self):')
+        print 'catch all field?', type(data_type.catch_all_field)
         with self.indent():
             # Call the parent constructor if a super type exists
             if data_type.super_type:
@@ -450,11 +452,30 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line('super({}, self).__init__()'.format(class_name))
 
             for field in data_type.fields:
+                print field.name
                 field_var_name = self.lang.format_variable(field.name)
                 if not isinstance(field, SymbolField):
                     self.emit_line('self._{} = None'.format(field_var_name))
             self.emit_line('self._tag = None')
             self.emit_empty_line()
+
+    def _generate_union_class_symbol_creators(self, data_type):
+        class_name = self.lang.format_class(data_type.name)
+        for field in data_type.fields:
+            if isinstance(field, SymbolField):
+                field_name = self.lang.format_method(field.name)
+                self.emit_line('@classmethod')
+                self.emit_line('def create_and_set_{}(cls):'.format(field_name))
+                with self.indent():
+                    self.emit_line('"""')
+                    self.emit_wrapped_indented_lines(
+                        ':rtype: {}'.format(class_name)
+                    )
+                    self.emit_line('"""')
+                    self.emit_line('c = cls()')
+                    self.emit_line('c.set_{}()'.format(field_name))
+                    self.emit_line('return c')
+                self.emit_empty_line()
 
     def _generate_union_class_is_set(self, data_type):
         for field in data_type.fields:
@@ -479,7 +500,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('@property')
             self.emit_line('def {}(self):'.format(field_name))
             with self.indent():
-                self.emit_line('if not self.is_{}():'.format(field_name))
+                self.emit_line('if not self.i s_{}():'.format(field_name))
                 with self.indent():
                     self.emit_line('raise KeyError("tag {!r} not set")'.format(field_name))
                 if isinstance(field, SymbolField):

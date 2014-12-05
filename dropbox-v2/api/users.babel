@@ -114,6 +114,7 @@ struct GetInfoReq
 union GetInfoError
     no_account
         "The specified :field:`account_id` does not exist."
+    *unknown
 
 route GetInfo (GetInfoReq, AccountInfo, GetInfoError)
     "Get information about a user's account."

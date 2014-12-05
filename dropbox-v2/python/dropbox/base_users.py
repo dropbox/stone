@@ -30,22 +30,22 @@ class Space(object):
 
     def __init__(self,
                  quota,
-                 private,
+                 individual,
                  shared,
                  datastores,
                  **kwargs):
         """
         :param long quota: The user's total quota allocation (bytes).
-        :param long private: The user's used quota outside of shared folders
-            (bytes).
+        :param long individual: The user's used quota not including shared
+            folders (bytes).
         :param long shared: The user's used quota in shared folders (bytes).
         :param long datastores: The user's used quota in datastores (bytes).
         """
         assert isinstance(quota, numbers.Integral), 'quota must be of type numbers.Integral'
         self.quota = quota
 
-        assert isinstance(private, numbers.Integral), 'private must be of type numbers.Integral'
-        self.private = private
+        assert isinstance(individual, numbers.Integral), 'individual must be of type numbers.Integral'
+        self.individual = individual
 
         assert isinstance(shared, numbers.Integral), 'shared must be of type numbers.Integral'
         self.shared = shared
@@ -60,7 +60,7 @@ class Space(object):
 
     def to_json(self):
         d = dict(quota=self.quota,
-                 private=self.private,
+                 individual=self.individual,
                  shared=self.shared,
                  datastores=self.datastores)
         return d
@@ -147,9 +147,10 @@ class Name(object):
     def __repr__(self):
         return 'Name(%r)' % self.given_name
 
-class BasicAccountInfo(object):
+class AccountInfo(object):
     """
-    Basic information about a user's account.
+    The amount of detail revealed about an account depends on the user being
+    queried and the user making the query.
     """
 
     def __init__(self,
@@ -171,7 +172,7 @@ class BasicAccountInfo(object):
     def from_json(cls, obj):
         obj = copy.copy(obj)
         obj['name'] = Name.from_json(obj['name'])
-        return BasicAccountInfo(**obj)
+        return AccountInfo(**obj)
 
     def to_json(self):
         d = dict(account_id=self.account_id,
@@ -179,11 +180,48 @@ class BasicAccountInfo(object):
         return d
 
     def __repr__(self):
-        return 'BasicAccountInfo(%r)' % self.account_id
+        return 'AccountInfo(%r)' % self.account_id
 
-class MeInfo(BasicAccountInfo):
+class BasicInfo(AccountInfo):
     """
-    Information about a user's account.
+    Minimal information about other accounts.
+    """
+
+    def __init__(self,
+                 account_id,
+                 name,
+                 is_teammate,
+                 **kwargs):
+        """
+        :param bool is_teammate: Whether this user is a teammate of the
+            authorized user.
+        """
+        super(BasicInfo, self).__init__(
+            account_id,
+            name,
+        )
+
+        assert isinstance(is_teammate, bool), 'is_teammate must be of type bool'
+        self.is_teammate = is_teammate
+
+    @classmethod
+    def from_json(cls, obj):
+        obj = copy.copy(obj)
+        obj['name'] = Name.from_json(obj['name'])
+        return BasicInfo(**obj)
+
+    def to_json(self):
+        d = dict(account_id=self.account_id,
+                 name=self.name.to_json(),
+                 is_teammate=self.is_teammate)
+        return d
+
+    def __repr__(self):
+        return 'BasicInfo(%r)' % self.is_teammate
+
+class MeInfo(AccountInfo):
+    """
+    Detailed information about the authorized user's account.
     """
 
     def __init__(self,
@@ -264,88 +302,7 @@ class MeInfo(BasicAccountInfo):
     def __repr__(self):
         return 'MeInfo(%r)' % self.email
 
-class AccountInfo(object):
-    """
-    The amount of detail revealed about an account depends on the user being
-    queried and the user making the query.
-
-    :ivar Me: None
-    :ivar Teammate: None
-    :ivar User: None
-    """
-
-    Me = MeInfo
-    Teammate = BasicAccountInfo
-    User = BasicAccountInfo
-
-    def __init__(self,
-                 me=None,
-                 teammate=None,
-                 user=None,
-                 **kwargs):
-        """
-        Only one argument can be set.
-
-        :type me: :class:`MeInfo`
-        :type teammate: :class:`BasicAccountInfo`
-        :type user: :class:`BasicAccountInfo`
-        """
-        assert_only_one(me=me,
-                        teammate=teammate,
-                        user=user,
-                        **kwargs)
-        self.me = None
-        self.teammate = None
-        self.user = None
-
-        if me is not None:
-            assert isinstance(me, MeInfo), 'me must be of type MeInfo'
-            self.me = me
-            self._tag = 'me'
-
-        if teammate is not None:
-            assert isinstance(teammate, BasicAccountInfo), 'teammate must be of type BasicAccountInfo'
-            self.teammate = teammate
-            self._tag = 'teammate'
-
-        if user is not None:
-            assert isinstance(user, BasicAccountInfo), 'user must be of type BasicAccountInfo'
-            self.user = user
-            self._tag = 'user'
-
-    def is_me(self):
-        return self._tag == 'me'
-
-    def is_teammate(self):
-        return self._tag == 'teammate'
-
-    def is_user(self):
-        return self._tag == 'user'
-
-    @classmethod
-    def from_json(self, obj):
-        obj = copy.copy(obj)
-        assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
-        if 'me' in obj:
-            obj['me'] = MeInfo.from_json(obj['me'])
-        if 'teammate' in obj:
-            obj['teammate'] = BasicAccountInfo.from_json(obj['teammate'])
-        if 'user' in obj:
-            obj['user'] = BasicAccountInfo.from_json(obj['user'])
-        return AccountInfo(**obj)
-
-    def to_json(self):
-        if self._tag == 'me':
-            return dict(me=self.me.to_json())
-        if self._tag == 'teammate':
-            return dict(teammate=self.teammate.to_json())
-        if self._tag == 'user':
-            return dict(user=self.user.to_json())
-
-    def __repr__(self):
-        return 'AccountInfo(%r)' % self._tag
-
-class InfoRequest(object):
+class GetInfoReq(object):
 
     def __init__(self,
                  account_id,
@@ -359,16 +316,16 @@ class InfoRequest(object):
     @classmethod
     def from_json(cls, obj):
         obj = copy.copy(obj)
-        return InfoRequest(**obj)
+        return GetInfoReq(**obj)
 
     def to_json(self):
         d = dict(account_id=self.account_id)
         return d
 
     def __repr__(self):
-        return 'InfoRequest(%r)' % self.account_id
+        return 'GetInfoReq(%r)' % self.account_id
 
-class InfoError(object):
+class GetInfoError(object):
 
     NoAccount = object()
 
@@ -398,20 +355,20 @@ class InfoError(object):
         assert len(obj) == 1, 'One key must be set, not %d' % len(obj)
         if obj == 'no_account':
             return obj
-        return InfoError(**obj)
+        return GetInfoError(**obj)
 
     def to_json(self):
         if self._tag == 'no_account':
             return self._tag
 
     def __repr__(self):
-        return 'InfoError(%r)' % self._tag
+        return 'GetInfoError(%r)' % self._tag
 
 class BaseUsers(Namespace):
     """Methods for routes in the users namespace"""
 
-    def info(self,
-             account_id):
+    def get_info(self,
+                 account_id):
         """
         Get information about a user's account.
 
@@ -422,15 +379,15 @@ class BaseUsers(Namespace):
         Error codes:
             no_account: The specified ``account_id`` does not exist.
         """
-        o = InfoRequest(account_id).to_json()
+        o = GetInfoReq(account_id).to_json()
         r = self._dropbox.request(Dropbox.Host.API,
-                                  'users/info',
+                                  'users/get_info',
                                   Dropbox.RouteStyle.RPC,
                                   o,
                                   None)
         return AccountInfo.from_json(r.obj_segment)
 
-    def info_me(self):
+    def get_my_info(self):
         """
         Get information about the authorized user's account.
 
@@ -438,7 +395,7 @@ class BaseUsers(Namespace):
         """
         o = Empty().to_json()
         r = self._dropbox.request(Dropbox.Host.API,
-                                  'users/info/me',
+                                  'users/get_my_info',
                                   Dropbox.RouteStyle.RPC,
                                   o,
                                   None)
