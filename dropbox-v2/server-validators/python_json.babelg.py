@@ -444,7 +444,6 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
     def _generate_union_class_init(self, data_type):
         """Generates the __init__ method for the class."""
         self.emit_line('def __init__(self):')
-        print 'catch all field?', type(data_type.catch_all_field)
         with self.indent():
             # Call the parent constructor if a super type exists
             if data_type.super_type:
@@ -452,7 +451,6 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line('super({}, self).__init__()'.format(class_name))
 
             for field in data_type.fields:
-                print field.name
                 field_var_name = self.lang.format_variable(field.name)
                 if not isinstance(field, SymbolField):
                     self.emit_line('self._{} = None'.format(field_var_name))
