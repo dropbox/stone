@@ -308,21 +308,8 @@ a data type::
        photo PhotoInfo
        video VideoInfo
 
-Tags that do not map to a type can be declared. The following example
-illustrates::
-
-    struct UpdateParentRev
-        "On a write conflict, overwrite the existing file if the parent rev
-        matches."
-
-        parent_rev String
-            "The revision to be updated."
-        auto_rename Boolean
-            "Whether the new file should be renamed on a conflict."
-
-        example default
-            parent_rev="abc123"
-            auto_rename=false
+Tags can be declared without mapping to a type. We call these Symbols. The
+following example illustrates::
 
     union WriteConflictPolicy
         "Policy for managing write conflicts."
@@ -333,9 +320,53 @@ illustrates::
             "On a write conflict, overwrite the existing file."
         rename
             "On a write conflict, rename the new file with a numerical suffix."
-        update_if_matching_parent_rev UpdateParentRev
-            "On a write conflict, overwrite the existing file."
 
+Catch All Symbol
+^^^^^^^^^^^^^^^^
+
+By default, we consider Unions to be closed. That is, for the sake of backwards
+compatibility, a client should never receive a variant that it isn't aware of.
+Therefore, expanding a union requires writing a new route and a new Union with
+the additional variant.
+
+Because we anticipate that this will be a hassle for APIs undergoing revision,
+we've introduced a notation to indicate that in the event a tag is not known,
+the union will default to a symbol. The notation is simply an asterix that
+follows a symbol field name::
+
+    union GetAccountError
+        no_account
+            "No account could be found."
+        unknown*
+
+In the example above, a client that received a tag it did not understand
+(e.g. ``permission_denied``) will default to the ``unknown`` tag.
+
+We expect this to be especially useful for unions that represent the possible
+errors an endpoint might return. Clients in the wild may have been generated
+with only a subset of the current errors, but they'll continue to function as
+long as they handle the catch all tag.
+
+Any Data Type
+^^^^^^^^^^^^^
+
+Changing a symbol field to some data type is a backwards incompatible change
+that requires creating a new route and union definition. After all, if a
+client is expecting a symbol and gets back a struct, it isn't likely the
+handling code will be prepared.
+
+To avoid this, set the field to the ``Any`` data type::
+
+    union GetAccountError
+        no_account Any
+            "No account could be found."
+
+Now, without rev-ing the route, it will be possible to change the definition
+in the future without breaking old clients::
+
+    union GetAccountError
+        no_account MoreInfoStruct
+            "No account could be found."
 
 Primitives
 ----------
