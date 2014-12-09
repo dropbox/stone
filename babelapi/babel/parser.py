@@ -64,16 +64,6 @@ class BabelSymbol(object):
             self.name,
         )
 
-class BabelCatchAllSymbol(object):
-    def __init__(self, name):
-        self.name = name
-    def __str__(self):
-        return self.__repr__()
-    def __repr__(self):
-        return 'BabelCatchAllSymbol({!r})'.format(
-            self.name,
-        )
-
 class BabelNamespace(object):
     def __init__(self, name):
         self.name = name
@@ -141,6 +131,21 @@ class BabelField(object):
             self.name,
             self.data_type_name,
             self.data_type_attrs,
+        )
+
+class BabelSymbolField(object):
+    def __init__(self, name, catch_all):
+        self.name = name
+        self.catch_all = catch_all
+        self.doc = None
+    def set_doc(self, docstring):
+        self.doc = docstring
+    def __str__(self):
+        return self.__repr__()
+    def __repr__(self):
+        return 'BabelSymbolField({!r}, {!r})'.format(
+            self.name,
+            self.catch_all,
         )
 
 class BabelSegment(object):
@@ -406,20 +411,17 @@ class BabelParser(object):
         elif has_docstring:
             p[0].set_doc(p[9])
 
-    def p_statement_field_symbol(self, p):
-        """field : ID COLON docstring DEDENT
-                 | ID NEWLINE INDENT docstring NEWLINE DEDENT"""
-        p[0] = BabelSymbol(p[1])
-        if p[2] == ':':
-            # old style docstring
-            if p[3]:
-                p[0].set_doc(self._normalize_docstring(p[3]))
-        else:
-            p[0].set_doc(p[4])
+    def p_asterix_option(self, p):
+        """asterix_option : ASTERIX
+                          | empty"""
+        p[0] = (p[1] is not None)
 
-    def p_statement_field_catchall(self, p):
-        """field : ASTERIX ID NEWLINE"""
-        p[0] = BabelCatchAllSymbol(p[2])
+    def p_statement_field_symbol(self, p):
+        """field : ID asterix_option NEWLINE
+                 | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
+        p[0] = BabelSymbolField(p[1], p[2])
+        if len(p) > 4:
+            p[0].set_doc(p[5])
 
     def p_statement_example(self, p):
         """example : KEYWORD ID STRING NEWLINE INDENT example_field_list DEDENT

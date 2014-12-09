@@ -8,25 +8,14 @@ specific at all.
 
 import re
 from babelapi.data_type import (
-    Binary,
-    Boolean,
-    CompositeType,
-    Float32,
-    Float64,
-    Field,
     Int32,
     Int64,
-    List,
-    Null,
     String,
-    Struct,
-    SymbolField,
-    Timestamp,
     UInt32,
     UInt64,
-    Union,
 )
 from babelapi.data_type import (
+    is_any_type,
     is_binary_type,
     is_boolean_type,
     is_composite_type,
@@ -35,6 +24,7 @@ from babelapi.data_type import (
     is_null_type,
     is_string_type,
     is_struct_type,
+    is_symbol_type,
     is_timestamp_type,
     is_union_type,
 )
@@ -254,7 +244,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         with self.indent():
             for field in data_type.fields:
                 var_name = self.lang.format_variable(field.name)
-                if isinstance(field, SymbolField):
+                if is_symbol_type(field.data_type) or is_any_type(field.data_type):
                     self.emit_line("'{}': None,".format(var_name))
                 else:
                     if not is_composite_type(field.data_type):
@@ -422,7 +412,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_wrapped_lines(self.docf(data_type.doc))
                 self.emit_empty_line()
                 for field in data_type.fields:
-                    if isinstance(field, SymbolField):
+                    if is_symbol_type(field.data_type):
                         ivar_doc = ':ivar {}: {}'.format(self.lang.format_class(field.name),
                                                          self.docf(field.doc))
                     elif is_composite_type(field.data_type):
@@ -452,7 +442,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
 
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name)
-                if not isinstance(field, SymbolField):
+                if not is_symbol_type(field.data_type):
                     self.emit_line('self._{} = None'.format(field_var_name))
             self.emit_line('self._tag = None')
             self.emit_empty_line()
@@ -460,7 +450,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
     def _generate_union_class_symbol_creators(self, data_type):
         class_name = self.lang.format_class(data_type.name)
         for field in data_type.fields:
-            if isinstance(field, SymbolField):
+            if is_symbol_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
                 self.emit_line('@classmethod')
                 self.emit_line('def create_and_set_{}(cls):'.format(field_name))
@@ -487,7 +477,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
 
-            if isinstance(field, SymbolField):
+            if is_symbol_type(field.data_type):
                 self.emit_line('def set_{}(self):'.format(field_name))
                 with self.indent():
                     self.emit_line('self._tag = {!r}'.format(field_name))
@@ -498,10 +488,10 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('@property')
             self.emit_line('def {}(self):'.format(field_name))
             with self.indent():
-                self.emit_line('if not self.i s_{}():'.format(field_name))
+                self.emit_line('if not self.is_{}():'.format(field_name))
                 with self.indent():
                     self.emit_line('raise KeyError("tag {!r} not set")'.format(field_name))
-                if isinstance(field, SymbolField):
+                if is_symbol_type(field.data_type):
                     self.emit_line('return {!r}'.format(field_name))
                 else:
                     self.emit_line('return self._{}'.format(field_name))

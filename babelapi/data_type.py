@@ -51,13 +51,13 @@ class Null(PrimitiveType):
         if val is not None:
             raise ValueError('%r is not a valid null type' % val)
 
-class Symbol(PrimitiveType):
-    def __init__(self, symbol_name):
-        self.symbol_name = symbol_name
+class Any(PrimitiveType):
     def check(self, val):
-        # FIXME: Uncertain whether val should be string or some Id class.
-        if val != self.symbol_name:
-            raise ValueError('val %r is not symbol %r' % (val, self.symbol_name))
+        pass
+
+class Symbol(PrimitiveType):
+    def check(self, val):
+        raise NotImplemented
 
 class Binary(PrimitiveType):
     def check(self, val):
@@ -247,9 +247,7 @@ class Field(object):
     def __init__(self,
                  name,
                  data_type,
-                 doc,
-                 optional=False,
-                 deprecated=False):
+                 doc):
         """
         Creates a new Field.
 
@@ -262,6 +260,32 @@ class Field(object):
         self.name = name
         self.data_type = data_type
         self.doc = doc
+
+    def __repr__(self):
+        return 'Field(%r, %r)' % (self.name,
+                                  self.data_type)
+
+class StructField(Field):
+    """
+    Represents a field in a composite type.
+    """
+
+    def __init__(self,
+                 name,
+                 data_type,
+                 doc,
+                 optional=False,
+                 deprecated=False):
+        """
+        Creates a new Field.
+
+        :param str name: Name of the field.
+        :param Type data_type: The type of variable for of this field.
+        :param str doc: Documentation for the field.
+        :param bool optional: Whether the field can be absent.
+        :param bool deprecated: Whether the field is deprecated.
+        """
+        super(StructField, self).__init__(name, data_type, doc)
         self.optional = optional
         self.deprecated = deprecated
         self.has_default = False
@@ -288,29 +312,18 @@ class Field(object):
             return self.data_type.check(val)
 
     def __repr__(self):
-        return 'Field(%r, %r, %r)' % (self.name,
-                                      self.data_type,
-                                      self.optional)
+        return 'StructField(%r, %r, %r)' % (self.name,
+                                            self.data_type,
+                                            self.optional)
 
-class SymbolField(object):
-    symbol = True
-    def __init__(self, name, doc):
-        """
-        Creates a new SymbolField.
-
-        :param str name: Name of the field.
-        :param str doc: Documentation for the field.
-        """
-        self.name = name
-        self.data_type = Symbol(name)
-        self.doc = doc
-
-    def check(self, val):
-        if val != self.name:
-            raise ValueError('val %r is not symbol %r' % (val, self.name))
-
-    def __repr__(self):
-        return 'SymbolField(%r)' % self.name
+class UnionField(Field):
+    def __init__(self,
+                 name,
+                 data_type,
+                 doc,
+                 catch_all=False):
+        super(UnionField, self).__init__(name, data_type, doc)
+        self.catch_all = catch_all
 
 class CompositeType(DataType):
     """
@@ -367,7 +380,7 @@ class CompositeType(DataType):
         Returns an iterator that traverses required fields in all super types
         first, and then for this type.
         """
-        return self._filter_fields(lambda f: (isinstance(f, SymbolField)
+        return self._filter_fields(lambda f: (isinstance(f.data_type, Symbol)
                                               or not f.optional))
 
     @property
@@ -376,7 +389,7 @@ class CompositeType(DataType):
         Returns an iterator that traverses optional fields in all super types
         first, and then for this type.
         """
-        return self._filter_fields(lambda f: (not isinstance(f, SymbolField)
+        return self._filter_fields(lambda f: (not isinstance(f.data_type, Symbol)
                                               and f.optional))
 
     @property
@@ -611,6 +624,8 @@ class Union(CompositeType):
 
 Empty = Struct('Empty', None, [])
 
+def is_any_type(data_type):
+    return isinstance(data_type, Any)
 def is_binary_type(data_type):
     return isinstance(data_type, Binary)
 def is_boolean_type(data_type):
@@ -625,6 +640,8 @@ def is_null_type(data_type):
     return isinstance(data_type, Null)
 def is_string_type(data_type):
     return isinstance(data_type, String)
+def is_symbol_type(data_type):
+    return isinstance(data_type, Symbol)
 def is_struct_type(data_type):
     return isinstance(data_type, Struct)
 def is_timestamp_type(data_type):

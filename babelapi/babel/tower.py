@@ -6,10 +6,12 @@ import sys
 
 from babelapi.babel.parser import BabelParser
 from babelapi.data_type import (
+    Any,
     Binary,
     Boolean,
     Empty,
-    Field,
+    StructField,
+    UnionField,
     Float32,
     Float64,
     Int32,
@@ -18,7 +20,7 @@ from babelapi.data_type import (
     Null,
     String,
     Struct,
-    SymbolField,
+    Symbol,
     Timestamp,
     UInt32,
     UInt64,
@@ -30,11 +32,11 @@ from babelapi.api import (
 )
 from babelapi.babel.parser import (
     BabelAlias,
-    BabelCatchAllSymbol,
     BabelInclude,
     BabelNamespace,
     BabelRouteDef,
     BabelSymbol,
+    BabelSymbolField,
     BabelTypeDef,
 )
 from babelapi.lang.lang import TargetLanguage
@@ -58,6 +60,7 @@ class TowerOfBabel(object):
     ]
 
     default_env = {data_type.__name__: data_type for data_type in data_types}
+    default_env['Any'] = Any()
     default_env['Empty'] = Empty
     default_env['Null'] = Null()
 
@@ -124,18 +127,18 @@ class TowerOfBabel(object):
                     super_type = env.get(item.extends)
             api_type_fields = []
             for babel_field in item.fields:
-                api_type_field = self._create_field(env, babel_field)
+                api_type_field = self._create_struct_field(env, babel_field)
                 api_type_fields.append(api_type_field)
             api_type = Struct(item.name, item.doc, api_type_fields, super_type, item.coverage)
         elif item.composite_type == 'union':
-            catch_all_field = None
             api_type_fields = []
+            catch_all_field = None
             for babel_field in item.fields:
-                if isinstance(babel_field, BabelCatchAllSymbol):
-                    catch_all_field = babel_field.name
-                else:
-                    api_type_field = self._create_field(env, babel_field)
-                    api_type_fields.append(api_type_field)
+                api_type_field = self._create_union_field(env, babel_field)
+                if isinstance(babel_field, BabelSymbolField) and babel_field.catch_all:
+                    assert not catch_all_field, 'Only one catch all symbol per Union.'
+                    catch_all_field = api_type_field
+                api_type_fields.append(api_type_field)
             api_type = Union(item.name, item.doc, api_type_fields, super_type,
                              catch_all_field)
         else:
@@ -146,19 +149,18 @@ class TowerOfBabel(object):
         env[item.name] = api_type
         return api_type
 
-    def _create_field(self, env, babel_field):
+    def _create_struct_field(self, env, babel_field):
         """
-        Given a BabelField, returns a babelapi.babel.tower.Field object.
+        This function resolves symbols to objects that we've instantiated in
+        the current environment. For example, a field with data type named
+        "String" is pointed to a String() object.
 
-        A BabelField is composed of symbols. This function resolves symbols to
-        objects that we've instantiated in the current environment. For example,
-        a field with type name "String" is converted into a String() object.
+        The caller needs to ensure that this babel_field is for a Struct and not
+        for a Union.
+
+        Returns a babelapi.data_type.StructField object.
         """
-        if isinstance(babel_field, BabelSymbol):
-            api_type_field = SymbolField(babel_field.name, babel_field.doc)
-        #elif isinstance(babel_field, BabelCatchAllSymbol):
-        #    pass
-        elif babel_field.data_type_name not in env:
+        if babel_field.data_type_name not in env:
             raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
         else:
             data_type = self._resolve_type(
@@ -166,7 +168,7 @@ class TowerOfBabel(object):
                 babel_field.data_type_name,
                 babel_field.data_type_attrs,
             )
-            api_type_field = Field(
+            api_type_field = StructField(
                 babel_field.name,
                 data_type,
                 babel_field.doc,
@@ -178,6 +180,34 @@ class TowerOfBabel(object):
                     # Verify that the type of the default value is correct for this field
                     data_type.check(babel_field.default)
                 api_type_field.set_default(babel_field.default)
+        return api_type_field
+
+    def _create_union_field(self, env, babel_field):
+        """
+        This function resolves symbols to objects that we've instantiated in
+        the current environment. For example, a field with data type named
+        "String" is pointed to a String() object.
+
+        The caller needs to ensure that this babel_field is for a Union and not
+        for a Struct.
+
+        Returns a babelapi.data_type.UnionField object.
+        """
+        if isinstance(babel_field, BabelSymbolField):
+            api_type_field = UnionField(babel_field.name, Symbol(), babel_field.doc)
+        elif babel_field.data_type_name not in env:
+            raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
+        else:
+            data_type = self._resolve_type(
+                env,
+                babel_field.data_type_name,
+                babel_field.data_type_attrs,
+            )
+            api_type_field = UnionField(
+                babel_field.name,
+                data_type,
+                babel_field.doc,
+            )
         return api_type_field
 
     def _resolve_type(self, env, data_type_name, data_type_attrs):
