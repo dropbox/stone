@@ -125,6 +125,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line('"""')
             self.emit_empty_line()
 
+            self._generate_struct_class_slots(data_type)
             self._generate_struct_class_vars(data_type)
             self._generate_struct_class_init(data_type)
             self._generate_struct_class_properties(data_type)
@@ -141,6 +142,15 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
     def _func_args_from_dict(self, d):
         filtered_d = self._filter_out_none_valued_keys(d)
         return ', '.join(['%s=%s' % (k, v) for k, v in filtered_d.items()])
+
+    def _generate_struct_class_slots(self, data_type):
+        self.emit_line('__slots__ = [')
+        with self.indent():
+            for field in data_type.fields:
+                field_name = self.lang.format_variable(field.name)
+                self.emit_line("'__%s_data_type'," % field_name)
+        self.emit_line(']')
+        self.emit_empty_line()
 
     def _generate_struct_class_vars(self, data_type):
         """
