@@ -1,10 +1,9 @@
-import datetime
-import numbers
-import six
-
 import babel_data_types as dt
 
-class Empty(dt.Struct):
+class Empty(object):
+
+    __slots__ = [
+    ]
 
     _field_names_ = {
     }
@@ -15,59 +14,59 @@ class Empty(dt.Struct):
     def __init__(self):
         pass
 
-    def validate(self):
-        return all([
-        ])
-
     def __repr__(self):
         return 'Empty()'
 
-class Space(dt.Struct):
+class Usage(object):
     """
     The space quota info for a user.
 
     :ivar quota: The user's total quota allocation (bytes).
-    :ivar private: The user's used quota outside of shared folders (bytes).
-    :ivar shared: The user's used quota in shared folders (bytes).
-    :ivar datastores: The user's used quota in datastores (bytes).
+    :ivar usage_individual: The user's used quota not including shared folders
+        (bytes).
+    :ivar usage_shared: The user's used quota in shared folders (bytes).
+    :ivar usage_datastores: The user's used quota in datastores (bytes).
     """
 
+    __slots__ = [
+        '_quota',
+        '__has_quota',
+        '_usage_individual',
+        '__has_usage_individual',
+        '_usage_shared',
+        '__has_usage_shared',
+        '_usage_datastores',
+        '__has_usage_datastores',
+    ]
+
     __quota_data_type = dt.UInt64()
-    __private_data_type = dt.UInt64()
-    __shared_data_type = dt.UInt64()
-    __datastores_data_type = dt.UInt64()
+    __usage_individual_data_type = dt.UInt64()
+    __usage_shared_data_type = dt.UInt64()
+    __usage_datastores_data_type = dt.UInt64()
 
     _field_names_ = {
         'quota',
-        'private',
-        'shared',
-        'datastores',
+        'usage_individual',
+        'usage_shared',
+        'usage_datastores',
     }
 
     _fields_ = [
         ('quota', False, __quota_data_type),
-        ('private', False, __private_data_type),
-        ('shared', False, __shared_data_type),
-        ('datastores', False, __datastores_data_type),
+        ('usage_individual', False, __usage_individual_data_type),
+        ('usage_shared', False, __usage_shared_data_type),
+        ('usage_datastores', False, __usage_datastores_data_type),
     ]
 
     def __init__(self):
         self._quota = None
         self.__has_quota = False
-        self._private = None
-        self.__has_private = False
-        self._shared = None
-        self.__has_shared = False
-        self._datastores = None
-        self.__has_datastores = False
-
-    def validate(self):
-        return all([
-            self.__has_quota,
-            self.__has_private,
-            self.__has_shared,
-            self.__has_datastores,
-        ])
+        self._usage_individual = None
+        self.__has_usage_individual = False
+        self._usage_shared = None
+        self.__has_usage_shared = False
+        self._usage_datastores = None
+        self.__has_usage_datastores = False
 
     @property
     def quota(self):
@@ -87,86 +86,93 @@ class Space(dt.Struct):
         self.__has_quota = True
 
     @quota.deleter
-    def quota(self, val):
+    def quota(self):
         self._quota = None
         self.__has_quota = False
 
     @property
-    def private(self):
+    def usage_individual(self):
         """
-        The user's used quota outside of shared folders (bytes).
+        The user's used quota not including shared folders (bytes).
         :rtype: long
         """
-        if self.__has_private:
-            return self._private
+        if self.__has_usage_individual:
+            return self._usage_individual
         else:
-            raise KeyError("missing required field 'private'")
+            raise KeyError("missing required field 'usage_individual'")
 
-    @private.setter
-    def private(self, val):
-        self.__private_data_type.validate(val)
-        self._private = val
-        self.__has_private = True
+    @usage_individual.setter
+    def usage_individual(self, val):
+        self.__usage_individual_data_type.validate(val)
+        self._usage_individual = val
+        self.__has_usage_individual = True
 
-    @private.deleter
-    def private(self, val):
-        self._private = None
-        self.__has_private = False
+    @usage_individual.deleter
+    def usage_individual(self):
+        self._usage_individual = None
+        self.__has_usage_individual = False
 
     @property
-    def shared(self):
+    def usage_shared(self):
         """
         The user's used quota in shared folders (bytes).
         :rtype: long
         """
-        if self.__has_shared:
-            return self._shared
+        if self.__has_usage_shared:
+            return self._usage_shared
         else:
-            raise KeyError("missing required field 'shared'")
+            raise KeyError("missing required field 'usage_shared'")
 
-    @shared.setter
-    def shared(self, val):
-        self.__shared_data_type.validate(val)
-        self._shared = val
-        self.__has_shared = True
+    @usage_shared.setter
+    def usage_shared(self, val):
+        self.__usage_shared_data_type.validate(val)
+        self._usage_shared = val
+        self.__has_usage_shared = True
 
-    @shared.deleter
-    def shared(self, val):
-        self._shared = None
-        self.__has_shared = False
+    @usage_shared.deleter
+    def usage_shared(self):
+        self._usage_shared = None
+        self.__has_usage_shared = False
 
     @property
-    def datastores(self):
+    def usage_datastores(self):
         """
         The user's used quota in datastores (bytes).
         :rtype: long
         """
-        if self.__has_datastores:
-            return self._datastores
+        if self.__has_usage_datastores:
+            return self._usage_datastores
         else:
-            raise KeyError("missing required field 'datastores'")
+            raise KeyError("missing required field 'usage_datastores'")
 
-    @datastores.setter
-    def datastores(self, val):
-        self.__datastores_data_type.validate(val)
-        self._datastores = val
-        self.__has_datastores = True
+    @usage_datastores.setter
+    def usage_datastores(self, val):
+        self.__usage_datastores_data_type.validate(val)
+        self._usage_datastores = val
+        self.__has_usage_datastores = True
 
-    @datastores.deleter
-    def datastores(self, val):
-        self._datastores = None
-        self.__has_datastores = False
+    @usage_datastores.deleter
+    def usage_datastores(self):
+        self._usage_datastores = None
+        self.__has_usage_datastores = False
 
     def __repr__(self):
-        return 'Space(%r)' % self._quota
+        return 'Usage(quota=%r)' % self._quota
 
-class Team(dt.Struct):
+class Team(object):
     """
     Information about a team.
 
     :ivar id: The team's unique ID.
     :ivar name: The name of the team.
     """
+
+    __slots__ = [
+        '_id',
+        '__has_id',
+        '_name',
+        '__has_name',
+    ]
 
     __id_data_type = dt.String(pattern=None)
     __name_data_type = dt.String(pattern=None)
@@ -187,12 +193,6 @@ class Team(dt.Struct):
         self._name = None
         self.__has_name = False
 
-    def validate(self):
-        return all([
-            self.__has_id,
-            self.__has_name,
-        ])
-
     @property
     def id(self):
         """
@@ -211,7 +211,7 @@ class Team(dt.Struct):
         self.__has_id = True
 
     @id.deleter
-    def id(self, val):
+    def id(self):
         self._id = None
         self.__has_id = False
 
@@ -233,25 +233,37 @@ class Team(dt.Struct):
         self.__has_name = True
 
     @name.deleter
-    def name(self, val):
+    def name(self):
         self._name = None
         self.__has_name = False
 
     def __repr__(self):
-        return 'Team(%r)' % self._id
+        return 'Team(id=%r)' % self._id
 
-class Name(dt.Struct):
+class Name(object):
     """
     Contains several ways a name might be represented to make
     internationalization more convenient.
 
     :ivar given_name: Also known as a first name.
     :ivar surname: Also known as a last name or family name.
-    :ivar familiar_name: Locale-dependent familiar name. Generally matches
-        ``given_name`` or ``display_name``.
+    :ivar familiar_name: Locale-dependent name. In the US, a person's familiar
+        name is their ``given_name``, but elsewhere, it could be any combination
+        of a person's ``given_name`` and ``surname``.
     :ivar display_name: A name that can be used directly to represent the name
         of a user's Dropbox account.
     """
+
+    __slots__ = [
+        '_given_name',
+        '__has_given_name',
+        '_surname',
+        '__has_surname',
+        '_familiar_name',
+        '__has_familiar_name',
+        '_display_name',
+        '__has_display_name',
+    ]
 
     __given_name_data_type = dt.String(pattern=None)
     __surname_data_type = dt.String(pattern=None)
@@ -282,14 +294,6 @@ class Name(dt.Struct):
         self._display_name = None
         self.__has_display_name = False
 
-    def validate(self):
-        return all([
-            self.__has_given_name,
-            self.__has_surname,
-            self.__has_familiar_name,
-            self.__has_display_name,
-        ])
-
     @property
     def given_name(self):
         """
@@ -308,7 +312,7 @@ class Name(dt.Struct):
         self.__has_given_name = True
 
     @given_name.deleter
-    def given_name(self, val):
+    def given_name(self):
         self._given_name = None
         self.__has_given_name = False
 
@@ -330,15 +334,16 @@ class Name(dt.Struct):
         self.__has_surname = True
 
     @surname.deleter
-    def surname(self, val):
+    def surname(self):
         self._surname = None
         self.__has_surname = False
 
     @property
     def familiar_name(self):
         """
-        Locale-dependent familiar name. Generally matches ``given_name`` or
-        ``display_name``.
+        Locale-dependent name. In the US, a person's familiar name is their
+        ``given_name``, but elsewhere, it could be any combination of a person's
+        ``given_name`` and ``surname``.
         :rtype: str
         """
         if self.__has_familiar_name:
@@ -353,7 +358,7 @@ class Name(dt.Struct):
         self.__has_familiar_name = True
 
     @familiar_name.deleter
-    def familiar_name(self, val):
+    def familiar_name(self):
         self._familiar_name = None
         self.__has_familiar_name = False
 
@@ -376,22 +381,31 @@ class Name(dt.Struct):
         self.__has_display_name = True
 
     @display_name.deleter
-    def display_name(self, val):
+    def display_name(self):
         self._display_name = None
         self.__has_display_name = False
 
     def __repr__(self):
-        return 'Name(%r)' % self._given_name
+        return 'Name(given_name=%r)' % self._given_name
 
-class BasicAccountInfo(dt.Struct):
+class Account(object):
     """
-    Basic information about a user's account.
+    The amount of detail revealed about an account depends on the user being
+    queried and the user making the query.
 
     :ivar account_id: The user's unique Dropbox ID.
     :ivar name: Details of a user's name.
     """
 
+    __slots__ = [
+        '_account_id',
+        '__has_account_id',
+        '_name',
+        '__has_name',
+    ]
+
     __account_id_data_type = dt.String(min_length=40, max_length=40, pattern=None)
+    __name_data_type = dt.Struct(Name)
 
     _field_names_ = {
         'account_id',
@@ -400,7 +414,7 @@ class BasicAccountInfo(dt.Struct):
 
     _fields_ = [
         ('account_id', False, __account_id_data_type),
-        ('name', False, Name),
+        ('name', False, __name_data_type),
     ]
 
     def __init__(self):
@@ -408,12 +422,6 @@ class BasicAccountInfo(dt.Struct):
         self.__has_account_id = False
         self._name = None
         self.__has_name = False
-
-    def validate(self):
-        return all([
-            self.__has_account_id,
-            self.__has_name,
-        ])
 
     @property
     def account_id(self):
@@ -433,7 +441,7 @@ class BasicAccountInfo(dt.Struct):
         self.__has_account_id = True
 
     @account_id.deleter
-    def account_id(self, val):
+    def account_id(self):
         self._account_id = None
         self.__has_account_id = False
 
@@ -450,64 +458,138 @@ class BasicAccountInfo(dt.Struct):
 
     @name.setter
     def name(self, val):
-        if not isinstance(val, Name):
-            raise TypeError('name is of type %r but must be of type Name' % type(val).__name__)
-        val.validate()
+        self.__name_data_type.validate_type_only(val)
         self._name = val
         self.__has_name = True
 
     @name.deleter
-    def name(self, val):
+    def name(self):
         self._name = None
         self.__has_name = False
 
     def __repr__(self):
-        return 'BasicAccountInfo(%r)' % self._account_id
+        return 'Account(account_id=%r)' % self._account_id
 
-class MeInfo(BasicAccountInfo):
+class BasicAccount(Account):
     """
-    Information about a user's account.
+    Basic information about any account.
+
+    :ivar is_teammate: Whether this user is a teammate of the current user. If
+        this account is the current user's account, then this will be 'true'.
+    """
+
+    __slots__ = [
+        '_is_teammate',
+        '__has_is_teammate',
+    ]
+
+    __is_teammate_data_type = dt.Boolean()
+
+    _field_names_ = Account._field_names_.union({
+        'is_teammate',
+    })
+
+    _fields_ = Account._fields_ + [
+        ('is_teammate', False, __is_teammate_data_type),
+    ]
+
+    def __init__(self):
+        super(BasicAccount, self).__init__()
+        self._is_teammate = None
+        self.__has_is_teammate = False
+
+    @property
+    def is_teammate(self):
+        """
+        Whether this user is a teammate of the current user. If this account is
+        the current user's account, then this will be 'true'.
+        :rtype: bool
+        """
+        if self.__has_is_teammate:
+            return self._is_teammate
+        else:
+            raise KeyError("missing required field 'is_teammate'")
+
+    @is_teammate.setter
+    def is_teammate(self, val):
+        self.__is_teammate_data_type.validate(val)
+        self._is_teammate = val
+        self.__has_is_teammate = True
+
+    @is_teammate.deleter
+    def is_teammate(self):
+        self._is_teammate = None
+        self.__has_is_teammate = False
+
+    def __repr__(self):
+        return 'BasicAccount(account_id=%r)' % self._account_id
+
+class FullAccount(Account):
+    """
+    Detailed information about the current user's account.
 
     :ivar email: The user's e-mail address.
-    :ivar country: The user's two-letter country code, if available.
-    :ivar locale: The language setting that user specified.
+    :ivar country: The user's two-letter country code, if available. Country
+        codes are based on `ISO 3166-1
+        <http://en.wikipedia.org/wiki/ISO_3166-1>`_.
+    :ivar locale: The language that the user specified. Locale tags will be
+        `IETF language tags <http://en.wikipedia.org/wiki/IETF_language_tag>`_.
     :ivar referral_link: The user's `referral link
         <https://www.dropbox.com/referrals>`_.
-    :ivar space: The user's quota.
+    :ivar usage: The user's quota.
     :ivar team: If this account is a member of a team.
     :ivar is_paired: Whether the user has a personal and work account. If the
-        authorized account is personal, then ``team`` will always be 'Null', but
+        current  account is personal, then ``team`` will always be 'Null', but
         ``is_paired`` will indicate if a work account is linked.
     """
+
+    __slots__ = [
+        '_email',
+        '__has_email',
+        '_country',
+        '__has_country',
+        '_locale',
+        '__has_locale',
+        '_referral_link',
+        '__has_referral_link',
+        '_usage',
+        '__has_usage',
+        '_team',
+        '__has_team',
+        '_is_paired',
+        '__has_is_paired',
+    ]
 
     __email_data_type = dt.String(pattern=None)
     __country_data_type = dt.String(min_length=2, max_length=2, pattern=None)
     __locale_data_type = dt.String(min_length=2, max_length=2, pattern=None)
     __referral_link_data_type = dt.String(pattern=None)
+    __usage_data_type = dt.Struct(Usage)
+    __team_data_type = dt.Struct(Team)
     __is_paired_data_type = dt.Boolean()
 
-    _field_names_ = BasicAccountInfo._field_names_.union({
+    _field_names_ = Account._field_names_.union({
         'email',
         'country',
         'locale',
         'referral_link',
-        'space',
+        'usage',
         'team',
         'is_paired',
     })
 
-    _fields_ = BasicAccountInfo._fields_ + [
+    _fields_ = Account._fields_ + [
         ('email', False, __email_data_type),
         ('country', True, __country_data_type),
         ('locale', False, __locale_data_type),
         ('referral_link', False, __referral_link_data_type),
-        ('space', False, Space),
-        ('team', True, Team),
+        ('usage', False, __usage_data_type),
+        ('team', True, __team_data_type),
         ('is_paired', False, __is_paired_data_type),
     ]
 
     def __init__(self):
-        super(MeInfo, self).__init__()
+        super(FullAccount, self).__init__()
         self._email = None
         self.__has_email = False
         self._country = None
@@ -516,23 +598,12 @@ class MeInfo(BasicAccountInfo):
         self.__has_locale = False
         self._referral_link = None
         self.__has_referral_link = False
-        self._space = None
-        self.__has_space = False
+        self._usage = None
+        self.__has_usage = False
         self._team = None
         self.__has_team = False
         self._is_paired = None
         self.__has_is_paired = False
-
-    def validate(self):
-        return all([
-            self.__has_account_id,
-            self.__has_name,
-            self.__has_email,
-            self.__has_locale,
-            self.__has_referral_link,
-            self.__has_space,
-            self.__has_is_paired,
-        ])
 
     @property
     def email(self):
@@ -552,14 +623,15 @@ class MeInfo(BasicAccountInfo):
         self.__has_email = True
 
     @email.deleter
-    def email(self, val):
+    def email(self):
         self._email = None
         self.__has_email = False
 
     @property
     def country(self):
         """
-        The user's two-letter country code, if available.
+        The user's two-letter country code, if available. Country codes are
+        based on `ISO 3166-1 <http://en.wikipedia.org/wiki/ISO_3166-1>`_.
         :rtype: str
         """
         if self.__has_country:
@@ -569,19 +641,23 @@ class MeInfo(BasicAccountInfo):
 
     @country.setter
     def country(self, val):
+        if val is None:
+            del self.country
+            return
         self.__country_data_type.validate(val)
         self._country = val
         self.__has_country = True
 
     @country.deleter
-    def country(self, val):
+    def country(self):
         self._country = None
         self.__has_country = False
 
     @property
     def locale(self):
         """
-        The language setting that user specified.
+        The language that the user specified. Locale tags will be `IETF language
+        tags <http://en.wikipedia.org/wiki/IETF_language_tag>`_.
         :rtype: str
         """
         if self.__has_locale:
@@ -596,7 +672,7 @@ class MeInfo(BasicAccountInfo):
         self.__has_locale = True
 
     @locale.deleter
-    def locale(self, val):
+    def locale(self):
         self._locale = None
         self.__has_locale = False
 
@@ -618,33 +694,31 @@ class MeInfo(BasicAccountInfo):
         self.__has_referral_link = True
 
     @referral_link.deleter
-    def referral_link(self, val):
+    def referral_link(self):
         self._referral_link = None
         self.__has_referral_link = False
 
     @property
-    def space(self):
+    def usage(self):
         """
         The user's quota.
-        :rtype: Space
+        :rtype: Usage
         """
-        if self.__has_space:
-            return self._space
+        if self.__has_usage:
+            return self._usage
         else:
-            raise KeyError("missing required field 'space'")
+            raise KeyError("missing required field 'usage'")
 
-    @space.setter
-    def space(self, val):
-        if not isinstance(val, Space):
-            raise TypeError('space is of type %r but must be of type Space' % type(val).__name__)
-        val.validate()
-        self._space = val
-        self.__has_space = True
+    @usage.setter
+    def usage(self, val):
+        self.__usage_data_type.validate_type_only(val)
+        self._usage = val
+        self.__has_usage = True
 
-    @space.deleter
-    def space(self, val):
-        self._space = None
-        self.__has_space = False
+    @usage.deleter
+    def usage(self):
+        self._usage = None
+        self.__has_usage = False
 
     @property
     def team(self):
@@ -659,21 +733,22 @@ class MeInfo(BasicAccountInfo):
 
     @team.setter
     def team(self, val):
-        if not isinstance(val, Team):
-            raise TypeError('team is of type %r but must be of type Team' % type(val).__name__)
-        val.validate()
+        if val is None:
+            del self.team
+            return
+        self.__team_data_type.validate_type_only(val)
         self._team = val
         self.__has_team = True
 
     @team.deleter
-    def team(self, val):
+    def team(self):
         self._team = None
         self.__has_team = False
 
     @property
     def is_paired(self):
         """
-        Whether the user has a personal and work account. If the authorized
+        Whether the user has a personal and work account. If the current
         account is personal, then ``team`` will always be 'Null', but
         ``is_paired`` will indicate if a work account is linked.
         :rtype: bool
@@ -690,103 +765,19 @@ class MeInfo(BasicAccountInfo):
         self.__has_is_paired = True
 
     @is_paired.deleter
-    def is_paired(self, val):
+    def is_paired(self):
         self._is_paired = None
         self.__has_is_paired = False
 
     def __repr__(self):
-        return 'MeInfo(%r)' % self._email
+        return 'FullAccount(account_id=%r)' % self._account_id
 
-class AccountInfo(dt.Union):
-    """
-    The amount of detail revealed about an account depends on the user being
-    queried and the user making the query.
+class GetAccountReq(object):
 
-    :ivar Me: None
-    :ivar Teammate: None
-    :ivar User: None
-    """
-
-    Me = MeInfo
-    Teammate = BasicAccountInfo
-    User = BasicAccountInfo
-
-    _field_names_ = {
-        'me',
-        'teammate',
-        'user',
-    }
-
-    _fields_ = {
-        'me': MeInfo,
-        'teammate': BasicAccountInfo,
-        'user': BasicAccountInfo,
-    }
-
-    def __init__(self):
-        self._me = None
-        self._teammate = None
-        self._user = None
-        self._tag = None
-
-    def validate(self):
-        return self._tag is not None
-
-    def is_me(self):
-        return self._tag == 'me'
-
-    def is_teammate(self):
-        return self._tag == 'teammate'
-
-    def is_user(self):
-        return self._tag == 'user'
-
-    @property
-    def me(self):
-        if not self.is_me():
-            raise KeyError("tag 'me' not set")
-        return self._me
-
-    @me.setter
-    def me(self, val):
-        if not isinstance(val, MeInfo):
-            raise TypeError('me is of type %r but must be of type MeInfo' % type(val).__name__)
-        val.validate()
-        self._me = val
-        self._tag = 'me'
-
-    @property
-    def teammate(self):
-        if not self.is_teammate():
-            raise KeyError("tag 'teammate' not set")
-        return self._teammate
-
-    @teammate.setter
-    def teammate(self, val):
-        if not isinstance(val, BasicAccountInfo):
-            raise TypeError('teammate is of type %r but must be of type BasicAccountInfo' % type(val).__name__)
-        val.validate()
-        self._teammate = val
-        self._tag = 'teammate'
-
-    @property
-    def user(self):
-        if not self.is_user():
-            raise KeyError("tag 'user' not set")
-        return self._user
-
-    @user.setter
-    def user(self, val):
-        if not isinstance(val, BasicAccountInfo):
-            raise TypeError('user is of type %r but must be of type BasicAccountInfo' % type(val).__name__)
-        val.validate()
-        self._user = val
-        self._tag = 'user'
-
-    def __repr__(self):
-        return 'AccountInfo(%r)' % self._tag
-
-class InfoRequest(dt.Struct):
+    __slots__ = [
+        '_account_id',
+        '__has_account_id',
+    ]
 
     __account_id_data_type = dt.String(min_length=40, max_length=40, pattern=None)
 
@@ -801,11 +792,6 @@ class InfoRequest(dt.Struct):
     def __init__(self):
         self._account_id = None
         self.__has_account_id = False
-
-    def validate(self):
-        return all([
-            self.__has_account_id,
-        ])
 
     @property
     def account_id(self):
@@ -825,38 +811,59 @@ class InfoRequest(dt.Struct):
         self.__has_account_id = True
 
     @account_id.deleter
-    def account_id(self, val):
+    def account_id(self):
         self._account_id = None
         self.__has_account_id = False
 
     def __repr__(self):
-        return 'InfoRequest(%r)' % self._account_id
+        return 'GetAccountReq(account_id=%r)' % self._account_id
 
-class InfoError(dt.Union):
-
-    NoAccount = object()
+class GetAccountError(object):
 
     _field_names_ = {
         'no_account',
+        'unknown',
     }
 
     _fields_ = {
         'no_account': None,
+        'unknown': None,
     }
 
     def __init__(self):
-        pass
+        self._no_account = None
         self._tag = None
 
-    def validate(self):
-        return self._tag is not None
+    @classmethod
+    def create_and_set_no_account(cls):
+        """
+        :rtype: GetAccountError
+        """
+        c = cls()
+        c.set_no_account()
+        return c
+
+    @classmethod
+    def create_and_set_unknown(cls):
+        """
+        :rtype: GetAccountError
+        """
+        c = cls()
+        c.set_unknown()
+        return c
 
     def is_no_account(self):
         return self._tag == 'no_account'
 
+    def is_unknown(self):
+        return self._tag == 'unknown'
+
     def set_no_account(self):
         self._tag = 'no_account'
 
+    def set_unknown(self):
+        self._tag = 'unknown'
+
     def __repr__(self):
-        return 'InfoError(%r)' % self._tag
+        return 'GetAccountError(%r)' % self._tag
 

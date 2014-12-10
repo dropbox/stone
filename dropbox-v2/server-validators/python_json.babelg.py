@@ -160,47 +160,57 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         """
         lineno = self.lineno
         for field in data_type.fields:
-            if not is_composite_type(field.data_type):
-                if is_list_type(field.data_type):
-                    # TODO: Support embedded lists
-                    self.emit_line('__{}_data_type = dt.List({})'.format(
-                        self.lang.format_variable(field.name),
-                        self._func_args_from_dict({
-                            'data_type': field.data_type.data_type.name,
-                            'min_length': field.data_type.min_items,
-                            'max_length': field.data_type.max_items,
-                        })
-                    ))
-                elif is_integer_type(field.data_type):
-                    self.emit_line('__{}_data_type = dt.{}({})'.format(
-                        self.lang.format_variable(field.name),
-                        field.data_type.name,
-                        self._func_args_from_dict({
-                            'min_value': field.data_type.min_value,
-                            'max_value': field.data_type.max_value,
-                        })
-                    ))
-                elif is_string_type(field.data_type):
-                    self.emit_line('__{}_data_type = dt.String({})'.format(
-                        self.lang.format_variable(field.name),
-                        self._func_args_from_dict({
-                            'min_length': field.data_type.min_length,
-                            'max_length': field.data_type.max_length,
-                            'pattern': repr(field.data_type.pattern),
-                        })
-                    ))
-                elif is_timestamp_type(field.data_type):
-                    self.emit_line('__{}_data_type = dt.Timestamp({})'.format(
-                        self.lang.format_variable(field.name),
-                        self._func_args_from_dict({
-                            'format': repr(field.data_type.format),
-                        })
-                    ))
-                else:
-                    self.emit_line('__{}_data_type = dt.{}()'.format(
-                        self.lang.format_variable(field.name),
-                        field.data_type.name,
-                    ))
+            if is_list_type(field.data_type):
+                # TODO: Support embedded lists
+                self.emit_line('__{}_data_type = dt.List({})'.format(
+                    self.lang.format_variable(field.name),
+                    self._func_args_from_dict({
+                        'data_type': field.data_type.data_type.name,
+                        'min_length': field.data_type.min_items,
+                        'max_length': field.data_type.max_items,
+                    })
+                ))
+            elif is_integer_type(field.data_type):
+                self.emit_line('__{}_data_type = dt.{}({})'.format(
+                    self.lang.format_variable(field.name),
+                    field.data_type.name,
+                    self._func_args_from_dict({
+                        'min_value': field.data_type.min_value,
+                        'max_value': field.data_type.max_value,
+                    })
+                ))
+            elif is_string_type(field.data_type):
+                self.emit_line('__{}_data_type = dt.String({})'.format(
+                    self.lang.format_variable(field.name),
+                    self._func_args_from_dict({
+                        'min_length': field.data_type.min_length,
+                        'max_length': field.data_type.max_length,
+                        'pattern': repr(field.data_type.pattern),
+                    })
+                ))
+            elif is_timestamp_type(field.data_type):
+                self.emit_line('__{}_data_type = dt.Timestamp({})'.format(
+                    self.lang.format_variable(field.name),
+                    self._func_args_from_dict({
+                        'format': repr(field.data_type.format),
+                    })
+                ))
+            elif is_struct_type(field.data_type):
+                self.emit_line('__{}_data_type = dt.Struct({})'.format(
+                    self.lang.format_variable(field.name),
+                    self.lang.format_class(field.data_type.name),
+                ))
+            elif is_union_type(field.data_type):
+                class_name = self._class_name_for_data_type(field.data_type)
+                self.emit_line('__{}_data_type = dt.Union({})'.format(
+                    self.lang.format_variable(field.name),
+                    self.lang.format_class(field.data_type.name),
+                ))
+            else:
+                self.emit_line('__{}_data_type = dt.{}()'.format(
+                    self.lang.format_variable(field.name),
+                    field.data_type.name,
+                ))
         if lineno != self.lineno:
             self.emit_empty_line()
 
@@ -232,10 +242,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         with self.indent():
             for field in data_type.fields:
                 var_name = self.lang.format_variable(field.name)
-                if not is_composite_type(field.data_type):
-                    validator_name = '__{0}_data_type'.format(var_name)
-                else:
-                    validator_name = self._class_name_for_data_type(field.data_type)
+                validator_name = '__{0}_data_type'.format(var_name)
                 self.emit_line("('{}', {}, {}),".format(var_name, field.optional, validator_name))
         self.emit_line(']')
         self.emit_empty_line()
@@ -346,15 +353,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                         self.emit_line('del self.{}'.format(field_name))
                         self.emit_line('return')
                 if is_composite_type(field.data_type):
-                    class_name = self.lang.format_class(field.data_type.name)
-                    if is_struct_type(field.data_type) and field.data_type.has_coverage():
-                        self.emit_line('if not isinstance(val, {}):'.format(class_name))
-                    else:
-                        self.emit_line('if type(val) is not {}:'.format(class_name))
-                    with self.indent():
-                        self.emit_line("raise TypeError('{} is of type %r but must be of type {}' % type(val).__name__)".format(field_name, class_name))
-                    # TODO(kelkabany): Should we re-enable this validation?
-                    #self.emit_line('val.validate()'.format(field_name))
+                    self.emit_line('self.__{}_data_type.validate_type_only(val)'.format(field_name))
                 else:
                     self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))
@@ -390,12 +389,13 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         if data_type.super_type:
             extends = self._class_name_for_data_type(data_type.super_type)
         else:
-            if is_struct_type(data_type):
-                extends = 'dt.Struct'
-            elif is_union_type(data_type):
-                extends = 'dt.Union'
-            else:
-                extends = 'object'
+            extends = 'object'
+            #if is_struct_type(data_type):
+            #    extends = 'dt.Struct'
+            #elif is_union_type(data_type):
+            #    extends = 'dt.Union'
+            #else:
+            #    extends = 'object'
         return 'class {}({}):'.format(self._class_name_for_data_type(data_type), extends)
 
     def _is_instance_type(self, data_type):
@@ -513,15 +513,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('def {}(self, val):'.format(field_name))
             with self.indent():
                 if is_composite_type(field.data_type):
-                    class_name = self.lang.format_class(field.data_type.name)
-                    if field.data_type.has_coverage():
-                        self.emit_line('if not isinstance(val, {}):'.format(class_name))
-                    else:
-                        self.emit_line('if type(val) is not {}:'.format(class_name))
-                    with self.indent():
-                        self.emit_line("raise TypeError('{} is of type %r but must be of type {}' % type(val).__name__)".format(field_name, class_name))
-                    # TODO(kelkabany): Re-enable this validation?
-                    #self.emit_line('val.validate()'.format(field_name))
+                    self.emit_line('self.__{}_data_type.validate_type_only(val)'.format(field_name))
                 else:
                     self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))

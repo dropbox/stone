@@ -1,10 +1,9 @@
-import datetime
-import numbers
-import six
-
 import babel_data_types as dt
 
-class Empty(dt.Struct):
+class Empty(object):
+
+    __slots__ = [
+    ]
 
     _field_names_ = {
     }
@@ -15,14 +14,15 @@ class Empty(dt.Struct):
     def __init__(self):
         pass
 
-    def validate(self):
-        return all([
-        ])
-
     def __repr__(self):
         return 'Empty()'
 
-class PathTarget(dt.Struct):
+class PathTarget(object):
+
+    __slots__ = [
+        '_path',
+        '__has_path',
+    ]
 
     __path_data_type = dt.String(pattern=None)
 
@@ -37,11 +37,6 @@ class PathTarget(dt.Struct):
     def __init__(self):
         self._path = None
         self.__has_path = False
-
-    def validate(self):
-        return all([
-            self.__has_path,
-        ])
 
     @property
     def path(self):
@@ -61,14 +56,19 @@ class PathTarget(dt.Struct):
         self.__has_path = True
 
     @path.deleter
-    def path(self, val):
+    def path(self):
         self._path = None
         self.__has_path = False
 
     def __repr__(self):
-        return 'PathTarget(%r)' % self._path
+        return 'PathTarget(path=%r)' % self._path
 
 class FileTarget(PathTarget):
+
+    __slots__ = [
+        '_rev',
+        '__has_rev',
+    ]
 
     __rev_data_type = dt.String(pattern=None)
 
@@ -85,11 +85,6 @@ class FileTarget(PathTarget):
         self._rev = None
         self.__has_rev = False
 
-    def validate(self):
-        return all([
-            self.__has_path,
-        ])
-
     @property
     def rev(self):
         """
@@ -103,19 +98,27 @@ class FileTarget(PathTarget):
 
     @rev.setter
     def rev(self, val):
+        if val is None:
+            del self.rev
+            return
         self.__rev_data_type.validate(val)
         self._rev = val
         self.__has_rev = True
 
     @rev.deleter
-    def rev(self, val):
+    def rev(self):
         self._rev = None
         self.__has_rev = False
 
     def __repr__(self):
-        return 'FileTarget(%r)' % self._rev
+        return 'FileTarget(path=%r)' % self._path
 
-class FileInfo(dt.Struct):
+class FileInfo(object):
+
+    __slots__ = [
+        '_name',
+        '__has_name',
+    ]
 
     __name_data_type = dt.String(pattern=None)
 
@@ -130,11 +133,6 @@ class FileInfo(dt.Struct):
     def __init__(self):
         self._name = None
         self.__has_name = False
-
-    def validate(self):
-        return all([
-            self.__has_name,
-        ])
 
     @property
     def name(self):
@@ -154,14 +152,19 @@ class FileInfo(dt.Struct):
         self.__has_name = True
 
     @name.deleter
-    def name(self, val):
+    def name(self):
         self._name = None
         self.__has_name = False
 
     def __repr__(self):
-        return 'FileInfo(%r)' % self._name
+        return 'FileInfo(name=%r)' % self._name
 
-class SubError(dt.Struct):
+class SubError(object):
+
+    __slots__ = [
+        '_reason',
+        '__has_reason',
+    ]
 
     __reason_data_type = dt.String(pattern=None)
 
@@ -176,11 +179,6 @@ class SubError(dt.Struct):
     def __init__(self):
         self._reason = None
         self.__has_reason = False
-
-    def validate(self):
-        return all([
-            self.__has_reason,
-        ])
 
     @property
     def reason(self):
@@ -200,26 +198,25 @@ class SubError(dt.Struct):
         self.__has_reason = True
 
     @reason.deleter
-    def reason(self, val):
+    def reason(self):
         self._reason = None
         self.__has_reason = False
 
     def __repr__(self):
-        return 'SubError(%r)' % self._reason
+        return 'SubError(reason=%r)' % self._reason
 
-class DownloadError(dt.Union):
-
-    Disallowed = SubError
-    NoFile = SubError
+class DownloadError(object):
 
     _field_names_ = {
         'disallowed',
         'no_file',
+        'unknown',
     }
 
     _fields_ = {
         'disallowed': SubError,
         'no_file': SubError,
+        'unknown': None,
     }
 
     def __init__(self):
@@ -227,14 +224,23 @@ class DownloadError(dt.Union):
         self._no_file = None
         self._tag = None
 
-    def validate(self):
-        return self._tag is not None
+    @classmethod
+    def create_and_set_unknown(cls):
+        """
+        :rtype: DownloadError
+        """
+        c = cls()
+        c.set_unknown()
+        return c
 
     def is_disallowed(self):
         return self._tag == 'disallowed'
 
     def is_no_file(self):
         return self._tag == 'no_file'
+
+    def is_unknown(self):
+        return self._tag == 'unknown'
 
     @property
     def disallowed(self):
@@ -244,9 +250,7 @@ class DownloadError(dt.Union):
 
     @disallowed.setter
     def disallowed(self, val):
-        if not isinstance(val, SubError):
-            raise TypeError('disallowed is of type %r but must be of type SubError' % type(val).__name__)
-        val.validate()
+        self.__disallowed_data_type.validate_type_only(val)
         self._disallowed = val
         self._tag = 'disallowed'
 
@@ -258,16 +262,22 @@ class DownloadError(dt.Union):
 
     @no_file.setter
     def no_file(self, val):
-        if not isinstance(val, SubError):
-            raise TypeError('no_file is of type %r but must be of type SubError' % type(val).__name__)
-        val.validate()
+        self.__no_file_data_type.validate_type_only(val)
         self._no_file = val
         self._tag = 'no_file'
+
+    def set_unknown(self):
+        self._tag = 'unknown'
 
     def __repr__(self):
         return 'DownloadError(%r)' % self._tag
 
-class UploadSessionStart(dt.Struct):
+class UploadSessionStart(object):
+
+    __slots__ = [
+        '_upload_id',
+        '__has_upload_id',
+    ]
 
     __upload_id_data_type = dt.String(pattern=None)
 
@@ -282,11 +292,6 @@ class UploadSessionStart(dt.Struct):
     def __init__(self):
         self._upload_id = None
         self.__has_upload_id = False
-
-    def validate(self):
-        return all([
-            self.__has_upload_id,
-        ])
 
     @property
     def upload_id(self):
@@ -306,14 +311,21 @@ class UploadSessionStart(dt.Struct):
         self.__has_upload_id = True
 
     @upload_id.deleter
-    def upload_id(self, val):
+    def upload_id(self):
         self._upload_id = None
         self.__has_upload_id = False
 
     def __repr__(self):
-        return 'UploadSessionStart(%r)' % self._upload_id
+        return 'UploadSessionStart(upload_id=%r)' % self._upload_id
 
-class UploadAppend(dt.Struct):
+class UploadAppend(object):
+
+    __slots__ = [
+        '_upload_id',
+        '__has_upload_id',
+        '_offset',
+        '__has_offset',
+    ]
 
     __upload_id_data_type = dt.String(pattern=None)
     __offset_data_type = dt.UInt64()
@@ -334,12 +346,6 @@ class UploadAppend(dt.Struct):
         self._offset = None
         self.__has_offset = False
 
-    def validate(self):
-        return all([
-            self.__has_upload_id,
-            self.__has_offset,
-        ])
-
     @property
     def upload_id(self):
         """
@@ -358,7 +364,7 @@ class UploadAppend(dt.Struct):
         self.__has_upload_id = True
 
     @upload_id.deleter
-    def upload_id(self, val):
+    def upload_id(self):
         self._upload_id = None
         self.__has_upload_id = False
 
@@ -382,14 +388,19 @@ class UploadAppend(dt.Struct):
         self.__has_offset = True
 
     @offset.deleter
-    def offset(self, val):
+    def offset(self):
         self._offset = None
         self.__has_offset = False
 
     def __repr__(self):
-        return 'UploadAppend(%r)' % self._upload_id
+        return 'UploadAppend(upload_id=%r)' % self._upload_id
 
-class IncorrectOffsetError(dt.Struct):
+class IncorrectOffsetError(object):
+
+    __slots__ = [
+        '_correct_offset',
+        '__has_correct_offset',
+    ]
 
     __correct_offset_data_type = dt.UInt64()
 
@@ -404,11 +415,6 @@ class IncorrectOffsetError(dt.Struct):
     def __init__(self):
         self._correct_offset = None
         self.__has_correct_offset = False
-
-    def validate(self):
-        return all([
-            self.__has_correct_offset,
-        ])
 
     @property
     def correct_offset(self):
@@ -427,18 +433,14 @@ class IncorrectOffsetError(dt.Struct):
         self.__has_correct_offset = True
 
     @correct_offset.deleter
-    def correct_offset(self, val):
+    def correct_offset(self):
         self._correct_offset = None
         self.__has_correct_offset = False
 
     def __repr__(self):
-        return 'IncorrectOffsetError(%r)' % self._correct_offset
+        return 'IncorrectOffsetError(correct_offset=%r)' % self._correct_offset
 
-class UploadAppendError(dt.Union):
-
-    NotFound = object()
-    Closed = object()
-    IncorrectOffset = IncorrectOffsetError
+class UploadAppendError(object):
 
     _field_names_ = {
         'not_found',
@@ -456,8 +458,23 @@ class UploadAppendError(dt.Union):
         self._incorrect_offset = None
         self._tag = None
 
-    def validate(self):
-        return self._tag is not None
+    @classmethod
+    def create_and_set_not_found(cls):
+        """
+        :rtype: UploadAppendError
+        """
+        c = cls()
+        c.set_not_found()
+        return c
+
+    @classmethod
+    def create_and_set_closed(cls):
+        """
+        :rtype: UploadAppendError
+        """
+        c = cls()
+        c.set_closed()
+        return c
 
     def is_not_found(self):
         return self._tag == 'not_found'
@@ -482,16 +499,19 @@ class UploadAppendError(dt.Union):
 
     @incorrect_offset.setter
     def incorrect_offset(self, val):
-        if not isinstance(val, IncorrectOffsetError):
-            raise TypeError('incorrect_offset is of type %r but must be of type IncorrectOffsetError' % type(val).__name__)
-        val.validate()
+        self.__incorrect_offset_data_type.validate_type_only(val)
         self._incorrect_offset = val
         self._tag = 'incorrect_offset'
 
     def __repr__(self):
         return 'UploadAppendError(%r)' % self._tag
 
-class UpdateParentRev(dt.Struct):
+class UpdateParentRev(object):
+
+    __slots__ = [
+        '_parent_rev',
+        '__has_parent_rev',
+    ]
 
     __parent_rev_data_type = dt.String(pattern=None)
 
@@ -506,11 +526,6 @@ class UpdateParentRev(dt.Struct):
     def __init__(self):
         self._parent_rev = None
         self.__has_parent_rev = False
-
-    def validate(self):
-        return all([
-            self.__has_parent_rev,
-        ])
 
     @property
     def parent_rev(self):
@@ -529,14 +544,14 @@ class UpdateParentRev(dt.Struct):
         self.__has_parent_rev = True
 
     @parent_rev.deleter
-    def parent_rev(self, val):
+    def parent_rev(self):
         self._parent_rev = None
         self.__has_parent_rev = False
 
     def __repr__(self):
-        return 'UpdateParentRev(%r)' % self._parent_rev
+        return 'UpdateParentRev(parent_rev=%r)' % self._parent_rev
 
-class ConflictPolicy(dt.Union):
+class ConflictPolicy(object):
     """
     The action to take when a file path conflict exists.
 
@@ -546,10 +561,6 @@ class ConflictPolicy(dt.Union):
     :ivar Update: On a conflict, only overwrite the target if the parent_rev
         matches.
     """
-
-    Add = object()
-    Overwrite = object()
-    Update = UpdateParentRev
 
     _field_names_ = {
         'add',
@@ -567,8 +578,23 @@ class ConflictPolicy(dt.Union):
         self._update = None
         self._tag = None
 
-    def validate(self):
-        return self._tag is not None
+    @classmethod
+    def create_and_set_add(cls):
+        """
+        :rtype: ConflictPolicy
+        """
+        c = cls()
+        c.set_add()
+        return c
+
+    @classmethod
+    def create_and_set_overwrite(cls):
+        """
+        :rtype: ConflictPolicy
+        """
+        c = cls()
+        c.set_overwrite()
+        return c
 
     def is_add(self):
         return self._tag == 'add'
@@ -593,18 +619,33 @@ class ConflictPolicy(dt.Union):
 
     @update.setter
     def update(self, val):
-        if not isinstance(val, UpdateParentRev):
-            raise TypeError('update is of type %r but must be of type UpdateParentRev' % type(val).__name__)
-        val.validate()
+        self.__update_data_type.validate_type_only(val)
         self._update = val
         self._tag = 'update'
 
     def __repr__(self):
         return 'ConflictPolicy(%r)' % self._tag
 
-class UploadCommit(dt.Struct):
+class UploadCommit(object):
+
+    __slots__ = [
+        '_path',
+        '__has_path',
+        '_mode',
+        '__has_mode',
+        '_append_to',
+        '__has_append_to',
+        '_autorename',
+        '__has_autorename',
+        '_client_modified_utc',
+        '__has_client_modified_utc',
+        '_mute',
+        '__has_mute',
+    ]
 
     __path_data_type = dt.String(pattern=None)
+    __mode_data_type = dt.Union(ConflictPolicy)
+    __append_to_data_type = dt.Struct(UploadAppend)
     __autorename_data_type = dt.Boolean()
     __client_modified_utc_data_type = dt.UInt64()
     __mute_data_type = dt.Boolean()
@@ -620,8 +661,8 @@ class UploadCommit(dt.Struct):
 
     _fields_ = [
         ('path', False, __path_data_type),
-        ('mode', False, ConflictPolicy),
-        ('append_to', True, UploadAppend),
+        ('mode', False, __mode_data_type),
+        ('append_to', True, __append_to_data_type),
         ('autorename', True, __autorename_data_type),
         ('client_modified_utc', True, __client_modified_utc_data_type),
         ('mute', True, __mute_data_type),
@@ -641,12 +682,6 @@ class UploadCommit(dt.Struct):
         self._mute = None
         self.__has_mute = False
 
-    def validate(self):
-        return all([
-            self.__has_path,
-            self.__has_mode,
-        ])
-
     @property
     def path(self):
         """
@@ -665,7 +700,7 @@ class UploadCommit(dt.Struct):
         self.__has_path = True
 
     @path.deleter
-    def path(self, val):
+    def path(self):
         self._path = None
         self.__has_path = False
 
@@ -682,14 +717,12 @@ class UploadCommit(dt.Struct):
 
     @mode.setter
     def mode(self, val):
-        if not isinstance(val, ConflictPolicy):
-            raise TypeError('mode is of type %r but must be of type ConflictPolicy' % type(val).__name__)
-        val.validate()
+        self.__mode_data_type.validate_type_only(val)
         self._mode = val
         self.__has_mode = True
 
     @mode.deleter
-    def mode(self, val):
+    def mode(self):
         self._mode = None
         self.__has_mode = False
 
@@ -707,14 +740,15 @@ class UploadCommit(dt.Struct):
 
     @append_to.setter
     def append_to(self, val):
-        if not isinstance(val, UploadAppend):
-            raise TypeError('append_to is of type %r but must be of type UploadAppend' % type(val).__name__)
-        val.validate()
+        if val is None:
+            del self.append_to
+            return
+        self.__append_to_data_type.validate_type_only(val)
         self._append_to = val
         self.__has_append_to = True
 
     @append_to.deleter
-    def append_to(self, val):
+    def append_to(self):
         self._append_to = None
         self.__has_append_to = False
 
@@ -730,12 +764,15 @@ class UploadCommit(dt.Struct):
 
     @autorename.setter
     def autorename(self, val):
+        if val is None:
+            del self.autorename
+            return
         self.__autorename_data_type.validate(val)
         self._autorename = val
         self.__has_autorename = True
 
     @autorename.deleter
-    def autorename(self, val):
+    def autorename(self):
         self._autorename = None
         self.__has_autorename = False
 
@@ -751,12 +788,15 @@ class UploadCommit(dt.Struct):
 
     @client_modified_utc.setter
     def client_modified_utc(self, val):
+        if val is None:
+            del self.client_modified_utc
+            return
         self.__client_modified_utc_data_type.validate(val)
         self._client_modified_utc = val
         self.__has_client_modified_utc = True
 
     @client_modified_utc.deleter
-    def client_modified_utc(self, val):
+    def client_modified_utc(self):
         self._client_modified_utc = None
         self.__has_client_modified_utc = False
 
@@ -772,23 +812,22 @@ class UploadCommit(dt.Struct):
 
     @mute.setter
     def mute(self, val):
+        if val is None:
+            del self.mute
+            return
         self.__mute_data_type.validate(val)
         self._mute = val
         self.__has_mute = True
 
     @mute.deleter
-    def mute(self, val):
+    def mute(self):
         self._mute = None
         self.__has_mute = False
 
     def __repr__(self):
-        return 'UploadCommit(%r)' % self._path
+        return 'UploadCommit(path=%r)' % self._path
 
-class ConflictReason(dt.Union):
-
-    Folder = object()
-    File = object()
-    AutorenameFailed = object()
+class ConflictReason(object):
 
     _field_names_ = {
         'folder',
@@ -803,11 +842,34 @@ class ConflictReason(dt.Union):
     }
 
     def __init__(self):
-        pass
         self._tag = None
 
-    def validate(self):
-        return self._tag is not None
+    @classmethod
+    def create_and_set_folder(cls):
+        """
+        :rtype: ConflictReason
+        """
+        c = cls()
+        c.set_folder()
+        return c
+
+    @classmethod
+    def create_and_set_file(cls):
+        """
+        :rtype: ConflictReason
+        """
+        c = cls()
+        c.set_file()
+        return c
+
+    @classmethod
+    def create_and_set_autorename_failed(cls):
+        """
+        :rtype: ConflictReason
+        """
+        c = cls()
+        c.set_autorename_failed()
+        return c
 
     def is_folder(self):
         return self._tag == 'folder'
@@ -830,24 +892,26 @@ class ConflictReason(dt.Union):
     def __repr__(self):
         return 'ConflictReason(%r)' % self._tag
 
-class ConflictError(dt.Struct):
+class ConflictError(object):
+
+    __slots__ = [
+        '_reason',
+        '__has_reason',
+    ]
+
+    __reason_data_type = dt.Union(ConflictReason)
 
     _field_names_ = {
         'reason',
     }
 
     _fields_ = [
-        ('reason', False, ConflictReason),
+        ('reason', False, __reason_data_type),
     ]
 
     def __init__(self):
         self._reason = None
         self.__has_reason = False
-
-    def validate(self):
-        return all([
-            self.__has_reason,
-        ])
 
     @property
     def reason(self):
@@ -861,25 +925,19 @@ class ConflictError(dt.Struct):
 
     @reason.setter
     def reason(self, val):
-        if not isinstance(val, ConflictReason):
-            raise TypeError('reason is of type %r but must be of type ConflictReason' % type(val).__name__)
-        val.validate()
+        self.__reason_data_type.validate_type_only(val)
         self._reason = val
         self.__has_reason = True
 
     @reason.deleter
-    def reason(self, val):
+    def reason(self):
         self._reason = None
         self.__has_reason = False
 
     def __repr__(self):
-        return 'ConflictError(%r)' % self._reason
+        return 'ConflictError(reason=%r)' % self._reason
 
-class UploadCommitError(dt.Union):
-
-    Conflict = ConflictError
-    NoWritePermission = object()
-    InsufficientQuota = object()
+class UploadCommitError(object):
 
     _field_names_ = {
         'conflict',
@@ -897,8 +955,23 @@ class UploadCommitError(dt.Union):
         self._conflict = None
         self._tag = None
 
-    def validate(self):
-        return self._tag is not None
+    @classmethod
+    def create_and_set_no_write_permission(cls):
+        """
+        :rtype: UploadCommitError
+        """
+        c = cls()
+        c.set_no_write_permission()
+        return c
+
+    @classmethod
+    def create_and_set_insufficient_quota(cls):
+        """
+        :rtype: UploadCommitError
+        """
+        c = cls()
+        c.set_insufficient_quota()
+        return c
 
     def is_conflict(self):
         return self._tag == 'conflict'
@@ -917,9 +990,7 @@ class UploadCommitError(dt.Union):
 
     @conflict.setter
     def conflict(self, val):
-        if not isinstance(val, ConflictError):
-            raise TypeError('conflict is of type %r but must be of type ConflictError' % type(val).__name__)
-        val.validate()
+        self.__conflict_data_type.validate_type_only(val)
         self._conflict = val
         self._tag = 'conflict'
 
@@ -932,7 +1003,7 @@ class UploadCommitError(dt.Union):
     def __repr__(self):
         return 'UploadCommitError(%r)' % self._tag
 
-class File(dt.Struct):
+class File(object):
     """
     A file resource
 
@@ -948,6 +1019,17 @@ class File(dt.Struct):
         changes and avoid conflicts.
     :ivar size: The file size in bytes.
     """
+
+    __slots__ = [
+        '_client_modified',
+        '__has_client_modified',
+        '_server_modified',
+        '__has_server_modified',
+        '_rev',
+        '__has_rev',
+        '_size',
+        '__has_size',
+    ]
 
     __client_modified_data_type = dt.Timestamp(format='%a, %d %b %Y %H:%M:%S +0000')
     __server_modified_data_type = dt.Timestamp(format='%a, %d %b %Y %H:%M:%S +0000')
@@ -978,14 +1060,6 @@ class File(dt.Struct):
         self._size = None
         self.__has_size = False
 
-    def validate(self):
-        return all([
-            self.__has_client_modified,
-            self.__has_server_modified,
-            self.__has_rev,
-            self.__has_size,
-        ])
-
     @property
     def client_modified(self):
         """
@@ -1008,7 +1082,7 @@ class File(dt.Struct):
         self.__has_client_modified = True
 
     @client_modified.deleter
-    def client_modified(self, val):
+    def client_modified(self):
         self._client_modified = None
         self.__has_client_modified = False
 
@@ -1030,7 +1104,7 @@ class File(dt.Struct):
         self.__has_server_modified = True
 
     @server_modified.deleter
-    def server_modified(self, val):
+    def server_modified(self):
         self._server_modified = None
         self.__has_server_modified = False
 
@@ -1054,7 +1128,7 @@ class File(dt.Struct):
         self.__has_rev = True
 
     @rev.deleter
-    def rev(self, val):
+    def rev(self):
         self._rev = None
         self.__has_rev = False
 
@@ -1076,18 +1150,21 @@ class File(dt.Struct):
         self.__has_size = True
 
     @size.deleter
-    def size(self, val):
+    def size(self):
         self._size = None
         self.__has_size = False
 
     def __repr__(self):
-        return 'File(%r)' % self._client_modified
+        return 'File(client_modified=%r)' % self._client_modified
 
-class Folder(dt.Struct):
+class Folder(object):
     """
     A folder resource
 
     """
+
+    __slots__ = [
+    ]
 
     _field_names_ = {
     }
@@ -1098,17 +1175,10 @@ class Folder(dt.Struct):
     def __init__(self):
         pass
 
-    def validate(self):
-        return all([
-        ])
-
     def __repr__(self):
         return 'Folder()'
 
-class Metadata(dt.Union):
-
-    File = File
-    Folder = Folder
+class Metadata(object):
 
     _field_names_ = {
         'file',
@@ -1125,9 +1195,6 @@ class Metadata(dt.Union):
         self._folder = None
         self._tag = None
 
-    def validate(self):
-        return self._tag is not None
-
     def is_file(self):
         return self._tag == 'file'
 
@@ -1142,9 +1209,7 @@ class Metadata(dt.Union):
 
     @file.setter
     def file(self, val):
-        if not isinstance(val, File):
-            raise TypeError('file is of type %r but must be of type File' % type(val).__name__)
-        val.validate()
+        self.__file_data_type.validate_type_only(val)
         self._file = val
         self._tag = 'file'
 
@@ -1156,17 +1221,23 @@ class Metadata(dt.Union):
 
     @folder.setter
     def folder(self, val):
-        if not isinstance(val, Folder):
-            raise TypeError('folder is of type %r but must be of type Folder' % type(val).__name__)
-        val.validate()
+        self.__folder_data_type.validate_type_only(val)
         self._folder = val
         self._tag = 'folder'
 
     def __repr__(self):
         return 'Metadata(%r)' % self._tag
 
-class Entry(dt.Struct):
+class Entry(object):
 
+    __slots__ = [
+        '_metadata',
+        '__has_metadata',
+        '_name',
+        '__has_name',
+    ]
+
+    __metadata_data_type = dt.Union(Metadata)
     __name_data_type = dt.String(pattern=None)
 
     _field_names_ = {
@@ -1175,7 +1246,7 @@ class Entry(dt.Struct):
     }
 
     _fields_ = [
-        ('metadata', False, Metadata),
+        ('metadata', False, __metadata_data_type),
         ('name', False, __name_data_type),
     ]
 
@@ -1184,12 +1255,6 @@ class Entry(dt.Struct):
         self.__has_metadata = False
         self._name = None
         self.__has_name = False
-
-    def validate(self):
-        return all([
-            self.__has_metadata,
-            self.__has_name,
-        ])
 
     @property
     def metadata(self):
@@ -1203,14 +1268,12 @@ class Entry(dt.Struct):
 
     @metadata.setter
     def metadata(self, val):
-        if not isinstance(val, Metadata):
-            raise TypeError('metadata is of type %r but must be of type Metadata' % type(val).__name__)
-        val.validate()
+        self.__metadata_data_type.validate_type_only(val)
         self._metadata = val
         self.__has_metadata = True
 
     @metadata.deleter
-    def metadata(self, val):
+    def metadata(self):
         self._metadata = None
         self.__has_metadata = False
 
@@ -1232,14 +1295,23 @@ class Entry(dt.Struct):
         self.__has_name = True
 
     @name.deleter
-    def name(self, val):
+    def name(self):
         self._name = None
         self.__has_name = False
 
     def __repr__(self):
-        return 'Entry(%r)' % self._metadata
+        return 'Entry(metadata=%r)' % self._metadata
 
-class ListFolderResponse(dt.Struct):
+class ListFolderResponse(object):
+
+    __slots__ = [
+        '_cursor',
+        '__has_cursor',
+        '_has_more',
+        '__has_has_more',
+        '_entries',
+        '__has_entries',
+    ]
 
     __cursor_data_type = dt.String(pattern=None)
     __has_more_data_type = dt.Boolean()
@@ -1265,13 +1337,6 @@ class ListFolderResponse(dt.Struct):
         self._entries = None
         self.__has_entries = False
 
-    def validate(self):
-        return all([
-            self.__has_cursor,
-            self.__has_has_more,
-            self.__has_entries,
-        ])
-
     @property
     def cursor(self):
         """
@@ -1291,7 +1356,7 @@ class ListFolderResponse(dt.Struct):
         self.__has_cursor = True
 
     @cursor.deleter
-    def cursor(self, val):
+    def cursor(self):
         self._cursor = None
         self.__has_cursor = False
 
@@ -1313,7 +1378,7 @@ class ListFolderResponse(dt.Struct):
         self.__has_has_more = True
 
     @has_more.deleter
-    def has_more(self, val):
+    def has_more(self):
         self._has_more = None
         self.__has_has_more = False
 
@@ -1335,10 +1400,10 @@ class ListFolderResponse(dt.Struct):
         self.__has_entries = True
 
     @entries.deleter
-    def entries(self, val):
+    def entries(self):
         self._entries = None
         self.__has_entries = False
 
     def __repr__(self):
-        return 'ListFolderResponse(%r)' % self._cursor
+        return 'ListFolderResponse(cursor=%r)' % self._cursor
 

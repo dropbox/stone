@@ -15,10 +15,23 @@ import datetime
 import numbers
 import re
 import six
-import types
 
 class ValidationError(Exception):
     pass
+
+def _generic_type_name(v):
+    """Return a descriptive type name that isn't Python specific. For example,
+    an int value will return 'integer' rather than 'int'."""
+    if isinstance(v, numbers.Real):
+        return 'float'
+    elif isinstance(v, numbers.Integral):
+        return 'integer'
+    elif isinstance(v, (tuple, list)):
+        return 'list'
+    elif isinstance(v, six.string_types):
+        return 'string'
+    else:
+        return type(v).__name__
 
 class DataType(object):
     """All primitive and composite data types should extend this."""
@@ -129,8 +142,8 @@ class String(PrimitiveType):
 
     def validate(self, val):
         if not isinstance(val, six.string_types):
-            raise ValidationError("'%s' is of type %r and is not a valid string"
-                                  % (val, type(val).__name__))
+            raise ValidationError("'%s' expected to be a string, got %s"
+                                  % (val, _generic_type_name(val)))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must be at most %d characters, got %d"
                                   % (val, self.max_length, len(val)))
@@ -204,7 +217,7 @@ class List(PrimitiveType):
         self.max_items = max_items
 
     def validate(self, val):
-        if not isinstance(val, list):
+        if not isinstance(val, (tuple, list)):
             raise ValidationError('%r is not a valid list' % val)
         elif self.max_items is not None and len(val) > self.max_items:
             raise ValidationError('%r has more than %s items'
@@ -212,22 +225,21 @@ class List(PrimitiveType):
         elif self.min_items is not None and len(val) < self.min_items:
             raise ValidationError('%r has fewer than %s items'
                                   % (val, self.min_items))
-
-        if isinstance(self.data_type, DataType):
-            for item in val:
-                self.data_type.validate(item)
-        else:
-            for item in val:
-                if not isinstance(item, self.data_type):
-                    raise ValidationError('%r is of type %r rather than %r'
-                        % (val, type(item).__name__, self.data_type.__name__))
-                item.validate()
+        for item in val:
+            self.data_type.validate(item)
 
 class CompositeType(DataType):
-    pass
+    def __init__(self, data_type):
+        self.data_type = data_type
+    def validate_type_only(self, val):
+        if type(val) is not self.data_type:
+            raise ValidationError('Expected type %r, got %r'
+                % (self.data_type.__name__, type(val).__name__))
+
 
 class Struct(CompositeType):
     """
+    FIXME: DOC
     Extend this when defining a Python class that represents a
     Babel IDL Struct.
 
@@ -238,10 +250,11 @@ class Struct(CompositeType):
         optional: Whether the field is optional (bool).
         data_type: DataType object.
     """
-    def validate(self):
-        for field_name, optional, data_type in self._fields_:
+    def validate(self, val):
+        self.validate_type_only(val)
+        for field_name, optional, _ in self.data_type._fields_:
             # Any absent field that's required will raise an exception
-            getattr(self, field_name)
+            getattr(val, field_name)
 
 class Union(CompositeType):
     """
@@ -249,11 +262,12 @@ class Union(CompositeType):
     Babel IDL Union.
 
     You must specify a _fields_ class variable structured as:
-        _fields_ = [(field_name, data_type), ...]
+        _fields_ = {field_name: data_type, ...}
 
         field_name: Name of the tag (str).
         data_type: DataType object. None if it's a symbol field.
     """
-    def validate(self):
-        if self._tag is None:
-            raise ValueError('No tag selected')
+    def validate(self, val):
+        self.validate_type_only(val)
+        if val._tag is None:
+            raise ValueError('No tag set')
