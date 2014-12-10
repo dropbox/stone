@@ -2,23 +2,23 @@ namespace users
 
 alias AccountId = String(min_length=40, max_length=40)
 
-struct Space
+struct Usage
     "The space quota info for a user."
 
     quota UInt64
         "The user's total quota allocation (bytes)."
-    individual UInt64
+    usage_individual UInt64
         "The user's used quota not including shared folders (bytes)."
-    shared UInt64
+    usage_shared UInt64
         "The user's used quota in shared folders (bytes)."
-    datastores UInt64
+    usage_datastores UInt64
         "The user's used quota in datastores (bytes)."
 
     example default
-        quota=1000000
-        individual=1000
-        shared=500
-        datastores=42
+        quota=1000000000
+        usage_individual=314159265
+        usage_shared=3589793
+        usage_datastores=16384
 
 struct Team
     "Information about a team."
@@ -43,8 +43,9 @@ struct Name
     surname String
         "Also known as a last name or family name."
     familiar_name String
-        "Locale-dependent familiar name. Generally matches :field:`given_name` or
-        :field:`display_name`."
+        "Locale-dependent name. In the US, a person's familiar name is their
+        :field:`given_name`, but elsewhere, it could be any combination of a
+        person's :field:`given_name` and :field:`surname`."
     display_name String
         "A name that can be used directly to represent the name of a user's
         Dropbox account."
@@ -52,10 +53,10 @@ struct Name
     example default
         given_name="Franz"
         surname="Ferdinand"
-        familiar_name="Franz Ferdinand"
+        familiar_name="Franz"
         display_name="Franz Ferdinand (Personal)"
 
-struct AccountInfo
+struct Account
     "The amount of detail revealed about an account depends on the user
     being queried and the user making the query."
 
@@ -64,29 +65,32 @@ struct AccountInfo
     name Name
         "Details of a user's name."
 
-struct BasicInfo extends AccountInfo
-    "Minimal information about other accounts."
+struct BasicAccount extends Account
+    "Basic information about any account."
 
     is_teammate Boolean
-        "Whether this user is a teammate of the authorized user."
+        "Whether this user is a teammate of the current user. If this account
+        is the current user's account, then this will be :val:`true`."
 
-struct MeInfo extends AccountInfo
-    "Detailed information about the authorized user's account."
+struct FullAccount extends Account
+    "Detailed information about the current user's account."
 
     email String
         "The user's e-mail address."
     country String(min_length=2, max_length=2)?
-        "The user's two-letter country code, if available."
+        "The user's two-letter country code, if available. Country codes are
+        based on :link:`ISO 3166-1 http://en.wikipedia.org/wiki/ISO_3166-1`."
     locale String(min_length=2, max_length=2)
-        "The language setting that user specified."
+        "The language that the user specified. Locale tags will be
+        :link:`IETF language tags http://en.wikipedia.org/wiki/IETF_language_tag`."
     referral_link String
         "The user's :link:`referral link https://www.dropbox.com/referrals`."
-    space Space
+    usage Usage
         "The user's quota."
     team Team?
         "If this account is a member of a team."
     is_paired Boolean
-        "Whether the user has a personal and work account. If the authorized
+        "Whether the user has a personal and work account. If the current 
         account is personal, then :field:`team` will always be :val:`Null`,
         but :field:`is_paired` will indicate if a work account is linked."
 
@@ -116,8 +120,8 @@ union GetInfoError
         "The specified :field:`account_id` does not exist."
     unknown*
 
-route GetInfo (GetInfoReq, AccountInfo, GetInfoError)
+route GetAccount (GetInfoReq, BasicAccount, GetInfoError)
     "Get information about a user's account."
 
-route GetMyInfo (Empty, MeInfo, Empty)
-    "Get information about the authorized user's account."
+route GetMyAccount (Empty, FullAccount, Empty)
+    "Get information about the current user's account."
