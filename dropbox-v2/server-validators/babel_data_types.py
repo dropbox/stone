@@ -204,7 +204,7 @@ class List(PrimitiveType):
         self.max_items = max_items
 
     def validate(self, val):
-        if not isinstance(val, types.ListType):
+        if not isinstance(val, list):
             raise ValidationError('%r is not a valid list' % val)
         elif self.max_items is not None and len(val) > self.max_items:
             raise ValidationError('%r has more than %s items'
