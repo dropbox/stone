@@ -373,10 +373,10 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         name, and if the class has fields, the first field as well."""
         self.emit_line('def __repr__(self):')
         with self.indent():
-            if data_type.fields:
-                self.emit_line("return '{}(%r)' % self._{}".format(
+            if data_type.all_fields:
+                self.emit_line("return '{0}({1}=%r)' % self._{1}".format(
                     self._class_name_for_data_type(data_type),
-                    data_type.fields[0].name,
+                    data_type.all_fields[0].name,
                 ))
             else:
                 self.emit_line("return '{}()'".format(self._class_name_for_data_type(data_type)))
