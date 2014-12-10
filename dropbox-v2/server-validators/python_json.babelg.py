@@ -450,7 +450,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
     def _generate_union_class_symbol_creators(self, data_type):
         class_name = self.lang.format_class(data_type.name)
         for field in data_type.fields:
-            if is_symbol_type(field.data_type):
+            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
                 self.emit_line('@classmethod')
                 self.emit_line('def create_and_set_{}(cls):'.format(field_name))
@@ -477,7 +477,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
 
-            if is_symbol_type(field.data_type):
+            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
                 self.emit_line('def set_{}(self):'.format(field_name))
                 with self.indent():
                     self.emit_line('self._tag = {!r}'.format(field_name))
