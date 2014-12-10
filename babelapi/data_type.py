@@ -577,7 +577,7 @@ class Union(CompositeType):
                 return True
         else:
             for field in self.fields:
-                if isinstance(field, SymbolField) and field.name == label:
+                if is_symbol_type(field.data_type) and field.name == label:
                     return True
 
             return False
@@ -593,7 +593,7 @@ class Union(CompositeType):
         else:
             # Fallback to checking for direct symbols
             for field in self.fields:
-                if isinstance(field, SymbolField) and field.name == label:
+                if is_symbol_type(field.data_type) and field.name == label:
                     return field.name
             else:
                 return None
@@ -611,7 +611,7 @@ class Union(CompositeType):
         """
         data_type_names = set()
         for field in self.fields:
-            if not isinstance(field, SymbolField):
+            if not is_symbol_type(field.data_type):
                 if field.data_type.name in data_type_names:
                     return False
                 else:
