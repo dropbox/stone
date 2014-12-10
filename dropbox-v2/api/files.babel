@@ -23,7 +23,7 @@ struct SubError
 union DownloadError
     disallowed SubError
     no_file SubError
-    *unknown
+    unknown*
 
 route Download (FileTarget, FileInfo, DownloadError)
     "Download a file in a user's Dropbox."
