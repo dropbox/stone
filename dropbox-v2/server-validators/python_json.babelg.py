@@ -346,7 +346,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                         self.emit_line('return')
                 if is_composite_type(field.data_type):
                     class_name = self.lang.format_class(field.data_type.name)
-                    if field.data_type.has_coverage():
+                    if is_struct_type(field.data_type) and field.data_type.has_coverage():
                         self.emit_line('if not isinstance(val, {}):'.format(class_name))
                     else:
                         self.emit_line('if type(val) is not {}:'.format(class_name))
