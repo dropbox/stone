@@ -111,16 +111,16 @@ struct FullAccount extends Account
         team=null
         is_paired=false
 
-struct GetInfoReq
+struct GetAccountReq
     account_id AccountId
         "A user's account identifier."
 
-union GetInfoError
+union GetAccountError
     no_account Any
         "The specified :field:`account_id` does not exist."
     unknown*
 
-route GetAccount (GetInfoReq, BasicAccount, GetInfoError)
+route GetAccount (GetAccountReq, BasicAccount, GetAccountError)
     "Get information about a user's account."
 
 route GetMyAccount (Empty, FullAccount, Empty)
