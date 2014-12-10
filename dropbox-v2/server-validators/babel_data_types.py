@@ -17,6 +17,9 @@ import re
 import six
 import types
 
+class ValidationError(Exception):
+    pass
+
 class DataType(object):
     """All primitive and composite data types should extend this."""
     __metaclass__ = ABCMeta
@@ -26,11 +29,11 @@ class DataType(object):
         """Validates that val is of this data type.
 
         Returns: None if validation succeeds.
-        Raises: A KeyError or ValueError if validation fails.
+        Raises: ValidationError
         """
         pass
 
-class PrimitiveType(object):
+class PrimitiveType(DataType):
     """A basic type that is defined by Babel."""
     pass
 
@@ -58,26 +61,26 @@ class _Integer(PrimitiveType):
             )
             if min_value < self.minimum:
                 raise ValueError('min_value cannot be less than the minimum '
-                                 'value for this type (%s < %s)'
+                                 'value for this type (%d < %d)'
                                  % (min_value, self.minimum))
+            self.minimum = min_value
         if max_value is not None:
             assert isinstance(max_value, numbers.Integral), (
                 'max_value must be an integral number'
             )
             if max_value > self.maximum:
                 raise ValueError('max_value cannot be greater than the maximum '
-                                 'value for this type (%s < %s)'
+                                 'value for this type (%d < %d)'
                                  % (max_value, self.maximum))
-        self.min_value = min_value
-        self.max_value = max_value
+            self.maximum = max_value
 
     def validate(self, val):
         if not isinstance(val, numbers.Integral):
-            raise ValueError('%r is of type %r and is not a valid integer type'
-                             % (val, type(val)))
+            raise ValidationError('%r is of type %r and is not a valid integer type'
+                                  % (val, type(val)))
         elif not (self.minimum <= val <= self.maximum):
-            raise ValueError('%s is not within range [%r, %r]'
-                             % (val, self.minimum, self.maximum))
+            raise ValidationError('%d is not within range [%d, %d]'
+                                  % (val, self.minimum, self.maximum))
 
     def __repr__(self):
         return '%s()' % self.__class__.__name__
@@ -126,17 +129,17 @@ class String(PrimitiveType):
 
     def validate(self, val):
         if not isinstance(val, six.string_types):
-            raise ValueError("'%s' is of type %r and is not a valid string"
-                             % (val, type(val).__name__))
+            raise ValidationError("'%s' is of type %r and is not a valid string"
+                                  % (val, type(val).__name__))
         elif self.max_length is not None and len(val) > self.max_length:
-            raise ValueError("'%s' must be at most %d characters, got %d"
-                             % (val, self.max_length, len(val)))
+            raise ValidationError("'%s' must be at most %d characters, got %d"
+                                  % (val, self.max_length, len(val)))
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValueError("'%s' must be at least %d characters, got %d"
-                             % (val, self.min_length, len(val)))
+            raise ValidationError("'%s' must be at least %d characters, got %d"
+                                  % (val, self.min_length, len(val)))
         elif self.pattern and not self.pattern_re.match(val):
-            raise ValueError("'%s' did not match pattern '%s'"
-                             % (val, self.pattern))
+            raise ValidationError("'%s' did not match pattern '%s'"
+                                  % (val, self.pattern))
 
 class Binary(PrimitiveType):
     def __init__(self, min_length=None, max_length=None):
@@ -159,14 +162,14 @@ class Binary(PrimitiveType):
     def validate(self, val):
         if not isinstance(val, str):
             # TODO: Add support for buffer and file objects.
-            raise ValueError("'%s' is of type %r and is not a valid binary type"
-                             % (val, type(val).__name__))
+            raise ValidationError("'%s' is of type %r and is not a valid binary type"
+                                  % (val, type(val).__name__))
         elif self.max_length is not None and len(val) > self.max_length:
-            raise ValueError("'%s' must have at most %d bytes, got %d"
-                             % (val, self.max_length))
+            raise ValidationError("'%s' must have at most %d bytes, got %d"
+                                  % (val, self.max_length))
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValueError("'%s' has fewer than %d bytes"
-                             % (val, self.min_length))
+            raise ValidationError("'%s' has fewer than %d bytes"
+                                  % (val, self.min_length))
 
 class Timestamp(PrimitiveType):
     """Note that while a format is specified, it isn't used in validation
@@ -202,13 +205,13 @@ class List(PrimitiveType):
 
     def validate(self, val):
         if not isinstance(val, types.ListType):
-            raise ValueError('%r is not a valid list' % val)
+            raise ValidationError('%r is not a valid list' % val)
         elif self.max_items is not None and len(val) > self.max_items:
-            raise ValueError('%r has more than %s items'
-                             % (val, self.max_items))
+            raise ValidationError('%r has more than %s items'
+                                  % (val, self.max_items))
         elif self.min_items is not None and len(val) < self.min_items:
-            raise ValueError('%r has fewer than %s items'
-                             % (val, self.min_items))
+            raise ValidationError('%r has fewer than %s items'
+                                  % (val, self.min_items))
 
         if isinstance(self.data_type, DataType):
             for item in val:
@@ -216,8 +219,8 @@ class List(PrimitiveType):
         else:
             for item in val:
                 if not isinstance(item, self.data_type):
-                    raise TypeError('%r is of type %r rather than %r'
-                    % (val, type(item).__name__, self.data_type.__name__))
+                    raise ValidationError('%r is of type %r rather than %r'
+                        % (val, type(item).__name__, self.data_type.__name__))
                 item.validate()
 
 class CompositeType(DataType):
