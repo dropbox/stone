@@ -148,7 +148,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         with self.indent():
             for field in data_type.fields:
                 field_name = self.lang.format_variable(field.name)
-                self.emit_line("'__%s_data_type'," % field_name)
+                self.emit_line("'_%s'," % field_name)
+                self.emit_line("'__has_%s'," % field_name)
         self.emit_line(']')
         self.emit_empty_line()
 
