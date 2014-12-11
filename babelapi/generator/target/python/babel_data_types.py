@@ -19,7 +19,7 @@ import six
 class ValidationError(Exception):
     pass
 
-def _generic_type_name(v):
+def generic_type_name(v):
     """Return a descriptive type name that isn't Python specific. For example,
     an int value will return 'integer' rather than 'int'."""
     if isinstance(v, numbers.Integral):
@@ -153,7 +153,7 @@ class String(PrimitiveType):
         """
         if not isinstance(val, six.string_types):
             raise ValidationError("'%s' expected to be a string, got %s"
-                                  % (val, _generic_type_name(val)))
+                                  % (val, generic_type_name(val)))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must be at most %d characters, got %d"
                                   % (val, self.max_length, len(val)))
@@ -193,7 +193,7 @@ class Binary(PrimitiveType):
         if not isinstance(val, bytes):
             # TODO(kelkabany): Add support for buffer and file objects.
             raise ValidationError("Expected binary type, got %s"
-                                  % _generic_type_name(val))
+                                  % generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must have at most %d bytes, got %d"
                                   % (val, self.max_length))
@@ -256,7 +256,7 @@ class CompositeType(DataType):
     def validate_type_only(self, val):
         if type(val) is not self.data_type:
             raise ValidationError('Expected type %s, got %s'
-                % (self.data_type.__name__, _generic_type_name(val)))
+                % (self.data_type.__name__, generic_type_name(val)))
 
 class Struct(CompositeType):
     def validate(self, val):
@@ -264,14 +264,13 @@ class Struct(CompositeType):
         For a val to pass validation, it must have a _fields_ class variable
         with the following structure:
 
-            _fields_ = [(field_name, optional, data_type), ...]
+            _fields_ = [(field_name, data_type), ...]
 
             field_name: Name of the field (str).
-            optional: Whether the field is optional (bool).
             data_type: DataType object.
         """
         self.validate_type_only(val)
-        for field_name, optional, _ in self.data_type._fields_:
+        for field_name, _ in self.data_type._fields_:
             # Any absent field that's required will raise a KeyError
             try:
                 getattr(val, field_name)
