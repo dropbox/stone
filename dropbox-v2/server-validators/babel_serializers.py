@@ -15,10 +15,12 @@ import json
 import six
 
 from babel_data_types import (
+    Any,
     Binary,
     List,
     PrimitiveType,
     Struct,
+    Symbol,
     Timestamp,
     Union,
     ValidationError,
@@ -32,10 +34,10 @@ class JsonEncoder(object):
        path String
        rev String
 
-    >>> fr = FileRef()
-    >>> fr.path = 'a/b/c'
-    >>> fr.rev = '1234'
-    >>> JsonEncoder.encode(fr)
+    > fr = FileRef()
+    > fr.path = 'a/b/c'
+    > fr.rev = '1234'
+    > JsonEncoder.encode(fr)
     "{'path': 'a/b/c', 'rev': '1234'}"
 
     Example of serializing a union to JSON:
@@ -45,41 +47,42 @@ class JsonEncoder(object):
         overwrite
         update FileRef
 
-    >>> um = UploadMode()
-    >>> um.set_add()
-    >>> JsonEncoder.encode(um)
+    > um = UploadMode()
+    > um.set_add()
+    > JsonEncoder.encode(um)
     '"add"'
-    >>> um.update = fr
-    >>> JsonEncoder.encode(um)
+    > um.update = fr
+    > JsonEncoder.encode(um)
     "{'update': {'path': 'a/b/c', 'rev': '1234'}}"
     """
 
     @classmethod
-    def encode(cls, obj, data_type=None):
+    def encode(cls, data_type, obj):
         """Encodes a Babel data type into JSON."""
-        return json.dumps(cls._encode_helper(obj, data_type))
+        return json.dumps(cls._encode_helper(data_type, obj))
 
     @classmethod
-    def _encode_helper(cls, obj, data_type=None):
+    def _encode_helper(cls, data_type, obj):
         """Encodes a Babel data type into a JSON-compatible dict."""
         if isinstance(data_type, List):
             if not isinstance(obj, list):
-                # TODO: This could be better...
                 raise ValidationError(
                     'Expected list, got %s'
                     % (type(obj).__name__)
                 )
-            return [cls._encode_helper(item, data_type.data_type) for item in obj]
+            return [cls._encode_helper(data_type.data_type, item) for item in obj]
         elif isinstance(data_type, PrimitiveType):
             return cls._make_json_friendly(data_type, obj)
         elif isinstance(data_type, Struct):
             d = {}
             for name, optional, field_data_type  in data_type.data_type._fields_:
-                val = getattr(obj, name)
-                if val is not None:
-                    d[name] = cls._encode_helper(val, field_data_type)
-                elif val is None and not optional:
-                    raise KeyError('missing required field {!r}'.format(name))
+                try:
+                    val = getattr(obj, name)
+                except AttributeError as e:
+                    raise ValidationError(e.args[0])
+                else:
+                    if val is not None:
+                        d[name] = cls._encode_helper(field_data_type, val)
             return d
         elif isinstance(data_type, Union):
             field_data_type = data_type.data_type._fields_[obj._tag]
@@ -88,7 +91,7 @@ class JsonEncoder(object):
                 if isinstance(field_data_type, PrimitiveType):
                     return cls._make_json_friendly(field_data_type, val)
                 else:
-                    return {obj._tag: cls._encode_helper(val)}
+                    return {obj._tag: cls._encode_helper(field_data_type, val)}
             else:
                 return obj._tag
         else:
@@ -113,8 +116,12 @@ class JsonDecoder(object):
 
     @classmethod
     def decode(cls, data_type, serialized_obj, strict=True):
-        """If strict, then unknown keys in serialized_obj will raise an error."""
-        return cls._decode_helper(data_type, json.loads(serialized_obj), strict)
+        """If strict, then unknown keys in serialized_obj will raise an error
+        and catch all symbols are never used."""
+        try:
+            return cls._decode_helper(data_type, json.loads(serialized_obj), strict)
+        except ValueError:
+            raise ValidationError('could not decode input as JSON')
 
     @classmethod
     def _decode_helper(cls, data_type, obj, strict):
@@ -126,7 +133,7 @@ class JsonDecoder(object):
             if strict:
                 for key in obj:
                     if key not in data_type.data_type._field_names_:
-                        raise ValidationError('unknown field {!s}'.format(key))
+                        raise ValidationError("unknown field '%s'" % key)
             o = data_type.data_type()
             for name, optional, field_data_type in data_type.data_type._fields_:
                 if name in obj:
@@ -136,25 +143,46 @@ class JsonDecoder(object):
         elif isinstance(data_type, Union):
             o = data_type.data_type()
             if isinstance(obj, six.string_types):
-                # The variant is a symbol
+                # Variant is a symbol
                 tag = obj
-                if tag not in data_type.data_type._fields_:
-                    raise ValidationError('Unknown tag %r' % tag)
+                if tag in data_type.data_type._fields_:
+                    val_data_type = data_type.data_type._fields_[tag]
+                    if not isinstance(val_data_type, (Any, Symbol)):
+                        raise ValidationError("expected object for '%s', got symbol"
+                                              % tag)
+                else:
+                    if not strict and data_type.data_type._catch_all_:
+                        tag = data_type.data_type._catch_all_
+                    else:
+                        raise ValidationError("unknown tag '%s'" % tag)
                 getattr(o, 'set_' + tag)()
             elif isinstance(obj, dict):
-                assert len(obj) == 1, 'obj must only have 1 key specified'
+                # Variant is not a symbol
+                assert len(obj) == 1, 'only 1 key must be specified'
                 tag, val = obj.items()[0]
-                if tag not in data_type.data_type._fields_:
-                    raise ValidationError('Unknown option %r' % tag)
-                v = cls._decode_helper(data_type.data_type._fields_[tag], val, strict)
-                setattr(o, tag, v)
+                if tag in data_type.data_type._fields_:
+                    val_data_type = data_type.data_type._fields_[tag]
+                    if isinstance(val_data_type, Any):
+                        getattr(o, 'set_' + tag)()
+                    elif isinstance(val_data_type, Symbol):
+                        raise ValidationError("expected symbol '%s', got object"
+                                              % tag)
+                    else:
+                        v = cls._decode_helper(val_data_type, val, strict)
+                        setattr(o, tag, v)
+                else:
+                    if not strict and data_type.data_type._catch_all_:
+                        tag = data_type.data_type._catch_all_
+                        getattr(o, 'set_' + tag)()
+                    else:
+                        raise ValidationError("unknown tag '%s'" % tag)
             else:
-                raise AssertionError('obj type %r != str or dict'
+                raise AssertionError('expected str or dict, got %r'
                                      % type(obj).__name__)
         elif isinstance(data_type, List):
             if not isinstance(obj, list):
                 raise ValidationError(
-                    'field is of type %r rather than a list'
+                    'expected list, got %s'
                     % (type(obj).__name__)
                 )
             return [cls._decode_helper(data_type.data_type, item, strict)
@@ -162,7 +190,7 @@ class JsonDecoder(object):
         elif isinstance(data_type, PrimitiveType):
             return cls._make_babel_friendly(data_type, obj)
         else:
-            raise AssertionError('obj type %r != Struct or Union'
+            raise AssertionError('expected Struct or Union, got %r'
                                  % type(obj).__name__)
         return o
 

@@ -47,7 +47,7 @@ class PathTarget(object):
         if self.__has_path:
             return self._path
         else:
-            raise KeyError("missing required field 'path'")
+            raise AttributeError("missing required field 'path'")
 
     @path.setter
     def path(self, val):
@@ -143,7 +143,7 @@ class FileInfo(object):
         if self.__has_name:
             return self._name
         else:
-            raise KeyError("missing required field 'name'")
+            raise AttributeError("missing required field 'name'")
 
     @name.setter
     def name(self, val):
@@ -189,7 +189,7 @@ class SubError(object):
         if self.__has_reason:
             return self._reason
         else:
-            raise KeyError("missing required field 'reason'")
+            raise AttributeError("missing required field 'reason'")
 
     @reason.setter
     def reason(self, val):
@@ -207,6 +207,11 @@ class SubError(object):
 
 class DownloadError(object):
 
+    __disallowed_data_type = dt.Struct(SubError)
+    __no_file_data_type = dt.Struct(SubError)
+    __unknown_data_type = dt.Symbol()
+    _catch_all_ = 'unknown'
+
     _field_names_ = {
         'disallowed',
         'no_file',
@@ -214,9 +219,9 @@ class DownloadError(object):
     }
 
     _fields_ = {
-        'disallowed': SubError,
-        'no_file': SubError,
-        'unknown': None,
+        'disallowed': __disallowed_data_type,
+        'no_file': __no_file_data_type,
+        'unknown': __unknown_data_type,
     }
 
     def __init__(self):
@@ -245,7 +250,7 @@ class DownloadError(object):
     @property
     def disallowed(self):
         if not self.is_disallowed():
-            raise KeyError("tag 'disallowed' not set")
+            raise AttributeError("tag 'disallowed' not set")
         return self._disallowed
 
     @disallowed.setter
@@ -257,7 +262,7 @@ class DownloadError(object):
     @property
     def no_file(self):
         if not self.is_no_file():
-            raise KeyError("tag 'no_file' not set")
+            raise AttributeError("tag 'no_file' not set")
         return self._no_file
 
     @no_file.setter
@@ -302,7 +307,7 @@ class UploadSessionStart(object):
         if self.__has_upload_id:
             return self._upload_id
         else:
-            raise KeyError("missing required field 'upload_id'")
+            raise AttributeError("missing required field 'upload_id'")
 
     @upload_id.setter
     def upload_id(self, val):
@@ -355,7 +360,7 @@ class UploadAppend(object):
         if self.__has_upload_id:
             return self._upload_id
         else:
-            raise KeyError("missing required field 'upload_id'")
+            raise AttributeError("missing required field 'upload_id'")
 
     @upload_id.setter
     def upload_id(self, val):
@@ -379,7 +384,7 @@ class UploadAppend(object):
         if self.__has_offset:
             return self._offset
         else:
-            raise KeyError("missing required field 'offset'")
+            raise AttributeError("missing required field 'offset'")
 
     @offset.setter
     def offset(self, val):
@@ -424,7 +429,7 @@ class IncorrectOffsetError(object):
         if self.__has_correct_offset:
             return self._correct_offset
         else:
-            raise KeyError("missing required field 'correct_offset'")
+            raise AttributeError("missing required field 'correct_offset'")
 
     @correct_offset.setter
     def correct_offset(self, val):
@@ -442,6 +447,11 @@ class IncorrectOffsetError(object):
 
 class UploadAppendError(object):
 
+    __not_found_data_type = dt.Symbol()
+    __closed_data_type = dt.Symbol()
+    __incorrect_offset_data_type = dt.Struct(IncorrectOffsetError)
+    _catch_all_ = None
+
     _field_names_ = {
         'not_found',
         'closed',
@@ -449,9 +459,9 @@ class UploadAppendError(object):
     }
 
     _fields_ = {
-        'not_found': None,
-        'closed': None,
-        'incorrect_offset': IncorrectOffsetError,
+        'not_found': __not_found_data_type,
+        'closed': __closed_data_type,
+        'incorrect_offset': __incorrect_offset_data_type,
     }
 
     def __init__(self):
@@ -494,7 +504,7 @@ class UploadAppendError(object):
     @property
     def incorrect_offset(self):
         if not self.is_incorrect_offset():
-            raise KeyError("tag 'incorrect_offset' not set")
+            raise AttributeError("tag 'incorrect_offset' not set")
         return self._incorrect_offset
 
     @incorrect_offset.setter
@@ -535,7 +545,7 @@ class UpdateParentRev(object):
         if self.__has_parent_rev:
             return self._parent_rev
         else:
-            raise KeyError("missing required field 'parent_rev'")
+            raise AttributeError("missing required field 'parent_rev'")
 
     @parent_rev.setter
     def parent_rev(self, val):
@@ -562,6 +572,11 @@ class ConflictPolicy(object):
         matches.
     """
 
+    __add_data_type = dt.Symbol()
+    __overwrite_data_type = dt.Symbol()
+    __update_data_type = dt.Struct(UpdateParentRev)
+    _catch_all_ = None
+
     _field_names_ = {
         'add',
         'overwrite',
@@ -569,9 +584,9 @@ class ConflictPolicy(object):
     }
 
     _fields_ = {
-        'add': None,
-        'overwrite': None,
-        'update': UpdateParentRev,
+        'add': __add_data_type,
+        'overwrite': __overwrite_data_type,
+        'update': __update_data_type,
     }
 
     def __init__(self):
@@ -614,7 +629,7 @@ class ConflictPolicy(object):
     @property
     def update(self):
         if not self.is_update():
-            raise KeyError("tag 'update' not set")
+            raise AttributeError("tag 'update' not set")
         return self._update
 
     @update.setter
@@ -691,7 +706,7 @@ class UploadCommit(object):
         if self.__has_path:
             return self._path
         else:
-            raise KeyError("missing required field 'path'")
+            raise AttributeError("missing required field 'path'")
 
     @path.setter
     def path(self, val):
@@ -713,7 +728,7 @@ class UploadCommit(object):
         if self.__has_mode:
             return self._mode
         else:
-            raise KeyError("missing required field 'mode'")
+            raise AttributeError("missing required field 'mode'")
 
     @mode.setter
     def mode(self, val):
@@ -829,6 +844,11 @@ class UploadCommit(object):
 
 class ConflictReason(object):
 
+    __folder_data_type = dt.Symbol()
+    __file_data_type = dt.Symbol()
+    __autorename_failed_data_type = dt.Symbol()
+    _catch_all_ = None
+
     _field_names_ = {
         'folder',
         'file',
@@ -836,9 +856,9 @@ class ConflictReason(object):
     }
 
     _fields_ = {
-        'folder': None,
-        'file': None,
-        'autorename_failed': None,
+        'folder': __folder_data_type,
+        'file': __file_data_type,
+        'autorename_failed': __autorename_failed_data_type,
     }
 
     def __init__(self):
@@ -921,7 +941,7 @@ class ConflictError(object):
         if self.__has_reason:
             return self._reason
         else:
-            raise KeyError("missing required field 'reason'")
+            raise AttributeError("missing required field 'reason'")
 
     @reason.setter
     def reason(self, val):
@@ -939,6 +959,11 @@ class ConflictError(object):
 
 class UploadCommitError(object):
 
+    __conflict_data_type = dt.Struct(ConflictError)
+    __no_write_permission_data_type = dt.Symbol()
+    __insufficient_quota_data_type = dt.Symbol()
+    _catch_all_ = None
+
     _field_names_ = {
         'conflict',
         'no_write_permission',
@@ -946,9 +971,9 @@ class UploadCommitError(object):
     }
 
     _fields_ = {
-        'conflict': ConflictError,
-        'no_write_permission': None,
-        'insufficient_quota': None,
+        'conflict': __conflict_data_type,
+        'no_write_permission': __no_write_permission_data_type,
+        'insufficient_quota': __insufficient_quota_data_type,
     }
 
     def __init__(self):
@@ -985,7 +1010,7 @@ class UploadCommitError(object):
     @property
     def conflict(self):
         if not self.is_conflict():
-            raise KeyError("tag 'conflict' not set")
+            raise AttributeError("tag 'conflict' not set")
         return self._conflict
 
     @conflict.setter
@@ -1073,7 +1098,7 @@ class File(object):
         if self.__has_client_modified:
             return self._client_modified
         else:
-            raise KeyError("missing required field 'client_modified'")
+            raise AttributeError("missing required field 'client_modified'")
 
     @client_modified.setter
     def client_modified(self, val):
@@ -1095,7 +1120,7 @@ class File(object):
         if self.__has_server_modified:
             return self._server_modified
         else:
-            raise KeyError("missing required field 'server_modified'")
+            raise AttributeError("missing required field 'server_modified'")
 
     @server_modified.setter
     def server_modified(self, val):
@@ -1119,7 +1144,7 @@ class File(object):
         if self.__has_rev:
             return self._rev
         else:
-            raise KeyError("missing required field 'rev'")
+            raise AttributeError("missing required field 'rev'")
 
     @rev.setter
     def rev(self, val):
@@ -1141,7 +1166,7 @@ class File(object):
         if self.__has_size:
             return self._size
         else:
-            raise KeyError("missing required field 'size'")
+            raise AttributeError("missing required field 'size'")
 
     @size.setter
     def size(self, val):
@@ -1180,14 +1205,18 @@ class Folder(object):
 
 class Metadata(object):
 
+    __file_data_type = dt.Struct(File)
+    __folder_data_type = dt.Struct(Folder)
+    _catch_all_ = None
+
     _field_names_ = {
         'file',
         'folder',
     }
 
     _fields_ = {
-        'file': File,
-        'folder': Folder,
+        'file': __file_data_type,
+        'folder': __folder_data_type,
     }
 
     def __init__(self):
@@ -1204,7 +1233,7 @@ class Metadata(object):
     @property
     def file(self):
         if not self.is_file():
-            raise KeyError("tag 'file' not set")
+            raise AttributeError("tag 'file' not set")
         return self._file
 
     @file.setter
@@ -1216,7 +1245,7 @@ class Metadata(object):
     @property
     def folder(self):
         if not self.is_folder():
-            raise KeyError("tag 'folder' not set")
+            raise AttributeError("tag 'folder' not set")
         return self._folder
 
     @folder.setter
@@ -1264,7 +1293,7 @@ class Entry(object):
         if self.__has_metadata:
             return self._metadata
         else:
-            raise KeyError("missing required field 'metadata'")
+            raise AttributeError("missing required field 'metadata'")
 
     @metadata.setter
     def metadata(self, val):
@@ -1286,7 +1315,7 @@ class Entry(object):
         if self.__has_name:
             return self._name
         else:
-            raise KeyError("missing required field 'name'")
+            raise AttributeError("missing required field 'name'")
 
     @name.setter
     def name(self, val):
@@ -1347,7 +1376,7 @@ class ListFolderResponse(object):
         if self.__has_cursor:
             return self._cursor
         else:
-            raise KeyError("missing required field 'cursor'")
+            raise AttributeError("missing required field 'cursor'")
 
     @cursor.setter
     def cursor(self, val):
@@ -1369,7 +1398,7 @@ class ListFolderResponse(object):
         if self.__has_has_more:
             return self._has_more
         else:
-            raise KeyError("missing required field 'has_more'")
+            raise AttributeError("missing required field 'has_more'")
 
     @has_more.setter
     def has_more(self, val):
@@ -1391,7 +1420,7 @@ class ListFolderResponse(object):
         if self.__has_entries:
             return self._entries
         else:
-            raise KeyError("missing required field 'entries'")
+            raise AttributeError("missing required field 'entries'")
 
     @entries.setter
     def entries(self, val):

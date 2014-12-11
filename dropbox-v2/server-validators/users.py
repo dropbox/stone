@@ -77,7 +77,7 @@ class Usage(object):
         if self.__has_quota:
             return self._quota
         else:
-            raise KeyError("missing required field 'quota'")
+            raise AttributeError("missing required field 'quota'")
 
     @quota.setter
     def quota(self, val):
@@ -99,7 +99,7 @@ class Usage(object):
         if self.__has_usage_individual:
             return self._usage_individual
         else:
-            raise KeyError("missing required field 'usage_individual'")
+            raise AttributeError("missing required field 'usage_individual'")
 
     @usage_individual.setter
     def usage_individual(self, val):
@@ -121,7 +121,7 @@ class Usage(object):
         if self.__has_usage_shared:
             return self._usage_shared
         else:
-            raise KeyError("missing required field 'usage_shared'")
+            raise AttributeError("missing required field 'usage_shared'")
 
     @usage_shared.setter
     def usage_shared(self, val):
@@ -143,7 +143,7 @@ class Usage(object):
         if self.__has_usage_datastores:
             return self._usage_datastores
         else:
-            raise KeyError("missing required field 'usage_datastores'")
+            raise AttributeError("missing required field 'usage_datastores'")
 
     @usage_datastores.setter
     def usage_datastores(self, val):
@@ -202,7 +202,7 @@ class Team(object):
         if self.__has_id:
             return self._id
         else:
-            raise KeyError("missing required field 'id'")
+            raise AttributeError("missing required field 'id'")
 
     @id.setter
     def id(self, val):
@@ -224,7 +224,7 @@ class Team(object):
         if self.__has_name:
             return self._name
         else:
-            raise KeyError("missing required field 'name'")
+            raise AttributeError("missing required field 'name'")
 
     @name.setter
     def name(self, val):
@@ -303,7 +303,7 @@ class Name(object):
         if self.__has_given_name:
             return self._given_name
         else:
-            raise KeyError("missing required field 'given_name'")
+            raise AttributeError("missing required field 'given_name'")
 
     @given_name.setter
     def given_name(self, val):
@@ -325,7 +325,7 @@ class Name(object):
         if self.__has_surname:
             return self._surname
         else:
-            raise KeyError("missing required field 'surname'")
+            raise AttributeError("missing required field 'surname'")
 
     @surname.setter
     def surname(self, val):
@@ -349,7 +349,7 @@ class Name(object):
         if self.__has_familiar_name:
             return self._familiar_name
         else:
-            raise KeyError("missing required field 'familiar_name'")
+            raise AttributeError("missing required field 'familiar_name'")
 
     @familiar_name.setter
     def familiar_name(self, val):
@@ -372,7 +372,7 @@ class Name(object):
         if self.__has_display_name:
             return self._display_name
         else:
-            raise KeyError("missing required field 'display_name'")
+            raise AttributeError("missing required field 'display_name'")
 
     @display_name.setter
     def display_name(self, val):
@@ -432,7 +432,7 @@ class Account(object):
         if self.__has_account_id:
             return self._account_id
         else:
-            raise KeyError("missing required field 'account_id'")
+            raise AttributeError("missing required field 'account_id'")
 
     @account_id.setter
     def account_id(self, val):
@@ -454,7 +454,7 @@ class Account(object):
         if self.__has_name:
             return self._name
         else:
-            raise KeyError("missing required field 'name'")
+            raise AttributeError("missing required field 'name'")
 
     @name.setter
     def name(self, val):
@@ -508,7 +508,7 @@ class BasicAccount(Account):
         if self.__has_is_teammate:
             return self._is_teammate
         else:
-            raise KeyError("missing required field 'is_teammate'")
+            raise AttributeError("missing required field 'is_teammate'")
 
     @is_teammate.setter
     def is_teammate(self, val):
@@ -614,7 +614,7 @@ class FullAccount(Account):
         if self.__has_email:
             return self._email
         else:
-            raise KeyError("missing required field 'email'")
+            raise AttributeError("missing required field 'email'")
 
     @email.setter
     def email(self, val):
@@ -663,7 +663,7 @@ class FullAccount(Account):
         if self.__has_locale:
             return self._locale
         else:
-            raise KeyError("missing required field 'locale'")
+            raise AttributeError("missing required field 'locale'")
 
     @locale.setter
     def locale(self, val):
@@ -685,7 +685,7 @@ class FullAccount(Account):
         if self.__has_referral_link:
             return self._referral_link
         else:
-            raise KeyError("missing required field 'referral_link'")
+            raise AttributeError("missing required field 'referral_link'")
 
     @referral_link.setter
     def referral_link(self, val):
@@ -707,7 +707,7 @@ class FullAccount(Account):
         if self.__has_usage:
             return self._usage
         else:
-            raise KeyError("missing required field 'usage'")
+            raise AttributeError("missing required field 'usage'")
 
     @usage.setter
     def usage(self, val):
@@ -756,7 +756,7 @@ class FullAccount(Account):
         if self.__has_is_paired:
             return self._is_paired
         else:
-            raise KeyError("missing required field 'is_paired'")
+            raise AttributeError("missing required field 'is_paired'")
 
     @is_paired.setter
     def is_paired(self, val):
@@ -802,7 +802,7 @@ class GetAccountReq(object):
         if self.__has_account_id:
             return self._account_id
         else:
-            raise KeyError("missing required field 'account_id'")
+            raise AttributeError("missing required field 'account_id'")
 
     @account_id.setter
     def account_id(self, val):
@@ -820,14 +820,18 @@ class GetAccountReq(object):
 
 class GetAccountError(object):
 
+    __no_account_data_type = dt.Any()
+    __unknown_data_type = dt.Symbol()
+    _catch_all_ = 'unknown'
+
     _field_names_ = {
         'no_account',
         'unknown',
     }
 
     _fields_ = {
-        'no_account': None,
-        'unknown': None,
+        'no_account': __no_account_data_type,
+        'unknown': __unknown_data_type,
     }
 
     def __init__(self):

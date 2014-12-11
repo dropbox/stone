@@ -1,9 +1,5 @@
 """
-BabelAPI Code Generator for the Dropbox Python v2 SDK.
-
-TODO: With a little bit more abstraction and better modularity, this could
-become the general "Babel-Python" generator, and wouldn't have to be Dropbox-
-specific at all.
+Code generator for Python.
 """
 
 import re
@@ -31,6 +27,7 @@ from babelapi.data_type import (
 from babelapi.generator.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
+# This will be at the top of every generated file.
 base = """\
 import babel_data_types as dt
 
@@ -40,8 +37,7 @@ import babel_data_types as dt
 doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>.*?)`')
 
 class PythonSDKGenerator(CodeGeneratorMonolingual):
-    """Generates Python modules for the Dropbox Python v2 SDK that implement
-    the data types defined in the spec."""
+    """Generates Python modules to represent the input Babel spec."""
 
     lang = PythonTargetLanguage()
 
@@ -49,18 +45,16 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         """
         Generates a module for each namespace.
 
-        Each namespace will have Python classes to represent structs and unions
-        in the Babel spec. The namespace will also have a class of the same
-        name but prefixed with "Base" that will have methods that represent
-        the routes specified in the Babel spec.
+        Each namespace will have Python classes to represent data types and
+        routes in the Babel spec.
         """
         for namespace in self.api.namespaces.values():
             with self.output_to_relative_path('{}.py'.format(namespace.name)):
                 self._generate_base_namespace_module(namespace)
 
     def _generate_base_namespace_module(self, namespace):
-        """Creates a module for the namespace. All data types are represented
-        as classes."""
+        """Creates a module for the namespace. All data types and routes are
+        represented as Python classes."""
         self.emit(base)
         for data_type in namespace.linearize_data_types():
             if is_struct_type(data_type):
@@ -169,11 +163,12 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         if lineno != self.lineno:
             self.emit_empty_line()
 
-        self._generate_fields_for_reflection(data_type)
+        self._generate_struct_class_fields_for_reflection(data_type)
 
     def _determine_validator_type(self, data_type):
         """
-        FIXME: Add docs
+        Given a Babel data type, returns a string that can be used to construct
+        the appropriate validation object in Python.
         """
         if is_list_type(data_type):
             return 'dt.List({})'.format(
@@ -210,7 +205,6 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.lang.format_class(data_type.name),
             )
         elif is_union_type(data_type):
-            class_name = self._class_name_for_data_type(data_type)
             return 'dt.Union({})'.format(
                 self.lang.format_class(data_type.name),
             )
@@ -219,7 +213,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 data_type.name,
             )
 
-    def _generate_fields_for_reflection(self, data_type):
+    def _generate_struct_class_fields_for_reflection(self, data_type):
         if data_type.super_type:
             super_type_class_name = self._class_name_for_data_type(data_type.super_type)
         else:
@@ -251,7 +245,6 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         self.emit_empty_line()
 
     def _generate_union_class_fields_for_reflection(self, data_type):
-
         assert not data_type.super_type, 'Unsupported: Inheritance of unions'
 
         self.emit_line('_field_names_ = {')
@@ -265,14 +258,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         with self.indent():
             for field in data_type.fields:
                 var_name = self.lang.format_variable(field.name)
-                if is_symbol_type(field.data_type) or is_any_type(field.data_type):
-                    self.emit_line("'{}': None,".format(var_name))
-                else:
-                    if not is_composite_type(field.data_type):
-                        validator_name = '__{0}_data_type'.format(var_name)
-                    else:
-                        validator_name = self._class_name_for_data_type(field.data_type)
-                    self.emit_line("'{}': {},".format(var_name, validator_name))
+                validator_name = '__{0}_data_type'.format(var_name)
+                self.emit_line("'{}': {},".format(var_name, validator_name))
         self.emit_line('}')
         self.emit_empty_line()
 
@@ -314,6 +301,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         elif is_composite_type(data_type):
             return self._class_name_for_data_type(data_type)
         elif is_list_type(data_type):
+            # PyCharm understands this description format for a list
             return 'list of [{}]'.format(self._python_type_mapping(data_type.data_type))
         else:
             raise TypeError('Unknown data type %r' % data_type)
@@ -343,7 +331,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                         else:
                             self.emit_line('return None')
                     else:
-                        self.emit_line('raise KeyError("missing required field {!r}")'.format(field_name))
+                        self.emit_line('raise AttributeError("missing required field {!r}")'.format(field_name))
             self.emit_empty_line()
 
             # generate setter for field
@@ -432,12 +420,34 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self.emit_line('"""')
             self.emit_empty_line()
 
+            self._generate_union_class_vars(data_type)
             self._generate_union_class_fields_for_reflection(data_type)
             self._generate_union_class_init(data_type)
             self._generate_union_class_symbol_creators(data_type)
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_properties(data_type)
             self._generate_union_class_repr(data_type)
+
+    def _generate_union_class_vars(self, data_type):
+        """
+        Each class has a class attribute for each field that is a primitive type.
+        Each class has a class attribute for each field that is a primitive type.
+        The attribute is a validator for the field.
+        """
+        lineno = self.lineno
+        for field in data_type.fields:
+            #if is_symbol_type(field.data_type):
+            #    continue
+            field_name = self.lang.format_variable(field.name)
+            validator_name = self._determine_validator_type(field.data_type)
+            self.emit_line('__{}_data_type = {}'.format(field_name,
+                                                        validator_name))
+        if data_type.catch_all_field:
+            self.emit_line('_catch_all_ = %r' % data_type.catch_all_field.name)
+        else:
+            self.emit_line('_catch_all_ = None')
+        if lineno != self.lineno:
+            self.emit_empty_line()
 
     def _generate_union_class_init(self, data_type):
         """Generates the __init__ method for the class."""
@@ -498,7 +508,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             with self.indent():
                 self.emit_line('if not self.is_{}():'.format(field_name))
                 with self.indent():
-                    self.emit_line('raise KeyError("tag {!r} not set")'.format(field_name))
+                    self.emit_line('raise AttributeError("tag {!r} not set")'.format(field_name))
                 if is_symbol_type(field.data_type):
                     self.emit_line('return {!r}'.format(field_name))
                 else:
@@ -533,6 +543,7 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
     #
     # Routes
     #
+
     def _generate_route_class(self, namespace, route):
         self.emit_line('class {}Route(object):'.format(self.lang.format_class(route.name)))
         with self.indent():

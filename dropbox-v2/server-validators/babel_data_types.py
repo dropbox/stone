@@ -22,10 +22,11 @@ class ValidationError(Exception):
 def _generic_type_name(v):
     """Return a descriptive type name that isn't Python specific. For example,
     an int value will return 'integer' rather than 'int'."""
-    if isinstance(v, numbers.Real):
-        return 'float'
-    elif isinstance(v, numbers.Integral):
+    if isinstance(v, numbers.Integral):
+        # Must come before real numbers check since integrals are floats too
         return 'integer'
+    elif isinstance(v, numbers.Real):
+        return 'float'
     elif isinstance(v, (tuple, list)):
         return 'list'
     elif isinstance(v, six.string_types):
@@ -173,10 +174,10 @@ class Binary(PrimitiveType):
         self.max_length = max_length
 
     def validate(self, val):
-        if not isinstance(val, str):
-            # TODO: Add support for buffer and file objects.
-            raise ValidationError("'%s' is of type %r and is not a valid binary type"
-                                  % (val, type(val).__name__))
+        if not isinstance(val, bytes):
+            # TODO(kelkabany): Add support for buffer and file objects.
+            raise ValidationError("Expected binary type, got %s"
+                                  % _generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must have at most %d bytes, got %d"
                                   % (val, self.max_length))
@@ -233,9 +234,8 @@ class CompositeType(DataType):
         self.data_type = data_type
     def validate_type_only(self, val):
         if type(val) is not self.data_type:
-            raise ValidationError('Expected type %r, got %r'
-                % (self.data_type.__name__, type(val).__name__))
-
+            raise ValidationError('Expected type %s, got %s'
+                % (self.data_type.__name__, _generic_type_name(val)))
 
 class Struct(CompositeType):
     def validate(self, val):
@@ -243,32 +243,41 @@ class Struct(CompositeType):
         For a val to pass validation, it must have a _fields_ class variable
         with the following structure:
 
-        _fields_ = [(field_name, optional, data_type), ...]
+            _fields_ = [(field_name, optional, data_type), ...]
 
-        field_name: Name of the field (str).
-        optional: Whether the field is optional (bool).
-        data_type: DataType object.
+            field_name: Name of the field (str).
+            optional: Whether the field is optional (bool).
+            data_type: DataType object.
         """
         self.validate_type_only(val)
         for field_name, optional, _ in self.data_type._fields_:
             # Any absent field that's required will raise a KeyError
             try:
                 getattr(val, field_name)
-            except KeyError as e:
+            except AttributeError as e:
                 raise ValidationError(e.args[0])
 
 class Union(CompositeType):
-    """
-    Extend this when defining a Python class that represents a
-    Babel IDL Union.
-
-    You must specify a _fields_ class variable structured as:
-        _fields_ = {field_name: data_type, ...}
-
-        field_name: Name of the tag (str).
-        data_type: DataType object. None if it's a symbol field.
-    """
     def validate(self, val):
+        """
+        For a val to pass validation, it must have a _fields_ class variable
+        with the following structure:
+
+            _fields_ = {field_name: data_type, ...}
+
+            field_name: Name of the tag (str).
+            data_type: DataType object. None if it's a symbol field.
+        """
         self.validate_type_only(val)
         if val._tag is None:
             raise ValidationError('No tag set')
+
+class Any(DataType):
+    """A special type that accepts any value."""
+    def validate(self, val):
+        pass
+
+class Symbol(DataType):
+    """A special type that doesn't have a corresponding value."""
+    def validate(self, val):
+        raise AssertionError('No value validates as a symbol.')
