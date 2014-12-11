@@ -89,10 +89,17 @@ class JsonEncoder(object):
             data_type.validate(obj)
             field_data_type = data_type.data_type._fields_[obj._tag]
             if field_data_type:
-                val = getattr(obj, obj._tag)
-                if isinstance(field_data_type, dt.PrimitiveType):
+                if isinstance(field_data_type, (dt.Any, dt.Symbol)):
+                    # TODO(kelkabany): Perhaps a JSON-serializable Any field
+                    # should look like {tag: null}
+                    return obj._tag
+                elif isinstance(field_data_type, dt.Any):
+                    return {obj._tag: None}
+                elif isinstance(field_data_type, dt.PrimitiveType):
+                    val = getattr(obj, obj._tag)
                     return cls._make_json_friendly(field_data_type, val)
                 else:
+                    val = getattr(obj, obj._tag)
                     return {obj._tag: cls._encode_helper(field_data_type, val)}
             else:
                 return obj._tag
