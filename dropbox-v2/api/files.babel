@@ -158,7 +158,7 @@ struct Entry
 route GetMetadata (FileTarget, Entry, Empty)
     "Returns the metadata for a file or folder."
 
-struct ListFolderResponse
+struct FolderWithContents
     cursor String
         "Pass the cursor into :route:`ListFolderContinue` to see what's changed
         in the folder since your previous query."
@@ -167,5 +167,5 @@ struct ListFolderResponse
     entries List(data_type=Entry)
         "Each entry is a resource in the folder."
 
-route ListFolder (PathTarget, ListFolderResponse, Empty)
+route ListFolder (PathTarget, FolderWithContents, Empty)
     "Returns the contents of a folder."
