@@ -116,6 +116,7 @@ class UInt64(_Integer):
     maximum = 2**64 - 1
 
 class String(PrimitiveType):
+    """Represents a unicode string."""
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
             assert isinstance(min_length, numbers.Integral), (
@@ -129,6 +130,10 @@ class String(PrimitiveType):
             assert max_length > 0, 'max_length must be > 0'
         if min_length and max_length:
             assert max_length >= min_length, 'max_length must be >= min_length'
+        if pattern is not None:
+            assert isinstance(pattern, six.string_types), (
+                'pattern must be a string'
+            )
 
         self.min_length = min_length
         self.max_length = max_length
@@ -142,6 +147,10 @@ class String(PrimitiveType):
                 raise ValueError('Regex {!r} failed: {}'.format(pattern, e.args[0]))
 
     def validate(self, val):
+        """
+        A unicode string of the correct length will pass validation. In PY2,
+        we enforce that a str type must be valid utf-8.
+        """
         if not isinstance(val, six.string_types):
             raise ValidationError("'%s' expected to be a string, got %s"
                                   % (val, _generic_type_name(val)))
@@ -151,7 +160,14 @@ class String(PrimitiveType):
         elif self.min_length is not None and len(val) < self.min_length:
             raise ValidationError("'%s' must be at least %d characters, got %d"
                                   % (val, self.min_length, len(val)))
-        elif self.pattern and not self.pattern_re.match(val):
+
+        if not six.PY3 and isinstance(val, str):
+            try:
+                val.decode('utf-8')
+            except UnicodeDecodeError:
+                raise ValidationError("'%s' was not valid utf-8")
+
+        if self.pattern and not self.pattern_re.match(val):
             raise ValidationError("'%s' did not match pattern '%s'"
                                   % (val, self.pattern))
 
@@ -167,7 +183,7 @@ class Binary(PrimitiveType):
                 'max_length must be an integral number'
             )
             assert max_length > 0, 'max_length must be > 0'
-        if min_length and max_length:
+        if min_length is not None and max_length is not None:
             assert max_length >= min_length, 'max_length must be >= min_length'
 
         self.min_length = min_length
@@ -206,13 +222,18 @@ class List(PrimitiveType):
 
     def __init__(self, data_type, min_items=None, max_items=None):
         self.data_type = data_type
-
         if min_items is not None:
+            assert isinstance(min_items, numbers.Integral), (
+                'min_items must be an integral number'
+            )
             assert min_items >= 0, 'min_items must be >= 0'
         if max_items is not None:
+            assert isinstance(max_items, numbers.Integral), (
+                'max_items must be an integral number'
+            )
             assert max_items > 0, 'max_items must be > 0'
-        if min_items and max_items:
-            assert max_items >= min_items, 'max_length must be >= min_length'
+        if min_items is not None and max_items is not None:
+            assert max_items >= min_items, 'max_items must be >= min_items'
 
         self.min_items = min_items
         self.max_items = max_items
