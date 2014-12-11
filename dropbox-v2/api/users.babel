@@ -3,7 +3,7 @@ namespace users
 alias AccountId = String(min_length=40, max_length=40)
 
 struct Usage
-    "The space quota info for a user."
+    "Information about a user's space usage and quota."
 
     quota UInt64
         "The user's total quota allocation (bytes)."
