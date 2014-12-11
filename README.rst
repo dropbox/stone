@@ -77,7 +77,7 @@ generate Python code using a Python code generator that comes with babelapi.
 
 You can view the generated code at::
 
-   $ output/base_users.py
+   $ output/users.py
 
 Later, you'll learn how to create your own generator either for an unsupported
 language, or to customize generation for an already supported language.
