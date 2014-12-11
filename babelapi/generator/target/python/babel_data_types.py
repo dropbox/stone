@@ -42,7 +42,7 @@ class DataType(object):
     def validate(self, val):
         """Validates that val is of this data type.
 
-        Returns: None if validation succeeds.
+        Returns: A normalized value if validation succeeds.
         Raises: ValidationError
         """
         pass
@@ -55,6 +55,7 @@ class Boolean(PrimitiveType):
     def validate(self, val):
         if not isinstance(val, bool):
             raise ValidationError('%r is not a valid boolean' % val)
+        return val
 
 class _Integer(PrimitiveType):
     """
@@ -95,6 +96,7 @@ class _Integer(PrimitiveType):
         elif not (self.minimum <= val <= self.maximum):
             raise ValidationError('%d is not within range [%d, %d]'
                                   % (val, self.minimum, self.maximum))
+        return val
 
     def __repr__(self):
         return '%s()' % self.__class__.__name__
@@ -163,13 +165,14 @@ class String(PrimitiveType):
 
         if not six.PY3 and isinstance(val, str):
             try:
-                val.decode('utf-8')
+                val = val.decode('utf-8')
             except UnicodeDecodeError:
                 raise ValidationError("'%s' was not valid utf-8")
 
         if self.pattern and not self.pattern_re.match(val):
             raise ValidationError("'%s' did not match pattern '%s'"
                                   % (val, self.pattern))
+        return val
 
 class Binary(PrimitiveType):
     def __init__(self, min_length=None, max_length=None):
@@ -200,6 +203,7 @@ class Binary(PrimitiveType):
         elif self.min_length is not None and len(val) < self.min_length:
             raise ValidationError("'%s' has fewer than %d bytes, got %d"
                                   % (val, self.min_length, len(val)))
+        return val
 
 class Timestamp(PrimitiveType):
     """Note that while a format is specified, it isn't used in validation
@@ -216,6 +220,7 @@ class Timestamp(PrimitiveType):
         if not isinstance(val, datetime.datetime):
             raise ValueError('%r is of type %r and is not a valid timestamp'
                              % (val, type(val).__name__))
+        return val
 
 class List(PrimitiveType):
     """Assumes list contents are homogeneous with respect to types."""
@@ -247,13 +252,24 @@ class List(PrimitiveType):
         elif self.min_items is not None and len(val) < self.min_items:
             raise ValidationError('%r has fewer than %s items'
                                   % (val, self.min_items))
-        for item in val:
-            self.data_type.validate(item)
+        return [self.data_type.validate(item) for item in val]
 
 class CompositeType(DataType):
     def __init__(self, data_type):
+        """
+        data_type must have a _fields_ class variable with the following
+        structure:
+
+            _fields_ = [(field_name, data_type), ...]
+
+            field_name: Name of the field (str).
+            data_type: DataType object.
+        """
+        assert hasattr(data_type, '_fields_'), 'needs _fields_ attribute'
         self.data_type = data_type
     def validate_type_only(self, val):
+        """Use this when you only want to validate that the type of an object
+        is correct, but not yet validate each field."""
         if type(val) is not self.data_type:
             raise ValidationError('Expected type %s, got %s'
                 % (self.data_type.__name__, generic_type_name(val)))
@@ -261,13 +277,7 @@ class CompositeType(DataType):
 class Struct(CompositeType):
     def validate(self, val):
         """
-        For a val to pass validation, it must have a _fields_ class variable
-        with the following structure:
-
-            _fields_ = [(field_name, data_type), ...]
-
-            field_name: Name of the field (str).
-            data_type: DataType object.
+        For a val to pass validation, each required field must be present.
         """
         self.validate_type_only(val)
         for field_name, _ in self.data_type._fields_:
@@ -276,26 +286,23 @@ class Struct(CompositeType):
                 getattr(val, field_name)
             except AttributeError as e:
                 raise ValidationError(e.args[0])
+        return val
 
 class Union(CompositeType):
     def validate(self, val):
         """
-        For a val to pass validation, it must have a _fields_ class variable
-        with the following structure:
-
-            _fields_ = {field_name: data_type, ...}
-
-            field_name: Name of the tag (str).
-            data_type: DataType object. None if it's a symbol field.
+        For a val to pass validation, a tag must be set.
         """
         self.validate_type_only(val)
         if val._tag is None:
             raise ValidationError('No tag set')
+        return val
 
 class Any(DataType):
     """A special type that accepts any value."""
     def validate(self, val):
-        pass
+        # TODO(kelkabany): This could also be made to return None.
+        return val
 
 class Symbol(DataType):
     """A special type that doesn't have a corresponding value."""

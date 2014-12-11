@@ -364,7 +364,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     self.emit_line('self.__%s_data_type.validate_type_only(val)'
                                    % field_name)
                 else:
-                    self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
+                    self.emit_line('val = self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))
                 self.emit_line('self.__has_{} = True'.format(field_name))
             self.emit_empty_line()
@@ -541,7 +541,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 if is_composite_type(field.data_type):
                     self.emit_line('self.__{}_data_type.validate_type_only(val)'.format(field_name))
                 else:
-                    self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
+                    self.emit_line('val = self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))
                 self.emit_line('self._tag = {!r}'.format(field_name))
             self.emit_empty_line()
