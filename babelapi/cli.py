@@ -24,7 +24,8 @@ def main():
     cmdline_parser.add_argument(
         'generator',
         type=str,
-        help='The path to the generator (*.py).',
+        help='Specify a pre-packaged generator (only "python" right now), or '
+             'the path to a custom generator (.babelg.py).',
     )
     cmdline_parser.add_argument(
         'spec',
@@ -64,9 +65,18 @@ def main():
         tower = TowerOfBabel(args.spec, debug=debug)
         api = tower.parse()
 
+    # Here we support two ways of specifying a generator. Either a name of a
+    # generator, which assumes it has been pre-packaged with babelapi, or a
+    # path to a Python module with a generator class defined within.
+    if args.generator == 'python':
+        generator = os.path.join(os.path.dirname(__file__),
+                                 'generator/target/python/python.babelg.py')
+    else:
+        generator = args.generator
+
     c = Compiler(
         api,
-        args.generator,
+        generator,
         args.output,
         clean_build=args.clean_build,
     )

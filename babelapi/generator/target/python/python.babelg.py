@@ -2,7 +2,9 @@
 Code generator for Python.
 """
 
+import os
 import re
+import shutil
 from babelapi.data_type import (
     Int32,
     Int64,
@@ -36,7 +38,7 @@ import babel_data_types as dt
 # Matches format of Babel doc tags
 doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>.*?)`')
 
-class PythonSDKGenerator(CodeGeneratorMonolingual):
+class PythonGenerator(CodeGeneratorMonolingual):
     """Generates Python modules to represent the input Babel spec."""
 
     lang = PythonTargetLanguage()
@@ -48,6 +50,13 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         Each namespace will have Python classes to represent data types and
         routes in the Babel spec.
         """
+        cur_folder = os.path.dirname(__file__)
+        self._logger.info('Copying babel_data_types.py to output folder')
+        shutil.copy(os.path.join(cur_folder, 'babel_data_types.py'),
+                    self.target_folder_path)
+        self._logger.info('Copying babel_serializers.py to output folder')
+        shutil.copy(os.path.join(cur_folder, 'babel_serializers.py'),
+                    self.target_folder_path)
         for namespace in self.api.namespaces.values():
             with self.output_to_relative_path('{}.py'.format(namespace.name)):
                 self._generate_base_namespace_module(namespace)
