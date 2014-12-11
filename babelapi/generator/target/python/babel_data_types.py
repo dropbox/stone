@@ -54,7 +54,7 @@ class PrimitiveType(DataType):
 class Boolean(PrimitiveType):
     def validate(self, val):
         if not isinstance(val, bool):
-            raise ValueError('%r is not a valid boolean' % val)
+            raise ValidationError('%r is not a valid boolean' % val)
 
 class _Integer(PrimitiveType):
     """
@@ -70,7 +70,7 @@ class _Integer(PrimitiveType):
         range inherent to the defined type.
         """
         if min_value is not None:
-            assert isinstance(max_value, numbers.Integral), (
+            assert isinstance(min_value, numbers.Integral), (
                 'min_value must be an integral number'
             )
             if min_value < self.minimum:
@@ -196,10 +196,10 @@ class Binary(PrimitiveType):
                                   % generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must have at most %d bytes, got %d"
-                                  % (val, self.max_length))
+                                  % (val, self.max_length, len(val)))
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValidationError("'%s' has fewer than %d bytes"
-                                  % (val, self.min_length))
+            raise ValidationError("'%s' has fewer than %d bytes, got %d"
+                                  % (val, self.min_length, len(val)))
 
 class Timestamp(PrimitiveType):
     """Note that while a format is specified, it isn't used in validation
