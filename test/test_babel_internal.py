@@ -7,16 +7,17 @@ from babelapi.data_type import (
     Int64,
     List,
     String,
+    Symbol,
     Timestamp,
     UInt32,
     UInt64,
 )
 
 from babelapi.data_type import (
-    Field,
     Struct,
-    SymbolField,
+    StructField,
     Union,
+    UnionField,
 )
 
 class TestBabelInternal(unittest.TestCase):
@@ -167,7 +168,7 @@ class TestBabelInternal(unittest.TestCase):
             'QuotaInfo',
             "Information about a user's space quota.",
             [
-             Field('quota', UInt64(), 'Total amount of space.'),
+             StructField('quota', UInt64(), 'Total amount of space.'),
              ],
         )
 
@@ -178,10 +179,10 @@ class TestBabelInternal(unittest.TestCase):
 
         quota_info.add_example('default', None, {'quota': 64000})
 
-        # set null for a non-nullable field
+        # set null for a required field
         with self.assertRaises(ValueError) as cm:
             quota_info.add_example('null', None, {'quota': None})
-        self.assertIn('field is not nullable', cm.exception.args[0])
+        self.assertIn('field is not optional', cm.exception.args[0])
 
         self.assertTrue(quota_info.has_example('default'))
 
@@ -190,8 +191,8 @@ class TestBabelInternal(unittest.TestCase):
             'AccountInfo',
             "Information about an account.",
             [
-             Field('account_id', String(), 'Unique identifier for account.'),
-             Field('quota_info', quota_info, 'Quota', nullable=True)
+             StructField('account_id', String(), 'Unique identifier for account.'),
+             StructField('quota_info', quota_info, 'Quota', optional=True)
             ],
         )
 
@@ -206,7 +207,7 @@ class TestBabelInternal(unittest.TestCase):
             'UpdateParentRev',
             "Overwrite existing file if the parent rev matches.",
             [
-                Field('parent_rev', String(), 'The revision to be updated.')
+                StructField('parent_rev', String(), 'The revision to be updated.')
             ]
         )
         update_parent_rev.add_example('default', None, {'parent_rev': 'xyz123'})
@@ -216,9 +217,9 @@ class TestBabelInternal(unittest.TestCase):
             'WriteConflictPolicy',
             'Policy for managing write conflicts.',
             [
-                SymbolField('reject', 'On a write conflict, reject the new file.'),
-                SymbolField('overwrite', 'On a write conflict, overwrite the existing file.'),
-                Field('update_if_matching_parent_rev',
+                UnionField('reject', Symbol(), 'On a write conflict, reject the new file.'),
+                UnionField('overwrite', Symbol(), 'On a write conflict, overwrite the existing file.'),
+                UnionField('update_if_matching_parent_rev',
                       update_parent_rev,
                       'On a write conflict, overwrite the existing file.'),
             ]

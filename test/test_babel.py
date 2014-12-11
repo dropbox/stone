@@ -3,11 +3,8 @@ import unittest
 from babelapi.babel.parser import (
     BabelNamespace,
     BabelAlias,
-    BabelField,
     BabelParser,
-    BabelCatchAllSymbol,
-    BabelSymbol,
-    BabelTypeDef,
+    BabelSymbolField,
 )
 
 class TestBabel(unittest.TestCase):
@@ -173,11 +170,11 @@ union Role
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'Role')
         self.assertEqual(out[1].doc, 'The role a user may have in a shared folder.')
-        self.assertIsInstance(out[1].fields[0], BabelSymbol)
+        self.assertIsInstance(out[1].fields[0], BabelSymbolField)
         self.assertEqual(out[1].fields[0].name, 'owner')
-        self.assertIsInstance(out[1].fields[1], BabelSymbol)
+        self.assertIsInstance(out[1].fields[1], BabelSymbolField)
         self.assertEqual(out[1].fields[1].name, 'viewer')
-        self.assertIsInstance(out[1].fields[2], BabelSymbol)
+        self.assertIsInstance(out[1].fields[2], BabelSymbolField)
         self.assertEqual(out[1].fields[2].name, 'editor')
 
         # TODO: Test a union that includes a struct.
@@ -190,10 +187,10 @@ union Error
         "Variant A"
     B
         "Variant B"
-    *UNK
+    UNK*
 """
         out = self.parser.parse(text)
-        self.assertTrue(isinstance(out[1].fields[2], BabelCatchAllSymbol))
+        self.assertTrue(out[1].fields[2].catch_all)
 
     def test_route_decl(self):
         text = """
