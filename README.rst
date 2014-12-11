@@ -33,7 +33,7 @@ Assumptions
 
 Babel makes no assumptions about the protocol layer being used to make API
 requests and return responses; its first use case is the Dropbox v2 API which
-operates over HTTP. Babel does not come with nor enforces any particular RPC
+operates over HTTP. Babel does not come with nor enforce any particular RPC
 framework.
 
 Babel make some assumptions about the data types supported in the serialization
@@ -71,13 +71,16 @@ Simple Example
 --------------
 
 You can compile an example spec, ``users.babel`` describing the Dropbox API and
-generate Python code using ``base_namespace.babelg.py``::
+generate Python code using a Python code generator that comes with babelapi.
 
-   $ babelapi example/generator/dropbox-python-sdk/dbx_python_json.babelg.py example/api/dbx-core/users.babel output/
+   $ babelapi python example/api/dbx-core/users.babel output/
 
 You can view the generated code at::
 
    $ output/base_users.py
+
+Later, you'll learn how to create your own generator either for an unsupported
+language, or to customize generation for an already supported language.
 
 File Types
 ==========
