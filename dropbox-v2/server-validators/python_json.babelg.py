@@ -331,7 +331,10 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                         else:
                             self.emit_line('return None')
                     else:
-                        self.emit_line('raise AttributeError("missing required field {!r}")'.format(field_name))
+                        self.emit_line(
+                            'raise AttributeError("missing required field %r")'
+                            % field_name
+                        )
             self.emit_empty_line()
 
             # generate setter for field
@@ -344,7 +347,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                         self.emit_line('del self.{}'.format(field_name))
                         self.emit_line('return')
                 if is_composite_type(field.data_type):
-                    self.emit_line('self.__{}_data_type.validate_type_only(val)'.format(field_name))
+                    self.emit_line('self.__%s_data_type.validate_type_only(val)'
+                                   % field_name)
                 else:
                     self.emit_line('self.__{}_data_type.validate(val)'.format(field_name))
                 self.emit_line('self._{} = val'.format(field_name))
@@ -370,7 +374,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                     data_type.all_fields[0].name,
                 ))
             else:
-                self.emit_line("return '{}()'".format(self._class_name_for_data_type(data_type)))
+                self.emit_line("return '%s()'"
+                               % self._class_name_for_data_type(data_type))
         self.emit_empty_line()
 
     def _class_name_for_data_type(self, data_type):
