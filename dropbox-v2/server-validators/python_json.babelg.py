@@ -69,6 +69,8 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
                 self._generate_union_class(data_type)
             else:
                 raise TypeError('Cannot handle type %r' % type(data_type))
+        for route in namespace.routes:
+            self._generate_route_class(namespace, route)
 
     def emit_wrapped_indented_lines(self, s):
         """Emits wrapped lines. All lines are the first are indented."""
@@ -160,61 +162,62 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
         """
         lineno = self.lineno
         for field in data_type.fields:
-            if is_list_type(field.data_type):
-                # TODO: Support embedded lists
-                self.emit_line('__{}_data_type = dt.List({})'.format(
-                    self.lang.format_variable(field.name),
-                    self._func_args_from_dict({
-                        'data_type': field.data_type.data_type.name,
-                        'min_length': field.data_type.min_items,
-                        'max_length': field.data_type.max_items,
-                    })
-                ))
-            elif is_integer_type(field.data_type):
-                self.emit_line('__{}_data_type = dt.{}({})'.format(
-                    self.lang.format_variable(field.name),
-                    field.data_type.name,
-                    self._func_args_from_dict({
-                        'min_value': field.data_type.min_value,
-                        'max_value': field.data_type.max_value,
-                    })
-                ))
-            elif is_string_type(field.data_type):
-                self.emit_line('__{}_data_type = dt.String({})'.format(
-                    self.lang.format_variable(field.name),
-                    self._func_args_from_dict({
-                        'min_length': field.data_type.min_length,
-                        'max_length': field.data_type.max_length,
-                        'pattern': repr(field.data_type.pattern),
-                    })
-                ))
-            elif is_timestamp_type(field.data_type):
-                self.emit_line('__{}_data_type = dt.Timestamp({})'.format(
-                    self.lang.format_variable(field.name),
-                    self._func_args_from_dict({
-                        'format': repr(field.data_type.format),
-                    })
-                ))
-            elif is_struct_type(field.data_type):
-                self.emit_line('__{}_data_type = dt.Struct({})'.format(
-                    self.lang.format_variable(field.name),
-                    self.lang.format_class(field.data_type.name),
-                ))
-            elif is_union_type(field.data_type):
-                class_name = self._class_name_for_data_type(field.data_type)
-                self.emit_line('__{}_data_type = dt.Union({})'.format(
-                    self.lang.format_variable(field.name),
-                    self.lang.format_class(field.data_type.name),
-                ))
-            else:
-                self.emit_line('__{}_data_type = dt.{}()'.format(
-                    self.lang.format_variable(field.name),
-                    field.data_type.name,
-                ))
+            field_name = self.lang.format_variable(field.name)
+            validator_name = self._determine_validator_type(field.data_type)
+            self.emit_line('__{}_data_type = {}'.format(field_name,
+                                                        validator_name))
         if lineno != self.lineno:
             self.emit_empty_line()
 
         self._generate_fields_for_reflection(data_type)
+
+    def _determine_validator_type(self, data_type):
+        """
+        FIXME: Add docs
+        """
+        if is_list_type(data_type):
+            return 'dt.List({})'.format(
+                self._func_args_from_dict({
+                    'data_type': self._determine_validator_type(data_type.data_type),
+                    'min_length': data_type.min_items,
+                    'max_length': data_type.max_items,
+                })
+            )
+        elif is_integer_type(data_type):
+            return 'dt.{}({})'.format(
+                data_type.name,
+                self._func_args_from_dict({
+                    'min_value': data_type.min_value,
+                    'max_value': data_type.max_value,
+                })
+            )
+        elif is_string_type(data_type):
+            return 'dt.String({})'.format(
+                self._func_args_from_dict({
+                    'min_length': data_type.min_length,
+                    'max_length': data_type.max_length,
+                    'pattern': repr(data_type.pattern),
+                })
+            )
+        elif is_timestamp_type(data_type):
+            return 'dt.Timestamp({})'.format(
+                self._func_args_from_dict({
+                    'format': repr(data_type.format),
+                })
+            )
+        elif is_struct_type(data_type):
+            return 'dt.Struct({})'.format(
+                self.lang.format_class(data_type.name),
+            )
+        elif is_union_type(data_type):
+            class_name = self._class_name_for_data_type(data_type)
+            return 'dt.Union({})'.format(
+                self.lang.format_class(data_type.name),
+            )
+        else:
+            return 'dt.{}()'.format(
+                data_type.name,
+            )
 
     def _generate_fields_for_reflection(self, data_type):
         if data_type.super_type:
@@ -390,12 +393,6 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             extends = self._class_name_for_data_type(data_type.super_type)
         else:
             extends = 'object'
-            #if is_struct_type(data_type):
-            #    extends = 'dt.Struct'
-            #elif is_union_type(data_type):
-            #    extends = 'dt.Union'
-            #else:
-            #    extends = 'object'
         return 'class {}({}):'.format(self._class_name_for_data_type(data_type), extends)
 
     def _is_instance_type(self, data_type):
@@ -532,3 +529,34 @@ class PythonSDKGenerator(CodeGeneratorMonolingual):
             else:
                 self.emit_line("return '{}()'".format(self._class_name_for_data_type(data_type)))
         self.emit_empty_line()
+
+    #
+    # Routes
+    #
+    def _generate_route_class(self, namespace, route):
+        self.emit_line('class {}Route(object):'.format(self.lang.format_class(route.name)))
+        with self.indent():
+            if route.doc:
+                self.emit_line('"""')
+                self.emit_wrapped_lines(self.docf(route.doc))
+                self.emit_line('"""')
+            if route.request_data_type:
+                self.emit_line('request_data_type = {}'.format(
+                    self._determine_validator_type(route.request_data_type)))
+            if route.response_data_type:
+                self.emit_line('response_data_type = {}'.format(
+                    self._determine_validator_type(route.response_data_type)))
+            if route.error_data_type:
+                self.emit_line('error_data_type = {}'.format(
+                    self._determine_validator_type(route.error_data_type)))
+
+            self.emit_empty_line()
+            if route.attrs:
+                self.emit_line('attrs = {')
+                with self.indent():
+                    for k, v in route.attrs.items():
+                        self.emit_line("'{}': {},".format(k, self.lang.format_obj(v)))
+                self.emit_line('}')
+            else:
+                self.emit_line('attrs = {}')
+            self.emit_empty_line()

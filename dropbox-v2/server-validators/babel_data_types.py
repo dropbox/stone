@@ -238,23 +238,24 @@ class CompositeType(DataType):
 
 
 class Struct(CompositeType):
-    """
-    FIXME: DOC
-    Extend this when defining a Python class that represents a
-    Babel IDL Struct.
+    def validate(self, val):
+        """
+        For a val to pass validation, it must have a _fields_ class variable
+        with the following structure:
 
-    You must specify a _fields_ class variable structured as:
         _fields_ = [(field_name, optional, data_type), ...]
 
         field_name: Name of the field (str).
         optional: Whether the field is optional (bool).
         data_type: DataType object.
-    """
-    def validate(self, val):
+        """
         self.validate_type_only(val)
         for field_name, optional, _ in self.data_type._fields_:
-            # Any absent field that's required will raise an exception
-            getattr(val, field_name)
+            # Any absent field that's required will raise a KeyError
+            try:
+                getattr(val, field_name)
+            except KeyError as e:
+                raise ValidationError(e.args[0])
 
 class Union(CompositeType):
     """
@@ -270,4 +271,4 @@ class Union(CompositeType):
     def validate(self, val):
         self.validate_type_only(val)
         if val._tag is None:
-            raise ValueError('No tag set')
+            raise ValidationError('No tag set')

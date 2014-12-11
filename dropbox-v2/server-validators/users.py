@@ -867,3 +867,23 @@ class GetAccountError(object):
     def __repr__(self):
         return 'GetAccountError(%r)' % self._tag
 
+class GetAccountRoute(object):
+    """
+    Get information about a user's account.
+    """
+    request_data_type = dt.Struct(GetAccountReq)
+    response_data_type = dt.Struct(BasicAccount)
+    error_data_type = dt.Union(GetAccountError)
+
+    attrs = {}
+
+class GetMyAccountRoute(object):
+    """
+    Get information about the current user's account.
+    """
+    request_data_type = dt.Struct(Empty)
+    response_data_type = dt.Struct(FullAccount)
+    error_data_type = dt.Struct(Empty)
+
+    attrs = {}
+

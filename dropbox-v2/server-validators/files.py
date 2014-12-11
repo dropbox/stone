@@ -1315,7 +1315,7 @@ class ListFolderResponse(object):
 
     __cursor_data_type = dt.String(pattern=None)
     __has_more_data_type = dt.Boolean()
-    __entries_data_type = dt.List(data_type=Entry)
+    __entries_data_type = dt.List(data_type=dt.Struct(Entry))
 
     _field_names_ = {
         'cursor',
@@ -1406,4 +1406,77 @@ class ListFolderResponse(object):
 
     def __repr__(self):
         return 'ListFolderResponse(cursor=%r)' % self._cursor
+
+class DownloadRoute(object):
+    """
+    Download a file in a user's Dropbox.
+    """
+    request_data_type = dt.Struct(FileTarget)
+    response_data_type = dt.Struct(FileInfo)
+    error_data_type = dt.Union(DownloadError)
+
+    attrs = {
+        'host': 'content',
+        'style': 'download',
+    }
+
+class UploadStartRoute(object):
+    """
+    Start an upload session.
+    """
+    request_data_type = dt.Struct(Empty)
+    response_data_type = dt.Struct(UploadSessionStart)
+    error_data_type = dt.Struct(Empty)
+
+    attrs = {
+        'host': 'content',
+        'style': 'upload',
+    }
+
+class UploadAppendRoute(object):
+    """
+    Start an upload session.
+    """
+    request_data_type = dt.Struct(UploadAppend)
+    response_data_type = dt.Struct(Empty)
+    error_data_type = dt.Struct(Empty)
+
+    attrs = {
+        'host': 'content',
+        'style': 'upload',
+    }
+
+class UploadRoute(object):
+    """
+    Use this endpoint to either finish an ongoing upload session that was begun
+    with UploadStart or upload a file in one shot.
+    """
+    request_data_type = dt.Struct(UploadCommit)
+    response_data_type = dt.Struct(FileInfo)
+    error_data_type = dt.Union(UploadCommitError)
+
+    attrs = {
+        'host': 'content',
+        'style': 'upload',
+    }
+
+class GetMetadataRoute(object):
+    """
+    Returns the metadata for a file or folder.
+    """
+    request_data_type = dt.Struct(FileTarget)
+    response_data_type = dt.Struct(Entry)
+    error_data_type = dt.Struct(Empty)
+
+    attrs = {}
+
+class ListFolderRoute(object):
+    """
+    Returns the contents of a folder.
+    """
+    request_data_type = dt.Struct(PathTarget)
+    response_data_type = dt.Struct(ListFolderResponse)
+    error_data_type = dt.Struct(Empty)
+
+    attrs = {}
 
