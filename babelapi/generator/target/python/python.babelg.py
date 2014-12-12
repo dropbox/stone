@@ -187,7 +187,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         if is_list_type(data_type):
             return 'dt.List({})'.format(
                 self._func_args_from_dict({
-                    'data_type': self._determine_validator_type(data_type.data_type),
+                    'item_data_type': self._determine_validator_type(data_type.data_type),
                     'min_items': data_type.min_items,
                     'max_items': data_type.max_items,
                 })
