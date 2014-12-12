@@ -184,8 +184,8 @@ class JsonDecoder(object):
                     else:
                         raise dt.ValidationError("unknown tag '%s'" % tag)
             else:
-                raise AssertionError('expected str or dict, got %r'
-                                     % dt.generic_type_name((obj)))
+                raise TypeError('expected str or dict, got %r'
+                                % dt.generic_type_name((obj)))
         elif isinstance(data_type, dt.List):
             if not isinstance(obj, list):
                 raise dt.ValidationError(
