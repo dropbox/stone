@@ -16,8 +16,9 @@ import six
 
 try:
     from . import babel_data_types as dt
-except ValueError:
-    # babel_data_types is not a top-level module, but this makes testing easier
+except (SystemError, ValueError):
+    # Catch errors raised when importing a relative module when not in a package.
+    # This makes testing this file directly (outside of a package) easier.
     import babel_data_types as dt
 
 class JsonEncoder(object):
@@ -170,7 +171,8 @@ class JsonDecoder(object):
                 # Variant is not a symbol
                 if len(obj) != 1:
                     raise dt.ValidationError('expected 1 key, got %s', len(obj))
-                tag, val = obj.items()[0]
+                tag = list(obj)[0]
+                val = obj[tag]
                 if tag in data_type.definition._fields_:
                     val_data_type = data_type.definition._fields_[tag]
                     if isinstance(val_data_type, dt.Any):
