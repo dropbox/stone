@@ -298,7 +298,7 @@ class Union(CompositeType):
         associated value has also been validated.
         """
         self.validate_type_only(val)
-        if val._tag is None:
+        if not hasattr(val, '_tag') or val._tag is None:
             raise ValidationError('No tag set')
         return val
 
