@@ -16,7 +16,7 @@ import six
 
 try:
     from . import babel_data_types as dt
-except ImportError:
+except ValueError:
     # babel_data_types is not a top-level module, but this makes testing easier
     import babel_data_types as dt
 
