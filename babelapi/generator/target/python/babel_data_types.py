@@ -1,6 +1,6 @@
 """
-Defines all of Babel's primitive types in Python. Also provides the high-level
-classes that should be extended when defining composite data types.
+Defines classes to represent each Babel type in Python. These classes should
+be used to validate Python objects and normalize them for a given type.
 
 The data types defined here should not be specific to an RPC or serialization
 format.
@@ -34,8 +34,8 @@ def generic_type_name(v):
     else:
         return type(v).__name__
 
-class DataType(object):
-    """All primitive and composite data types should extend this."""
+class Validator(object):
+    """All primitive and composite data types should be a subclass of this."""
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -47,7 +47,7 @@ class DataType(object):
         """
         pass
 
-class PrimitiveType(DataType):
+class PrimitiveType(Validator):
     """A basic type that is defined by Babel."""
     pass
 
@@ -298,13 +298,13 @@ class Union(CompositeType):
             raise ValidationError('No tag set')
         return val
 
-class Any(DataType):
+class Any(Validator):
     """A special type that accepts any value."""
     def validate(self, val):
         # TODO(kelkabany): This could also be made to return None.
         return val
 
-class Symbol(DataType):
+class Symbol(Validator):
     """A special type that doesn't have a corresponding value."""
     def validate(self, val):
         raise AssertionError('No value validates as a symbol.')
