@@ -71,18 +71,16 @@ class _Integer(PrimitiveType):
         range inherent to the defined type.
         """
         if min_value is not None:
-            assert isinstance(min_value, numbers.Integral), (
+            assert isinstance(min_value, numbers.Integral), \
                 'min_value must be an integral number'
-            )
             if min_value < self.minimum:
                 raise ValueError('min_value cannot be less than the minimum '
                                  'value for this type (%d < %d)'
                                  % (min_value, self.minimum))
             self.minimum = min_value
         if max_value is not None:
-            assert isinstance(max_value, numbers.Integral), (
+            assert isinstance(max_value, numbers.Integral), \
                 'max_value must be an integral number'
-            )
             if max_value > self.maximum:
                 raise ValueError('max_value cannot be greater than the maximum '
                                  'value for this type (%d < %d)'
@@ -121,21 +119,18 @@ class String(PrimitiveType):
     """Represents a unicode string."""
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
-            assert isinstance(min_length, numbers.Integral), (
+            assert isinstance(min_length, numbers.Integral), \
                 'min_length must be an integral number'
-            )
             assert min_length >= 0, 'min_length must be >= 0'
         if max_length is not None:
-            assert isinstance(max_length, numbers.Integral), (
+            assert isinstance(max_length, numbers.Integral), \
                 'max_length must be an integral number'
-            )
             assert max_length > 0, 'max_length must be > 0'
         if min_length and max_length:
             assert max_length >= min_length, 'max_length must be >= min_length'
         if pattern is not None:
-            assert isinstance(pattern, six.string_types), (
+            assert isinstance(pattern, six.string_types), \
                 'pattern must be a string'
-            )
 
         self.min_length = min_length
         self.max_length = max_length
@@ -178,14 +173,12 @@ class String(PrimitiveType):
 class Binary(PrimitiveType):
     def __init__(self, min_length=None, max_length=None):
         if min_length is not None:
-            assert isinstance(min_length, numbers.Integral), (
+            assert isinstance(min_length, numbers.Integral), \
                 'min_length must be an integral number'
-            )
             assert min_length >= 0, 'min_length must be >= 0'
         if max_length is not None:
-            assert isinstance(max_length, numbers.Integral), (
+            assert isinstance(max_length, numbers.Integral), \
                 'max_length must be an integral number'
-            )
             assert max_length > 0, 'max_length must be > 0'
         if min_length is not None and max_length is not None:
             assert max_length >= min_length, 'max_length must be >= min_length'
@@ -212,9 +205,7 @@ class Timestamp(PrimitiveType):
     can and should be used by serializers."""
 
     def __init__(self, format):
-        assert isinstance(format, str), (
-            'format must be a string'
-        )
+        assert isinstance(format, str), 'format must be a string'
         self.format = format
 
     def validate(self, val):
@@ -229,14 +220,12 @@ class List(PrimitiveType):
     def __init__(self, data_type, min_items=None, max_items=None):
         self.data_type = data_type
         if min_items is not None:
-            assert isinstance(min_items, numbers.Integral), (
+            assert isinstance(min_items, numbers.Integral), \
                 'min_items must be an integral number'
-            )
             assert min_items >= 0, 'min_items must be >= 0'
         if max_items is not None:
-            assert isinstance(max_items, numbers.Integral), (
+            assert isinstance(max_items, numbers.Integral), \
                 'max_items must be an integral number'
-            )
             assert max_items > 0, 'max_items must be > 0'
         if min_items is not None and max_items is not None:
             assert max_items >= min_items, 'max_items must be >= min_items'
@@ -255,7 +244,7 @@ class List(PrimitiveType):
                                   % (val, self.min_items))
         return [self.data_type.validate(item) for item in val]
 
-class CompositeType(DataType):
+class CompositeType(Validator):
     def __init__(self, data_type):
         """
         data_type must have a _fields_ class variable with the following
@@ -264,7 +253,7 @@ class CompositeType(DataType):
             _fields_ = [(field_name, data_type), ...]
 
             field_name: Name of the field (str).
-            data_type: DataType object.
+            data_type: Validator object.
         """
         assert hasattr(data_type, '_fields_'), 'needs _fields_ attribute'
         self.data_type = data_type
