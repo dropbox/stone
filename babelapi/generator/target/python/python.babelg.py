@@ -234,16 +234,16 @@ class PythonGenerator(CodeGeneratorMonolingual):
             super_type_class_name = None
 
         if super_type_class_name:
-            self.emit_line('_field_names_ = %s._field_names_.union({' % super_type_class_name)
+            self.emit_line('_field_names_ = %s._field_names_.union(set((' % super_type_class_name)
         else:
-            self.emit_line('_field_names_ = {')
+            self.emit_line('_field_names_ = set((')
         with self.indent():
             for field in data_type.fields:
                 self.emit_line("'{}',".format(self.lang.format_variable(field.name)))
         if super_type_class_name:
-            self.emit_line('})')
+            self.emit_line(')))')
         else:
-            self.emit_line('}')
+            self.emit_line('))')
         self.emit_empty_line()
 
         if super_type_class_name:
