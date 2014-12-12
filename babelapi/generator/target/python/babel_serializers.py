@@ -111,9 +111,7 @@ class JsonEncoder(object):
     def _make_json_friendly(cls, data_type, val):
         """Convert a primitive type to a Python type that can be serialized
         by the json package."""
-        if val is None:
-            return val
-        elif isinstance(data_type, dt.Timestamp):
+        if isinstance(data_type, dt.Timestamp):
             return val.strftime(data_type.format)
         elif isinstance(data_type, dt.Binary):
             return base64.b64encode(val)
@@ -207,9 +205,7 @@ class JsonDecoder(object):
     def _make_babel_friendly(cls, data_type, val):
         """Convert a Python object to a type that will pass validation by a
         Babel data type."""
-        if val is None:
-            return val
-        elif isinstance(data_type, dt.Timestamp):
+        if isinstance(data_type, dt.Timestamp):
             return datetime.datetime.strptime(val, data_type.format)
         elif isinstance(data_type, dt.Binary):
             return base64.b64decode(val)
