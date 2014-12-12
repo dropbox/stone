@@ -277,7 +277,9 @@ class CompositeType(DataType):
 class Struct(CompositeType):
     def validate(self, val):
         """
-        For a val to pass validation, each required field must be present.
+        For a val to pass validation, each required field must be present as
+        an object attribute. This assumes that each field has already been
+        validated by the object, so it does not explicitly check them.
         """
         self.validate_type_only(val)
         for field_name, _ in self.data_type._fields_:
@@ -291,7 +293,9 @@ class Struct(CompositeType):
 class Union(CompositeType):
     def validate(self, val):
         """
-        For a val to pass validation, a tag must be set.
+        For a val to pass validation, it must have a _tag set. This assumes
+        that the object validated that _tag is a valid tag, and that any
+        associated value has also been validated.
         """
         self.validate_type_only(val)
         if val._tag is None:
