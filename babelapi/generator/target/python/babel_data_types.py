@@ -94,8 +94,8 @@ class _Integer(PrimitiveType):
 
     def validate(self, val):
         if not isinstance(val, numbers.Integral):
-            raise ValidationError('%r is of type %r and is not a valid integer type'
-                                  % (val, type(val)))
+            raise ValidationError('expected integer, got %s'
+                                  % generic_type_name(val))
         elif not (self.minimum <= val <= self.maximum):
             raise ValidationError('%d is not within range [%d, %d]'
                                   % (val, self.minimum, self.maximum))

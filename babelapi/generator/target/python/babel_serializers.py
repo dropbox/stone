@@ -99,12 +99,9 @@ class JsonEncoder(object):
             if field_data_type:
                 if isinstance(field_data_type, (dt.Any, dt.Symbol)):
                     return obj._tag
-                elif isinstance(field_data_type, dt.PrimitiveType):
-                    val = getattr(obj, obj._tag)
-                    return cls._make_json_friendly(field_data_type, val)
                 else:
                     val = getattr(obj, obj._tag)
-                    return {obj._tag: cls._encode_helper(field_data_type, val)}
+                    return {obj._tag: cls._encode_helper(field_data_type, val, False)}
             else:
                 return obj._tag
         else:

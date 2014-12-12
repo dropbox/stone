@@ -104,6 +104,43 @@ class TestPythonGen(unittest.TestCase):
         b = '\xff' * 5
         self.assertEqual(JsonEncoder.encode(dt.Binary(), b), json.dumps(base64.b64encode(b)))
 
+    def test_json_encoder_union(self):
+        class S(object):
+            _field_names_ = {'f'}
+            _fields_ = [('f', dt.String())]
+        class U(object):
+            _fields_ = {'a': dt.Int64(),
+                        'b': dt.Symbol(),
+                        'c': dt.Struct(S),
+                        'd': dt.List(dt.Int64())}
+
+        # Test primitive variant
+        u = U()
+        u._tag = 'a'
+        u.a = 64
+        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps({'a': 64}))
+
+        # Test symbol variant
+        u = U()
+        u._tag = 'b'
+        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps('b'))
+
+        # Test struct variant
+        u = U()
+        u._tag = 'c'
+        u.c = S()
+        u.c.f = 'hello'
+        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps({'c': {'f': 'hello'}}))
+
+        # Test list variant
+        u = U()
+        u._tag = 'd'
+        u.d = [1, 2, 3, 'a']
+        # lists should be re-validated during serialization
+        self.assertRaises(dt.ValidationError, lambda: JsonEncoder.encode(dt.Union(U), u))
+        u.d = [1, 2, 3, 4]
+        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps({'d': u.d}))
+
     def test_json_decoder(self):
         self.assertEqual(JsonDecoder.decode(dt.String(), json.dumps('abc')), 'abc')
         self.assertEqual(JsonDecoder.decode(dt.UInt32(), json.dumps(123)), 123)
@@ -115,3 +152,36 @@ class TestPythonGen(unittest.TestCase):
                          now)
         b = '\xff' * 5
         self.assertEqual(JsonDecoder.decode(dt.Binary(), json.dumps(base64.b64encode(b))), b)
+
+    def test_json_decoder_union(self):
+        class S(object):
+            _field_names_ = {'f'}
+            _fields_ = [('f', dt.String())]
+        class U(object):
+            _fields_ = {'a': dt.Int64(),
+                        'b': dt.Symbol(),
+                        'c': dt.Struct(S),
+                        'd': dt.List(dt.Int64())}
+            _tag = None
+            def set_b(self):
+                self._tag = 'b'
+
+        # Test primitive variant
+        u = JsonDecoder.decode(dt.Union(U), json.dumps({'a': 64}))
+        self.assertEqual(u.a, 64)
+
+        # Test symbol variant
+        u = JsonDecoder.decode(dt.Union(U), json.dumps('b'))
+        self.assertEqual(u._tag, 'b')
+
+        # Test struct variant
+        u = JsonDecoder.decode(dt.Union(U), json.dumps({'c': {'f': 'hello'}}))
+        self.assertEqual(u.c.f, 'hello')
+
+        # Test list variant
+        l = [1, 2, 3, 4]
+        u = JsonDecoder.decode(dt.Union(U), json.dumps({'d': l}))
+        self.assertEqual(u.d, l)
+
+        # Raises if unknown tag
+        self.assertRaises(dt.ValidationError, lambda: JsonDecoder.decode(dt.Union(U), json.dumps('z')))
