@@ -16,6 +16,11 @@ import numbers
 import re
 import six
 
+if six.PY3:
+    _binary_types = (bytes, memoryview)
+else:
+    _binary_types = (bytes, buffer)
+
 class ValidationError(Exception):
     pass
 
@@ -145,25 +150,25 @@ class String(PrimitiveType):
 
     def validate(self, val):
         """
-        A unicode string of the correct length will pass validation. In PY2,
-        we enforce that a str type must be valid utf-8, and a unicode string
-        will be returned.
+        A unicode string of the correct length and pattern will pass validation.
+        In PY2, we enforce that a str type must be valid utf-8, and a unicode
+        string will be returned.
         """
         if not isinstance(val, six.string_types):
             raise ValidationError("'%s' expected to be a string, got %s"
                                   % (val, generic_type_name(val)))
-        elif self.max_length is not None and len(val) > self.max_length:
+        elif not six.PY3 and isinstance(val, str):
+            try:
+                val = val.decode('utf-8')
+            except UnicodeDecodeError:
+                raise ValidationError("'%s' was not valid utf-8")
+
+        if self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must be at most %d characters, got %d"
                                   % (val, self.max_length, len(val)))
         elif self.min_length is not None and len(val) < self.min_length:
             raise ValidationError("'%s' must be at least %d characters, got %d"
                                   % (val, self.min_length, len(val)))
-
-        if not six.PY3 and isinstance(val, str):
-            try:
-                val = val.decode('utf-8')
-            except UnicodeDecodeError:
-                raise ValidationError("'%s' was not valid utf-8")
 
         if self.pattern and not self.pattern_re.match(val):
             raise ValidationError("'%s' did not match pattern '%s'"
@@ -187,8 +192,7 @@ class Binary(PrimitiveType):
         self.max_length = max_length
 
     def validate(self, val):
-        if not isinstance(val, bytes):
-            # TODO(kelkabany): Add support for buffer and file objects.
+        if not isinstance(val, _binary_types):
             raise ValidationError("Expected binary type, got %s"
                                   % generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
@@ -205,6 +209,8 @@ class Timestamp(PrimitiveType):
     can and should be used by serializers."""
 
     def __init__(self, format):
+        """format must be composed of format codes that the C standard (1989)
+        supports, most notably in its strftime() function."""
         assert isinstance(format, str), 'format must be a string'
         self.format = format
 
@@ -217,8 +223,9 @@ class Timestamp(PrimitiveType):
 class List(PrimitiveType):
     """Assumes list contents are homogeneous with respect to types."""
 
-    def __init__(self, data_type, min_items=None, max_items=None):
-        self.data_type = data_type
+    def __init__(self, item_data_type, min_items=None, max_items=None):
+        """Every list item will be validated with item_data_type."""
+        self.item_data_type = item_data_type
         if min_items is not None:
             assert isinstance(min_items, numbers.Integral), \
                 'min_items must be an integral number'
@@ -242,27 +249,26 @@ class List(PrimitiveType):
         elif self.min_items is not None and len(val) < self.min_items:
             raise ValidationError('%r has fewer than %s items'
                                   % (val, self.min_items))
-        return [self.data_type.validate(item) for item in val]
+        return [self.item_data_type.validate(item) for item in val]
 
 class CompositeType(Validator):
-    def __init__(self, data_type):
+    def __init__(self, definition):
         """
-        data_type must have a _fields_ class variable with the following
-        structure:
+        definition must have a _fields_ attribute with the following structure:
 
             _fields_ = [(field_name, data_type), ...]
 
             field_name: Name of the field (str).
             data_type: Validator object.
         """
-        assert hasattr(data_type, '_fields_'), 'needs _fields_ attribute'
-        self.data_type = data_type
+        assert hasattr(definition, '_fields_'), 'needs _fields_ attribute'
+        self.definition = definition
     def validate_type_only(self, val):
         """Use this when you only want to validate that the type of an object
         is correct, but not yet validate each field."""
-        if type(val) is not self.data_type:
+        if type(val) is not self.definition:
             raise ValidationError('Expected type %s, got %s'
-                % (self.data_type.__name__, generic_type_name(val)))
+                % (self.definition.__name__, generic_type_name(val)))
 
 class Struct(CompositeType):
     def validate(self, val):
@@ -272,7 +278,7 @@ class Struct(CompositeType):
         validated by the object, so it does not explicitly check them.
         """
         self.validate_type_only(val)
-        for field_name, _ in self.data_type._fields_:
+        for field_name, _ in self.definition._fields_:
             # Any absent field that's required will raise a KeyError
             try:
                 getattr(val, field_name)
@@ -293,12 +299,17 @@ class Union(CompositeType):
         return val
 
 class Any(Validator):
-    """A special type that accepts any value."""
+    """
+    A special type that accepts any value. Only valid as the data type of a
+    union variant.
+    """
     def validate(self, val):
-        # TODO(kelkabany): This could also be made to return None.
         return val
 
 class Symbol(Validator):
-    """A special type that doesn't have a corresponding value."""
+    """
+    Only valid as the data type of a union variant. This type should be thought
+    of as a value-less variant.
+    """
     def validate(self, val):
         raise AssertionError('No value validates as a symbol.')
