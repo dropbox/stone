@@ -120,8 +120,8 @@ union GetAccountError
         "The specified :field:`account_id` does not exist."
     unknown*
 
-route GetAccount (GetAccountReq, BasicAccount, GetAccountError)
+route GetAccount /get_account (GetAccountReq, BasicAccount, GetAccountError)
     "Get information about a user's account."
 
-route GetMyAccount (Empty, FullAccount, Empty)
+route GetMyAccount /get_my_account (Empty, FullAccount, Empty)
     "Get information about the current user's account."
