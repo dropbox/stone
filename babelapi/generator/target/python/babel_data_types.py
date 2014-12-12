@@ -23,7 +23,7 @@ def generic_type_name(v):
     """Return a descriptive type name that isn't Python specific. For example,
     an int value will return 'integer' rather than 'int'."""
     if isinstance(v, numbers.Integral):
-        # Must come before real numbers check since integrals are floats too
+        # Must come before real numbers check since integrals are reals too
         return 'integer'
     elif isinstance(v, numbers.Real):
         return 'float'
@@ -151,7 +151,8 @@ class String(PrimitiveType):
     def validate(self, val):
         """
         A unicode string of the correct length will pass validation. In PY2,
-        we enforce that a str type must be valid utf-8.
+        we enforce that a str type must be valid utf-8, and a unicode string
+        will be returned.
         """
         if not isinstance(val, six.string_types):
             raise ValidationError("'%s' expected to be a string, got %s"
