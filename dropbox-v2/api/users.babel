@@ -88,7 +88,7 @@ struct FullAccount extends Account
     usage Usage
         "The user's quota."
     team Team?
-        "If this account is a member of a team."
+        "If this account is a member of a team, information about that team."
     is_paired Boolean
         "Whether the user has a personal and work account. If the current 
         account is personal, then :field:`team` will always be :val:`Null`,
