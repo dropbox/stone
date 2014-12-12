@@ -23,7 +23,7 @@ def generic_type_name(v):
     """Return a descriptive type name that isn't Python specific. For example,
     an int value will return 'integer' rather than 'int'."""
     if isinstance(v, numbers.Integral):
-        # Must come before real numbers check since integrals are floats too
+        # Must come before real numbers check since integrals are reals too
         return 'integer'
     elif isinstance(v, numbers.Real):
         return 'float'
@@ -151,7 +151,8 @@ class String(PrimitiveType):
     def validate(self, val):
         """
         A unicode string of the correct length will pass validation. In PY2,
-        we enforce that a str type must be valid utf-8.
+        we enforce that a str type must be valid utf-8, and a unicode string
+        will be returned.
         """
         if not isinstance(val, six.string_types):
             raise ValidationError("'%s' expected to be a string, got %s"
@@ -277,7 +278,9 @@ class CompositeType(DataType):
 class Struct(CompositeType):
     def validate(self, val):
         """
-        For a val to pass validation, each required field must be present.
+        For a val to pass validation, each required field must be present as
+        an object attribute. This assumes that each field has already been
+        validated by the object, so it does not explicitly check them.
         """
         self.validate_type_only(val)
         for field_name, _ in self.data_type._fields_:
@@ -291,10 +294,12 @@ class Struct(CompositeType):
 class Union(CompositeType):
     def validate(self, val):
         """
-        For a val to pass validation, a tag must be set.
+        For a val to pass validation, it must have a _tag set. This assumes
+        that the object validated that _tag is a valid tag, and that any
+        associated value has also been validated.
         """
         self.validate_type_only(val)
-        if val._tag is None:
+        if not hasattr(val, '_tag') or val._tag is None:
             raise ValidationError('No tag set')
         return val
 

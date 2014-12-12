@@ -16,7 +16,7 @@ import six
 
 try:
     from . import babel_data_types as dt
-except:
+except ValueError:
     # babel_data_types is not a top-level module, but this makes testing easier
     import babel_data_types as dt
 
@@ -89,10 +89,17 @@ class JsonEncoder(object):
             data_type.validate(obj)
             field_data_type = data_type.data_type._fields_[obj._tag]
             if field_data_type:
-                val = getattr(obj, obj._tag)
-                if isinstance(field_data_type, dt.PrimitiveType):
+                if isinstance(field_data_type, (dt.Any, dt.Symbol)):
+                    # TODO(kelkabany): Perhaps a JSON-serializable Any field
+                    # should look like {tag: null}
+                    return obj._tag
+                elif isinstance(field_data_type, dt.Any):
+                    return {obj._tag: None}
+                elif isinstance(field_data_type, dt.PrimitiveType):
+                    val = getattr(obj, obj._tag)
                     return cls._make_json_friendly(field_data_type, val)
                 else:
+                    val = getattr(obj, obj._tag)
                     return {obj._tag: cls._encode_helper(field_data_type, val)}
             else:
                 return obj._tag
@@ -104,9 +111,7 @@ class JsonEncoder(object):
     def _make_json_friendly(cls, data_type, val):
         """Convert a primitive type to a Python type that can be serialized
         by the json package."""
-        if val is None:
-            return val
-        elif isinstance(data_type, dt.Timestamp):
+        if isinstance(data_type, dt.Timestamp):
             return val.strftime(data_type.format)
         elif isinstance(data_type, dt.Binary):
             return base64.b64encode(val)
@@ -179,8 +184,8 @@ class JsonDecoder(object):
                     else:
                         raise dt.ValidationError("unknown tag '%s'" % tag)
             else:
-                raise AssertionError('expected str or dict, got %r'
-                                     % dt.generic_type_name((obj)))
+                raise TypeError('expected str or dict, got %r'
+                                % dt.generic_type_name((obj)))
         elif isinstance(data_type, dt.List):
             if not isinstance(obj, list):
                 raise dt.ValidationError(
@@ -200,9 +205,7 @@ class JsonDecoder(object):
     def _make_babel_friendly(cls, data_type, val):
         """Convert a Python object to a type that will pass validation by a
         Babel data type."""
-        if val is None:
-            return val
-        elif isinstance(data_type, dt.Timestamp):
+        if isinstance(data_type, dt.Timestamp):
             return datetime.datetime.strptime(val, data_type.format)
         elif isinstance(data_type, dt.Binary):
             return base64.b64decode(val)

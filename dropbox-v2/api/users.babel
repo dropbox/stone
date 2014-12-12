@@ -90,7 +90,7 @@ struct FullAccount extends Account
     team Team?
         "If this account is a member of a team, information about that team."
     is_paired Boolean
-        "Whether the user has a personal and work account. If the current 
+        "Whether the user has a personal and work account. If the current
         account is personal, then :field:`team` will always be :val:`Null`,
         but :field:`is_paired` will indicate if a work account is linked."
 
