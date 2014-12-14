@@ -173,10 +173,14 @@ class TestPythonGen(unittest.TestCase):
         # Test symbol variant
         u = JsonDecoder.decode(dt.Union(U), json.dumps('b'))
         self.assertEqual(u._tag, 'b')
+        self.assertRaises(dt.ValidationError,
+                          lambda: JsonDecoder.decode(dt.Union(U), json.dumps([1,2])))
 
         # Test struct variant
         u = JsonDecoder.decode(dt.Union(U), json.dumps({'c': {'f': 'hello'}}))
         self.assertEqual(u.c.f, 'hello')
+        self.assertRaises(dt.ValidationError,
+                          lambda: JsonDecoder.decode(dt.Union(U), json.dumps({'c': [1,2,3]})))
 
         # Test list variant
         l = [1, 2, 3, 4]

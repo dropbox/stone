@@ -138,6 +138,9 @@ class JsonDecoder(object):
         representative Python object.
         """
         if isinstance(data_type, dt.Struct):
+            if not isinstance(obj, dict):
+                raise dt.ValidationError('expected object, got %s'
+                                         % dt.generic_type_name(obj))
             if strict:
                 for key in obj:
                     if key not in data_type.definition._field_names_:
@@ -187,7 +190,7 @@ class JsonDecoder(object):
                     else:
                         raise dt.ValidationError("unknown tag '%s'" % tag)
             else:
-                raise dt.ValidationError("expected string or object, got '%s'"
+                raise dt.ValidationError("expected string or object, got %s"
                                          % dt.generic_type_name((obj)))
         elif isinstance(data_type, dt.List):
             if not isinstance(obj, list):
