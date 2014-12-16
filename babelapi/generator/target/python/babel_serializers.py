@@ -132,7 +132,7 @@ class JsonDecoder(object):
             raise dt.ValidationError('could not decode input as JSON')
 
     @classmethod
-    def _decode_helper(cls, data_type, obj, strict):
+    def _decode_helper(cls, data_type, obj, strict, validate_primitives=True):
         """
         Decodes a JSON-compatible object based on its Babel data type into a
         representative Python object.
@@ -148,7 +148,7 @@ class JsonDecoder(object):
             o = data_type.definition()
             for name, field_data_type in data_type.definition._fields_:
                 if name in obj:
-                    v = cls._decode_helper(field_data_type, obj[name], strict)
+                    v = cls._decode_helper(field_data_type, obj[name], strict, False)
                     setattr(o, name, v)
             data_type.validate(o)
         elif isinstance(data_type, dt.Union):
@@ -166,7 +166,7 @@ class JsonDecoder(object):
                         tag = data_type.definition._catch_all_
                     else:
                         raise dt.ValidationError("unknown tag '%s'" % tag)
-                getattr(o, 'set_' + tag)()
+                o._tag = tag
             elif isinstance(obj, dict):
                 # Variant is not a symbol
                 if len(obj) != 1:
@@ -176,17 +176,17 @@ class JsonDecoder(object):
                 if tag in data_type.definition._fields_:
                     val_data_type = data_type.definition._fields_[tag]
                     if isinstance(val_data_type, dt.Any):
-                        getattr(o, 'set_' + tag)()
+                        o._tag = tag
                     elif isinstance(val_data_type, dt.Symbol):
                         raise dt.ValidationError("expected symbol '%s', got object"
                                                  % tag)
                     else:
-                        v = cls._decode_helper(val_data_type, val, strict)
+                        v = cls._decode_helper(val_data_type, val, strict, False)
                         setattr(o, tag, v)
                 else:
                     if not strict and data_type.definition._catch_all_:
                         tag = data_type.definition._catch_all_
-                        getattr(o, 'set_' + tag)()
+                        o._tag = tag
                     else:
                         raise dt.ValidationError("unknown tag '%s'" % tag)
             else:
@@ -201,19 +201,27 @@ class JsonDecoder(object):
             return [cls._decode_helper(data_type.item_data_type, item, strict)
                     for item in obj]
         elif isinstance(data_type, dt.PrimitiveType):
-            return cls._make_babel_friendly(data_type, obj)
+            return cls._make_babel_friendly(data_type, obj, validate_primitives)
         else:
             raise AssertionError('cannot handle type %r'
-                                 % dt.generic_type_name(obj))
+                                 % data_type)
         return o
 
     @classmethod
-    def _make_babel_friendly(cls, data_type, val):
+    def _make_babel_friendly(cls, data_type, val, validate):
         """Convert a Python object to a type that will pass validation by a
         Babel data type."""
         if isinstance(data_type, dt.Timestamp):
-            return datetime.datetime.strptime(val, data_type.format)
+            try:
+                return datetime.datetime.strptime(val, data_type.format)
+            except ValueError as e:
+                raise dt.ValidationError(e.args[0])
         elif isinstance(data_type, dt.Binary):
-            return base64.b64decode(val)
+            try:
+                return base64.b64decode(val)
+            except:
+                raise dt.ValidationError('invalid base64')
         else:
+            if validate:
+                data_type.validate(val)
             return val

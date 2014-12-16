@@ -157,7 +157,7 @@ class String(PrimitiveType):
         if not isinstance(val, six.string_types):
             raise ValidationError("'%s' expected to be a string, got %s"
                                   % (val, generic_type_name(val)))
-        elif not six.PY3 and isinstance(val, str):
+        if not six.PY3 and isinstance(val, str):
             try:
                 val = val.decode('utf-8')
             except UnicodeDecodeError:
@@ -166,7 +166,7 @@ class String(PrimitiveType):
         if self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must be at most %d characters, got %d"
                                   % (val, self.max_length, len(val)))
-        elif self.min_length is not None and len(val) < self.min_length:
+        if self.min_length is not None and len(val) < self.min_length:
             raise ValidationError("'%s' must be at least %d characters, got %d"
                                   % (val, self.min_length, len(val)))
 
@@ -193,7 +193,7 @@ class Binary(PrimitiveType):
 
     def validate(self, val):
         if not isinstance(val, _binary_types):
-            raise ValidationError("Expected binary type, got %s"
+            raise ValidationError("expected binary type, got %s"
                                   % generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must have at most %d bytes, got %d"
@@ -216,8 +216,10 @@ class Timestamp(PrimitiveType):
 
     def validate(self, val):
         if not isinstance(val, datetime.datetime):
-            raise ValueError('%r is of type %r and is not a valid timestamp'
-                             % (val, type(val).__name__))
+            raise ValidationError('expected timestamp, got %s'
+                                  % generic_type_name(val))
+        elif val.tzinfo is not None:
+            raise ValidationError('timestamp should not have a timezone set')
         return val
 
 class List(PrimitiveType):
@@ -267,7 +269,7 @@ class CompositeType(Validator):
         """Use this when you only want to validate that the type of an object
         is correct, but not yet validate each field."""
         if type(val) is not self.definition:
-            raise ValidationError('Expected type %s, got %s'
+            raise ValidationError('expected type %s, got %s'
                 % (self.definition.__name__, generic_type_name(val)))
 
 class Struct(CompositeType):

@@ -66,7 +66,7 @@ class TestPythonGen(unittest.TestCase):
 
     def test_timestamp_data_type(self):
         t = dt.Timestamp('%a, %d %b %Y %H:%M:%S +0000')
-        self.assertRaises(ValueError, lambda: t.validate('abcd'))
+        self.assertRaises(dt.ValidationError, lambda: t.validate('abcd'))
         t.validate(datetime.datetime.utcnow())
 
     def test_list_data_type(self):
@@ -143,8 +143,17 @@ class TestPythonGen(unittest.TestCase):
 
     def test_json_decoder(self):
         self.assertEqual(JsonDecoder.decode(dt.String(), json.dumps('abc')), 'abc')
+        self.assertRaises(dt.ValidationError,
+                          lambda: JsonDecoder.decode(dt.String(), json.dumps(32)))
+
         self.assertEqual(JsonDecoder.decode(dt.UInt32(), json.dumps(123)), 123)
+        self.assertRaises(dt.ValidationError,
+                          lambda: JsonDecoder.decode(dt.UInt32(), json.dumps('hello')))
+
         self.assertEqual(JsonDecoder.decode(dt.Boolean(), json.dumps(True)), True)
+        self.assertRaises(dt.ValidationError,
+                          lambda: JsonDecoder.decode(dt.Boolean(), json.dumps(1)))
+
         f = '%a, %d %b %Y %H:%M:%S +0000'
         now = datetime.datetime.utcnow().replace(microsecond=0)
         self.assertEqual(JsonDecoder.decode(dt.Timestamp('%a, %d %b %Y %H:%M:%S +0000'),
@@ -152,6 +161,8 @@ class TestPythonGen(unittest.TestCase):
                          now)
         b = '\xff' * 5
         self.assertEqual(JsonDecoder.decode(dt.Binary(), json.dumps(base64.b64encode(b))), b)
+        self.assertRaises(dt.ValidationError,
+                          lambda: JsonDecoder.decode(dt.Binary(), json.dumps(1)))
 
     def test_json_decoder_union(self):
         class S(object):
