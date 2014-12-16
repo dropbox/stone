@@ -15,6 +15,7 @@ import copy
 import datetime
 import numbers
 import re
+import six
 import types
 
 class DataType(object):
@@ -174,7 +175,7 @@ class String(PrimitiveType):
                 raise ValueError('Regex {!r} failed: {}'.format(pattern, e.args[0]))
 
     def check(self, val):
-        if not isinstance(val, types.StringTypes):
+        if not isinstance(val, six.string_types):
             raise ValueError('%r is not a valid string' % val)
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValueError('%r has more than %s characters'
@@ -193,7 +194,7 @@ class Timestamp(PrimitiveType):
         self.format = format
 
     def check(self, val):
-        if not isinstance(val, types.StringTypes):
+        if not isinstance(val, six.string_types):
             raise ValueError('Timestamp must be specified as a str')
 
         # Raises a ValueError if val is the incorrect format
@@ -216,7 +217,7 @@ class List(DataType):
         self.max_items = max_items
 
     def check(self, val):
-        if not isinstance(val, types.ListType):
+        if not isinstance(val, list):
             raise ValueError('%r is not a valid list' % val)
         elif self.max_items is not None and len(val) > self.max_items:
             raise ValueError('%r has more than %s items'
