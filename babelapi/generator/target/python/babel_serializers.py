@@ -98,7 +98,7 @@ class JsonEncoder(object):
         elif isinstance(data_type, dt.Union):
             data_type.validate(obj)
             field_data_type = data_type.definition._fields_[obj._tag]
-            if field_data_type:
+            if field_data_type is not None:
                 if isinstance(field_data_type, (dt.Any, dt.Symbol)):
                     return obj._tag
                 else:
