@@ -226,8 +226,8 @@ class JsonDecoder(object):
         elif isinstance(data_type, dt.Binary):
             try:
                 return base64.b64decode(val)
-            except:
-                raise dt.ValidationError('invalid base64')
+            except TypeError:
+                raise dt.ValidationError('invalid base64-encoded binary')
         else:
             if validate:
                 data_type.validate(val)
