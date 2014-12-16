@@ -173,6 +173,7 @@ class TestPythonGen(unittest.TestCase):
                         'b': dt.Symbol(),
                         'c': dt.Struct(S),
                         'd': dt.List(dt.Int64())}
+            _catch_all_ = 'b'
             _tag = None
             def set_b(self):
                 self._tag = 'b'
@@ -200,3 +201,12 @@ class TestPythonGen(unittest.TestCase):
 
         # Raises if unknown tag
         self.assertRaises(dt.ValidationError, lambda: JsonDecoder.decode(dt.Union(U), json.dumps('z')))
+
+        # Unknown variant (strict=True)
+        self.assertRaises(dt.ValidationError,
+                          lambda: JsonDecoder.decode(dt.Union(U), json.dumps({'e': 'test'})))
+
+
+        # Test catch all variant
+        u = JsonDecoder.decode(dt.Union(U), json.dumps({'e': 'test'}), strict=False)
+        self.assertEqual(u._tag, 'b')

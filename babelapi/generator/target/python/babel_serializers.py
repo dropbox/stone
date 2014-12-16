@@ -126,8 +126,13 @@ class JsonDecoder(object):
 
     @classmethod
     def decode(cls, data_type, serialized_obj, strict=True):
-        """If strict, then unknown keys in serialized_obj will raise an error
-        and catch all symbols are never used."""
+        """
+        If strict, then unknown struct fields will raise an error, and
+        unknown union variants will raise an error even if a catch all field
+        is specified. strict should only be used by a recipient of serialized
+        JSON if it's guaranteed that its Babel specs are at least as recent as
+        the senders it receives messages from.
+        """
         try:
             return cls._decode_helper(data_type, json.loads(serialized_obj), strict)
         except ValueError:
