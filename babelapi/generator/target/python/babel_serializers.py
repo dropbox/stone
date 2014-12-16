@@ -105,8 +105,8 @@ class JsonEncoder(object):
             else:
                 return obj._tag
         else:
-            raise TypeError('Unsupported data type %r'
-                            % type(data_type).__name__)
+            raise AssertionError('Unsupported data type %r'
+                                 % type(data_type).__name__)
 
     @classmethod
     def _make_json_friendly(cls, data_type, val):
