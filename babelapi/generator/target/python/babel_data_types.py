@@ -299,7 +299,7 @@ class Union(CompositeType):
         """
         self.validate_type_only(val)
         if not hasattr(val, '_tag') or val._tag is None:
-            raise ValidationError('No tag set')
+            raise ValidationError('no tag set')
         return val
 
 class Any(Validator):
@@ -316,4 +316,4 @@ class Symbol(Validator):
     of as a value-less variant.
     """
     def validate(self, val):
-        raise AssertionError('No value validates as a symbol.')
+        raise AssertionError('no value validates as a symbol.')

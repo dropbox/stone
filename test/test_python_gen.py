@@ -7,8 +7,8 @@ from babelapi.generator.target.python import (
     babel_data_types as dt
 )
 from babelapi.generator.target.python.babel_serializers import (
-    JsonEncoder,
-    JsonDecoder,
+    json_encode,
+    json_decode,
 )
 
 class TestPythonGen(unittest.TestCase):
@@ -94,15 +94,15 @@ class TestPythonGen(unittest.TestCase):
         a.validate(object())
 
     def test_json_encoder(self):
-        self.assertEqual(JsonEncoder.encode(dt.String(), 'abc'), json.dumps('abc'))
-        self.assertEqual(JsonEncoder.encode(dt.UInt32(), 123), json.dumps(123))
-        self.assertEqual(JsonEncoder.encode(dt.Boolean(), True), json.dumps(True))
+        self.assertEqual(json_encode(dt.String(), 'abc'), json.dumps('abc'))
+        self.assertEqual(json_encode(dt.UInt32(), 123), json.dumps(123))
+        self.assertEqual(json_encode(dt.Boolean(), True), json.dumps(True))
         f = '%a, %d %b %Y %H:%M:%S +0000'
         now = datetime.datetime.utcnow()
-        self.assertEqual(JsonEncoder.encode(dt.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), now),
+        self.assertEqual(json_encode(dt.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), now),
                          json.dumps(now.strftime(f)))
         b = '\xff' * 5
-        self.assertEqual(JsonEncoder.encode(dt.Binary(), b), json.dumps(base64.b64encode(b)))
+        self.assertEqual(json_encode(dt.Binary(), b), json.dumps(base64.b64encode(b)))
 
     def test_json_encoder_union(self):
         class S(object):
@@ -118,51 +118,51 @@ class TestPythonGen(unittest.TestCase):
         u = U()
         u._tag = 'a'
         u.a = 64
-        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps({'a': 64}))
+        self.assertEqual(json_encode(dt.Union(U), u), json.dumps({'a': 64}))
 
         # Test symbol variant
         u = U()
         u._tag = 'b'
-        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps('b'))
+        self.assertEqual(json_encode(dt.Union(U), u), json.dumps('b'))
 
         # Test struct variant
         u = U()
         u._tag = 'c'
         u.c = S()
         u.c.f = 'hello'
-        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps({'c': {'f': 'hello'}}))
+        self.assertEqual(json_encode(dt.Union(U), u), json.dumps({'c': {'f': 'hello'}}))
 
         # Test list variant
         u = U()
         u._tag = 'd'
         u.d = [1, 2, 3, 'a']
         # lists should be re-validated during serialization
-        self.assertRaises(dt.ValidationError, lambda: JsonEncoder.encode(dt.Union(U), u))
+        self.assertRaises(dt.ValidationError, lambda: json_encode(dt.Union(U), u))
         u.d = [1, 2, 3, 4]
-        self.assertEqual(JsonEncoder.encode(dt.Union(U), u), json.dumps({'d': u.d}))
+        self.assertEqual(json_encode(dt.Union(U), u), json.dumps({'d': u.d}))
 
     def test_json_decoder(self):
-        self.assertEqual(JsonDecoder.decode(dt.String(), json.dumps('abc')), 'abc')
+        self.assertEqual(json_decode(dt.String(), json.dumps('abc')), 'abc')
         self.assertRaises(dt.ValidationError,
-                          lambda: JsonDecoder.decode(dt.String(), json.dumps(32)))
+                          lambda: json_decode(dt.String(), json.dumps(32)))
 
-        self.assertEqual(JsonDecoder.decode(dt.UInt32(), json.dumps(123)), 123)
+        self.assertEqual(json_decode(dt.UInt32(), json.dumps(123)), 123)
         self.assertRaises(dt.ValidationError,
-                          lambda: JsonDecoder.decode(dt.UInt32(), json.dumps('hello')))
+                          lambda: json_decode(dt.UInt32(), json.dumps('hello')))
 
-        self.assertEqual(JsonDecoder.decode(dt.Boolean(), json.dumps(True)), True)
+        self.assertEqual(json_decode(dt.Boolean(), json.dumps(True)), True)
         self.assertRaises(dt.ValidationError,
-                          lambda: JsonDecoder.decode(dt.Boolean(), json.dumps(1)))
+                          lambda: json_decode(dt.Boolean(), json.dumps(1)))
 
         f = '%a, %d %b %Y %H:%M:%S +0000'
         now = datetime.datetime.utcnow().replace(microsecond=0)
-        self.assertEqual(JsonDecoder.decode(dt.Timestamp('%a, %d %b %Y %H:%M:%S +0000'),
-                                            json.dumps(now.strftime(f))),
+        self.assertEqual(json_decode(dt.Timestamp('%a, %d %b %Y %H:%M:%S +0000'),
+                                     json.dumps(now.strftime(f))),
                          now)
         b = '\xff' * 5
-        self.assertEqual(JsonDecoder.decode(dt.Binary(), json.dumps(base64.b64encode(b))), b)
+        self.assertEqual(json_decode(dt.Binary(), json.dumps(base64.b64encode(b))), b)
         self.assertRaises(dt.ValidationError,
-                          lambda: JsonDecoder.decode(dt.Binary(), json.dumps(1)))
+                          lambda: json_decode(dt.Binary(), json.dumps(1)))
 
     def test_json_decoder_union(self):
         class S(object):
@@ -179,34 +179,34 @@ class TestPythonGen(unittest.TestCase):
                 self._tag = 'b'
 
         # Test primitive variant
-        u = JsonDecoder.decode(dt.Union(U), json.dumps({'a': 64}))
+        u = json_decode(dt.Union(U), json.dumps({'a': 64}))
         self.assertEqual(u.a, 64)
 
         # Test symbol variant
-        u = JsonDecoder.decode(dt.Union(U), json.dumps('b'))
+        u = json_decode(dt.Union(U), json.dumps('b'))
         self.assertEqual(u._tag, 'b')
         self.assertRaises(dt.ValidationError,
-                          lambda: JsonDecoder.decode(dt.Union(U), json.dumps([1,2])))
+                          lambda: json_decode(dt.Union(U), json.dumps([1,2])))
 
         # Test struct variant
-        u = JsonDecoder.decode(dt.Union(U), json.dumps({'c': {'f': 'hello'}}))
+        u = json_decode(dt.Union(U), json.dumps({'c': {'f': 'hello'}}))
         self.assertEqual(u.c.f, 'hello')
         self.assertRaises(dt.ValidationError,
-                          lambda: JsonDecoder.decode(dt.Union(U), json.dumps({'c': [1,2,3]})))
+                          lambda: json_decode(dt.Union(U), json.dumps({'c': [1,2,3]})))
 
         # Test list variant
         l = [1, 2, 3, 4]
-        u = JsonDecoder.decode(dt.Union(U), json.dumps({'d': l}))
+        u = json_decode(dt.Union(U), json.dumps({'d': l}))
         self.assertEqual(u.d, l)
 
         # Raises if unknown tag
-        self.assertRaises(dt.ValidationError, lambda: JsonDecoder.decode(dt.Union(U), json.dumps('z')))
+        self.assertRaises(dt.ValidationError, lambda: json_decode(dt.Union(U), json.dumps('z')))
 
         # Unknown variant (strict=True)
         self.assertRaises(dt.ValidationError,
-                          lambda: JsonDecoder.decode(dt.Union(U), json.dumps({'e': 'test'})))
+                          lambda: json_decode(dt.Union(U), json.dumps({'e': 'test'})))
 
 
         # Test catch all variant
-        u = JsonDecoder.decode(dt.Union(U), json.dumps({'e': 'test'}), strict=False)
+        u = json_decode(dt.Union(U), json.dumps({'e': 'test'}), strict=False)
         self.assertEqual(u._tag, 'b')
