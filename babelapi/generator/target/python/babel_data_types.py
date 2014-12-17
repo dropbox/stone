@@ -283,7 +283,7 @@ class Struct(CompositeType):
         """
         self.validate_type_only(val)
         for field_name, _ in self.definition._fields_:
-            # Any absent field that's required will raise a KeyError
+            # Any absent field that's required will raise an AttributeError
             try:
                 getattr(val, field_name)
             except AttributeError as e:
