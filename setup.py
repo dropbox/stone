@@ -5,7 +5,8 @@ use_setuptools()
 from setuptools import setup
 
 install_reqs = ['jinja2>=2.7.0',
-                'ply>=3.4']
+                'ply>=3.4',
+                'six>=1.3.0']
 
 dist = setup(
     name='babelapi',
