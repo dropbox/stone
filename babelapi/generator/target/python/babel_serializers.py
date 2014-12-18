@@ -140,9 +140,11 @@ def json_decode(data_type, serialized_obj, strict=True):
     the senders it receives messages from.
     """
     try:
-        return _json_decode_helper(data_type, json.loads(serialized_obj), strict)
+        deserialized_obj = json.loads(serialized_obj)
     except ValueError:
         raise dt.ValidationError('could not decode input as JSON')
+    else:
+        return _json_decode_helper(data_type, deserialized_obj, strict)
 
 def _json_decode_helper(data_type, obj, strict, validate_primitives=True):
     """
@@ -215,7 +217,7 @@ def _json_decode_helper(data_type, obj, strict, validate_primitives=True):
     elif isinstance(data_type, dt.PrimitiveType):
         return _make_babel_friendly(data_type, obj, validate_primitives)
     else:
-        raise AssertionError('cannot handle type %r'
+        raise AssertionError('Cannot handle type %r.'
                              % data_type)
     return o
 

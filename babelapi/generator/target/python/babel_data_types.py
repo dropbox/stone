@@ -283,11 +283,9 @@ class Struct(CompositeType):
         """
         self.validate_type_only(val)
         for field_name, _ in self.definition._fields_:
-            # Any absent field that's required will raise an AttributeError
-            try:
-                getattr(val, field_name)
-            except AttributeError as e:
-                raise ValidationError(e.args[0])
+            if not hasattr(val, field_name):
+                raise ValidationError("missing required field '%s'" %
+                                      field_name)
         return val
 
 class Union(CompositeType):
@@ -316,4 +314,4 @@ class Symbol(Validator):
     of as a value-less variant.
     """
     def validate(self, val):
-        raise AssertionError('no value validates as a symbol.')
+        raise AssertionError('No value validates as a symbol.')
