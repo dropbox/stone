@@ -113,33 +113,40 @@ class TestPythonGen(unittest.TestCase):
                         'b': dt.Symbol(),
                         'c': dt.Struct(S),
                         'd': dt.List(dt.Int64())}
+            _tag = None
+            def __init__(self, tag, value=None):
+                self._tag = tag
+                setattr(self, '_' + tag, value)
+            def get_a(self):
+                return self._a
+            def get_c(self):
+                return self._c
+            def get_d(self):
+                return self._d
+
+        U.b = U('b')
 
         # Test primitive variant
-        u = U()
-        u._tag = 'a'
-        u.a = 64
+        u = U('a', 64)
         self.assertEqual(json_encode(dt.Union(U), u), json.dumps({'a': 64}))
 
         # Test symbol variant
-        u = U()
-        u._tag = 'b'
+        u = U('b')
         self.assertEqual(json_encode(dt.Union(U), u), json.dumps('b'))
 
         # Test struct variant
-        u = U()
-        u._tag = 'c'
-        u.c = S()
-        u.c.f = 'hello'
+        c = S()
+        c.f = 'hello'
+        u = U('c', c)
         self.assertEqual(json_encode(dt.Union(U), u), json.dumps({'c': {'f': 'hello'}}))
 
         # Test list variant
-        u = U()
-        u._tag = 'd'
-        u.d = [1, 2, 3, 'a']
+        u = U('d', [1, 2, 3, 'a'])
         # lists should be re-validated during serialization
         self.assertRaises(dt.ValidationError, lambda: json_encode(dt.Union(U), u))
-        u.d = [1, 2, 3, 4]
-        self.assertEqual(json_encode(dt.Union(U), u), json.dumps({'d': u.d}))
+        l = [1, 2, 3, 4]
+        u = U('d', [1, 2, 3, 4])
+        self.assertEqual(json_encode(dt.Union(U), u), json.dumps({'d': l}))
 
     def test_json_decoder(self):
         self.assertEqual(json_decode(dt.String(), json.dumps('abc')), 'abc')
@@ -175,12 +182,20 @@ class TestPythonGen(unittest.TestCase):
                         'd': dt.List(dt.Int64())}
             _catch_all_ = 'b'
             _tag = None
-            def set_b(self):
-                self._tag = 'b'
+            def __init__(self, tag, value=None):
+                self._tag = tag
+                setattr(self, '_' + tag, value)
+            def get_a(self):
+                return self._a
+            def get_c(self):
+                return self._c
+            def get_d(self):
+                return self._d
+        U.b = U('b')
 
         # Test primitive variant
         u = json_decode(dt.Union(U), json.dumps({'a': 64}))
-        self.assertEqual(u.a, 64)
+        self.assertEqual(u.get_a(), 64)
 
         # Test symbol variant
         u = json_decode(dt.Union(U), json.dumps('b'))
@@ -190,14 +205,14 @@ class TestPythonGen(unittest.TestCase):
 
         # Test struct variant
         u = json_decode(dt.Union(U), json.dumps({'c': {'f': 'hello'}}))
-        self.assertEqual(u.c.f, 'hello')
+        self.assertEqual(u.get_c().f, 'hello')
         self.assertRaises(dt.ValidationError,
                           lambda: json_decode(dt.Union(U), json.dumps({'c': [1,2,3]})))
 
         # Test list variant
         l = [1, 2, 3, 4]
         u = json_decode(dt.Union(U), json.dumps({'d': l}))
-        self.assertEqual(u.d, l)
+        self.assertEqual(u.get_d(), l)
 
         # Raises if unknown tag
         self.assertRaises(dt.ValidationError, lambda: json_decode(dt.Union(U), json.dumps('z')))

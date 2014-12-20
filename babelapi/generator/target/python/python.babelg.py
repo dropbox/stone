@@ -262,13 +262,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
     def _generate_union_class_fields_for_reflection(self, data_type):
         assert not data_type.super_type, 'Unsupported: Inheritance of unions'
 
-        self.emit_line('_field_names_ = {')
-        with self.indent():
-            for field in data_type.fields:
-                self.emit_line("'{}',".format(self.lang.format_variable(field.name)))
-        self.emit_line('}')
-        self.emit_empty_line()
-
         self.emit_line('_fields_ = {')
         with self.indent():
             for field in data_type.fields:
@@ -443,21 +436,19 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self._generate_union_class_vars(data_type)
             self._generate_union_class_fields_for_reflection(data_type)
             self._generate_union_class_init(data_type)
-            self._generate_union_class_symbol_creators(data_type)
+            self._generate_union_class_variant_creators(data_type)
             self._generate_union_class_is_set(data_type)
-            self._generate_union_class_properties(data_type)
+            self._generate_union_class_get_helpers(data_type)
             self._generate_union_class_repr(data_type)
+        self._generate_union_class_symbol_creators(data_type)
 
     def _generate_union_class_vars(self, data_type):
         """
-        Each class has a class attribute for each field that is a primitive type.
-        Each class has a class attribute for each field that is a primitive type.
-        The attribute is a validator for the field.
+        Each class has a class attribute for each field specifying its data type.
+        If a catch all field exists, it's also specified here.
         """
         lineno = self.lineno
         for field in data_type.fields:
-            #if is_symbol_type(field.data_type):
-            #    continue
             field_name = self.lang.format_variable(field.name)
             validator_name = self._determine_validator_type(field.data_type)
             self.emit_line('__{}_data_type = {}'.format(field_name,
@@ -466,12 +457,19 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_line('_catch_all_ = %r' % data_type.catch_all_field.name)
         else:
             self.emit_line('_catch_all_ = None')
+
+        for field in data_type.fields:
+            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
+                field_name = self.lang.format_variable(field.name)
+                self.emit_line('# Attribute is overwritten below the class definition')
+                self.emit_line('{} = None'.format(field_name))
+
         if lineno != self.lineno:
             self.emit_empty_line()
 
     def _generate_union_class_init(self, data_type):
         """Generates the __init__ method for the class."""
-        self.emit_line('def __init__(self):')
+        self.emit_line('def __init__(self, tag, value=None):')
         with self.indent():
             # Call the parent constructor if a super type exists
             if data_type.super_type:
@@ -480,28 +478,38 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name)
-                if not is_symbol_type(field.data_type):
+                if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
                     self.emit_line('self._{} = None'.format(field_var_name))
-            self.emit_line('self._tag = None')
+            self.emit_line("assert tag in self._fields_, 'Invalid tag %r.' % tag")
+            self.emit_line('if isinstance(self._fields_[tag], (dt.Any, dt.Symbol)):')
+            with self.indent():
+                self.emit_line(
+                    "assert value is None, 'Do not set a value for Symbol or Any variant.'")
+            self.emit_line('else:')
+            with self.indent():
+                self.emit_line('self._fields_[tag].validate(value)')
+            self.emit_line('self._tag = tag')
             self.emit_empty_line()
+
+    def _generate_union_class_variant_creators(self, data_type):
+        for field in data_type.fields:
+            if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
+                field_name = self.lang.format_method(field.name)
+                self.emit_line('@classmethod')
+                self.emit_line('def {}(cls, val):'.format(field_name))
+                with self.indent():
+                    self.emit_line('return cls({!r}, val)'.format(field_name))
+                self.emit_empty_line()
 
     def _generate_union_class_symbol_creators(self, data_type):
         class_name = self.lang.format_class(data_type.name)
+        lineno = self.lineno
         for field in data_type.fields:
             if is_symbol_type(field.data_type) or is_any_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
-                self.emit_line('@classmethod')
-                self.emit_line('def create_and_set_{}(cls):'.format(field_name))
-                with self.indent():
-                    self.emit_line('"""')
-                    self.emit_wrapped_indented_lines(
-                        ':rtype: {}'.format(class_name)
-                    )
-                    self.emit_line('"""')
-                    self.emit_line('c = cls()')
-                    self.emit_line('c.set_{}()'.format(field_name))
-                    self.emit_line('return c')
-                self.emit_empty_line()
+                self.emit_line('{0}.{1} = {0}({1!r})'.format(class_name, field_name))
+        if lineno != self.lineno:
+            self.emit_empty_line()
 
     def _generate_union_class_is_set(self, data_type):
         for field in data_type.fields:
@@ -511,41 +519,19 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line('return self._tag == {!r}'.format(field_name))
             self.emit_empty_line()
 
-    def _generate_union_class_properties(self, data_type):
+    def _generate_union_class_get_helpers(self, data_type):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
 
-            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
-                self.emit_line('def set_{}(self):'.format(field_name))
+            if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
+                # generate getter for field
+                self.emit_line('def get_{}(self):'.format(field_name))
                 with self.indent():
-                    self.emit_line('self._tag = {!r}'.format(field_name))
-                self.emit_empty_line()
-                continue
-
-            # generate getter for field
-            self.emit_line('@property')
-            self.emit_line('def {}(self):'.format(field_name))
-            with self.indent():
-                self.emit_line('if not self.is_{}():'.format(field_name))
-                with self.indent():
-                    self.emit_line('raise AttributeError("tag {!r} not set")'.format(field_name))
-                if is_symbol_type(field.data_type):
-                    self.emit_line('return {!r}'.format(field_name))
-                else:
+                    self.emit_line('if not self.is_{}():'.format(field_name))
+                    with self.indent():
+                        self.emit_line('raise AttributeError("tag {!r} not set")'.format(field_name))
                     self.emit_line('return self._{}'.format(field_name))
-            self.emit_empty_line()
-
-            # generate setter for field
-            self.emit_line('@{}.setter'.format(field_name))
-            self.emit_line('def {}(self, val):'.format(field_name))
-            with self.indent():
-                if is_composite_type(field.data_type):
-                    self.emit_line('self.__{}_data_type.validate_type_only(val)'.format(field_name))
-                else:
-                    self.emit_line('val = self.__{}_data_type.validate(val)'.format(field_name))
-                self.emit_line('self._{} = val'.format(field_name))
-                self.emit_line('self._tag = {!r}'.format(field_name))
-            self.emit_empty_line()
+                self.emit_empty_line()
 
     def _generate_union_class_repr(self, data_type):
         # The special __repr__() function will return a string of the class

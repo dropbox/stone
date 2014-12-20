@@ -108,7 +108,7 @@ def _json_encode_helper(data_type, obj, needs_validation=True):
             if isinstance(field_data_type, (dt.Any, dt.Symbol)):
                 return obj._tag
             else:
-                val = getattr(obj, obj._tag)
+                val = getattr(obj, '_'+obj._tag)
                 return {obj._tag: _json_encode_helper(field_data_type, val, False)}
         else:
             return obj._tag
@@ -166,7 +166,7 @@ def _json_decode_helper(data_type, obj, strict, validate_primitives=True):
                 setattr(o, name, v)
         data_type.validate(o)
     elif isinstance(data_type, dt.Union):
-        o = data_type.definition()
+        val = None # Symbols do not have values
         if isinstance(obj, six.string_types):
             # Variant is a symbol
             tag = obj
@@ -180,32 +180,28 @@ def _json_decode_helper(data_type, obj, strict, validate_primitives=True):
                     tag = data_type.definition._catch_all_
                 else:
                     raise dt.ValidationError("unknown tag '%s'" % tag)
-            o._tag = tag
         elif isinstance(obj, dict):
             # Variant is not a symbol
             if len(obj) != 1:
                 raise dt.ValidationError('expected 1 key, got %s', len(obj))
             tag = list(obj)[0]
-            val = obj[tag]
+            raw_val = obj[tag]
             if tag in data_type.definition._fields_:
                 val_data_type = data_type.definition._fields_[tag]
-                if isinstance(val_data_type, dt.Any):
-                    o._tag = tag
-                elif isinstance(val_data_type, dt.Symbol):
+                if isinstance(val_data_type, dt.Symbol):
                     raise dt.ValidationError("expected symbol '%s', got object"
                                              % tag)
-                else:
-                    v = _json_decode_helper(val_data_type, val, strict, False)
-                    setattr(o, tag, v)
+                elif not isinstance(val_data_type, dt.Any):
+                    val = _json_decode_helper(val_data_type, raw_val, strict, False)
             else:
                 if not strict and data_type.definition._catch_all_:
                     tag = data_type.definition._catch_all_
-                    o._tag = tag
                 else:
                     raise dt.ValidationError("unknown tag '%s'" % tag)
         else:
             raise dt.ValidationError("expected string or object, got %s"
                                      % dt.generic_type_name((obj)))
+        o = data_type.definition(tag, val)
     elif isinstance(data_type, dt.List):
         if not isinstance(obj, list):
             raise dt.ValidationError(
