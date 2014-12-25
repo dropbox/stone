@@ -279,14 +279,8 @@ class TowerOfBabel(object):
                     env,
                     item.error_data_type_name,
                 )
-                if item.path:
-                    path = item.path.lstrip('/')
-                else:
-                    path = '_'.join([w.lower()
-                                     for w in TargetLanguage.split_words(item.name)])
                 route = ApiRoute(
                     item.name,
-                    path,
                     item.doc,
                     request_data_type,
                     response_data_type,

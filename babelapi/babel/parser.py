@@ -5,9 +5,8 @@ import ply.yacc as yacc
 from babelapi.babel.lexer import BabelLexer, BabelNull
 
 class BabelRouteDef(object):
-    def __init__(self, name, path=None):
+    def __init__(self, name):
         self.name = name
-        self.path = path
         self.request_data_type_name = None
         self.response_data_type_name = None
         self.error_data_type_name = None
@@ -306,14 +305,16 @@ class BabelParser(object):
         if p[1]:
             p[0] = p[4]
 
-    def p_path(self, p):
-        """path_option : PATH
-                       | empty"""
+    def p_route_name_path_suffix(self, p):
+        """route_path : PATH
+                      | empty"""
         p[0] = p[1]
 
     def p_statement_routedef(self, p):
-        """routedef : ROUTE ID path_option attributes_group NEWLINE INDENT docsection attrssection DEDENT"""
-        p[0] = BabelRouteDef(p[2], p[3])
+        """routedef : ROUTE ID route_path attributes_group NEWLINE INDENT docsection attrssection DEDENT"""
+        if p[3]:
+            p[2] += p[3]
+        p[0] = BabelRouteDef(p[2])
         p[0].set_doc(self._normalize_docstring(p[7]))
         data_types = p[4]
         if len(data_types) == 2:

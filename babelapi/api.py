@@ -84,15 +84,13 @@ class ApiRoute(object):
 
     def __init__(self,
                  name,
-                 path,
                  doc,
                  request_data_type,
                  response_data_type,
                  error_data_type,
                  attrs):
         """
-        :param str name: Friendly name of the endpoint.
-        :param str path: Request path.
+        :param str name: Designated name of the endpoint.
         :param str doc: Description of the endpoint.
         :type request_data_type: :class:`babelapi.data_type.DataType`
         :type response_data_type: :class:`babelapi.data_type.DataType`
@@ -100,7 +98,6 @@ class ApiRoute(object):
         """
 
         self.name = name
-        self.path = path
         self.doc = doc
         self.request_data_type = request_data_type
         self.response_data_type = response_data_type

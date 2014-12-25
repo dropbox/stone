@@ -4,11 +4,11 @@ namespace files
 # TODO(kelkabany): Handle this in the Python code generator
 alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S +0000")
 
-struct PathTarget
+struct PathRef
     path String
         "Path from root. Should be an empty string for root."
 
-struct FileTarget extends PathTarget
+struct FileRef extends PathRef
     rev String?
         "Revision of target file."
 
@@ -25,7 +25,7 @@ union DownloadError
     no_file SubError
     unknown*
 
-route Download (FileTarget, FileInfo, DownloadError)
+route download (FileRef, FileInfo, DownloadError)
     "Download a file in a user's Dropbox."
 
     attrs
@@ -36,7 +36,7 @@ struct UploadSessionStart
     upload_id String
         "A unique identifier for the upload session."
 
-route UploadStart /upload/start (Empty, UploadSessionStart, Empty)
+route upload/start (Empty, UploadSessionStart, Empty)
     "Start an upload session."
 
     attrs
@@ -61,7 +61,7 @@ union UploadAppendError
         "Upload session was closed."
     incorrect_offset IncorrectOffsetError
 
-route UploadAppend /upload/append (UploadAppend, Empty, Empty)
+route upload/append (UploadAppend, Empty, Empty)
     "Start an upload session."
 
     attrs
@@ -71,12 +71,12 @@ route UploadAppend /upload/append (UploadAppend, Empty, Empty)
 struct UpdateParentRev
     parent_rev String
 
-union ConflictPolicy
+union UploadMode
     "The action to take when a file path conflict exists."
 
     add
-        "On a conflict, the upload is rejected. You can call the :route:`Upload`
-        endpoint again and try a different path."
+        "If the path is already occupied, the upload is rejected. You can call
+        the :route:`upload` endpoint again and try a different path."
     overwrite
         "On a conflict, the target is overridden."
     update UpdateParentRev
@@ -85,7 +85,7 @@ union ConflictPolicy
 struct UploadCommit
     path String
         "Path in the user's Dropbox to save the file."
-    mode ConflictPolicy
+    mode UploadMode
         "The course of action to take if a file already exists at :field:`path`."
     append_to UploadAppend?
         "If specified, the current chunk of data should be appended to an
@@ -117,9 +117,9 @@ union UploadCommitError
     insufficient_quota
         "User does not have sufficient space quota to save the file."
 
-route Upload (UploadCommit, FileInfo, UploadCommitError)
+route upload (UploadCommit, FileInfo, UploadCommitError)
     "Use this endpoint to either finish an ongoing upload session that was
-    begun with :route:`UploadStart` or upload a file in one shot."
+    begun with :route:`upload/start` or upload a file in one shot."
 
     attrs
         host="content"
@@ -155,17 +155,43 @@ struct Entry
     name String
         "The name of the resource as seen by the user in their Dropbox."
 
-route GetMetadata (FileTarget, Entry, Empty)
+union GetMetadataError
+    not_found
+        "File was not found at the specified path."
+
+route get_metadata (FileRef, Entry, GetMetadataError)
     "Returns the metadata for a file or folder."
 
-struct FolderWithContents
+struct FolderContentsBase
     cursor String
         "Pass the cursor into :route:`ListFolderContinue` to see what's changed
         in the folder since your previous query."
     has_more Boolean
         "If true, then there are more entries available."
+
+struct FolderContentsInit extends FolderContentsBase
     entries List(data_type=Entry)
         "Each entry is a resource in the folder."
 
-route ListFolder (PathTarget, FolderWithContents, Empty)
+union ListFolderError
+    not_found
+        "File was not found at the specified path."
+    not_folder
+        "Entry at path was not a folder."
+
+route list_folder (PathRef, FolderContentsInit, ListFolderError)
     "Returns the contents of a folder."
+
+struct CursorRef
+    cursor String
+
+union ContinueType
+    continue List(data_type=Entry)
+    restart List(data_type=Entry)
+
+struct FolderContentsContinue extends FolderContentsBase
+    entries ContinueType
+
+route list_folder/continue (CursorRef, FolderContentsContinue, ListFolderError)
+    "Once a cursor has been retrieved from :route:`ListFolder`, use this to
+    paginate through all files and retrieve updates to the folder."

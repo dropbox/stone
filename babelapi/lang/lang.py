@@ -4,7 +4,7 @@ _split_words_capitalization_re = re.compile(
     '^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$'
 )
 
-_split_words_dashes_re = re.compile('[-_]+')
+_split_words_dashes_re = re.compile('[-_/]+')
 
 class TargetLanguage(object):
 
