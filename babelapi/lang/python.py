@@ -36,6 +36,17 @@ class PythonTargetLanguage(TargetLanguage):
         Timestamp: 'datetime',
     }
 
+    _reserved_keywords = {
+        'continue',
+        'pass',
+    }
+
+    def _check_reserved(self, s):
+        if s in self._reserved_keywords:
+            return s + '_'
+        else:
+            return s
+
     def format_type(self, data_type):
         return PythonTargetLanguage._type_table.get(data_type.__class__,
                                                     self.format_class(data_type.name))
@@ -44,10 +55,14 @@ class PythonTargetLanguage(TargetLanguage):
         return pprint.pformat(o, width=1)
 
     def format_variable(self, name):
-        return '_'.join([word.lower() for word in self.split_words(name)])
+        return self._check_reserved(
+            '_'.join([word.lower() for word in self.split_words(name)])
+        )
 
     def format_class(self, name):
         return ''.join([word.capitalize() for word in self.split_words(name)])
 
     def format_method(self, name):
-        return '_'.join([word.lower() for word in self.split_words(name)])
+        return self._check_reserved(
+            '_'.join([word.lower() for word in self.split_words(name)])
+        )
