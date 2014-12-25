@@ -488,6 +488,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_line('else:')
             with self.indent():
                 self.emit_line('self._fields_[tag].validate(value)')
+            self.emit_line("setattr(self, '_' + tag, value)")
             self.emit_line('self._tag = tag')
             self.emit_empty_line()
 
