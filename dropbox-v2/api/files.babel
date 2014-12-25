@@ -179,6 +179,16 @@ union ListFolderError
     not_folder
         "Entry at path was not a folder."
 
+    # reset can only ever happen on ListFolderContinue. This demonstrates an
+    # issue with Babel-generated unions where ListFolderContinue has a superset
+    # of errors of ListFolderInit. It's ideal to share code between the two,
+    # but one requires ListFolderError to be returned, whereas the other one
+    # would hypothetically require ListFolderContinueError. If both use the
+    # same error data type, then ListFolderInit will specify errors that do not
+    # actually occur, which is what "reset" is in this case.
+    reset
+        "Placeholder. This isn't used yet."
+
 route list_folder (PathRef, FolderContentsInit, ListFolderError)
     "Returns the contents of a folder."
 
