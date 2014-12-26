@@ -4,6 +4,8 @@ namespace files
 # TODO(kelkabany): Handle this in the Python code generator
 alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S +0000")
 
+alias Rev = String
+
 struct PathRef
     path String
         "Path from root. Should be an empty string for root."
@@ -11,119 +13,6 @@ struct PathRef
 struct FileRef extends PathRef
     rev String?
         "Revision of target file."
-
-struct FileInfo
-    name String
-        "Name of file."
-
-struct SubError
-    reason String
-        "A code indicating the type of error."
-
-union DownloadError
-    disallowed SubError
-    no_file SubError
-    unknown*
-
-route download (FileRef, FileInfo, DownloadError)
-    "Download a file in a user's Dropbox."
-
-    attrs
-        host="content"
-        style="download"
-
-struct UploadSessionStart
-    upload_id String
-        "A unique identifier for the upload session."
-
-route upload/start (Empty, UploadSessionStart, Empty)
-    "Start an upload session."
-
-    attrs
-        host="content"
-        style="upload"
-
-struct UploadAppend
-    upload_id String
-        "Identifies the upload session to append data to."
-    offset UInt64
-        "The offset into the file of the current chunk of data being uploaded.
-        It can also be thought of as the amount of data that has been uploaded
-        so far. We use the offset as a sanity check."
-
-struct IncorrectOffsetError
-    correct_offset UInt64
-
-union UploadAppendError
-    not_found
-        ":field:`upload_id` was not found."
-    closed
-        "Upload session was closed."
-    incorrect_offset IncorrectOffsetError
-
-route upload/append (UploadAppend, Empty, Empty)
-    "Start an upload session."
-
-    attrs
-        host="content"
-        style="upload"
-
-struct UpdateParentRev
-    parent_rev String
-
-union UploadMode
-    "The action to take when a file path conflict exists."
-
-    add
-        "If the path is already occupied, the upload is rejected. You can call
-        the :route:`upload` endpoint again and try a different path."
-    overwrite
-        "On a conflict, the target is overridden."
-    update UpdateParentRev
-        "On a conflict, only overwrite the target if the parent_rev matches."
-
-struct UploadCommit
-    path String
-        "Path in the user's Dropbox to save the file."
-    mode UploadMode
-        "The course of action to take if a file already exists at :field:`path`."
-    append_to UploadAppend?
-        "If specified, the current chunk of data should be appended to an
-        existing upload session."
-    autorename Boolean? = false
-        "Whether the file should be autorenamed in the event of a conflict."
-    client_modified_utc UInt64? = null
-        "Self reported time of when this file was created or modified."
-    mute Boolean? = false
-        "Whether the devices that the user has linked should notify them of the
-        new or updated file."
-
-union ConflictReason
-    folder
-        "Conflict with a folder."
-    file
-        "Conflict with a file."
-    autorename_failed
-        "Could not autorename."
-
-struct ConflictError
-    reason ConflictReason
-
-union UploadCommitError
-    conflict ConflictError
-    no_write_permission
-        "User does not have permission to write in the folder. An example of
-        this is if the folder is a read-only shared folder."
-    insufficient_quota
-        "User does not have sufficient space quota to save the file."
-
-route upload (UploadCommit, FileInfo, UploadCommitError)
-    "Use this endpoint to either finish an ongoing upload session that was
-    begun with :route:`upload/start` or upload a file in one shot."
-
-    attrs
-        host="content"
-        style="upload"
 
 struct File
     "A file resource"
@@ -155,6 +44,11 @@ struct Entry
     name String
         "The name of the resource as seen by the user in their Dropbox."
 
+struct FileEntry
+    name String
+        "The name of the resource as seen by the user in their Dropbox."
+    metadata File
+
 union GetMetadataError
     not_found
         "File was not found at the specified path."
@@ -164,7 +58,7 @@ route get_metadata (FileRef, Entry, GetMetadataError)
 
 struct FolderContentsBase
     cursor String
-        "Pass the cursor into :route:`ListFolderContinue` to see what's changed
+        "Pass the cursor into :route:`list_folder/continue` to see what's changed
         in the folder since your previous query."
     has_more Boolean
         "If true, then there are more entries available."
@@ -203,5 +97,148 @@ struct FolderContentsContinue extends FolderContentsBase
     entries ContinueType
 
 route list_folder/continue (CursorRef, FolderContentsContinue, ListFolderError)
-    "Once a cursor has been retrieved from :route:`ListFolder`, use this to
+    "Once a cursor has been retrieved from :route:`list_folder`, use this to
     paginate through all files and retrieve updates to the folder."
+
+union NoFileReason
+    not_found Any
+    is_folder Any
+
+struct NoFile
+    reason NoFileReason
+
+union RestrictedReason
+    dmca
+    other*
+
+struct Restricted
+    reason RestrictedReason
+
+union DisallowedReason
+    permission Any
+    restricted Restricted
+
+struct Disallowed
+    reason DisallowedReason
+
+union DownloadError
+    disallowed Disallowed
+    no_file NoFile
+    other*
+
+route download (FileRef, FileEntry, DownloadError)
+    "Download a file in a user's Dropbox."
+
+    attrs
+        host="content"
+        style="download"
+
+#
+# Upload Routes
+#
+
+# Errors
+
+union ConflictError
+    file
+        "A file already exists at this path."
+    folder
+        "A folder already exists at this path."
+    autorename_failed
+        "File could not be automatically renamed."
+    other*
+
+union CommitError
+    conflict ConflictError
+    no_write_permission Any
+        "User does not have permission to write in the folder. An example of
+        this is if the folder is a read-only shared folder."
+    insufficient_quota Any
+        "User does not have sufficient space quota to save the file."
+    other*
+
+struct CommitFailed
+    reason CommitError
+    upload_id String
+
+struct IncorrectOffset
+    correct_offset UInt64
+
+union LookupError
+    not_found
+        ":field:`upload_id` was not found."
+    incorrect_offset IncorrectOffset
+        "Upload session was closed."
+    closed
+    other*
+
+union UploadError
+    append_to_failed LookupError
+    commit_failed CommitFailed
+    append_to LookupError
+    other*
+
+# Req/Resp
+
+struct UploadSessionStart
+    upload_id String
+        "A unique identifier for the upload session."
+
+route upload/start (Empty, UploadSessionStart, Empty)
+    "Start an upload session.
+
+    Since this is an upload-style endpoint, a binary payload must be included."
+
+    attrs
+        host="content"
+        style="upload"
+
+struct UploadAppend
+    upload_id String
+        "Identifies the upload session to append data to."
+    offset UInt64
+        "The offset into the file of the current chunk of data being uploaded.
+        It can also be thought of as the amount of data that has been uploaded
+        so far. We use the offset as a sanity check."
+
+route upload/append (UploadAppend, Empty, LookupError)
+    "Start an upload session."
+
+    attrs
+        host="content"
+        style="upload"
+
+union UploadMode
+    "The action to take when a file path conflict exists."
+
+    add
+        "If the path is already occupied, the upload is rejected. You can call
+        the :route:`upload` endpoint again and try a different path."
+    overwrite
+        "On a conflict, the target is overridden."
+    update Rev
+        "On a conflict, only overwrite the target if the revision matches."
+
+struct UploadCommit
+    path String
+        "Path in the user's Dropbox to save the file."
+    mode UploadMode
+        "The course of action to take if a file already exists at :field:`path`."
+    append_to UploadAppend?
+        "If specified, the current chunk of data should be appended to an
+        existing upload session."
+    autorename Boolean? = false
+        "Whether the file should be autorenamed in the event of a conflict."
+    client_modified_utc UInt64? = null
+        "Self reported time of when this file was created or modified."
+    mute Boolean? = false
+        "Whether the devices that the user has linked should notify them of the
+        new or updated file."
+
+route upload (UploadCommit, FileEntry, UploadError)
+    "Use this endpoint to either finish an ongoing upload session that was
+    begun with :route:`upload/start` or upload a file in one shot."
+
+    attrs
+        host="content"
+        style="upload"
