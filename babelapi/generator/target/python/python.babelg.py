@@ -273,19 +273,35 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
     def _generate_struct_class_init(self, data_type):
         """Generates constructor for struct."""
-        self.emit_line('def __init__(self):')
+        self.emit_line('def __init__', trailing_newline=False)
+        args = ['self']
+        for field in data_type.all_fields:
+            args.append('%s=None' % self.lang.format_variable(field.name))
+        self._generate_func_arg_list(args)
+        self.emit(':')
+        self.emit_empty_line()
         with self.indent():
             lineno = self.lineno
 
             # Call the parent constructor if a super type exists
             if data_type.super_type:
                 class_name = self._class_name_for_data_type(data_type)
-                self.emit_line('super({}, self).__init__()'.format(class_name))
+                self.emit_line('super({}, self).__init__'.format(class_name),
+                               trailing_newline=False)
+                self._generate_func_arg_list([self.lang.format_variable(f.name)
+                                              for f in data_type.super_type.fields])
+                self.emit_empty_line()
 
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name)
                 self.emit_line('self._{} = None'.format(field_var_name))
                 self.emit_line('self.__has_{} = False'.format(field_var_name))
+
+            for field in data_type.fields:
+                field_var_name = self.lang.format_variable(field.name)
+                self.emit_line('if {} is not None:'.format(field_var_name))
+                with self.indent():
+                    self.emit_line('self.{0} = {0}'.format(field_var_name))
 
             if lineno == self.lineno:
                 self.emit_line('pass')
