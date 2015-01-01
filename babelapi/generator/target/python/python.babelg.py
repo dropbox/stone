@@ -351,7 +351,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 with self.indent():
                     if field.optional:
                         if field.has_default:
-                            self.emit_line(self.lang.format_obj(field.default))
+                            self.emit_line('return {}'.format(self.lang.format_obj(field.default)))
                         else:
                             self.emit_line('return None')
                     else:
