@@ -31,9 +31,9 @@ class PythonTargetLanguage(TargetLanguage):
         Int64: 'long',
         List: 'list',
         String: 'str',
+        Timestamp: 'datetime',
         UInt32: 'long',
         UInt64: 'long',
-        Timestamp: 'datetime',
     }
 
     _reserved_keywords = {
@@ -54,15 +54,13 @@ class PythonTargetLanguage(TargetLanguage):
     def format_obj(self, o):
         return pprint.pformat(o, width=1)
 
-    def format_variable(self, name):
-        return self._check_reserved(
-            '_'.join([word.lower() for word in self.split_words(name)])
-        )
+    def format_variable(self, name, rename_if_reserved=False):
+        s = '_'.join([word.lower() for word in self.split_words(name)])
+        return self._check_reserved(s) if rename_if_reserved else s
 
     def format_class(self, name):
         return ''.join([word.capitalize() for word in self.split_words(name)])
 
-    def format_method(self, name):
-        return self._check_reserved(
-            '_'.join([word.lower() for word in self.split_words(name)])
-        )
+    def format_method(self, name, rename_if_reserved=False):
+        s = '_'.join([word.lower() for word in self.split_words(name)])
+        return self._check_reserved(s) if rename_if_reserved else s

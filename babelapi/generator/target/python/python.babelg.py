@@ -276,7 +276,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
         self.emit_line('def __init__', trailing_newline=False)
         args = ['self']
         for field in data_type.all_fields:
-            args.append('%s=None' % self.lang.format_variable(field.name))
+            field_name_reserved_check = self.lang.format_variable(field.name, True)
+            args.append('%s=None' % field_name_reserved_check)
         self._generate_func_arg_list(args)
         self.emit(':')
         self.emit_empty_line()
@@ -288,7 +289,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 class_name = self._class_name_for_data_type(data_type)
                 self.emit_line('super({}, self).__init__'.format(class_name),
                                trailing_newline=False)
-                self._generate_func_arg_list([self.lang.format_variable(f.name)
+                self._generate_func_arg_list([self.lang.format_method(f.name, True)
                                               for f in data_type.super_type.fields])
                 self.emit_empty_line()
 
@@ -298,7 +299,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line('self.__has_{} = False'.format(field_var_name))
 
             for field in data_type.fields:
-                field_var_name = self.lang.format_variable(field.name)
+                field_var_name = self.lang.format_variable(field.name, True)
                 self.emit_line('if {} is not None:'.format(field_var_name))
                 with self.indent():
                     self.emit_line('self.{0} = {0}'.format(field_var_name))
@@ -333,10 +334,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
     def _generate_struct_class_properties(self, data_type):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
+            field_name_reserved_check = self.lang.format_method(field.name, True)
 
             # generate getter for field
             self.emit_line('@property')
-            self.emit_line('def {}(self):'.format(field_name))
+            self.emit_line('def {}(self):'.format(field_name_reserved_check))
             with self.indent():
                 self.emit_line('"""')
                 if field.doc:
@@ -362,13 +364,13 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
             # generate setter for field
-            self.emit_line('@{}.setter'.format(field_name))
-            self.emit_line('def {}(self, val):'.format(field_name))
+            self.emit_line('@{}.setter'.format(field_name_reserved_check))
+            self.emit_line('def {}(self, val):'.format(field_name_reserved_check))
             with self.indent():
                 if field.optional:
                     self.emit_line('if val is None:')
                     with self.indent():
-                        self.emit_line('del self.{}'.format(field_name))
+                        self.emit_line('del self.{}'.format(field_name_reserved_check))
                         self.emit_line('return')
                 if is_composite_type(field.data_type):
                     self.emit_line('self.__%s_data_type.validate_type_only(val)'
@@ -380,8 +382,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
             # generate deleter for field
-            self.emit_line('@{}.deleter'.format(field_name))
-            self.emit_line('def {}(self):'.format(field_name))
+            self.emit_line('@{}.deleter'.format(field_name_reserved_check))
+            self.emit_line('def {}(self):'.format(field_name_reserved_check))
             with self.indent():
                 self.emit_line('self._{} = None'.format(field_name))
                 self.emit_line('self.__has_{} = False'.format(field_name))
@@ -512,8 +514,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
+                field_name_reserved_check = self.lang.format_method(field.name, True)
                 self.emit_line('@classmethod')
-                self.emit_line('def {}(cls, val):'.format(field_name))
+                self.emit_line('def {}(cls, val):'.format(field_name_reserved_check))
                 with self.indent():
                     self.emit_line('return cls({!r}, val)'.format(field_name))
                 self.emit_empty_line()
