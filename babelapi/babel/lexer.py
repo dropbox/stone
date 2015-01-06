@@ -258,6 +258,7 @@ class BabelLexer(object):
     def t_STRING(self, t):
         r'\"([^\\"]|(\\.))*\"'
         escaped = 0
+        t.lexer.lineno += t.value.count('\n')
         # FIXME: Split on two or more newlines
         s = '\n'.join([line.replace('\n', ' ') for line in t.value[1:-1].split('\n\n')])
         new_str = ""
