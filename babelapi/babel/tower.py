@@ -83,11 +83,16 @@ class TowerOfBabel(object):
         self.parser = BabelParser(debug=debug)
 
     def parse(self):
-        """Parses each Babel file and returns an API description."""
+        """Parses each Babel file and returns an API description. Returns None
+        if an error was encountered during parsing."""
         for path, scripture in self._scriptures:
             self._logger.info('Parsing spec %s', path)
             res = self.parse_scripture(scripture)
-            if res:
+            if self.parser.got_errors_parsing():
+                for error in self.parser.get_error_strings():
+                    self._logger.error(error)
+                return None
+            elif res:
                 self.add_to_api(path, res)
             else:
                 self._logger.warn('No output generated from file')

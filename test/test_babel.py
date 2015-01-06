@@ -208,3 +208,39 @@ route GetAccountInfo(AccountInfo, Null, Null)
         self.assertEqual(out[2].request_data_type_name, 'AccountInfo')
         self.assertEqual(out[2].response_data_type_name, 'Null')
         self.assertEqual(out[2].error_data_type_name, 'Null')
+
+    def test_lexing_errors(self):
+        text = """
+namespace users
+
+%
+
+# testing line numbers
+
+%
+
+struct AccountInfo
+    email String
+"""
+        out = self.parser.parse(text)
+        char, lineno = self.parser.lexer.errors[0]
+        self.assertEqual(char, '%')
+        self.assertEqual(lineno, 4)
+        char, lineno = self.parser.lexer.errors[1]
+        self.assertEqual(char, '%')
+        self.assertEqual(lineno, 8)
+        # Check that despite lexing errors, parser marched on successfully.
+        self.assertEqual(out[1].name, 'AccountInfo')
+
+    def test_parsing_errors(self):
+        text = """
+namespace users
+
+strct AccountInfo
+    email String
+"""
+        self.parser.parse(text)
+        ttype, tvalue, lineno = self.parser.errors[0]
+        self.assertEqual(ttype, 'ID')
+        self.assertEqual(tvalue, 'strct')
+        self.assertEqual(lineno, 4)

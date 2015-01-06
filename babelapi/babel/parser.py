@@ -175,18 +175,40 @@ class BabelParser(object):
         self.yacc = yacc.yacc(module=self, debug=self.debug, write_tables=self.debug)
         self.lexer = BabelLexer()
         self._logger = logging.getLogger('babelapi.babel.parser')
+        # [(token type, token value, line number), ...]
+        self.errors = []
 
     def parse(self, data):
-        return self.yacc.parse(data.lstrip(), lexer=self.lexer, debug=self.debug)
+        return self.yacc.parse(data, lexer=self.lexer, debug=self.debug)
 
     def test_lexing(self, data):
-        self.lexer.test(data.lstrip())
+        self.lexer.test(data)
+
+    def got_errors_parsing(self):
+        """Whether the lexer or parser had errors."""
+        return self.errors or self.lexer.errors
+
+    def get_error_strings(self):
+        """Call this if got_errors_parsing() returns True to get a list of
+        error strings."""
+        errors = []
+        for char, lineno in self.lexer.errors:
+            errors.append('Line %d: Illegal character %r' % (lineno, char))
+        for token_type, token_value, lineno in self.errors:
+            errors.append('Line %d: Unexpected %s with value %r' %
+                              (lineno, token_type, token_value))
+        return errors
 
     def p_statement_decl_to_desc(self, p):
         """desc : decl
                 | typedef
                 | routedef"""
         p[0] = [p[1]]
+
+    def p_statement_desc_init(self, p):
+        """desc : NEWLINE
+                | empty"""
+        p[0] = []
 
     def p_statement_desc_iter(self, p):
         """desc : desc decl
@@ -469,7 +491,8 @@ class BabelParser(object):
             p[0] = (p[1], p[3])
 
     def p_error(self, token):
-        self._logger.error('Unexpected %s(%r) at line %d',
+        self._logger.debug('Unexpected %s(%r) at line %d',
                            token.type,
                            token.value,
                            token.lineno)
+        self.errors.append((token.type, token.value, token.lineno))

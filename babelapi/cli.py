@@ -64,6 +64,10 @@ def main():
         # TODO: Needs version
         tower = TowerOfBabel(args.spec, debug=debug)
         api = tower.parse()
+        if api is None:
+            print >> sys.stderr, \
+                'You must fix the above parsing errors for generation to continue.'
+            sys.exit(1)
 
     # Here we support two ways of specifying a generator. Either a name of a
     # generator, which assumes it has been pre-packaged with babelapi, or a

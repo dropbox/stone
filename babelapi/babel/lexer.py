@@ -23,6 +23,8 @@ class BabelLexer(object):
         self.cur_indent = None
         self._logger = logging.getLogger('babelapi.babel.lexer')
         self.last_token = None
+        # [(character, line number), ...]
+        self.errors = []
 
     def input(self, file_data, **kwargs):
         """
@@ -320,7 +322,9 @@ class BabelLexer(object):
 
     # Error handling rule
     def t_error(self, token):
-        self._logger.error('Illegal character %r at line %d', token.value[0], token.lexer.lineno)
+        self._logger.debug('Illegal character %r at line %d',
+                           token.value[0], token.lexer.lineno)
+        self.errors.append((token.value[0], token.lexer.lineno))
         token.lexer.skip(1)
 
     # Use the same error handler in freetext mode
