@@ -142,14 +142,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self._generate_struct_class_properties(data_type)
             self._generate_struct_class_repr(data_type)
 
-    def _format_type_in_doc(self, data_type):
-        if is_null_type(data_type):
-            return 'None'
-        elif is_composite_type(data_type):
-            return ':class:`{}`'.format(self.lang.format_type(data_type))
-        else:
-            return self.lang.format_type(data_type)
-
     def _func_args_from_dict(self, d):
         filtered_d = self._filter_out_none_valued_keys(d)
         return ', '.join(['%s=%s' % (k, v) for k, v in filtered_d.items()])
