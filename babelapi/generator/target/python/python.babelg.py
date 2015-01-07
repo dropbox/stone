@@ -295,8 +295,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name)
-                self.emit_line('self._{} = None'.format(field_var_name))
-                self.emit_line('self.__has_{} = False'.format(field_var_name))
+                field_default = None
+                if field.has_default:
+                    field_default = field.default
+                self.emit_line('self._{} = {}'.format(field_var_name, field_default))
+                self.emit_line('self.__has_{} = {!r}'.format(field_var_name, field.has_default))
 
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name, True)
@@ -352,10 +355,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line('else:')
                 with self.indent():
                     if field.optional:
-                        if field.has_default:
-                            self.emit_line('return {}'.format(self.lang.format_obj(field.default)))
-                        else:
-                            self.emit_line('return None')
+                        self.emit_line('return None')
                     else:
                         self.emit_line(
                             'raise AttributeError("missing required field %r")'
