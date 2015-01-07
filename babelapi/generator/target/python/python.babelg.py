@@ -6,13 +6,6 @@ import os
 import re
 import shutil
 from babelapi.data_type import (
-    Int32,
-    Int64,
-    String,
-    UInt32,
-    UInt64,
-)
-from babelapi.data_type import (
     is_any_type,
     is_binary_type,
     is_boolean_type,
@@ -115,6 +108,39 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 doc = doc.replace(matched_text, '``{}``'.format(val))
         return doc
 
+    def _python_type_mapping(self, data_type):
+        """Map Babel data types to their most natural equivalent in Python
+        for documentation purposes."""
+        if is_string_type(data_type):
+            return 'str'
+        elif is_binary_type(data_type):
+            return 'str'
+        elif is_boolean_type(data_type):
+            return 'bool'
+        elif is_integer_type(data_type):
+            return 'long'
+        elif is_null_type(data_type):
+            return 'None'
+        elif is_timestamp_type(data_type):
+            return 'datetime.datetime'
+        elif is_composite_type(data_type):
+            return self._class_name_for_data_type(data_type)
+        elif is_list_type(data_type):
+            # PyCharm understands this description format for a list
+            return 'list of [{}]'.format(self._python_type_mapping(data_type.data_type))
+        else:
+            raise TypeError('Unknown data type %r' % data_type)
+
+    def _class_name_for_data_type(self, data_type):
+        return self.lang.format_class(data_type.name)
+
+    def _class_declaration_for_data_type(self, data_type):
+        if data_type.super_type:
+            extends = self._class_name_for_data_type(data_type.super_type)
+        else:
+            extends = 'object'
+        return 'class {}({}):'.format(self._class_name_for_data_type(data_type), extends)
+
     #
     # Struct Types
     #
@@ -143,10 +169,18 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self._generate_struct_class_repr(data_type)
 
     def _func_args_from_dict(self, d):
+        """Given a Python dictionary, creates a string representing arguments
+        for invoking a function. All arguments with a value of None are
+        ignored."""
         filtered_d = self._filter_out_none_valued_keys(d)
         return ', '.join(['%s=%s' % (k, v) for k, v in filtered_d.items()])
 
     def _generate_struct_class_slots(self, data_type):
+        """Creates a slots declaration for struct classes.
+
+        Slots are an optimization in Python. They reduce the memory footprint
+        of instances since attributes cannot be added after declaration.
+        """
         self.emit_line('__slots__ = [')
         with self.indent():
             for field in data_type.fields:
@@ -158,8 +192,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
     def _generate_struct_class_vars(self, data_type):
         """
-        Each class has a class attribute for each field that is a primitive type.
-        The attribute is a validator for the field.
+        Each class has a class attribute for each field. The attribute is a
+        validator for the field.
         """
         lineno = self.lineno
         for field in data_type.fields:
@@ -221,6 +255,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
             )
 
     def _generate_struct_class_fields_for_reflection(self, data_type):
+        """
+        Declares a _field_names_ class attribute, which is a set of all field
+        names. Also, declares a _fields_ class attribute which is a list of
+        tuples, where each tuple is (field name, validator).
+        """
         if data_type.super_type:
             super_type_class_name = self._class_name_for_data_type(data_type.super_type)
         else:
@@ -233,6 +272,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         with self.indent():
             for field in data_type.fields:
                 self.emit_line("'{}',".format(self.lang.format_variable(field.name)))
+
         if super_type_class_name:
             self.emit_line(')))')
         else:
@@ -243,6 +283,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_line('_fields_ = {}._fields_ + ['.format(super_type_class_name))
         else:
             self.emit_line('_fields_ = [')
+
         with self.indent():
             for field in data_type.fields:
                 var_name = self.lang.format_variable(field.name)
@@ -251,20 +292,13 @@ class PythonGenerator(CodeGeneratorMonolingual):
         self.emit_line(']')
         self.emit_empty_line()
 
-    def _generate_union_class_fields_for_reflection(self, data_type):
-        assert not data_type.super_type, 'Unsupported: Inheritance of unions'
-
-        self.emit_line('_fields_ = {')
-        with self.indent():
-            for field in data_type.fields:
-                var_name = self.lang.format_variable(field.name)
-                validator_name = '__{0}_data_type'.format(var_name)
-                self.emit_line("'{}': {},".format(var_name, validator_name))
-        self.emit_line('}')
-        self.emit_empty_line()
-
     def _generate_struct_class_init(self, data_type):
-        """Generates constructor for struct."""
+        """
+        Generates constructor. The constructor takes all possible fields as
+        optional arguments. Any argument that is set on construction sets the
+        corresponding field for the instance.
+        """
+        # __init__ signature
         self.emit_line('def __init__', trailing_newline=False)
         args = ['self']
         for field in data_type.all_fields:
@@ -273,6 +307,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         self._generate_func_arg_list(args)
         self.emit(':')
         self.emit_empty_line()
+
         with self.indent():
             lineno = self.lineno
 
@@ -285,6 +320,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                                               for f in data_type.super_type.fields])
                 self.emit_empty_line()
 
+            # initialize each field
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name)
                 field_default = None
@@ -293,6 +329,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line('self._{} = {}'.format(field_var_name, field_default))
                 self.emit_line('self.__has_{} = {!r}'.format(field_var_name, field.has_default))
 
+            # handle arguments that were set
             for field in data_type.fields:
                 field_var_name = self.lang.format_variable(field.name, True)
                 self.emit_line('if {} is not None:'.format(field_var_name))
@@ -303,30 +340,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line('pass')
             self.emit_empty_line()
 
-    def _python_type_mapping(self, data_type):
-        """Map Babel data types to their most natural equivalent in Python
-        for documentation purposes."""
-        if is_string_type(data_type):
-            return 'str'
-        elif is_binary_type(data_type):
-            return 'str'
-        elif is_boolean_type(data_type):
-            return 'bool'
-        elif is_integer_type(data_type):
-            return 'long'
-        elif is_null_type(data_type):
-            return 'None'
-        elif is_timestamp_type(data_type):
-            return 'datetime.datetime'
-        elif is_composite_type(data_type):
-            return self._class_name_for_data_type(data_type)
-        elif is_list_type(data_type):
-            # PyCharm understands this description format for a list
-            return 'list of [{}]'.format(self._python_type_mapping(data_type.data_type))
-        else:
-            raise TypeError('Unknown data type %r' % data_type)
-
     def _generate_struct_class_properties(self, data_type):
+        """
+        Each field of the struct has a corresponding setter and getter.
+        The setter validates the value being set.
+        """
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
             field_name_reserved_check = self.lang.format_method(field.name, True)
@@ -396,28 +414,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
                                % self._class_name_for_data_type(data_type))
         self.emit_empty_line()
 
-    def _class_name_for_data_type(self, data_type):
-        return self.lang.format_class(data_type.name)
-
-    def _class_declaration_for_data_type(self, data_type):
-        if data_type.super_type:
-            extends = self._class_name_for_data_type(data_type.super_type)
-        else:
-            extends = 'object'
-        return 'class {}({}):'.format(self._class_name_for_data_type(data_type), extends)
-
-    def _is_instance_type(self, data_type):
-        """The Python types to use in a call to isinstance() for the specified
-        Babel data_type."""
-        if isinstance(data_type, (UInt32, UInt64, Int32, Int64)):
-            return 'numbers.Integral'
-        elif isinstance(data_type, String):
-            return 'six.string_types'
-        elif is_timestamp_type(data_type):
-            return 'datetime.datetime'
-        else:
-            return self.lang.format_type(data_type)
-
     #
     # Tagged Union Types
     #
@@ -444,7 +440,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
             self._generate_union_class_vars(data_type)
-            self._generate_union_class_fields_for_reflection(data_type)
             self._generate_union_class_init(data_type)
             self._generate_union_class_variant_creators(data_type)
             self._generate_union_class_is_set(data_type)
@@ -455,7 +450,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
     def _generate_union_class_vars(self, data_type):
         """
         Each class has a class attribute for each field specifying its data type.
-        If a catch all field exists, it's also specified here.
+        If a catch all field exists, it's specified as a _catch_all_ attribute.
         """
         lineno = self.lineno
         for field in data_type.fields:
@@ -468,6 +463,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
         else:
             self.emit_line('_catch_all_ = None')
 
+        # Generate stubs for class variables so that IDEs like PyCharms have an
+        # easier time detecting their existence.
         for field in data_type.fields:
             if is_symbol_type(field.data_type) or is_any_type(field.data_type):
                 field_name = self.lang.format_variable(field.name)
@@ -477,8 +474,24 @@ class PythonGenerator(CodeGeneratorMonolingual):
         if lineno != self.lineno:
             self.emit_empty_line()
 
+        self._generate_union_class_fields_for_reflection(data_type)
+
+    def _generate_union_class_fields_for_reflection(self, data_type):
+        assert not data_type.super_type, 'Unsupported: Inheritance of unions'
+
+        self.emit_line('_fields_ = {')
+        with self.indent():
+            for field in data_type.fields:
+                var_name = self.lang.format_variable(field.name)
+                validator_name = '__{0}_data_type'.format(var_name)
+                self.emit_line("'{}': {},".format(var_name, validator_name))
+        self.emit_line('}')
+        self.emit_empty_line()
+
     def _generate_union_class_init(self, data_type):
-        """Generates the __init__ method for the class."""
+        """Generates the __init__ method for the class. The tag should be
+        specified as a string, and the value will be validated with respect
+        to the tag."""
         self.emit_line('def __init__(self, tag, value=None):')
         with self.indent():
             # Call the parent constructor if a super type exists
@@ -503,6 +516,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
     def _generate_union_class_variant_creators(self, data_type):
+        """
+        Each non-symbol, non-any variant has a corresponding class method that
+        can be used to construct a union with that variant selected.
+        """
         for field in data_type.fields:
             if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
@@ -513,16 +530,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     self.emit_line('return cls({!r}, val)'.format(field_name))
                 self.emit_empty_line()
 
-    def _generate_union_class_symbol_creators(self, data_type):
-        class_name = self.lang.format_class(data_type.name)
-        lineno = self.lineno
-        for field in data_type.fields:
-            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
-                field_name = self.lang.format_method(field.name)
-                self.emit_line('{0}.{1} = {0}({1!r})'.format(class_name, field_name))
-        if lineno != self.lineno:
-            self.emit_empty_line()
-
     def _generate_union_class_is_set(self, data_type):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
@@ -532,6 +539,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
     def _generate_union_class_get_helpers(self, data_type):
+        """
+        These are the getters used to access the value of a variant, once
+        the tag has been switched on.
+        """
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
 
@@ -546,8 +557,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_empty_line()
 
     def _generate_union_class_repr(self, data_type):
-        # The special __repr__() function will return a string of the class
-        # name, and the selected tag
+        """
+        The __repr__() function will return a string of the class name, and
+        the selected tag.
+        """
         self.emit_line('def __repr__(self):')
         with self.indent():
             if data_type.fields:
@@ -558,11 +571,30 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line("return '{}()'".format(self._class_name_for_data_type(data_type)))
         self.emit_empty_line()
 
+    def _generate_union_class_symbol_creators(self, data_type):
+        """
+        Class attributes that represent a symbol are set after the union class
+        definition.
+        """
+        class_name = self.lang.format_class(data_type.name)
+        lineno = self.lineno
+        for field in data_type.fields:
+            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
+                field_name = self.lang.format_method(field.name)
+                self.emit_line('{0}.{1} = {0}({1!r})'.format(class_name, field_name))
+        if lineno != self.lineno:
+            self.emit_empty_line()
+
     #
     # Routes
     #
 
     def _generate_route_class(self, namespace, route):
+        """
+        Each route is represented as a class with its request/response/error
+        data types specified as class variables. Also, its attributes are
+        included as a class variable dictionary.
+        """
         self.emit_line('class {}Route(object):'.format(self.lang.format_class(route.name)))
         with self.indent():
             if route.doc:
