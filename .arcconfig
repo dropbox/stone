@@ -1,0 +1,7 @@
+{
+  "project_id" : "Babel",
+  "conduit_uri" : "https://tails.corp.dropbox.com/api/",
+  "copyright_holder" : "Dropbox",
+  "repository.callsign": "BABEL",
+  "immutable_history": false
+}
