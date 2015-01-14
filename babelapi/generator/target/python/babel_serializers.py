@@ -12,6 +12,7 @@ EDITING THIS FILE? Please modify the version in the babelapi repo,
 """
 
 import base64
+import collections
 import datetime
 import json
 import six
@@ -87,7 +88,7 @@ def _json_encode_helper(data_type, obj, needs_validation=True):
             data_type.validate(obj)
         return _make_json_friendly(data_type, obj)
     elif isinstance(data_type, dt.Struct):
-        d = {}
+        d = collections.OrderedDict()
         if needs_validation:
             data_type.validate_type_only(obj)
         for field_name, field_data_type in data_type.definition._fields_:
