@@ -315,3 +315,25 @@ class Symbol(Validator):
     """
     def validate(self, val):
         raise AssertionError('No value validates as a symbol.')
+
+class FunctionStyle(object):
+    def __init__(self, ident):
+        self.ident = ident
+
+    def __repr__(self):
+        return "FunctionStyle.{}".format(self.ident)
+
+FunctionStyle.RPC = FunctionStyle("RPC")
+FunctionStyle.UPLOAD = FunctionStyle("UPLOAD")
+FunctionStyle.DOWNLOAD = FunctionStyle("DOWNLOAD")
+
+class FunctionSignature(object):
+    def __init__(self, style, request_type, response_type, error_type):
+        self.style = style
+        self.request_type = request_type
+        self.response_type = response_type
+        self.error_type = error_type
+
+    def __repr__(self):
+        return "FunctionSignature{!r}".format((
+            self.style, self.request_type, self.response_type, self.error_type))

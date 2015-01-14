@@ -71,8 +71,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self._generate_union_class(data_type)
             else:
                 raise TypeError('Cannot handle type %r' % type(data_type))
-        for route in namespace.routes:
-            self._generate_route_class(namespace, route)
+        self._generate_routes(namespace)
 
     def emit_wrapped_indented_lines(self, s):
         """Emits wrapped lines. All lines are the first are indented."""
@@ -589,35 +588,27 @@ class PythonGenerator(CodeGeneratorMonolingual):
     # Routes
     #
 
-    def _generate_route_class(self, namespace, route):
-        """
-        Each route is represented as a class with its request/response/error
-        data types specified as class variables. Also, its attributes are
-        included as a class variable dictionary.
-        """
-        self.emit_line('class {}Route(object):'.format(self.lang.format_class(route.name)))
-        with self.indent():
-            if route.doc:
-                self.emit_line('"""')
-                self.emit_wrapped_lines(self.docf(route.doc))
-                self.emit_line('"""')
-            if route.request_data_type:
-                self.emit_line('request_data_type = {}'.format(
-                    self._determine_validator_type(route.request_data_type)))
-            if route.response_data_type:
-                self.emit_line('response_data_type = {}'.format(
-                    self._determine_validator_type(route.response_data_type)))
-            if route.error_data_type:
-                self.emit_line('error_data_type = {}'.format(
-                    self._determine_validator_type(route.error_data_type)))
+    STYLE_MAPPING = {
+        # Maps from the 'style' attr in the Babel file to the FunctionStyle enum values.
+        None: 'RPC',
+        'upload': 'UPLOAD',
+        'download': 'DOWNLOAD',
+    }
 
-            self.emit_empty_line()
-            if route.attrs:
-                self.emit_line('attrs = {')
+    def _generate_routes(self, namespace):
+        self.emit_line('FUNCTIONS = {')
+        for route in namespace.routes:
+            with self.indent():
+
+                host_ident = route.attrs.get('host')
+                if host_ident is None:
+                    host_ident = 'meta'
+
+                style_enum = self.STYLE_MAPPING[route.attrs.get('style')]
+                self.emit_line('{!r}: ({!r}, dt.FunctionSignature('.format(route.name, host_ident))
                 with self.indent():
-                    for k, v in route.attrs.items():
-                        self.emit_line("'{}': {},".format(k, self.lang.format_obj(v)))
-                self.emit_line('}')
-            else:
-                self.emit_line('attrs = {}')
-            self.emit_empty_line()
+                    self.emit_line('dt.FunctionStyle.{},'.format(style_enum))
+                    for t in (route.request_data_type, route.response_data_type, route.error_data_type):
+                        self.emit_line('{},'.format(self._determine_validator_type(t)))
+                self.emit_line(')),')
+        self.emit_line('}')
