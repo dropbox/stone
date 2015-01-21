@@ -96,6 +96,9 @@ class TestPythonGen(unittest.TestCase):
     def test_json_encoder(self):
         self.assertEqual(json_encode(dt.String(), 'abc'), json.dumps('abc'))
         self.assertEqual(json_encode(dt.UInt32(), 123), json.dumps(123))
+        # Because a bool is a subclass of an int, ensure they aren't mistakenly
+        # encoded as a true/false in JSON when an integer is the data type.
+        self.assertEqual(json_encode(dt.UInt32(), True), json.dumps(1))
         self.assertEqual(json_encode(dt.Boolean(), True), json.dumps(True))
         f = '%a, %d %b %Y %H:%M:%S +0000'
         now = datetime.datetime.utcnow()

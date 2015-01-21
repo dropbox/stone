@@ -64,7 +64,7 @@ class Boolean(PrimitiveType):
             raise ValidationError('%r is not a valid boolean' % val)
         return val
 
-class _Integer(PrimitiveType):
+class Integer(PrimitiveType):
     """
     Do not use this class directly. Extend it and specify a 'minimum' and
     'maximum' value as class variables for the more restrictive integer range.
@@ -106,19 +106,19 @@ class _Integer(PrimitiveType):
     def __repr__(self):
         return '%s()' % self.__class__.__name__
 
-class Int32(_Integer):
+class Int32(Integer):
     minimum = -2**31
     maximum = 2**31 - 1
 
-class UInt32(_Integer):
+class UInt32(Integer):
     minimum = 0
     maximum = 2**32 - 1
 
-class Int64(_Integer):
+class Int64(Integer):
     minimum = -2**63
     maximum = 2**63 - 1
 
-class UInt64(_Integer):
+class UInt64(Integer):
     minimum = 0
     maximum = 2**64 - 1
 
