@@ -39,7 +39,6 @@ from babelapi.babel.parser import (
     BabelSymbolField,
     BabelTypeDef,
 )
-from babelapi.lang.lang import TargetLanguage
 
 class TowerOfBabel(object):
 
