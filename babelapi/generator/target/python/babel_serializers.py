@@ -126,7 +126,7 @@ def _make_json_friendly(data_type, val):
         return base64.b64encode(val)
     elif isinstance(data_type, dt.Integer) and isinstance(val, bool):
         # A bool is a subclass of an int so it passes Integer validation. But,
-        # want the bool to be encoded as an Integer (1/0) rather than T/F.
+        # we want the bool to be encoded as an Integer (1/0) rather than T/F.
         return int(val)
     else:
         return val
