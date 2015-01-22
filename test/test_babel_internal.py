@@ -182,24 +182,26 @@ class TestBabelInternal(unittest.TestCase):
         # set null for a required field
         with self.assertRaises(ValueError) as cm:
             quota_info.add_example('null', None, {'quota': None})
-        self.assertIn('field is not optional', cm.exception.args[0])
+        self.assertIn('type is not nullable', cm.exception.args[0])
 
         self.assertTrue(quota_info.has_example('default'))
 
+        quota_info.nullable = True
+
         # test for structs within structs
-        quota_info = Struct(
+        account_info = Struct(
             'AccountInfo',
             "Information about an account.",
             [
              StructField('account_id', String(), 'Unique identifier for account.'),
-             StructField('quota_info', quota_info, 'Quota', optional=True)
+             StructField('quota_info', quota_info, 'Quota')
             ],
         )
 
-        quota_info.add_example('default', None, {'account_id': 'xyz123'})
+        account_info.add_example('default', None, {'account_id': 'xyz123'})
 
         # ensure that an example for quota_info is propagated up
-        self.assertIn('quota_info', quota_info.get_example('default'))
+        self.assertIn('quota_info', account_info.get_example('default'))
 
     def test_union(self):
 

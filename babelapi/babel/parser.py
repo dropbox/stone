@@ -1,26 +1,50 @@
 from collections import OrderedDict
 import logging
+
 import ply.yacc as yacc
 
 from babelapi.babel.lexer import BabelLexer, BabelNull
 
-class BabelRouteDef(object):
+class BabelNamespace(object):
     def __init__(self, name):
+        """
+        Args:
+            name (str): The namespace of the spec.
+        """
         self.name = name
-        self.request_data_type_name = None
-        self.response_data_type_name = None
-        self.error_data_type_name = None
-        self.attrs = {}
-    def set_doc(self, docstring):
-        self.doc = docstring
-    def set_request_data_type_name(self, data_type_name):
-        self.request_data_type_name = data_type_name
-    def set_response_data_type_name(self, data_type_name):
-        self.response_data_type_name = data_type_name
-    def set_error_data_type_name(self, data_type_name):
-        self.error_data_type_name = data_type_name
-    def set_attrs(self, attrs):
-        self.attrs = attrs
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return 'BabelNamespace({!r})'.format(self.name)
+
+class BabelInclude(object):
+    def __init__(self, target):
+        """
+        Args:
+            target (str): The filename of the header file.
+        """
+        self.target = target
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        return 'BabelInclude({!r})'.format(self.target)
+
+class BabelAlias(object):
+    def __init__(self, name, type_ref):
+        """
+        Args:
+            name (str): The name of the alias.
+            type_ref (BabelTypeRef): The data type of the field.
+        """
+        self.name = name
+        self.type_ref = type_ref
+
+    def __repr__(self):
+        return 'BabelAlias({!r}, {!r})'.format(self.name, self.type_ref)
 
 class BabelTypeDef(object):
     def __init__(self, composite_type, name, extends=None, coverage=None):
@@ -50,72 +74,42 @@ class BabelTypeDef(object):
             self.fields,
         )
 
-class BabelSymbol(object):
-    def __init__(self, name):
-        self.name = name
-        self.doc = None
-    def set_doc(self, docstring):
-        self.doc = docstring
-    def __str__(self):
-        return self.__repr__()
-    def __repr__(self):
-        return 'BabelSymbol({!r})'.format(
-            self.name,
-        )
-
-class BabelNamespace(object):
-    def __init__(self, name):
-        self.name = name
-    def __str__(self):
-        return self.__repr__()
-    def __repr__(self):
-        return 'BabelNamespace({!r})'.format(
-            self.name,
-        )
-
-class BabelInclude(object):
-    def __init__(self, target):
-        self.target = target
-    def __str__(self):
-        return self.__repr__()
-    def __repr__(self):
-        return 'BabelInclude({!r})'.format(
-            self.target,
-        )
-
-class BabelAlias(object):
-    def __init__(self, name, data_type_name, data_type_attrs):
+class BabelTypeRef(object):
+    def __init__(self, name, attrs, nullable):
         """
-        :param data_type_attrs: List of attributes.
+        Args:
+            name (str): Name of the referenced type.
+            attrs (list): List of attributes for the type.
+            nullable (bool): Whether the type is nullable (can be null)
         """
         self.name = name
-        self.data_type_name = data_type_name
-        self.data_type_attrs = data_type_attrs
+        self.attrs = attrs
+        self.nullable = nullable
 
     def __repr__(self):
-        return 'BabelAlias({!r}, {!r}, {!r})'.format(
+        return 'BabelTypeRef({!r}, {!r}, {!r})'.format(
             self.name,
-            self.data_type_name,
-            self.data_type_attrs,
+            self.attrs,
+            self.nullable,
         )
 
 class BabelField(object):
-    def __init__(self,
-                 name,
-                 data_type_name,
-                 data_type_attrs,
-                 optional,
-                 deprecated):
+    """
+    Represents both a field of a struct and a field of a union.
+    TODO(kelkabany): Split this into two different classes.
+    """
+    def __init__(self, name, type_ref, deprecated):
         """
-        :param data_type_attrs: List of attributes.
+        Args:
+            name (str): The name of the field.
+            type_ref (BabelTypeRef): The data type of the field.
+            deprecated (bool): Whether the field is deprecated.
         """
         self.name = name
-        self.data_type_name = data_type_name
-        self.data_type_attrs = data_type_attrs
+        self.type_ref = type_ref
         self.doc = None
         self.has_default = False
         self.default = None
-        self.optional = optional
         self.deprecated = deprecated
 
     def set_doc(self, docstring):
@@ -126,10 +120,9 @@ class BabelField(object):
         self.default = default
 
     def __repr__(self):
-        return 'BabelField({!r}, {!r}, {!r})'.format(
+        return 'BabelField({!r}, {!r})'.format(
             self.name,
-            self.data_type_name,
-            self.data_type_attrs,
+            self.type_ref,
         )
 
 class BabelSymbolField(object):
@@ -147,15 +140,21 @@ class BabelSymbolField(object):
             self.catch_all,
         )
 
-class BabelSegment(object):
-    def __init__(self, data_type_name, name):
-        self.data_type_name = data_type_name
+class BabelRouteDef(object):
+    def __init__(self, name, request_type_ref, response_type_ref,
+                 error_type_ref=None):
         self.name = name
-    def __repr__(self):
-        return 'BabelSegment({!r}, {!r})'.format(
-            self.data_type_name,
-            self.name,
-        )
+        self.request_type_ref = request_type_ref
+        self.response_type_ref = response_type_ref
+        self.error_type_ref = error_type_ref
+        self.attrs = {}
+
+    def set_doc(self, docstring):
+        self.doc = docstring
+
+    def set_attrs(self, attrs):
+        self.attrs = attrs
+
 
 class BabelParser(object):
     """
@@ -168,7 +167,7 @@ class BabelParser(object):
     tokens = BabelLexer.tokens
 
     # Ply feature: Starting grammar rule
-    start = 'desc'
+    start = 'spec'
 
     def __init__(self, debug=False):
         self.debug = debug
@@ -199,78 +198,103 @@ class BabelParser(object):
                               (lineno, token_type, token_value))
         return errors
 
-    def p_statement_decl_to_desc(self, p):
-        """desc : decl
-                | typedef
-                | routedef"""
-        p[0] = [p[1]]
+    # --------------------------------------------------------------
+    # Spec := Namespace Include* Definition*
 
-    def p_statement_desc_init(self, p):
-        """desc : NEWLINE
+    def p_spec_init(self, p):
+        """spec : NEWLINE
                 | empty"""
         p[0] = []
 
-    def p_statement_desc_iter(self, p):
-        """desc : desc decl
-                | desc typedef
-                | desc routedef"""
+    def p_spec_init_decl(self, p):
+        """spec : namespace
+                | include
+                | definition"""
+        p[0] = [p[1]]
+
+    def p_spec_iter(self, p):
+        """spec : spec namespace
+                | spec include
+                | spec definition"""
         p[0] = p[1]
         p[0].append(p[2])
 
     # This covers the case where we have garbage characters in a file that
     # splits a NEWLINE token into two separate tokens.
-    def p_statement_desc_ignore_newline(self, p):
-        'desc : desc NEWLINE'
+    def p_spec_ignore_newline(self, p):
+        'spec : spec NEWLINE'
         p[0] = p[1]
 
-    def p_statement_decl(self, p):
-        'decl : KEYWORD ID NEWLINE'
+    def p_definition(self, p):
+        """definition : alias
+                      | struct
+                      | union
+                      | route"""
+        p[0] = p[1]
+
+    def p_namespace(self, p):
+        'namespace : KEYWORD ID NEWLINE'
         if p[1] == 'namespace':
             p[0] = BabelNamespace(p[2])
         else:
             raise ValueError('Expected namespace keyword')
 
-    def p_statement_include(self, p):
-        'decl : INCLUDE ID NEWLINE'
+    def p_include(self, p):
+        'include : INCLUDE ID NEWLINE'
         p[0] = BabelInclude(p[2])
 
-    def p_statement_alias(self, p):
-        """decl : KEYWORD ID EQ ID NEWLINE
-                | KEYWORD ID EQ ID LPAR attributes_list RPAR NEWLINE"""
+    def p_alias(self, p):
+        'alias : KEYWORD ID EQ type_ref NEWLINE'
         if p[1] == 'alias':
-            if len(p) > 6:
-                alias = BabelAlias(p[2], p[4], p[6])
-            else:
-                alias = BabelAlias(p[2], p[4], [])
-            p[0] = alias
+            p[0] = BabelAlias(p[2], p[4])
         else:
             raise ValueError('Expected alias keyword')
 
-    def p_statement_attribute_single(self, p):
-        """attribute : ID"""
-        p[0] = (p[1], True)
+    # --------------------------------------------------------------
+    # Primitive Types
 
-    def p_statement_attribute_kv(self, p):
-        """attribute : ID EQ INTEGER
-                     | ID EQ FLOAT
-                     | ID EQ STRING
-                     | ID EQ BOOLEAN"""
+    def p_primitive(self, p):
+        """primitive : BOOLEAN
+                     | FLOAT
+                     | INTEGER
+                     | NULL
+                     | STRING"""
+        p[0] = p[1]
+
+    # --------------------------------------------------------------
+    # References to Types
+    #
+    # There are several places references to types are made:
+    # 1. Alias targets
+    #    alias x = TypeRef
+    # 2. Field data types
+    #    struct S
+    #        f TypeRef
+    # 3. In attributes of type references
+    #    struct S
+    #        f TypeRef(key=TypeRef)
+    #
+    # A type reference can have attributes:
+    #     TypeRef(key1=value1, ...)
+    # If it has no attributes, the parentheses can be omitted.
+    #
+    # If a type reference has a '?' suffix, it is an option type.
+
+    def p_attribute_kv(self, p):
+        """attribute : ID EQ primitive
+                     | ID EQ type_ref"""
         p[0] = (p[1], p[3])
 
-    def p_statement_attribute_kv_symbol(self, p):
-        'attribute : ID EQ ID'
-        p[0] = (p[1], BabelSymbol(p[3]))
-
-    def p_statement_attributes_list_create(self, p):
+    def p_attributes_list_create(self, p):
         """attributes_list : attribute"""
         p[0] = [p[1]]
 
-    def p_statement_attributes_list_extend(self, p):
+    def p_attributes_list_extend(self, p):
         """attributes_list : attributes_list COMMA attribute"""
         p[0] = p[1]
         p[0].append(p[3])
 
-    def p_statement_attributes_group(self, p):
+    def p_attributes_group(self, p):
         """attributes_group : LPAR attributes_list RPAR
                             | empty"""
         if p[1] is not None:
@@ -278,16 +302,25 @@ class BabelParser(object):
         else:
             p[0] = []
 
-    def p_statement_typedef_union(self, p):
-        'typedef : UNION ID NEWLINE INDENT docsection field_list example_list DEDENT'
-        p[0] = BabelTypeDef(p[1], p[2])
-        if p[5]:
-            p[0].set_doc(self._normalize_docstring(p[5]))
-        if p[6] is not None:
-            p[0].set_fields(p[6])
-        if p[7]:
-            for label, text, example in p[7]:
-                p[0].add_example(label, text, example)
+    def p_field_nullable(self, p):
+        """nullable : Q
+                    | empty"""
+        p[0] = p[1] == '?'
+
+    def p_type_ref(self, p):
+        'type_ref : ID attributes_group nullable'
+        p[0] = BabelTypeRef(p[1], p[2], p[3])
+
+    # --------------------------------------------------------------
+    # Structs
+    #
+    # An example struct looks as follows:
+    #
+    # struct S extends P
+    #     "This is a docstring for the struct"
+    #
+    #     typed_field String
+    #         "This is a docstring for the field"
 
     def p_inheritance(self, p):
         """inheritance : EXTENDS ID
@@ -310,62 +343,163 @@ class BabelParser(object):
         if p[1]:
             p[0] = p[2]
 
-    def p_statement_typedef_struct(self, p):
-        'typedef : STRUCT ID inheritance coverage NEWLINE INDENT docsection field_list example_list DEDENT'
+    def p_struct(self, p):
+        'struct : STRUCT ID inheritance coverage NEWLINE INDENT docsection field_list example_list DEDENT'
         p[0] = BabelTypeDef(p[1], p[2], extends=p[3], coverage=p[4])
         if p[7]:
-            p[0].set_doc(self._normalize_docstring(p[7]))
+            p[0].set_doc(p[7])
         if p[8] is not None:
             p[0].set_fields(p[8])
         if p[9] is not None:
             for label, text, example in p[9]:
                 p[0].add_example(label, text, example)
 
-    def p_statement_attrs_section(self, p):
+    # --------------------------------------------------------------
+    # Fields
+    #
+    # Each struct has zero or more fields. A field has a name, type,
+    # and docstring. The "deprecated" keyword is currently unused.
+    #
+    # TODO(kelkabany): Split fields into struct fields and union fields
+    # since they differ in capabilities rather significantly now.
+
+    def p_field_list_create(self, p):
+        """field_list : field
+                      | empty"""
+        if p[1] is not None:
+            p[0] = [p[1]]
+
+    def p_field_list_extend(self, p):
+        'field_list : field_list field'
+        p[0] = p[1]
+        p[0].append(p[2])
+
+    def p_field_deprecation(self, p):
+        """deprecation : DEPRECATED
+                       | empty"""
+        p[0] = (p[1] == 'deprecated')
+
+    def p_eq_primitive(self, p):
+        'eq_primitive : EQ primitive'
+        p[0] = p[2]
+
+    def p_default_option(self, p):
+        """default_option : eq_primitive
+                          | empty"""
+        p[0] = p[1]
+
+    def p_field(self, p):
+        """field : ID type_ref default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT
+                 | ID type_ref default_option deprecation NEWLINE"""
+        has_docstring = len(p) > 6
+        p[0] = BabelField(p[1], p[2], p[4])
+        if p[3] is not None:
+            if p[3] is BabelNull:
+                p[0].set_default(None)
+            else:
+                p[0].set_default(p[3])
+        if has_docstring:
+            p[0].set_doc(p[7])
+
+    # --------------------------------------------------------------
+    # Unions
+    #
+    # An example union looks as follows:
+    #
+    # union U
+    #     "This is a docstring for the union"
+    #
+    #     symbol_field*
+    #         "Docstring for symbol"
+    #     typed_field String
+    #
+    # symbol_field demonstrates the notation for a catch all variant.
+
+    def p_union(self, p):
+        'union : UNION ID NEWLINE INDENT docsection field_list example_list DEDENT'
+        p[0] = BabelTypeDef(p[1], p[2])
+        if p[5]:
+            p[0].set_doc(p[5])
+        if p[6] is not None:
+            p[0].set_fields(p[6])
+        if p[7]:
+            for label, text, example in p[7]:
+                p[0].add_example(label, text, example)
+
+    def p_asterix_option(self, p):
+        """asterix_option : ASTERIX
+                          | empty"""
+        p[0] = (p[1] is not None)
+
+    def p_field_symbol(self, p):
+        """field : ID asterix_option NEWLINE
+                 | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
+        p[0] = BabelSymbolField(p[1], p[2])
+        if len(p) > 4:
+            p[0].set_doc(p[5])
+
+    # --------------------------------------------------------------
+    # Routes
+    #
+    # An example route looks as follows:
+    #
+    # route sample-route/sub-path (request, response, error)
+    #     "This is a docstring for the route"
+    #
+    #     attrs
+    #         key="value"
+    #
+    # The error type is optional.
+
+    def p_route_path_suffix(self, p):
+        """route_path : PATH
+                      | empty"""
+        p[0] = p[1]
+
+    def p_route_io(self, p):
+        """route_io : LPAR type_ref COMMA type_ref RPAR
+                    | LPAR type_ref COMMA type_ref COMMA type_ref RPAR"""
+        if len(p) > 6:
+            p[0] = (p[2], p[4], p[6])
+        else:
+            p[0] = (p[2], p[4], None)
+
+    def p_route(self, p):
+        """route : ROUTE ID route_path route_io NEWLINE INDENT docsection attrssection DEDENT"""
+        if p[3]:
+            p[2] += p[3]
+        p[0] = BabelRouteDef(p[2], *p[4])
+        p[0].set_doc(p[7])
+        if p[8]:
+            p[0].set_attrs(dict(p[8]))
+
+    def p_attrs_section(self, p):
         """attrssection : ATTRS NEWLINE INDENT example_field_list DEDENT
                          | empty"""
         if p[1]:
             p[0] = p[4]
 
-    def p_route_name_path_suffix(self, p):
-        """route_path : PATH
-                      | empty"""
-        p[0] = p[1]
+    # --------------------------------------------------------------
+    # Doc sections
+    #
+    # Doc sections appear after struct, union, and route signatures;
+    # also after field declarations.
+    #
+    # They're represented by text (multi-line supported) enclosed by
+    # quotations.
+    #
+    # struct S
+    #     "This is a docstring
+    #     for struct S"
+    #
+    #     number Int64
+    #         "This is a docstring for this field"
 
-    def p_statement_routedef(self, p):
-        """routedef : ROUTE ID route_path attributes_group NEWLINE INDENT docsection attrssection DEDENT"""
-        if p[3]:
-            p[2] += p[3]
-        p[0] = BabelRouteDef(p[2])
-        p[0].set_doc(self._normalize_docstring(p[7]))
-        data_types = p[4]
-        if len(data_types) == 2:
-            request, response = data_types
-            error = (None, None)
-        elif len(data_types) == 3:
-            request, response, error = data_types
-        else:
-            raise ValueError('Incorrect number of arguments to route %d' % len(data_types))
-        p[0].set_request_data_type_name(request[0])
-        p[0].set_response_data_type_name(response[0])
-        p[0].set_error_data_type_name(error[0])
-        if p[8]:
-            p[0].set_attrs(dict(p[8]))
-
-    def p_statement_add_doc(self, p):
-        """docsection : KEYWORD COLON docstring DEDENT
-                      | docstring NEWLINE
+    def p_docsection(self, p):
+        """docsection : docstring NEWLINE
                       | empty"""
         if p[1]:
-            if p[2] == ':':
-                if p[1] != 'doc':
-                    raise Exception('Wrong keyword in doc section...')
-                else:
-                    # Convert a lone newline to a space, and two consecutive newlines
-                    # to a single newline.
-                    p[0] = p[3]
-            else:
-                p[0] = p[1]
+            p[0] = self._normalize_docstring(p[1])
 
     def _normalize_docstring(self, docstring):
         """We convert double newlines to single newlines, and single newlines
@@ -379,79 +513,24 @@ class BabelParser(object):
         p[0] = '\n'.join([line.replace('\n' + ' ' * self.lexer.cur_indent, ' ')
                           for line in lines]).strip()
 
-    def p_statement_docstring_create(self, p):
-        'docstring : LINE'
-        p[0] = p[1]
+    # --------------------------------------------------------------
+    # Examples
+    #
+    # Examples appear at the bottom of struct definitions to give
+    # illustrative examples of what struct values may look like.
+    #
+    # struct S
+    #     number Int64
+    #
+    #     example default "This is a label"
+    #         number=42
 
-    def p_statement_docstring_extend(self, p):
-        'docstring : docstring LINE'
-        p[0] = p[1] + p[2]
-
-    def p_field_list_create(self, p):
-        """field_list : field
-                      | empty"""
-        if p[1] is not None:
-            p[0] = [p[1]]
-
-    def p_field_list_extend(self, p):
-        'field_list : field_list field'
-        p[0] = p[1]
-        p[0].append(p[2])
-
-    def p_field_optional(self, p):
-        """optional : Q
-                    | empty"""
-        p[0] = p[1] == '?'
-
-    def p_field_deprecation(self, p):
-        """deprecation : DEPRECATED
-                       | empty"""
-        p[0] = (p[1] == 'deprecated')
-
-    def p_eq_primitive(self, p):
-        """eq_primitive : EQ INTEGER
-                        | EQ FLOAT
-                        | EQ STRING
-                        | EQ BOOLEAN
-                        | EQ NULL"""
-        p[0] = p[2]
-
-    def p_default_option(self, p):
-        """default_option : eq_primitive
-                          | empty"""
-        p[0] = p[1]
-
-    def p_statement_field(self, p):
-        """field : ID ID attributes_group optional default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT
-                 | ID ID attributes_group optional default_option deprecation NEWLINE"""
-        has_docstring = len(p) > 9
-        p[0] = BabelField(p[1], p[2], p[3], p[4], p[6])
-        if p[5] is not None:
-            if p[5] is BabelNull:
-                p[0].set_default(None)
-            else:
-                p[0].set_default(p[5])
-        elif has_docstring:
-            p[0].set_doc(p[9])
-
-    def p_asterix_option(self, p):
-        """asterix_option : ASTERIX
-                          | empty"""
-        p[0] = (p[1] is not None)
-
-    def p_statement_field_symbol(self, p):
-        """field : ID asterix_option NEWLINE
-                 | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
-        p[0] = BabelSymbolField(p[1], p[2])
-        if len(p) > 4:
-            p[0].set_doc(p[5])
-
-    def p_statement_example(self, p):
+    def p_example(self, p):
         """example : KEYWORD ID STRING NEWLINE INDENT example_field_list DEDENT
                    | KEYWORD ID empty NEWLINE INDENT example_field_list DEDENT"""
         p[0] = (p[2], p[3], p[6])
 
-    def p_statement_example_field_list(self, p):
+    def p_example_field_list(self, p):
         """example_field_list : example_field
                               | PASS NEWLINE"""
         if p[1] == 'pass':
@@ -459,37 +538,38 @@ class BabelParser(object):
         else:
             p[0] = [p[1]]
 
-    def p_statement_example_field_list_2(self, p):
+    def p_example_field_list_2(self, p):
         'example_field_list : example_field_list example_field'
         p[0] = p[1]
         p[0].append(p[2])
 
-    def p_empty(self, p):
-        'empty :'
-        pass
-
-    def p_statement_example_create(self, p):
+    def p_example_create(self, p):
         """example_list : example
                         | empty"""
         if p[1] is not None:
             p[0] = [p[1]]
 
-    def p_statement_example_list_extend(self, p):
+    def p_example_list_extend(self, p):
         'example_list : example_list example'
         p[0] = p[1]
         p[0].append(p[2])
 
-    def p_statement_example_field(self, p):
-        """example_field : ID EQ INTEGER NEWLINE
-                         | ID EQ FLOAT NEWLINE
-                         | ID EQ STRING NEWLINE
-                         | ID EQ BOOLEAN NEWLINE
-                         | ID EQ NULL NEWLINE"""
+    def p_example_field(self, p):
+        'example_field : ID EQ primitive NEWLINE'
         if p[3] is BabelNull:
             p[0] = (p[1], None)
         else:
             p[0] = (p[1], p[3])
 
+    # --------------------------------------------------------------
+
+    # In ply, this is how you define an empty rule. This is used when we want
+    # the parser to treat a rule as optional.
+    def p_empty(self, p):
+        'empty :'
+        pass
+
+    # Called by the parser whenever a token doesn't match any rule.
     def p_error(self, token):
         self._logger.debug('Unexpected %s(%r) at line %d',
                            token.type,

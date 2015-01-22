@@ -16,7 +16,6 @@ import datetime
 import numbers
 import re
 import six
-import types
 
 class DataType(object):
     """
@@ -27,6 +26,10 @@ class DataType(object):
     """
 
     __metaclass__ = ABCMeta
+
+    # When this is in a context where nullability is relevant, this should be
+    # set to True or False.
+    nullable = None
 
     @property
     def name(self):
@@ -255,7 +258,6 @@ class Field(object):
         :param str name: Name of the field.
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
-        :param bool optional: Whether the field can be absent.
         :param bool deprecated: Whether the field is deprecated.
         """
         self.name = name
@@ -275,7 +277,6 @@ class StructField(Field):
                  name,
                  data_type,
                  doc,
-                 optional=False,
                  deprecated=False):
         """
         Creates a new Field.
@@ -283,11 +284,9 @@ class StructField(Field):
         :param str name: Name of the field.
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
-        :param bool optional: Whether the field can be absent.
         :param bool deprecated: Whether the field is deprecated.
         """
         super(StructField, self).__init__(name, data_type, doc)
-        self.optional = optional
         self.deprecated = deprecated
         self.has_default = False
         self._default = None
@@ -305,17 +304,16 @@ class StructField(Field):
 
     def check(self, val):
         if val is None:
-            if self.optional:
+            if self.data_type.nullable:
                 return None
             else:
-                raise ValueError('val is None but field is not optional')
+                raise ValueError('val is None but type is not nullable')
         else:
             return self.data_type.check(val)
 
     def __repr__(self):
-        return 'StructField(%r, %r, %r)' % (self.name,
-                                            self.data_type,
-                                            self.optional)
+        return 'StructField(%r, %r)' % (self.name,
+                                        self.data_type)
 
 class UnionField(Field):
     def __init__(self,
@@ -352,46 +350,6 @@ class CompositeType(DataType):
         self.fields = fields
         self.super_type = super_type
         self.examples = {}
-
-    @property
-    def all_fields(self):
-        """
-        Returns an iterator of all fields. Required fields before optional
-        fields. Super type fields before type fields.
-        """
-        return self.all_required_fields + self.all_optional_fields
-
-    def _filter_fields(self, filter_function):
-        """
-        Utility to iterate through all fields (super types first) of a type.
-
-        :param filter: A function that takes in a Field object. If it returns
-            True, the field is part of the generated output. If False, it is
-            omitted.
-        """
-        fields = []
-        if self.super_type:
-            fields.extend(self.super_type._filter_fields(filter_function))
-        fields.extend(filter(filter_function, self.fields))
-        return fields
-
-    @property
-    def all_required_fields(self):
-        """
-        Returns an iterator that traverses required fields in all super types
-        first, and then for this type.
-        """
-        return self._filter_fields(lambda f: (isinstance(f.data_type, Symbol)
-                                              or not f.optional))
-
-    @property
-    def all_optional_fields(self):
-        """
-        Returns an iterator that traverses optional fields in all super types
-        first, and then for this type.
-        """
-        return self._filter_fields(lambda f: (not isinstance(f.data_type, Symbol)
-                                              and f.optional))
 
     @property
     def name(self):
@@ -461,6 +419,48 @@ class Struct(CompositeType):
             else:
                 raise ValueError('Field %r is unspecified' % field.name)
 
+    @property
+    def all_fields(self):
+        """
+        Returns an iterator of all fields. Required fields before optional
+        fields. Super type fields before type fields.
+        """
+        return self.all_required_fields + self.all_optional_fields
+
+    def _filter_fields(self, filter_function):
+        """
+        Utility to iterate through all fields (super types first) of a type.
+
+        :param filter: A function that takes in a Field object. If it returns
+            True, the field is part of the generated output. If False, it is
+            omitted.
+        """
+        fields = []
+        if self.super_type:
+            fields.extend(self.super_type._filter_fields(filter_function))
+        fields.extend(filter(filter_function, self.fields))
+        return fields
+
+    @property
+    def all_required_fields(self):
+        """
+        Returns an iterator that traverses required fields in all super types
+        first, and then for this type.
+        """
+        def required_check(f):
+            return not f.data_type.nullable and not f.has_default
+        return self._filter_fields(required_check)
+
+    @property
+    def all_optional_fields(self):
+        """
+        Returns an iterator that traverses optional fields in all super types
+        first, and then for this type.
+        """
+        def optional_check(f):
+            return f.data_type.nullable or f.has_default
+        return self._filter_fields(optional_check)
+
     def add_example(self, label, text, example):
         """
         Add a plausible example of the contents of this type. The example is
@@ -487,7 +487,7 @@ class Struct(CompositeType):
                 if isinstance(field.data_type, CompositeType):
                     # An example that specifies the key as null is okay if the
                     # field permits it.
-                    if field.optional and example[field.name] is None:
+                    if field.data_type.nullable and example[field.name] is None:
                         ordered_example[field.name] = None
                     else:
                         raise KeyError('Field %r should not be specified since '
@@ -504,7 +504,8 @@ class Struct(CompositeType):
                 else:
                     field.check(example[field.name])
                     ordered_example[field.name] = example[field.name]
-            elif not isinstance(field.data_type, (CompositeType, List)) and not field.optional:
+            elif not isinstance(field.data_type, (CompositeType, List)) \
+                    and not field.data_type.nullable:
                 raise KeyError('Missing field %r in example' % field.name)
         self.examples[label] = ordered_example
 

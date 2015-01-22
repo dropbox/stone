@@ -39,7 +39,7 @@ alias Rev = String
         out = self.parser.parse(text)
         self.assertIsInstance(out[1], BabelAlias)
         self.assertEqual(out[1].name, 'Rev')
-        self.assertEqual(out[1].data_type_name, 'String')
+        self.assertEqual(out[1].type_ref.name, 'String')
 
     def test_struct_decl(self):
 
@@ -53,7 +53,7 @@ struct QuotaInfo
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].data_type_name, 'UInt64')
+        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
 
         # test struct with only a top-level doc
         text = """
@@ -67,7 +67,7 @@ struct QuotaInfo
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
         self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].data_type_name, 'UInt64')
+        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
 
         # test struct with field doc
         text = """
@@ -82,7 +82,7 @@ struct QuotaInfo
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
         self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].data_type_name, 'UInt64')
+        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
         self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
 
         # test without newline after field doc
@@ -99,7 +99,7 @@ struct QuotaInfo
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
         self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].data_type_name, 'UInt64')
+        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
         self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
 
         # test with example
@@ -205,9 +205,9 @@ route GetAccountInfo(AccountInfo, Null, Null)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'AccountInfo')
         self.assertEqual(out[2].name, 'GetAccountInfo')
-        self.assertEqual(out[2].request_data_type_name, 'AccountInfo')
-        self.assertEqual(out[2].response_data_type_name, 'Null')
-        self.assertEqual(out[2].error_data_type_name, 'Null')
+        self.assertEqual(out[2].request_type_ref.name, 'AccountInfo')
+        self.assertEqual(out[2].response_type_ref.name, 'Null')
+        self.assertEqual(out[2].error_type_ref.name, 'Null')
 
     def test_lexing_errors(self):
         text = """

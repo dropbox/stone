@@ -363,7 +363,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
                 self.emit_line('else:')
                 with self.indent():
-                    if field.optional:
+                    if field.data_type.nullable:
                         self.emit_line('return None')
                     else:
                         self.emit_line(
@@ -376,7 +376,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_line('@{}.setter'.format(field_name_reserved_check))
             self.emit_line('def {}(self, val):'.format(field_name_reserved_check))
             with self.indent():
-                if field.optional:
+                if field.data_type.nullable:
                     self.emit_line('if val is None:')
                     with self.indent():
                         self.emit_line('del self.{}'.format(field_name_reserved_check))

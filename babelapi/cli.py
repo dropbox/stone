@@ -7,9 +7,10 @@ import imp
 import logging
 import os
 import sys
+import traceback
 
 from babelapi.compiler import Compiler
-from babelapi.babel.tower import TowerOfBabel
+from babelapi.babel.tower import InvalidSpec, TowerOfBabel
 
 def main():
     """The entry point for the program."""
@@ -63,7 +64,15 @@ def main():
     else:
         # TODO: Needs version
         tower = TowerOfBabel(args.spec, debug=debug)
-        api = tower.parse()
+        try:
+            api = tower.parse()
+        except InvalidSpec as e:
+            print >> sys.stderr, 'Specification had error(s). You must fix ' \
+                'these to continue:\n'
+            print >> sys.stderr, e, '\n'
+            print >> sys.stderr, 'A traceback is included below in case ' \
+                'this is a bug in Babel.\n', traceback.format_exc()
+            sys.exit(1)
         if api is None:
             print >> sys.stderr, \
                 'You must fix the above parsing errors for generation to continue.'

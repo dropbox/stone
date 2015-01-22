@@ -35,10 +35,12 @@ from babelapi.babel.parser import (
     BabelInclude,
     BabelNamespace,
     BabelRouteDef,
-    BabelSymbol,
     BabelSymbolField,
     BabelTypeDef,
+    BabelTypeRef,
 )
+
+class InvalidSpec(Exception): pass
 
 class TowerOfBabel(object):
 
@@ -106,27 +108,31 @@ class TowerOfBabel(object):
 
     def _create_alias(self, env, item):
         if item.name in env:
-            raise Exception('Symbol %r already defined' % item.name)
-        elif item.data_type_name not in env:
-            raise Exception('Symbol %r is undefined' % item.data_type_name)
+            raise InvalidSpec('Symbol %r already defined' % item.name)
+        elif item.type_ref.name not in env:
+            raise InvalidSpec('Symbol %r is undefined' % item.data_type_name)
 
-        obj = env[item.data_type_name]
+        obj = env[item.type_ref.name]
         if inspect.isclass(obj):
-            env[item.name] = obj(**dict(item.data_type_attrs))
-        elif item.data_type_attrs:
+            env[item.name] = obj(**dict(item.type_ref.attrs))
+        elif item.type_ref.attrs:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise Exception('Attributes cannot be specified for instantiated '
-                            'type %r.' % item.data_type_name)
+            raise InvalidSpec('Attributes cannot be specified for instantiated '
+                              'type %r.' % item.type_ref.name)
         else:
-            env[item.name] = env[item.data_type_name]
+            ref = env[item.type_ref.name]
+            if item.type_ref.nullable:
+                ref = copy.copy(ref)
+                ref.nullable = item.type_ref.nullable
+            env[item.name] = ref
 
     def _create_type(self, env, item):
         super_type = None
         if item.composite_type == 'struct':
             if item.extends:
                 if item.extends not in env:
-                    raise Exception('Data type %r is undefined' % item.extends)
+                    raise InvalidSpec('Data type %r is undefined' % item.extends)
                 else:
                     super_type = env.get(item.extends)
             api_type_fields = []
@@ -146,8 +152,8 @@ class TowerOfBabel(object):
             api_type = Union(item.name, item.doc, api_type_fields, super_type,
                              catch_all_field)
         else:
-            raise ValueError('Unknown composite_type %r'
-                             % item.composite_type)
+            raise AssertionError('Unknown composite_type %r' %
+                                 item.composite_type)
         for example_label, (example_text, example) in item.examples.items():
             api_type.add_example(example_label, example_text, dict(example))
         env[item.name] = api_type
@@ -162,25 +168,21 @@ class TowerOfBabel(object):
         The caller needs to ensure that this babel_field is for a Struct and not
         for a Union.
 
-        Returns a babelapi.data_type.StructField object.
+        Returns:
+            babelapi.data_type.StructField: A field of a struct.
         """
-        if babel_field.data_type_name not in env:
-            raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
+        if babel_field.type_ref.name not in env:
+            raise InvalidSpec('Symbol %r is undefined' % babel_field.data_type_name)
         else:
-            data_type = self._resolve_type(
-                env,
-                babel_field.data_type_name,
-                babel_field.data_type_attrs,
-            )
+            data_type = self._resolve_type(env, babel_field.type_ref)
             api_type_field = StructField(
                 babel_field.name,
                 data_type,
                 babel_field.doc,
-                optional=babel_field.optional,
                 deprecated=babel_field.deprecated,
             )
             if babel_field.has_default:
-                if not (babel_field.optional and babel_field.default is None):
+                if not (babel_field.type_ref.nullable and babel_field.default is None):
                     # Verify that the type of the default value is correct for this field
                     data_type.check(babel_field.default)
                 api_type_field.set_default(babel_field.default)
@@ -195,17 +197,19 @@ class TowerOfBabel(object):
         The caller needs to ensure that this babel_field is for a Union and not
         for a Struct.
 
-        Returns a babelapi.data_type.UnionField object.
+        Returns:
+            babelapi.data_type.UnionField: A field of a union.
         """
         if isinstance(babel_field, BabelSymbolField):
             api_type_field = UnionField(babel_field.name, Symbol(), babel_field.doc)
-        elif babel_field.data_type_name not in env:
-            raise Exception('Symbol %r is undefined' % babel_field.data_type_name)
+        elif babel_field.type_ref.name not in env:
+            raise InvalidSpec('Symbol %r is undefined' % babel_field.type_ref.name)
         else:
+            if babel_field.type_ref.nullable:
+                raise InvalidSpec('Variants cannot reference nullable types.')
             data_type = self._resolve_type(
                 env,
-                babel_field.data_type_name,
-                babel_field.data_type_attrs,
+                babel_field.type_ref,
             )
             api_type_field = UnionField(
                 babel_field.name,
@@ -214,34 +218,39 @@ class TowerOfBabel(object):
             )
         return api_type_field
 
-    def _resolve_type(self, env, data_type_name, data_type_attrs):
-        """
-        Resolves the data type referenced by the data_type_name.
-        """
-        obj = env[data_type_name]
+    def _resolve_type(self, env, type_ref):
+        """Resolves the data type referenced by type_ref."""
+        obj = env[type_ref.name]
         if inspect.isclass(obj):
-            resolved_data_type_attrs = self._resolve_attrs(env, data_type_attrs)
+            resolved_data_type_attrs = self._resolve_attrs(env, type_ref.attrs)
             data_type = obj(**dict(resolved_data_type_attrs))
-        elif data_type_attrs:
+            data_type.nullable = type_ref.nullable
+        elif type_ref.attrs:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise Exception('Attributes cannot be specified for instantiated '
-                            'type %r.' % data_type_name)
+            raise InvalidSpec('Attributes cannot be specified for instantiated '
+                              'type %r.' % type_ref.name)
         else:
-            data_type = env[data_type_name]
+            # The data_type could be nullable if this is an alias to a nullable
+            # type. Or, the type reference itself could be nullable.
+            data_type = env[type_ref.name]
+            if data_type.nullable or type_ref.nullable:
+                data_type = copy.copy(data_type)
+                data_type.nullable = True
         return data_type
 
     def _resolve_attrs(self, env, attrs):
         """
-        Resolves symbols in data type attributes to data types in environment.
+        Resolves type references in data type attributes to data types in
+        the environment.
         """
         new_attrs = []
         for (k, v) in attrs:
-            if isinstance(v, BabelSymbol):
+            if isinstance(v, BabelTypeRef):
                 if v.name not in env:
-                    raise Exception('Symbol %r is undefined' % v.name)
+                    raise InvalidSpec('Symbol %r is undefined' % v.name)
                 else:
-                    new_attr = (k, self._resolve_type(env, v.name, []))
+                    new_attr = (k, self._resolve_type(env, v))
                     new_attrs.append(new_attr)
             else:
                 new_attrs.append((k, v))
@@ -271,18 +280,18 @@ class TowerOfBabel(object):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
             elif isinstance(item, BabelRouteDef):
-                request_data_type = self._resolve_data_type(
-                    env,
-                    item.request_data_type_name,
-                )
-                response_data_type = self._resolve_data_type(
-                    env,
-                    item.response_data_type_name,
-                )
-                error_data_type = self._resolve_data_type(
-                    env,
-                    item.error_data_type_name,
-                )
+                request_data_type = self._resolve_type(env, item.request_type_ref)
+                if request_data_type.nullable:
+                    raise InvalidSpec('Route %r request type %r cannot be nullable.' %
+                                      (item.name, request_data_type.name))
+                response_data_type = self._resolve_type(env, item.response_type_ref)
+                if response_data_type.nullable:
+                    raise InvalidSpec('Route %r response type %r cannot be nullable.' %
+                                      (item.name, response_data_type.name))
+                error_data_type = self._resolve_type(env, item.error_type_ref)
+                if error_data_type.nullable:
+                    raise InvalidSpec('Route %r error type %r cannot be nullable.' %
+                                      (item.name, error_data_type.name))
                 route = ApiRoute(
                     item.name,
                     item.doc,
@@ -307,8 +316,7 @@ class TowerOfBabel(object):
     def _include_babelh(self, env, path, name):
         babelh_path = os.path.join(path, name) + '.babelh'
         if not os.path.exists(babelh_path):
-            raise Exception('Babel header %r does not exist'
-                            % babelh_path)
+            raise InvalidSpec('Babel header %r does not exist' % babelh_path)
 
         with open(babelh_path) as f:
             scripture = f.read()
@@ -323,14 +331,5 @@ class TowerOfBabel(object):
             elif isinstance(item, BabelTypeDef):
                 self._create_type(env, item)
             else:
-                raise Exception('Unknown Babel Declaration Type %r'
-                                % item.__class__.__name__)
-
-    def _resolve_data_type(self, env, data_type_name):
-        if not data_type_name:
-            # FIXME: We should think through whether the name should always be present
-            return None
-        if data_type_name not in env:
-            raise Exception('Symbol %r is undefined' % data_type_name)
-        data_type = env.get(data_type_name)
-        return data_type
+                raise AssertionError('Unknown Babel Declaration Type %r' %
+                                     item.__class__.__name__)

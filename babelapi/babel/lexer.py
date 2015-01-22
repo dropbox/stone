@@ -95,16 +95,10 @@ class BabelLexer(object):
 
     # List of token names
     tokens = (
-       'COLON',
        'ID',
        'KEYWORD',
        'PATH',
        'PIPE',
-    )
-
-    # Tokens related to free text
-    tokens += (
-        'LINE',
     )
 
     # Whitespace tokens
