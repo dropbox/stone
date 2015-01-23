@@ -26,8 +26,6 @@ Here's a simple no-op generator::
         def generate(self):
             pass
 
-.. api-obj:
-
 Using the API Object
 ====================
 
@@ -46,8 +44,6 @@ Here's an example generator that creates no file output, but will print the
             print self.api
 
 See the Python object definition for more information.
-
-.. create-output:
 
 Creating an Output File
 =======================
@@ -96,8 +92,6 @@ that each serve a different purpose.
     Writes the number of spaces for the current indentation level to the output
     file.
 
-.. indentation:
-
 Indentation
 ===========
 
@@ -123,8 +117,6 @@ The contents of ``ex_indent.out`` is::
 
 Indentation is always four spaces. We plan to make this customizable in the
 future.
-
-.. examples:
 
 Examples
 ========

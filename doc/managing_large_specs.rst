@@ -5,8 +5,6 @@ Managing Large Specs
 Here we cover several strategies for dealing with a large number of routes
 and types.
 
-.. using-namespaces:
-
 Using Namespaces
 ================
 
@@ -16,8 +14,6 @@ namespaces. This organizes your API into logical groups.
 Code generators should translate your namespaces into logical groups in the
 target language. For example, the Python generator creates a separate Python
 module for each namespace.
-
-.. splitting-namespace:
 
 Splitting a Namespace Across Files
 ==================================
@@ -39,8 +35,6 @@ specs::
     $ babelapi python spec1.babel spec2.babel spec3.babel output/
     $ babelapi python *.babel output/
 
-.. using-headers:
-
 Using Header Files
 ==================
 
@@ -56,8 +50,6 @@ Assuming that the header file is named ``common.babelh``, specify
 to all data types defined in the header. These data types will be imported into
 the global environment of the spec file and will not require any reference to
 ``common``.
-
-.. public-private:
 
 Separating Public and Private Routes
 ====================================

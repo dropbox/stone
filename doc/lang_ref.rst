@@ -59,8 +59,6 @@ The spec should live in a file called ``users.babel``::
     route get_account (GetAccountReq, Account, GetAccountErr)
         "Get information about a specified user's account."
 
-.. filename:
-
 Choosing a Filename
 ===================
 
@@ -70,8 +68,6 @@ spec. If the definitions for a namespace are spread across multiple files, we
 recommend that all spec files use the namespace as a filename prefix. For
 example, ``users_public.babel`` and ``users_private.babel``.
 
-.. comments:
-
 Comments
 ========
 
@@ -79,8 +75,6 @@ Any line whose first non-whitespace character is a hash ``#`` is considered a
 comment and ignored by the parser. Use comments to explain parts of the spec
 to a reader of the spec. Comments are distinct from documentation strings,
 which are parsed and accessible to generators.
-
-.. namespace:
 
 Namespace
 =========
@@ -96,8 +90,6 @@ Namespaces are useful for grouping related functionality together. For example,
 the Dropbox API has a namespace devoted to all file operations (uploading,
 downloading, ...), and another namespace for all operations relevant to user
 accounts.
-
-.. primitive-types:
 
 Primitive Types
 ===============
@@ -131,8 +123,6 @@ If no arguments are needed, the parentheses can be omitted. For example::
         number Int64
         string String
 
-.. struct:
-
 Struct
 ======
 
@@ -157,8 +147,6 @@ After the documentation is a list of fields. Fields are formatted with the field
 name first followed by the field type. To provide documentation for a field,
 specify a string on a new indented line following the field declaration.
 
-.. struct-inheritance:
-
 Inheritance
 -----------
 
@@ -168,8 +156,6 @@ struct::
     struct Account extends BasicAccount
 
 ``Account`` inherits ``account_id`` and ``email`` from ``BasicAccount``.
-
-.. struct-composition:
 
 Composition
 -----------
@@ -192,8 +178,6 @@ structs or unions::
         status Status
             "The status of the account."
 
-.. struct-nullable:
-
 Nullable Type
 -------------
 
@@ -210,8 +194,6 @@ the presence of a field is the preferred method.
 
 A nullable type is considered optional. If it is not specified in a message,
 the receiver should not error, but instead treat the field as absent.
-
-.. struct-defaults:
 
 Defaults
 --------
@@ -271,8 +253,6 @@ representation of the general case for the type::
 As you can see, ``null`` should be used to mark that a nullable field is not
 present.
 
-.. union:
-
 Union
 =====
 
@@ -289,14 +269,10 @@ by a documentation string::
 
 Its list of fields are a list of variants.
 
-.. union-symbol:
-
 Symbol
 ------
 
 ``active`` is a tag that is not mapped to any value. We call these symbols.
-
-.. union-catch-all:
 
 Catch All Symbol
 ----------------
@@ -331,8 +307,6 @@ errors an endpoint might return. Recipients in the wild may have been generated
 with only a subset of the current errors, but they'll continue to function as
 long as they handle the catch all tag.
 
-.. union-any:
-
 Any Data Type
 -------------
 
@@ -360,8 +334,6 @@ updated to include more information::
             is text explaining why."
         unknown*
 
-.. alias:
-
 Alias
 =====
 
@@ -372,8 +344,6 @@ over again::
 
 In our example, declaring an ``AccountId`` alias is clearer when used and
 will make it easier to change in the future.
-
-.. route:
 
 Route
 =====
@@ -409,8 +379,6 @@ followed by an arbitrary set of ``key=value`` pairs::
 
 Code generators will populate a route object with these attributes.
 
-.. documentation:
-
 Documentation
 =============
 
@@ -426,8 +394,6 @@ Documentation is accessible to generators. Code generators will inject
 documentation into the language objects that represent routes, structs, and
 unions. Generators for API documentation will find documentation strings
 especially useful.
-
-.. documentation-stubs:
 
 Stubs
 -----
@@ -453,15 +419,11 @@ val
     A value. Generators should convert this to the native representation of the
     value for the target language.
 
-.. include:
-
 Include
 =======
 
 Including header files is covered in
 `Managing Large Specs: Using Headers <managing_large_specs.rst#using-headers>`_.
-
-.. formal-grammar:
 
 Formal Grammar
 ===============

@@ -12,10 +12,10 @@ actively worked on, and the intention is to support
 
     * Introduction
         * Motivation_
-        * Install_
-        * `Taste of Babel <taste-of-babel_>`_
+        * Installation_
+        * `Taste of Babel <#a-taste-of-babel>`_
     * `Language Reference (.babel) <doc/lang_ref.rst>`_
-        * `Choosing a Filename <doc/lang_ref.rst#filename>`_
+        * `Choosing a Filename <doc/lang_ref.rst#choosing-a-filename>`_
         * `Comments <doc/lang_ref.rst#comments>`_
         * `Namespace <doc/lang_ref.rst#namespace>`_
         * `Primitive Types <doc/lang_ref.rst#primitive-types>`_
@@ -26,25 +26,25 @@ actively worked on, and the intention is to support
         * `Documentation <doc/lang_ref.rst#documentation>`_
         * `Formal Grammar <doc/lang_ref.rst#formal-grammar>`_
     * `Using a Generator <doc/using_generator.rst>`_
-        * `Compile with the CLI <doc/using_generator.rst#compile>`_
-        * `Python Generation <doc/using_generator.rst#python-gen>`_
+        * `Compile with the CLI <doc/using_generator.rst#compile-with-the-cli>`_
+        * `Python Generation <doc/using_generator.rst#python-generation>`_
     * `Managing Large Specs <doc/managing_large_specs.rst>`_
         * `Using Namespaces <doc/managing_large_specs.rst#using-namespaces>`_
-        * `Splitting a Namespace Across Files <doc/managing_large_specs.rst#splitting-namespace>`_
-        * `Using Header Files <doc/managing_large_specs.rst#using-headers>`_
-        * `Separating Public and Private Routes <doc/managing_large_specs.rst#public-private>`_
+        * `Splitting a Namespace Across Files <doc/managing_large_specs.rst#splitting-a-namespace-across-files>`_
+        * `Using Header Files <doc/managing_large_specs.rst#using-header-files>`_
+        * `Separating Public and Private Routes <doc/managing_large_specs.rst#separation-public-and-private-routes>`_
     * `Evolving a Spec <doc/evolve_spec.rst>`_
         * `Background <doc/evolve_spec.rst#background>`_
         * `Sender-Recipient <doc/evolve_spec.rst#sender-recipient>`_
-        * `Backwards Incompatible Changes <doc/evolve_spec.rst#backwards-incompat>`_
-        * `Backwards Compatible Changes <doc/evolve_spec.rst#backwards-compat>`_
-        * `Planning for Backwards Compatibility <doc/evolve_spec.rst#planning-for-compat>`_
+        * `Backwards Incompatible Changes <doc/evolve_spec.rst#backwards-incompatible-changes>`_
+        * `Backwards Compatible Changes <doc/evolve_spec.rst#backwards-compatible-changes>`_
+        * `Planning for Backwards Compatibility <doc/evolve_spec.rst#planning-for-backwards-compatibility>`_
         * `Leader-Clients <doc/evolve_spec.rst#leader-clients>`_
         * `Route Versioning <doc/evolve_spec.rst#route-versioning>`_
     * `Generator Reference (.babelg.py) <doc/generator_ref.rst>`_
-        * `Using the API Object <doc/generator_ref.rst#api-obj>`_
-        * `Creating an Output File <doc/generator_ref.rst#output-file>`_
-        * `Emit Methods <doc/generator_ref.rst#emit_methods>`_
+        * `Using the API Object <doc/generator_ref.rst#using-the-api-object>`_
+        * `Creating an Output File <doc/generator_ref.rst#creating-an-output-file>`_
+        * `Emit Methods <doc/generator_ref.rst#emit-methods>`_
         * `Indentation <doc/generator_ref.rst#indentation>`_
         * `Examples <doc/generator_ref.rst#examples>`_
     * `Wire Format <doc/wire_format.rst>`_
@@ -92,7 +92,7 @@ response types defined without relation to each other. In other words, the
 type of response does not change based on the input to the endpoint. An
 exception to this rule is afforded for error responses.
 
-.. _install:
+.. _installation:
 
 Installation
 ============
@@ -111,7 +111,7 @@ you can replace ``babelapi`` with ``python -m babelapi.cli`` as follows::
 
    $ python -m babelapi.cli -h
 
-.. _taste-of-babel:
+.. taste-of-babel:
 
 A Taste of Babel
 ================

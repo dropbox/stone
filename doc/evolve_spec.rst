@@ -6,8 +6,6 @@ APIs are constantly evolving. In designing Babel, we sought to codify what
 changes are backwards incompatible, and added facilities to make maintaining
 compatibility easier.
 
-.. background:
-
 Background
 ==========
 
@@ -23,8 +21,6 @@ reasons:
        servers in stages, meaning that clusters of servers will have different
        understandings of the interface for windows of time.
 
-.. sender-recipient:
-
 Sender-Recipient
 ================
 
@@ -38,8 +34,6 @@ doesn't.
 
 If the recipient has a newer version, we want to make sure that it knows what
 to do when the sender's message is missing data.
-
-.. backwards-incompat:
 
 Backwards Incompatible Changes
 ------------------------------
@@ -65,8 +59,6 @@ Backwards Incompatible Changes
         * The change in data type is backwards incompatible if any operation
           is backwards incompatible.
 
-.. backwards-compat:
-
 Backwards Compatible Changes
 ----------------------------
 
@@ -86,8 +78,6 @@ Backwards Compatible Changes
           will handle this new variant through the same code path that handles
           the catch all variant.
 
-.. planning-for-compat:
-
 Planning for Backwards Compatibility
 ====================================
 
@@ -95,8 +85,6 @@ Planning for Backwards Compatibility
       future, add a `catch all symbol variant <lang_ref.rst#union-catch-all>`_.
     * When defining a symbol that you're likely to convert to a variant with
       a value sometime in the future, use the `Any <lang_ref.rst#union-any>`_.
-
-.. leader-clients:
 
 Leader-Clients
 ==============
@@ -139,8 +127,6 @@ A known leader can be stricter with what it receives from clients:
 [TODO] There are more nuanced backwards compatible changes such as: A variant
 can be removed if the union is only sent from the server to a client. Will this
 level of detail just lead to errors in practice?
-
-.. route-versioning:
 
 Route Versioning
 ================

@@ -16,8 +16,6 @@ create generators for an assortment of languages including:
     * Ruby
     * Swift
 
-.. compile:
-
 Compile with the CLI
 ====================
 
@@ -37,8 +35,6 @@ The first argument, ``python``, selected the bundled Python code generator.
 ``users.babel`` is the spec file to compile. If we had another spec file, we
 could list it right after ``users.babel``. The ``.`` says to save the output
 of the code generator to the current directory.
-
-.. python-gen:
 
 Python Generation
 =================
