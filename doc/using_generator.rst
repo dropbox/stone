@@ -111,7 +111,7 @@ For each union in your spec, you will see a corresponding Python class of the
 same name.
 
 You do not use a union class's constructor directly. To select a symbol (or a
-`Any data type<lang_ref.rst#union-any>`_) variant, use the class attribute of
+`Any data type <lang_ref.rst#union-any>`_) variant, use the class attribute of
 the same name::
 
     >>> GetAccountErr.no_account # symbol

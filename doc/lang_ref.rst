@@ -192,37 +192,47 @@ structs or unions::
         status Status
             "The status of the account."
 
-.. struct-optionality:
+.. struct-nullable:
 
-Optionality
------------
+Nullable Type
+-------------
 
-When a field type is followed by a ``?``, the field is optional::
+When a field type is followed by a ``?``, the field is nullable::
 
     name String(min_length=1)?
 
-Optional means that the field can be unspecified. Code generators should use
-a programming language's null value to represent an unspecified field.
-Serializers can either include the field with a null value, or have it absent
-from the output, which is how the included JSON encoder works.
+Nullable means that the field can be unspecified, ie. ``null``. Code generators
+should use a language's native facilities for null,
+`boxed types <http://en.wikipedia.org/wiki/Object_type_(object-oriented_programming)#Boxing>`_,
+and `option types <http://en.wikipedia.org/wiki/Option_type>`_ if possible. For
+languages that do not support these features, a separate function to check for
+the presence of a field is the preferred method.
+
+A nullable type is considered optional. If it is not specified in a message,
+the receiver should not error, but instead treat the field as absent.
 
 .. struct-defaults:
 
 Defaults
 --------
 
-Setting a default means that a field can be unspecified, and if so, the default
-will be assumed::
+A field with a primitive type can have a default set with a ``=`` followed by
+a value at the end of the field declaration::
 
     struct Example
         number UInt64 = 1024
         string String = "hello, world."
 
-Generators should generate code that return the default when a field with a
-default is not set. If a field is explicitly unspecified (set to ``null``),
-the default should not be returned.
+Setting a default means that a field is optional. If it is not specified in a
+message, the receiver should not error, but instead return the default when
+the field is queried. The receiver should, however, track the fact that the
+field was unspecified, so that if the message is re-serialized the default is
+not present in the message.
 
-In practice, defaults are useful when evolving a spec [TODO].
+Note also that a default cannot be set for a nullable type. Nullable types
+implicitly have a default of ``null``.
+
+In practice, defaults are useful when `evolving a spec <evolve_spec.rst>`_.
 
 .. struct-examples:
 
@@ -258,7 +268,7 @@ representation of the general case for the type::
             email="anony@example.org"
             name=null
 
-As you can see, ``null`` should be used to mark that an optional field is not
+As you can see, ``null`` should be used to mark that a nullable field is not
 present.
 
 .. union:

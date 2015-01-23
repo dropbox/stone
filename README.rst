@@ -11,9 +11,9 @@ actively worked on, and the intention is to support
 `several other languages <doc/using_generator.rst>`_.
 
     * Introduction
-        * `Motivation <#motivation>`_
-        * `Installation <#install>`_
-        * `A Taste of Babel <#taste-of-babel>`_
+        * Motivation_
+        * Install_
+        * `Taste of Babel <taste-of-babel_>`_
     * `Language Reference (.babel) <doc/lang_ref.rst>`_
         * `Choosing a Filename <doc/lang_ref.rst#filename>`_
         * `Comments <doc/lang_ref.rst#comments>`_
@@ -49,7 +49,7 @@ actively worked on, and the intention is to support
         * `Examples <doc/generator_ref.rst#examples>`_
     * `Wire Format <doc/wire_format.rst>`_
 
-.. motivation:
+.. _motivation:
 
 Motivation
 ==========
@@ -92,7 +92,7 @@ response types defined without relation to each other. In other words, the
 type of response does not change based on the input to the endpoint. An
 exception to this rule is afforded for error responses.
 
-.. install:
+.. _install:
 
 Installation
 ============
@@ -111,7 +111,7 @@ you can replace ``babelapi`` with ``python -m babelapi.cli`` as follows::
 
    $ python -m babelapi.cli -h
 
-.. taste-of-babel:
+.. _taste-of-babel:
 
 A Taste of Babel
 ================
