@@ -5,17 +5,9 @@ namespace files
 alias DbxTimestamp = Timestamp(format="%a, %d %b %Y %H:%M:%S +0000")
 
 alias Rev = String
+alias Path = String
 
-struct PathRef
-    path String
-        "Path from root. Should be an empty string for root."
-
-struct FileRef extends PathRef
-    rev String?
-        "Revision of target file."
-
-struct File
-    "A file resource"
+struct FileMetadata
 
     client_modified DbxTimestamp
         "For files, this is the modification time set by the desktop client
@@ -25,53 +17,61 @@ struct File
         for example, to determine if a file has changed or not."
     server_modified DbxTimestamp
         "The last time the file was modified on Dropbox."
-    rev String
+    rev Rev
         "A unique identifier for the current revision of a file. This field is
         the same rev as elsewhere in the API and can be used to detect changes
         and avoid conflicts."
     size UInt64
         "The file size in bytes."
 
-struct Folder
-    "A folder resource"
+struct FolderMetadata
+    "Placeholder to make parser work."
 
 union Metadata
-    file File
-    folder Folder
+    file FileMetadata
+    folder FolderMetadata
 
-struct Entry
+struct FileMetadataWithName
+    name String
+    metadata FileMetadata
+
+struct MetadataWithName
+    name String
     metadata Metadata
-    name String
-        "The name of the resource as seen by the user in their Dropbox."
-
-struct FileEntry
-    name String
-        "The name of the resource as seen by the user in their Dropbox."
-    metadata File
 
 union GetMetadataError
     not_found
         "File was not found at the specified path."
 
-route get_metadata (FileRef, Entry, GetMetadataError)
+struct GetMetadataRequest
+    path Path
+
+route get_metadata (GetMetadataRequest, MetadataWithName, GetMetadataError)
     "Returns the metadata for a file or folder."
 
-struct FolderContentsBase
+struct ListFolderFooter
     cursor String
         "Pass the cursor into :route:`list_folder/continue` to see what's changed
         in the folder since your previous query."
     has_more Boolean
         "If true, then there are more entries available."
 
-struct FolderContentsInit extends FolderContentsBase
-    entries List(data_type=Entry)
-        "Each entry is a resource in the folder."
+struct ListFolderRequest
+    path Path
+
+struct ChangeEntry
+    name String
+    metadata Metadata?
+
+struct ListFolderResponse
+    entries List(data_type=ChangeEntry)
+    footer ListFolderFooter
 
 union ListFolderError
     not_found
-        "File was not found at the specified path."
+        "There is no file or folder at the given path."
     not_folder
-        "Entry at path was not a folder."
+        "Entry at path is not a folder."
 
     # reset can only ever happen on ListFolderContinue. This demonstrates an
     # issue with Babel-generated unions where ListFolderContinue has a superset
@@ -83,22 +83,35 @@ union ListFolderError
     reset
         "Placeholder. This isn't used yet."
 
-route list_folder (PathRef, FolderContentsInit, ListFolderError)
+route list_folder (ListFolderRequest, ListFolderResponse, ListFolderError)
     "Returns the contents of a folder."
 
-struct CursorRef
+struct ListFolderContinueRequest
     cursor String
 
-union ContinueType
-    continue List(data_type=Entry)
-    restart List(data_type=Entry)
+union ListFolderContinueEntries
+    continue List(data_type=ChangeEntry)
+    restart List(data_type=ChangeEntry)
 
-struct FolderContentsContinue extends FolderContentsBase
-    entries ContinueType
+struct ListFolderContinueResponse
+    entries ListFolderContinueEntries
+    footer ListFolderFooter
 
-route list_folder/continue (CursorRef, FolderContentsContinue, ListFolderError)
+route list_folder/continue (ListFolderContinueRequest, ListFolderContinueResponse, ListFolderError)
     "Once a cursor has been retrieved from :route:`list_folder`, use this to
     paginate through all files and retrieve updates to the folder."
+
+struct GetDescendantsRequest
+    id String
+
+struct GetDescendantsResponse
+    results List(data_type=ChangeEntry)
+
+union GetDescendantsError
+    no_permission
+
+route get_descendants (GetDescendantsRequest, GetDescendantsResponse, GetDescendantsError)
+    "TODO: Something about file IDs."
 
 union NoFileReason
     not_found Any
@@ -126,7 +139,11 @@ union DownloadError
     no_file NoFile
     other*
 
-route download (FileRef, FileEntry, DownloadError)
+struct DownloadRequest
+    path Path
+    rev Rev?
+
+route download (DownloadRequest, FileMetadataWithName, DownloadError)
     "Download a file in a user's Dropbox."
 
     attrs
@@ -220,25 +237,26 @@ union UploadMode
         "On a conflict, only overwrite the target if the revision matches."
 
 struct UploadCommit
-    path String
+    path Path
         "Path in the user's Dropbox to save the file."
     mode UploadMode
         "The course of action to take if a file already exists at :field:`path`."
     append_to UploadAppend?
         "If specified, the current chunk of data should be appended to an
         existing upload session."
-    autorename Boolean? = false
+    autorename Boolean = false
         "Whether the file should be autorenamed in the event of a conflict."
-    client_modified_utc UInt64? = null
+    client_modified_utc UInt64?
         "Self reported time of when this file was created or modified."
-    mute Boolean? = false
+    mute Boolean = false
         "Whether the devices that the user has linked should notify them of the
         new or updated file."
 
-route upload (UploadCommit, FileEntry, UploadError)
+route upload (UploadCommit, FileMetadataWithName, UploadError)
     "Use this endpoint to either finish an ongoing upload session that was
     begun with :route:`upload/start` or upload a file in one shot."
 
     attrs
         host="content"
         style="upload"
+

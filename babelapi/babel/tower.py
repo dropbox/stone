@@ -108,9 +108,9 @@ class TowerOfBabel(object):
 
     def _create_alias(self, env, item):
         if item.name in env:
-            raise InvalidSpec('Symbol %r already defined' % item.name)
+            raise InvalidSpec('Symbol %r already defined.' % item.name)
         elif item.type_ref.name not in env:
-            raise InvalidSpec('Symbol %r is undefined' % item.data_type_name)
+            raise InvalidSpec('Symbol %r is undefined.' % item.data_type_name)
 
         obj = env[item.type_ref.name]
         if inspect.isclass(obj):
@@ -132,7 +132,7 @@ class TowerOfBabel(object):
         if item.composite_type == 'struct':
             if item.extends:
                 if item.extends not in env:
-                    raise InvalidSpec('Data type %r is undefined' % item.extends)
+                    raise InvalidSpec('Data type %r is undefined.' % item.extends)
                 else:
                     super_type = env.get(item.extends)
             api_type_fields = []
@@ -172,9 +172,12 @@ class TowerOfBabel(object):
             babelapi.data_type.StructField: A field of a struct.
         """
         if babel_field.type_ref.name not in env:
-            raise InvalidSpec('Symbol %r is undefined' % babel_field.data_type_name)
+            raise InvalidSpec('Symbol %r is undefined.' % babel_field.data_type_name)
         else:
             data_type = self._resolve_type(env, babel_field.type_ref)
+            if data_type.nullable and babel_field.has_default:
+                raise InvalidSpec('Field %r cannot be a nullable type and '
+                    'have a default specified.' % babel_field.name)
             api_type_field = StructField(
                 babel_field.name,
                 data_type,
@@ -203,7 +206,7 @@ class TowerOfBabel(object):
         if isinstance(babel_field, BabelSymbolField):
             api_type_field = UnionField(babel_field.name, Symbol(), babel_field.doc)
         elif babel_field.type_ref.name not in env:
-            raise InvalidSpec('Symbol %r is undefined' % babel_field.type_ref.name)
+            raise InvalidSpec('Symbol %r is undefined.' % babel_field.type_ref.name)
         else:
             if babel_field.type_ref.nullable:
                 raise InvalidSpec('Variants cannot reference nullable types.')
@@ -316,7 +319,7 @@ class TowerOfBabel(object):
     def _include_babelh(self, env, path, name):
         babelh_path = os.path.join(path, name) + '.babelh'
         if not os.path.exists(babelh_path):
-            raise InvalidSpec('Babel header %r does not exist' % babelh_path)
+            raise InvalidSpec('Babel header %r does not exist.' % babelh_path)
 
         with open(babelh_path) as f:
             scripture = f.read()

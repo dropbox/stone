@@ -18,18 +18,21 @@ import json
 import six
 
 try:
-    from . import babel_data_types as dt
+    from . import babel_validators as bv
 except (SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
-    import babel_data_types as dt
+    import babel_validators as bv
 
 # --------------------------------------------------------------
 # JSON Encoder
 
 def json_encode(data_type, obj):
-    """
-    Encodes a Babel data type into JSON.
+    """Encodes an object into JSON based on its type.
+
+    Args:
+        data_type (Validator): Validator for obj.
+        obj (object): Object to be serialized.
 
     This function will also do additional validation that wasn't done by the
     objects themselves:
@@ -77,17 +80,22 @@ def _json_encode_helper(data_type, obj, needs_validation=True):
     We skip validation of fields with primitive data types in structs and
     unions because they've already been validated on assignment.
     """
-    if isinstance(data_type, dt.List):
+    if isinstance(data_type, bv.List):
         # Because Lists are mutable, we always validate them during
         # serialization.
-        data_type.validate(obj)
-        return [_json_encode_helper(data_type.item_data_type, item)
+        obj = data_type.validate(obj)
+        return [_json_encode_helper(data_type.item_validator, item)
                 for item in obj]
-    elif isinstance(data_type, dt.PrimitiveType):
+    elif isinstance(data_type, bv.Nullable):
         if needs_validation:
-            data_type.validate(obj)
+            obj = data_type.validate(obj)
+        return (_json_encode_helper(data_type.validator, obj, False)
+                if obj is not None else None)
+    elif isinstance(data_type, bv.Primitive):
+        if needs_validation:
+            obj = data_type.validate(obj)
         return _make_json_friendly(data_type, obj)
-    elif isinstance(data_type, dt.Struct):
+    elif isinstance(data_type, bv.Struct):
         d = collections.OrderedDict()
         if needs_validation:
             data_type.validate_type_only(obj)
@@ -95,18 +103,21 @@ def _json_encode_helper(data_type, obj, needs_validation=True):
             try:
                 val = getattr(obj, field_name)
             except AttributeError as e:
-                raise dt.ValidationError(e.args[0])
-            if val is not None:
+                raise bv.ValidationError(e.args[0])
+            presence_key = '_%s_present' % field_name
+            if val is not None and getattr(obj, presence_key):
+                # This check makes sure that we don't serialize absent struct
+                # fields as null, even if there is a default.
                 d[field_name] = _json_encode_helper(field_data_type, val, False)
         return d
-    elif isinstance(data_type, dt.Union):
+    elif isinstance(data_type, bv.Union):
         if needs_validation:
             data_type.validate_type_only(obj)
         if obj._tag is None:
-            raise dt.ValidationError('no tag set')
-        field_data_type = data_type.definition._fields_[obj._tag]
+            raise bv.ValidationError('no tag set')
+        field_data_type = data_type.definition._tagmap_[obj._tag]
         if field_data_type is not None:
-            if isinstance(field_data_type, (dt.Any, dt.Symbol)):
+            if isinstance(field_data_type, (bv.Any, bv.Symbol)):
                 return obj._tag
             else:
                 val = getattr(obj, '_'+obj._tag)
@@ -118,13 +129,15 @@ def _json_encode_helper(data_type, obj, needs_validation=True):
                              % type(data_type).__name__)
 
 def _make_json_friendly(data_type, val):
-    """Convert a primitive type to a Python type that can be serialized
-    by the json package."""
-    if isinstance(data_type, dt.Timestamp):
+    """
+    Convert a primitive type to a Python type that can be serialized by the
+    json package.
+    """
+    if isinstance(data_type, bv.Timestamp):
         return val.strftime(data_type.format)
-    elif isinstance(data_type, dt.Binary):
+    elif isinstance(data_type, bv.Binary):
         return base64.b64encode(val)
-    elif isinstance(data_type, dt.Integer) and isinstance(val, bool):
+    elif isinstance(data_type, bv.Integer) and isinstance(val, bool):
         # A bool is a subclass of an int so it passes Integer validation. But,
         # we want the bool to be encoded as an Integer (1/0) rather than T/F.
         return int(val)
@@ -135,87 +148,103 @@ def _make_json_friendly(data_type, val):
 # JSON Decoder
 
 def json_decode(data_type, serialized_obj, strict=True):
-    """
-    Performs the reverse operation of json_encode.
+    """Performs the reverse operation of json_encode.
 
-    If strict, then unknown struct fields will raise an error, and
-    unknown union variants will raise an error even if a catch all field
-    is specified. strict should only be used by a recipient of serialized
-    JSON if it's guaranteed that its Babel specs are at least as recent as
-    the senders it receives messages from.
+    Args:
+        data_type (Validator): Validator for serialized_obj.
+        serialized_obj (str): The JSON string to deserialize.
+        strict (bool): If strict, then unknown struct fields will raise an
+            error, and unknown union variants will raise an error even if a
+            catch all field is specified. strict should only be used by a
+            recipient of serialized JSON if it's guaranteed that its Babel
+            specs are at least as recent as the senders it receives messages
+            from.
     """
     try:
         deserialized_obj = json.loads(serialized_obj)
     except ValueError:
-        raise dt.ValidationError('could not decode input as JSON')
+        raise bv.ValidationError('could not decode input as JSON')
     else:
         return _json_decode_helper(data_type, deserialized_obj, strict)
 
 def _json_decode_helper(data_type, obj, strict, validate_primitives=True):
     """
-    Decodes a JSON-compatible object based on its Babel data type into a
+    Decodes a JSON-compatible object based on its data type into a
     representative Python object.
+
+    See json_decode() for argument descriptions.
+
+    Args:
+        validate_primitives (bool): Whether primitives should be validated.
+            This is an efficiency optimization since struct fields and union
+            values are already validated on assignment, and don't need to be
+            re-validated.
     """
-    if isinstance(data_type, dt.Struct):
+    if isinstance(data_type, bv.Struct):
         if not isinstance(obj, dict):
-            raise dt.ValidationError('expected object, got %s'
-                                     % dt.generic_type_name(obj))
+            raise bv.ValidationError('expected object, got %s' %
+                                     bv.generic_type_name(obj))
         if strict:
             for key in obj:
                 if key not in data_type.definition._field_names_:
-                    raise dt.ValidationError("unknown field '%s'" % key)
+                    raise bv.ValidationError("unknown field '%s'" % key)
         o = data_type.definition()
         for name, field_data_type in data_type.definition._fields_:
             if name in obj:
                 v = _json_decode_helper(field_data_type, obj[name], strict, False)
                 setattr(o, name, v)
         data_type.validate(o)
-    elif isinstance(data_type, dt.Union):
+    elif isinstance(data_type, bv.Union):
         val = None # Symbols do not have values
         if isinstance(obj, six.string_types):
             # Variant is a symbol
             tag = obj
-            if tag in data_type.definition._fields_:
-                val_data_type = data_type.definition._fields_[tag]
-                if not isinstance(val_data_type, (dt.Any, dt.Symbol)):
-                    raise dt.ValidationError("expected object for '%s', got symbol"
-                                             % tag)
+            if tag in data_type.definition._tagmap_:
+                val_data_type = data_type.definition._tagmap_[tag]
+                if not isinstance(val_data_type, (bv.Any, bv.Symbol)):
+                    raise bv.ValidationError(
+                        "expected object for '%s', got symbol" % tag)
             else:
                 if not strict and data_type.definition._catch_all_:
                     tag = data_type.definition._catch_all_
                 else:
-                    raise dt.ValidationError("unknown tag '%s'" % tag)
+                    raise bv.ValidationError("unknown tag '%s'" % tag)
         elif isinstance(obj, dict):
             # Variant is not a symbol
             if len(obj) != 1:
-                raise dt.ValidationError('expected 1 key, got %s', len(obj))
+                raise bv.ValidationError('expected 1 key, got %s', len(obj))
             tag = list(obj)[0]
             raw_val = obj[tag]
-            if tag in data_type.definition._fields_:
-                val_data_type = data_type.definition._fields_[tag]
-                if isinstance(val_data_type, dt.Symbol):
-                    raise dt.ValidationError("expected symbol '%s', got object"
+            if tag in data_type.definition._tagmap_:
+                val_data_type = data_type.definition._tagmap_[tag]
+                if isinstance(val_data_type, bv.Symbol):
+                    raise bv.ValidationError("expected symbol '%s', got object"
                                              % tag)
-                elif not isinstance(val_data_type, dt.Any):
+                elif not isinstance(val_data_type, bv.Any):
                     val = _json_decode_helper(val_data_type, raw_val, strict, False)
             else:
                 if not strict and data_type.definition._catch_all_:
                     tag = data_type.definition._catch_all_
                 else:
-                    raise dt.ValidationError("unknown tag '%s'" % tag)
+                    raise bv.ValidationError("unknown tag '%s'" % tag)
         else:
-            raise dt.ValidationError("expected string or object, got %s"
-                                     % dt.generic_type_name((obj)))
+            raise bv.ValidationError("expected string or object, got %s" %
+                                     bv.generic_type_name((obj)))
         o = data_type.definition(tag, val)
-    elif isinstance(data_type, dt.List):
+    elif isinstance(data_type, bv.List):
         if not isinstance(obj, list):
-            raise dt.ValidationError(
-                'expected list, got %s'
-                % dt.generic_type_name(obj)
+            raise bv.ValidationError(
+                'expected list, got %s' %
+                bv.generic_type_name(obj)
             )
-        return [_json_decode_helper(data_type.item_data_type, item, strict)
+        return [_json_decode_helper(data_type.item_validator, item, strict)
                 for item in obj]
-    elif isinstance(data_type, dt.PrimitiveType):
+    elif isinstance(data_type, bv.Nullable):
+        if obj is not None:
+            return _json_decode_helper(data_type.validator, obj, strict)
+        else:
+            return None
+    elif isinstance(data_type, bv.Primitive):
         return _make_babel_friendly(data_type, obj, validate_primitives)
     else:
         raise AssertionError('Cannot handle type %r.'
@@ -223,18 +252,20 @@ def _json_decode_helper(data_type, obj, strict, validate_primitives=True):
     return o
 
 def _make_babel_friendly(data_type, val, validate):
-    """Convert a Python object to a type that will pass validation by a
-    Babel data type."""
-    if isinstance(data_type, dt.Timestamp):
+    """
+    Convert a Python object to a type that will pass validation by its
+    validator.
+    """
+    if isinstance(data_type, bv.Timestamp):
         try:
             return datetime.datetime.strptime(val, data_type.format)
         except ValueError as e:
-            raise dt.ValidationError(e.args[0])
-    elif isinstance(data_type, dt.Binary):
+            raise bv.ValidationError(e.args[0])
+    elif isinstance(data_type, bv.Binary):
         try:
             return base64.b64decode(val)
         except TypeError:
-            raise dt.ValidationError('invalid base64-encoded binary')
+            raise bv.ValidationError('invalid base64-encoded binary')
     else:
         if validate:
             data_type.validate(val)

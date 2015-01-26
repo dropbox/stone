@@ -38,6 +38,8 @@ def generic_type_name(v):
         return 'list'
     elif isinstance(v, six.string_types):
         return 'string'
+    elif v is None:
+        return 'null'
     else:
         return type(v).__name__
 
@@ -54,17 +56,18 @@ class Validator(object):
         """
         pass
 
-class PrimitiveType(Validator):
+class Primitive(Validator):
     """A basic type that is defined by Babel."""
     pass
 
-class Boolean(PrimitiveType):
+class Boolean(Primitive):
+
     def validate(self, val):
         if not isinstance(val, bool):
             raise ValidationError('%r is not a valid boolean' % val)
         return val
 
-class Integer(PrimitiveType):
+class Integer(Primitive):
     """
     Do not use this class directly. Extend it and specify a 'minimum' and
     'maximum' value as class variables for the more restrictive integer range.
@@ -122,8 +125,9 @@ class UInt64(Integer):
     minimum = 0
     maximum = 2**64 - 1
 
-class String(PrimitiveType):
+class String(Primitive):
     """Represents a unicode string."""
+
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
             assert isinstance(min_length, numbers.Integral), \
@@ -177,7 +181,8 @@ class String(PrimitiveType):
                                   % (val, self.pattern))
         return val
 
-class Binary(PrimitiveType):
+class Binary(Primitive):
+
     def __init__(self, min_length=None, max_length=None):
         if min_length is not None:
             assert isinstance(min_length, numbers.Integral), \
@@ -205,7 +210,7 @@ class Binary(PrimitiveType):
                                   % (val, self.min_length, len(val)))
         return val
 
-class Timestamp(PrimitiveType):
+class Timestamp(Primitive):
     """Note that while a format is specified, it isn't used in validation
     since a native Python datetime object is preferred. The format, however,
     can and should be used by serializers."""
@@ -224,12 +229,12 @@ class Timestamp(PrimitiveType):
             raise ValidationError('timestamp should not have a timezone set')
         return val
 
-class List(PrimitiveType):
+class List(Primitive):
     """Assumes list contents are homogeneous with respect to types."""
 
-    def __init__(self, item_data_type, min_items=None, max_items=None):
-        """Every list item will be validated with item_data_type."""
-        self.item_data_type = item_data_type
+    def __init__(self, item_validator, min_items=None, max_items=None):
+        """Every list item will be validated with item_validator."""
+        self.item_validator = item_validator
         if min_items is not None:
             assert isinstance(min_items, numbers.Integral), \
                 'min_items must be an integral number'
@@ -253,28 +258,30 @@ class List(PrimitiveType):
         elif self.min_items is not None and len(val) < self.min_items:
             raise ValidationError('%r has fewer than %s items'
                                   % (val, self.min_items))
-        return [self.item_data_type.validate(item) for item in val]
+        return [self.item_validator.validate(item) for item in val]
 
-class CompositeType(Validator):
+class Composite(Validator):
+    """Validator for user-defined types."""
+    pass
+
+class Struct(Composite):
+
     def __init__(self, definition):
         """
-        definition must have a _fields_ attribute with the following structure:
+        Args:
+            definition (class): Must have a _fields_ attribute with the
+                following structure:
 
-            _fields_ = [(field_name, data_type), ...]
+                _fields_ = [(field_name, validator), ...]
 
-            field_name: Name of the field (str).
-            data_type: Validator object.
+                where
+                    field_name: Name of the field (str).
+                    validator: Validator object.
         """
         assert hasattr(definition, '_fields_'), 'needs _fields_ attribute'
+        assert isinstance(definition._fields_, list), '_fields_ must be a list'
         self.definition = definition
-    def validate_type_only(self, val):
-        """Use this when you only want to validate that the type of an object
-        is correct, but not yet validate each field."""
-        if type(val) is not self.definition:
-            raise ValidationError('expected type %s, got %s'
-                % (self.definition.__name__, generic_type_name(val)))
 
-class Struct(CompositeType):
     def validate(self, val):
         """
         For a val to pass validation, each required field must be present as
@@ -288,7 +295,35 @@ class Struct(CompositeType):
                                       field_name)
         return val
 
-class Union(CompositeType):
+    def validate_type_only(self, val):
+        """Use this when you only want to validate that the type of an object
+        is correct, but not yet validate each field."""
+        # Since the definition maintains the list of fields for serialization,
+        # we're okay with a subclass that might have extra information. This
+        # makes it easier to return one subclass for two routes, one of which
+        # relies on the parent class.
+        if not isinstance(val, self.definition):
+            raise ValidationError('expected type %s, got %s'
+                % (self.definition.__name__, generic_type_name(val)))
+
+class Union(Composite):
+
+    def __init__(self, definition):
+        """
+        Args:
+            definition (class): Must have a _tagmap_ attribute with the
+                following structure:
+
+                _tagmap_ = {field_name: validator, ...}
+
+                where
+                    field_name (str): Tag name.
+                    validator (Validator): Tag value validator.
+        """
+        assert hasattr(definition, '_tagmap_'), 'needs _tagmap_ attribute'
+        assert isinstance(definition._tagmap_, dict), '_tagmap_ must be a dict'
+        self.definition = definition
+
     def validate(self, val):
         """
         For a val to pass validation, it must have a _tag set. This assumes
@@ -299,6 +334,15 @@ class Union(CompositeType):
         if not hasattr(val, '_tag') or val._tag is None:
             raise ValidationError('no tag set')
         return val
+
+    def validate_type_only(self, val):
+        """Use this when you only want to validate that the type of an object
+        is correct, but not yet validate each field."""
+        # We don't allow subclasses because there should be no subclassing of
+        # union classes.
+        if type(val) is not self.definition:
+            raise ValidationError('expected type %s, got %s'
+                % (self.definition.__name__, generic_type_name(val)))
 
 class Any(Validator):
     """
@@ -316,7 +360,30 @@ class Symbol(Validator):
     def validate(self, val):
         raise AssertionError('No value validates as a symbol.')
 
+class Nullable(Primitive):
+
+    def __init__(self, validator):
+        assert isinstance(validator, (Primitive, Composite)), \
+            'validator must be for a primitive or composite type'
+        assert not isinstance(validator, Nullable), \
+            'nullables cannot be stacked'
+        self.validator = validator
+
+    def validate(self, val):
+        if val is None:
+            return
+        else:
+            return self.validator.validate(val)
+
+    def validate_type_only(self, val):
+        """Use this only if Nullable is wrapping a Composite."""
+        if val is None:
+            return
+        else:
+            return self.validator.validate_type_only(val)
+
 class FunctionStyle(object):
+
     def __init__(self, ident):
         self.ident = ident
 
@@ -328,6 +395,7 @@ FunctionStyle.UPLOAD = FunctionStyle("UPLOAD")
 FunctionStyle.DOWNLOAD = FunctionStyle("DOWNLOAD")
 
 class FunctionSignature(object):
+
     def __init__(self, style, request_type, response_type, error_type):
         self.style = style
         self.request_type = request_type
