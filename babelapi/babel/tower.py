@@ -208,8 +208,6 @@ class TowerOfBabel(object):
         elif babel_field.type_ref.name not in env:
             raise InvalidSpec('Symbol %r is undefined.' % babel_field.type_ref.name)
         else:
-            if babel_field.type_ref.nullable:
-                raise InvalidSpec('Variants cannot reference nullable types.')
             data_type = self._resolve_type(
                 env,
                 babel_field.type_ref,
@@ -284,17 +282,8 @@ class TowerOfBabel(object):
                 namespace.add_data_type(api_type)
             elif isinstance(item, BabelRouteDef):
                 request_data_type = self._resolve_type(env, item.request_type_ref)
-                if request_data_type.nullable:
-                    raise InvalidSpec('Route %r request type %r cannot be nullable.' %
-                                      (item.name, request_data_type.name))
                 response_data_type = self._resolve_type(env, item.response_type_ref)
-                if response_data_type.nullable:
-                    raise InvalidSpec('Route %r response type %r cannot be nullable.' %
-                                      (item.name, response_data_type.name))
                 error_data_type = self._resolve_type(env, item.error_type_ref)
-                if error_data_type.nullable:
-                    raise InvalidSpec('Route %r error type %r cannot be nullable.' %
-                                      (item.name, error_data_type.name))
                 route = ApiRoute(
                     item.name,
                     item.doc,
