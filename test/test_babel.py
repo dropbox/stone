@@ -193,6 +193,15 @@ union Error
         self.assertTrue(out[1].fields[2].catch_all)
 
     def test_route_decl(self):
+
+        text = """
+namespace users
+
+route GetAccountInfo(Null, Null, Null)
+"""
+        # Test route definition with no docstring
+        self.parser.parse(text)
+
         text = """
 namespace users
 

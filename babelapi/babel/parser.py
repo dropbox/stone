@@ -147,6 +147,7 @@ class BabelRouteDef(object):
         self.request_type_ref = request_type_ref
         self.response_type_ref = response_type_ref
         self.error_type_ref = error_type_ref
+        self.doc = None
         self.attrs = {}
 
     def set_doc(self, docstring):
@@ -465,13 +466,15 @@ class BabelParser(object):
             p[0] = (p[2], p[4], None)
 
     def p_route(self, p):
-        """route : ROUTE ID route_path route_io NEWLINE INDENT docsection attrssection DEDENT"""
+        """route : ROUTE ID route_path route_io NEWLINE INDENT docsection attrssection DEDENT
+                 | ROUTE ID route_path route_io NEWLINE"""
         if p[3]:
             p[2] += p[3]
         p[0] = BabelRouteDef(p[2], *p[4])
-        p[0].set_doc(p[7])
-        if p[8]:
-            p[0].set_attrs(dict(p[8]))
+        if len(p) > 6:
+            p[0].set_doc(p[7])
+            if p[8]:
+                p[0].set_attrs(dict(p[8]))
 
     def p_attrs_section(self, p):
         """attrssection : ATTRS NEWLINE INDENT example_field_list DEDENT
@@ -571,6 +574,7 @@ class BabelParser(object):
 
     # Called by the parser whenever a token doesn't match any rule.
     def p_error(self, token):
+        assert token is not None, "Unknown error, please report this."
         self._logger.debug('Unexpected %s(%r) at line %d',
                            token.type,
                            token.value,
