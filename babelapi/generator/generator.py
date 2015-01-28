@@ -4,12 +4,12 @@ import logging
 import os
 import textwrap
 
-class CodeGenerator(object):
+class Generator(object):
     """
-    The parent class for code generation. All code generators should extend
-    this class to be recognized as such.
+    The parent class for all generators. All generators should extend this
+    class to be recognized as such.
 
-    You will want to implement the generate() function to do the code generation
+    You will want to implement the generate() function to do the generation
     that you need.
 
     Here's roughly what you need to do in generate().
@@ -36,6 +36,28 @@ class CodeGenerator(object):
         self.output = []
         self.lineno = 1
         self.cur_indent = 0
+
+    @abstractmethod
+    def generate(self):
+        """Subclasses should override this method. It's the entry point for
+        all code generation given the api description."""
+        raise NotImplemented
+
+    @contextmanager
+    def output_to_relative_path(self, relative_path):
+        """
+        Sets up generator so that all emits are directed towards the new file
+        created at :param:`relative_path`.
+
+        Clears output buffer on enter, and on exit.
+        """
+        full_path = os.path.join(self.target_folder_path, relative_path)
+        self._logger.info('Generating %s', full_path)
+        self.output = []
+        yield
+        with open(full_path, 'w') as f:
+            f.write(''.join(self.output))
+        self.output = []
 
     @contextmanager
     def indent(self, dent=None):
@@ -129,6 +151,12 @@ class CodeGenerator(object):
         if trailing_newline:
             self.emit('\n')
 
+class CodeGenerator(Generator):
+    """
+    Extend this instead of :class:`Generator` when generating source code.
+    Contains helper functions specific to code generation.
+    """
+
     def _filter_out_none_valued_keys(self, d):
         """Given a dict, returns a new dict with all the same key/values except
         for keys that had values of None."""
@@ -137,28 +165,6 @@ class CodeGenerator(object):
             if v is not None:
                 new_d[k] = v
         return new_d
-
-    @contextmanager
-    def output_to_relative_path(self, relative_path):
-        """
-        Sets up generator so that all emits are directed towards the new file
-        created at :param:`relative_path`.
-
-        Clears output buffer on enter, and on exit.
-        """
-        full_path = os.path.join(self.target_folder_path, relative_path)
-        self._logger.info('Generating %s', full_path)
-        self.output = []
-        yield
-        with open(full_path, 'w') as f:
-            f.write(''.join(self.output))
-        self.output = []
-
-    @abstractmethod
-    def generate(self):
-        """Subclasses should override this method. It's the entry point for
-        all code generation given the api description."""
-        raise NotImplemented
 
     def _generate_func_arg_list(self, args, compact=True):
         """
@@ -211,16 +217,3 @@ class CodeGeneratorMonolingual(CodeGenerator):
     def __init__(self, api, target_folder_path):
         assert self.lang, 'Language must be specified'
         super(CodeGeneratorMonolingual, self).__init__(api, target_folder_path)
-
-class Generator(object):
-    """
-    Deprecated way of generating code using jinja2.
-    TODO(kelkabany): Remove this when jinja2 has been excised.
-    """
-    def __init__(self, api):
-        self.api = api
-        self._logger = logging.getLogger('bablesdk.generator.%s'
-                                         % self.__class__.__name__)
-
-    def render(self, extension, text):
-        raise NotImplemented
