@@ -10,6 +10,7 @@ from babelapi.data_type import (
     is_binary_type,
     is_boolean_type,
     is_composite_type,
+    is_float_type,
     is_integer_type,
     is_list_type,
     is_null_type,
@@ -116,6 +117,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
             return 'str'
         elif is_boolean_type(data_type):
             return 'bool'
+        elif is_float_type(data_type):
+            return 'float'
         elif is_integer_type(data_type):
             return 'long'
         elif is_null_type(data_type):
@@ -216,6 +219,14 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     'item_validator': self._determine_validator_type(data_type.data_type),
                     'min_items': data_type.min_items,
                     'max_items': data_type.max_items,
+                })
+            )
+        elif is_float_type(data_type):
+            v = 'bv.{}({})'.format(
+                data_type.name,
+                self._func_args_from_dict({
+                    'min_value': data_type.min_value,
+                    'max_value': data_type.max_value,
                 })
             )
         elif is_integer_type(data_type):

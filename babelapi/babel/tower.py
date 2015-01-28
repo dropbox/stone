@@ -172,7 +172,7 @@ class TowerOfBabel(object):
             babelapi.data_type.StructField: A field of a struct.
         """
         if babel_field.type_ref.name not in env:
-            raise InvalidSpec('Symbol %r is undefined.' % babel_field.data_type_name)
+            raise InvalidSpec('Symbol %r is undefined.' % babel_field.type_ref.name)
         else:
             data_type = self._resolve_type(env, babel_field.type_ref)
             if data_type.nullable and babel_field.has_default:

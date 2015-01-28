@@ -14,6 +14,7 @@ EDITING THIS FILE? Please modify the version in the babelapi repo,
 
 from abc import ABCMeta, abstractmethod
 import datetime
+import math
 import numbers
 import re
 import six
@@ -70,7 +71,7 @@ class Boolean(Primitive):
 class Integer(Primitive):
     """
     Do not use this class directly. Extend it and specify a 'minimum' and
-    'maximum' value as class variables for the more restrictive integer range.
+    'maximum' value as class variables for a more restrictive integer range.
     """
     minimum = None
     maximum = None
@@ -83,18 +84,16 @@ class Integer(Primitive):
         if min_value is not None:
             assert isinstance(min_value, numbers.Integral), \
                 'min_value must be an integral number'
-            if min_value < self.minimum:
-                raise ValueError('min_value cannot be less than the minimum '
-                                 'value for this type (%d < %d)'
-                                 % (min_value, self.minimum))
+            assert min_value >= self.minimum, \
+                'min_value cannot be less than the minimum value for this ' \
+                'type (%d < %d)' % (min_value, self.minimum)
             self.minimum = min_value
         if max_value is not None:
             assert isinstance(max_value, numbers.Integral), \
                 'max_value must be an integral number'
-            if max_value > self.maximum:
-                raise ValueError('max_value cannot be greater than the maximum '
-                                 'value for this type (%d < %d)'
-                                 % (max_value, self.maximum))
+            assert max_value <= self.maximum, \
+                'max_value cannot be greater than the maximum value for ' \
+                'this type (%d < %d)' % (max_value, self.maximum)
             self.maximum = max_value
 
     def validate(self, val):
@@ -125,6 +124,79 @@ class UInt64(Integer):
     minimum = 0
     maximum = 2**64 - 1
 
+class Real(Primitive):
+    """
+    Do not use this class directly. Extend it and optionally set a 'minimum'
+    and 'maximum' value to enforce a range that's a subset of the Python float
+    implementation. Python floats are doubles.
+    """
+    minimum = None
+    maximum = None
+
+    def __init__(self, min_value=None, max_value=None):
+        """
+        A more restrictive minimum or maximum value can be specified than the
+        range inherent to the defined type.
+        """
+        if min_value is not None:
+            assert isinstance(min_value, numbers.Real), \
+                'min_value must be a real number'
+            if not isinstance(min_value, float):
+                try:
+                    min_value = float(min_value)
+                except OverflowError:
+                    raise AssertionError('min_value is too small for a float')
+            if self.minimum is not None and min_value < self.minimum:
+                raise AssertionError('min_value cannot be less than the '
+                                     'minimum value for this type (%f < %f)' %
+                                     (min_value, self.minimum))
+            self.minimum = min_value
+        if max_value is not None:
+            assert isinstance(max_value, numbers.Real), \
+                'max_value must be a real number'
+            if not isinstance(max_value, float):
+                try:
+                    max_value = float(max_value)
+                except OverflowError:
+                    raise AssertionError('max_value is too large for a float')
+            if self.maximum is not None and max_value > self.maximum:
+                raise AssertionError('max_value cannot be greater than the '
+                                     'maximum value for this type (%f < %f)' %
+                                     (max_value, self.maximum))
+            self.maximum = max_value
+
+    def validate(self, val):
+        if not isinstance(val, numbers.Real):
+            raise ValidationError('expected real number, got %s' %
+                                  generic_type_name(val))
+        if not isinstance(val, float):
+            # This checks for the case where a number is passed in with a
+            # magnitude larger than supported by float64.
+            try:
+                val = float(val)
+            except OverflowError:
+                raise ValidationError('too large for float')
+        if math.isnan(val) or math.isinf(val):
+            raise ValidationError('%f values are not supported' % val)
+        if self.minimum is not None and val < self.minimum:
+            raise ValidationError('%f is not greater than %f' %
+                                  (val, self.minimum))
+        if self.maximum is not None and val > self.maximum:
+            raise ValidationError('%f is not less than %f' %
+                                  (val, self.maximum))
+        return val
+
+    def __repr__(self):
+        return '%s()' % self.__class__.__name__
+
+class Float32(Real):
+    # Maximum and minimums from the IEEE 754-1985 standard
+    minimum = -3.40282 * 10**38
+    maximum = 3.40282 * 10**38
+
+class Float64(Real):
+    pass
+
 class String(Primitive):
     """Represents a unicode string."""
 
@@ -152,7 +224,8 @@ class String(Primitive):
             try:
                 self.pattern_re = re.compile(pattern)
             except re.error as e:
-                raise ValueError('Regex {!r} failed: {}'.format(pattern, e.args[0]))
+                raise AssertionError('Regex {!r} failed: {}'.format(
+                    pattern, e.args[0]))
 
     def validate(self, val):
         """

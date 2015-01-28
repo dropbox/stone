@@ -1,18 +1,18 @@
 """
 Defines data types for Babel.
 
-The data types defined here should include all data types we expect to support
-across all serialization formats. For example, if we were just supporting JSON,
-we would only have a Number type since all numbers in Javascript are doubles.
-But, we may want to eventually support Protobuf, which has primitives closer
-to those in C. This is why Int32 and UInt32 are differentiated, though it has
-the added benefit that the user is able to reason between signed vs. unsigned.
+The goal of this module is to define all data types that are common to the
+languages and serialization formats we want to support.
+
+TODO: This file is in need of refactoring, and should take after the
+babelapi.generator.target.python.babel_validators module.
 """
 
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import copy
 import datetime
+import math
 import numbers
 import re
 import six
@@ -78,7 +78,8 @@ class Binary(PrimitiveType):
 
 class _BoundedInteger(PrimitiveType):
     """
-    When extending, specify 'minimum' and 'maximum' as class variables.
+    When extending, specify 'minimum' and 'maximum' as class variables. This
+    is the range of values supported by the data type.
     """
     def __init__(self, min_value=None, max_value=None):
         """
@@ -107,9 +108,15 @@ class _BoundedInteger(PrimitiveType):
     def check(self, val):
         if not isinstance(val, numbers.Integral):
             raise ValueError('%r is not a valid integer type' % val)
-        elif not (self.minimum <= val <= self.maximum):
-            raise ValueError('%s is not within range [%r, %r]'
+        if not (self.minimum <= val <= self.maximum):
+            raise ValueError('%d is not within range [%r, %r]'
                              % (val, self.minimum, self.maximum))
+        if self.min_value is not None and val < self.min_value:
+            raise ValueError('%d is less than %d' %
+                             (val, self.min_value))
+        if self.max_value is not None and val > self.max_value:
+            raise ValueError('%d is greater than %d' %
+                             (val, self.max_value))
 
     def __repr__(self):
         return '%s()' % self.name
@@ -130,21 +137,82 @@ class UInt64(_BoundedInteger):
     minimum = 0
     maximum = 2**64 - 1
 
-class BigInt(PrimitiveType):
-    def check(self, val):
-        if not isinstance(val, numbers.Integral):
-            raise ValueError('%r is not a valid integer')
+class _BoundedFloat(PrimitiveType):
+    """
+    When extending, optionally specify 'minimum' and 'maximum' as class
+    variables. This is the range of values supported by the data type. For
+    a float64, there is no need to specify a minimum and maximum since Python's
+    native float implementation is a float64/double. Therefore, any Python
+    float will pass the data type range check automatically.
+    """
+    minimum = None
+    maximum = None
 
-class Float32(PrimitiveType):
-    # TODO: Decide how to enforce a 32-bit float
+    def __init__(self, min_value=None, max_value=None):
+        """
+        A more restrictive minimum or maximum value can be specified than the
+        range inherent to the defined type.
+        """
+        if min_value is not None:
+            assert isinstance(min_value, numbers.Real), \
+                'min_value must be a real number'
+            if not isinstance(min_value, float):
+                try:
+                    min_value = float(min_value)
+                except OverflowError:
+                    raise AssertionError('min_value is too small for a float')
+            if self.minimum is not None and min_value < self.minimum:
+                raise AssertionError('min_value cannot be less than the '
+                                     'minimum value for this type (%f < %f)' %
+                                     (min_value, self.minimum))
+        if max_value is not None:
+            assert isinstance(max_value, numbers.Real), \
+                'max_value must be a real number'
+            if not isinstance(max_value, float):
+                try:
+                    max_value = float(max_value)
+                except OverflowError:
+                    raise AssertionError('max_value is too large for a float')
+            if self.maximum is not None and max_value > self.maximum:
+                raise AssertionError('max_value cannot be greater than the '
+                                     'maximum value for this type (%f < %f)' %
+                                     (max_value, self.maximum))
+        self.min_value = min_value
+        self.max_value = max_value
+
     def check(self, val):
         if not isinstance(val, numbers.Real):
-            raise ValueError('%r is not a valid float' % val)
+            raise ValueError('%r is not a valid real number' % val)
+        if not isinstance(val, float):
+            try:
+                val = float(val)
+            except OverflowError:
+                raise ValueError('%r is too large for float' % val)
+        if math.isnan(val) or math.isinf(val):
+            raise ValueError('%f values are not supported' % val)
+        if self.minimum is not None and val < self.minimum:
+            raise ValueError('%f is less than %f' %
+                             (val, self.minimum))
+        if self.maximum is not None and val > self.maximum:
+            raise ValueError('%f is greater than %f' %
+                             (val, self.maximum))
+        if self.min_value is not None and val < self.min_value:
+            raise ValueError('%f is less than %f' %
+                             (val, self.min_value))
+        if self.max_value is not None and val > self.max_value:
+            raise ValueError('%f is greater than %f' %
+                             (val, self.min_value))
 
-class Float64(PrimitiveType):
-    def check(self, val):
-        if not isinstance(val, numbers.Real):
-            raise ValueError('%r is not a valid double' % val)
+    def __repr__(self):
+        return '%s()' % self.name
+
+class Float32(_BoundedFloat):
+    # Maximum and minimums from the IEEE 754-1985 standard
+    minimum = -3.40282 * 10**38
+    maximum = 3.40282 * 10**38
+
+class Float64(_BoundedFloat):
+    pass
 
 class Boolean(PrimitiveType):
     def check(self, val):
@@ -636,6 +704,8 @@ def is_composite_type(data_type):
     return isinstance(data_type, CompositeType)
 def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
+def is_float_type(data_type):
+    return isinstance(data_type, (Float32, Float64))
 def is_list_type(data_type):
     return isinstance(data_type, List)
 def is_null_type(data_type):

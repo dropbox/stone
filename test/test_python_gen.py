@@ -51,9 +51,34 @@ class TestPythonGen(unittest.TestCase):
         i.validate(50)
 
         # min_value is less than the default for the type
-        self.assertRaises(ValueError, lambda: bv.UInt32(min_value=-3))
+        self.assertRaises(AssertionError, lambda: bv.UInt32(min_value=-3))
         # non-sensical min_value
         self.assertRaises(AssertionError, lambda: bv.UInt32(min_value=1.3))
+
+    def test_float_data_type(self):
+        f64 = bv.Float64()
+        # Too large for a float to represent
+        self.assertRaises(bv.ValidationError, lambda: f64.validate(10**310))
+        # inf and nan should be rejected
+        self.assertRaises(bv.ValidationError, lambda: f64.validate(float('nan')))
+        self.assertRaises(bv.ValidationError, lambda: f64.validate(float('inf')))
+        # Passes
+        f64.validate(1.1 * 10**300)
+
+        # Test a float64 with an additional bound
+        f64b = bv.Float64(min_value=0, max_value=100)
+        # Check bounds
+        self.assertRaises(bv.ValidationError, lambda: f64b.validate(1000))
+        self.assertRaises(bv.ValidationError, lambda: f64b.validate(-1))
+
+        # Test a float64 with an invalid bound
+        self.assertRaises(AssertionError, lambda: bv.Float64(min_value=0, max_value=10**330))
+
+        f32 = bv.Float32()
+        self.assertRaises(bv.ValidationError, lambda: f32.validate(3.5 * 10**38))
+        self.assertRaises(bv.ValidationError, lambda: f32.validate(-3.5 * 10**38))
+        # Passes
+        f32.validate(0)
 
     def test_binary_data_type(self):
         b = bv.Binary(min_length=1, max_length=10)

@@ -3,6 +3,7 @@ import unittest
 from babelapi.data_type import (
     Boolean,
     Float32,
+    Float64,
     Int32,
     Int64,
     List,
@@ -125,6 +126,14 @@ class TestBabelInternal(unittest.TestCase):
             i.check(-1)
         self.assertIn('not within range', cm.exception.args[0])
 
+        i = Int64(min_value=0, max_value=10)
+        with self.assertRaises(ValueError) as cm:
+            i.check(20)
+        self.assertIn('20 is greater than 10', cm.exception.args[0])
+        with self.assertRaises(ValueError) as cm:
+            i.check(-5)
+        self.assertIn('-5 is less than 0', cm.exception.args[0])
+
     def test_boolean(self):
 
         b = Boolean()
@@ -147,9 +156,20 @@ class TestBabelInternal(unittest.TestCase):
         # check non-float
         with self.assertRaises(ValueError) as cm:
             f.check('1.1')
-        self.assertIn('not a valid float', cm.exception.args[0])
+        self.assertIn('not a valid real', cm.exception.args[0])
 
-        # TODO: Need to check float range once it's been implemented.
+        f = Float64(min_value=0, max_value=100)
+        with self.assertRaises(ValueError) as cm:
+            f.check(101)
+        self.assertIn('is greater than', cm.exception.args[0])
+
+        with self.assertRaises(AssertionError) as cm:
+             Float64(min_value=0, max_value=10**330)
+        self.assertIn('too large for a float', cm.exception.args[0])
+
+        with self.assertRaises(AssertionError) as cm:
+            Float32(min_value=0, max_value=10**50)
+        self.assertIn('greater than the maximum value', cm.exception.args[0])
 
     def test_timestamp(self):
         t = Timestamp('%a, %d %b %Y %H:%M:%S')
