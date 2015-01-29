@@ -70,8 +70,12 @@ def main():
             print >> sys.stderr, 'Specification had error(s). You must fix ' \
                 'these to continue:\n'
             print >> sys.stderr, e, '\n'
-            print >> sys.stderr, 'A traceback is included below in case ' \
-                'this is a bug in Babel.\n', traceback.format_exc()
+            if debug:
+                print >> sys.stderr, 'A traceback is included below in case ' \
+                    'this is a bug in Babel.\n', traceback.format_exc()
+            else:
+                print >> sys.stderr, 'If the error is not clear, try using ' \
+                                     'the -v flag.'
             sys.exit(1)
         if api is None:
             print >> sys.stderr, \
