@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from distutils.version import StrictVersion
 
-from babelapi.data_type import Empty
+from babelapi.data_type import Empty, doc_unwrap
 
 class Api(object):
     """
@@ -98,7 +98,8 @@ class ApiRoute(object):
         """
 
         self.name = name
-        self.doc = doc
+        self.raw_doc = doc
+        self.doc = doc_unwrap(doc)
         self.request_data_type = request_data_type
         self.response_data_type = response_data_type
         self.error_data_type = error_data_type

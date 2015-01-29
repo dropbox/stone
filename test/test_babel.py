@@ -218,6 +218,23 @@ route GetAccountInfo(AccountInfo, Null, Null)
         self.assertEqual(out[2].response_type_ref.name, 'Null')
         self.assertEqual(out[2].error_type_ref.name, 'Null')
 
+        # Test raw documentation
+        text = """
+namespace users
+
+route GetAccountInfo(Null, Null, Null)
+    "0
+
+    1
+
+    2
+
+    3
+    "
+"""
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].doc, '0\n\n1\n\n2\n\n3\n')
+
     def test_lexing_errors(self):
         text = """
 namespace users

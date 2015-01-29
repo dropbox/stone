@@ -5,12 +5,18 @@ import ply.yacc as yacc
 
 from babelapi.babel.lexer import BabelLexer, BabelNull
 
-class BabelNamespace(object):
-    def __init__(self, name):
+class _Element(object):
+    def __init__(self, lineno, lexpos):
+        self.lineno = lineno
+        self.lexpos = lexpos
+
+class BabelNamespace(_Element):
+    def __init__(self, lineno, lexpos, name):
         """
         Args:
             name (str): The namespace of the spec.
         """
+        super(BabelNamespace, self).__init__(lineno, lexpos)
         self.name = name
 
     def __str__(self):
@@ -19,12 +25,13 @@ class BabelNamespace(object):
     def __repr__(self):
         return 'BabelNamespace({!r})'.format(self.name)
 
-class BabelInclude(object):
-    def __init__(self, target):
+class BabelInclude(_Element):
+    def __init__(self, lineno, lexpos, target):
         """
         Args:
             target (str): The filename of the header file.
         """
+        super(BabelInclude, self).__init__(lineno, lexpos)
         self.target = target
 
     def __str__(self):
@@ -33,21 +40,24 @@ class BabelInclude(object):
     def __repr__(self):
         return 'BabelInclude({!r})'.format(self.target)
 
-class BabelAlias(object):
-    def __init__(self, name, type_ref):
+class BabelAlias(_Element):
+    def __init__(self, lineno, lexpos, name, type_ref):
         """
         Args:
             name (str): The name of the alias.
             type_ref (BabelTypeRef): The data type of the field.
         """
+        super(BabelAlias, self).__init__(lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
 
     def __repr__(self):
         return 'BabelAlias({!r}, {!r})'.format(self.name, self.type_ref)
 
-class BabelTypeDef(object):
-    def __init__(self, composite_type, name, extends=None, coverage=None):
+class BabelTypeDef(_Element):
+    def __init__(self, lineno, lexpos, composite_type, name, extends=None,
+                 coverage=None):
+        super(BabelTypeDef, self).__init__(lineno, lexpos)
         self.composite_type = composite_type
         self.name = name
         self.extends = extends
@@ -74,14 +84,15 @@ class BabelTypeDef(object):
             self.fields,
         )
 
-class BabelTypeRef(object):
-    def __init__(self, name, attrs, nullable):
+class BabelTypeRef(_Element):
+    def __init__(self, lineno, lexpos, name, attrs, nullable):
         """
         Args:
             name (str): Name of the referenced type.
             attrs (list): List of attributes for the type.
             nullable (bool): Whether the type is nullable (can be null)
         """
+        super(BabelTypeRef, self).__init__(lineno, lexpos)
         self.name = name
         self.attrs = attrs
         self.nullable = nullable
@@ -93,18 +104,19 @@ class BabelTypeRef(object):
             self.nullable,
         )
 
-class BabelField(object):
+class BabelField(_Element):
     """
     Represents both a field of a struct and a field of a union.
     TODO(kelkabany): Split this into two different classes.
     """
-    def __init__(self, name, type_ref, deprecated):
+    def __init__(self, lineno, lexpos, name, type_ref, deprecated):
         """
         Args:
             name (str): The name of the field.
             type_ref (BabelTypeRef): The data type of the field.
             deprecated (bool): Whether the field is deprecated.
         """
+        super(BabelField, self).__init__(lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
         self.doc = None
@@ -125,8 +137,9 @@ class BabelField(object):
             self.type_ref,
         )
 
-class BabelSymbolField(object):
-    def __init__(self, name, catch_all):
+class BabelSymbolField(_Element):
+    def __init__(self, lineno, lexpos, name, catch_all):
+        super(BabelSymbolField, self).__init__(lineno, lexpos)
         self.name = name
         self.catch_all = catch_all
         self.doc = None
@@ -140,9 +153,10 @@ class BabelSymbolField(object):
             self.catch_all,
         )
 
-class BabelRouteDef(object):
-    def __init__(self, name, request_type_ref, response_type_ref,
-                 error_type_ref=None):
+class BabelRouteDef(_Element):
+    def __init__(self, lineno, lexpos, name, request_type_ref,
+                 response_type_ref, error_type_ref=None):
+        super(BabelRouteDef, self).__init__(lineno, lexpos)
         self.name = name
         self.request_type_ref = request_type_ref
         self.response_type_ref = response_type_ref
@@ -236,18 +250,18 @@ class BabelParser(object):
     def p_namespace(self, p):
         'namespace : KEYWORD ID NEWLINE'
         if p[1] == 'namespace':
-            p[0] = BabelNamespace(p[2])
+            p[0] = BabelNamespace(p.lineno(1), p.lexpos(1), p[2])
         else:
             raise ValueError('Expected namespace keyword')
 
     def p_include(self, p):
         'include : INCLUDE ID NEWLINE'
-        p[0] = BabelInclude(p[2])
+        p[0] = BabelInclude(p.lineno(1), p.lexpos(1), p[2])
 
     def p_alias(self, p):
         'alias : KEYWORD ID EQ type_ref NEWLINE'
         if p[1] == 'alias':
-            p[0] = BabelAlias(p[2], p[4])
+            p[0] = BabelAlias(p.lineno(1), p.lexpos(1), p[2], p[4])
         else:
             raise ValueError('Expected alias keyword')
 
@@ -310,7 +324,7 @@ class BabelParser(object):
 
     def p_type_ref(self, p):
         'type_ref : ID attributes_group nullable'
-        p[0] = BabelTypeRef(p[1], p[2], p[3])
+        p[0] = BabelTypeRef(p.lineno(1), p.lexpos(1), p[1], p[2], p[3])
 
     # --------------------------------------------------------------
     # Structs
@@ -346,7 +360,7 @@ class BabelParser(object):
 
     def p_struct(self, p):
         'struct : STRUCT ID inheritance coverage NEWLINE INDENT docsection field_list example_list DEDENT'
-        p[0] = BabelTypeDef(p[1], p[2], extends=p[3], coverage=p[4])
+        p[0] = BabelTypeDef(p.lineno(1), p.lexpos(1), p[1], p[2], extends=p[3], coverage=p[4])
         if p[7]:
             p[0].set_doc(p[7])
         if p[8] is not None:
@@ -393,7 +407,7 @@ class BabelParser(object):
         """field : ID type_ref default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT
                  | ID type_ref default_option deprecation NEWLINE"""
         has_docstring = len(p) > 6
-        p[0] = BabelField(p[1], p[2], p[4])
+        p[0] = BabelField(p.lineno(1), p.lexpos(1), p[1], p[2], p[4])
         if p[3] is not None:
             if p[3] is BabelNull:
                 p[0].set_default(None)
@@ -418,7 +432,7 @@ class BabelParser(object):
 
     def p_union(self, p):
         'union : UNION ID NEWLINE INDENT docsection field_list example_list DEDENT'
-        p[0] = BabelTypeDef(p[1], p[2])
+        p[0] = BabelTypeDef(p.lineno(1), p.lexpos(1), p[1], p[2])
         if p[5]:
             p[0].set_doc(p[5])
         if p[6] is not None:
@@ -435,7 +449,7 @@ class BabelParser(object):
     def p_field_symbol(self, p):
         """field : ID asterix_option NEWLINE
                  | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
-        p[0] = BabelSymbolField(p[1], p[2])
+        p[0] = BabelSymbolField(p.lineno(1), p.lexpos(1), p[1], p[2])
         if len(p) > 4:
             p[0].set_doc(p[5])
 
@@ -470,7 +484,7 @@ class BabelParser(object):
                  | ROUTE ID route_path route_io NEWLINE"""
         if p[3]:
             p[2] += p[3]
-        p[0] = BabelRouteDef(p[2], *p[4])
+        p[0] = BabelRouteDef(p.lineno(1), p.lexpos(1), p[2], *p[4])
         if len(p) > 6:
             p[0].set_doc(p[7])
             if p[8]:
@@ -502,19 +516,12 @@ class BabelParser(object):
         """docsection : docstring NEWLINE
                       | empty"""
         if p[1]:
-            p[0] = self._normalize_docstring(p[1])
-
-    def _normalize_docstring(self, docstring):
-        """We convert double newlines to single newlines, and single newlines
-        to a single whitespace."""
-        lines = docstring.strip().split('\n\n')
-        return '\n'.join([line.replace('\n', ' ') for line in lines]).strip()
+            p[0] = p[1]
 
     def p_docstring_string(self, p):
         'docstring : STRING'
-        lines = p[1].strip().split('\n\n')
-        p[0] = '\n'.join([line.replace('\n' + ' ' * self.lexer.cur_indent, ' ')
-                          for line in lines]).strip()
+        # Remove trailing whitespace on every line.
+        p[0] = '\n'.join([line.rstrip() for line in p[1].split('\n')])
 
     # --------------------------------------------------------------
     # Examples

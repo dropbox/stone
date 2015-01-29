@@ -88,11 +88,6 @@ class BabelLexer(object):
                 break
             self._logger.debug('Token %r', token)
 
-    states = (
-        # For switching to free text mode for doc strings.
-        ('freetext', 'exclusive'),
-    )
-
     # List of token names
     tokens = (
        'ID',
@@ -195,48 +190,6 @@ class BabelLexer(object):
         r'\/[/a-zA-Z0-9_-]*'
         return token
 
-    def t_COLON(self, token):
-        r':'
-        self._logger.debug('Pushing freetext state')
-        token.lexer.push_state('freetext')
-        self.cur_indent += 4
-        # TODO: Can we not force it? Should we emit an indent and newline token?
-        return token
-
-    def t_freetext_LINE(self, line_token):
-        r'.*?\n'
-
-        line_token.lexer.lineno += line_token.value.count("\n")
-        tokens = [line_token]
-
-        next_line_pos = line_token.lexpos + len(line_token.value)
-        if next_line_pos == len(line_token.lexer.lexdata):
-            return line_token
-
-        line = line_token.lexer.lexdata[next_line_pos:].splitlines()[0]
-        if not line:
-            # Ignore blank lines
-            return line_token
-
-        indent = len(line) - len(line.lstrip())
-        indent_spaces = indent - self.cur_indent
-        if indent_spaces % 4 > 0:
-            raise Exception('Indent was not divisible by 4.')
-
-        indent_delta = indent_spaces / 4
-        if indent_delta >= 0:
-            # Ignore additional indents when in a freetext block.
-            return line_token
-
-        dedent_token = self._create_token('DEDENT', '\t', line_token.lineno + 1, next_line_pos)
-        tokens.extend([dedent_token] * abs(indent_delta))
-        line_token.lexer.pop_state()
-        self.cur_indent = indent
-
-        return MultiToken(tokens)
-
-    t_freetext_ignore = ' \t'
-
     def t_FLOAT(self, token):
         r'((\d*\.\d+)(E[\+-]?\d+)?|([1-9]\d*E[\+-]?\d+))'
         token.value = float(token.value)
@@ -253,8 +206,7 @@ class BabelLexer(object):
         r'\"([^\\"]|(\\.))*\"'
         escaped = 0
         t.lexer.lineno += t.value.count('\n')
-        # FIXME: Split on two or more newlines
-        s = '\n'.join([line.replace('\n', ' ') for line in t.value[1:-1].split('\n\n')])
+        s = t.value[1:-1]
         new_str = ""
         for i in range(0, len(s)):
             c = s[i]
@@ -270,6 +222,7 @@ class BabelLexer(object):
                     escaped = 1
                 else:
                     new_str += c
+        # remove current indentation
         new_str = '\n'.join([line.replace(' ' * self.cur_indent, '')
                              for line in new_str.splitlines()])
         t.value = new_str
@@ -321,6 +274,3 @@ class BabelLexer(object):
                            token.value[0], token.lexer.lineno)
         self.errors.append((token.value[0], token.lexer.lineno))
         token.lexer.skip(1)
-
-    # Use the same error handler in freetext mode
-    t_freetext_error = t_error

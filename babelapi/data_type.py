@@ -311,6 +311,31 @@ class List(DataType):
         else:
             return None
 
+def doc_unwrap(raw_doc):
+    """
+    Applies two transformations to raw_doc:
+    1. N consecutive newlines are converted into N-1 newlines.
+    2. A lone newline is converted to a space, which basically unwraps text.
+
+    Returns a new string, or None if the input was None.
+    """
+    if raw_doc is None:
+        return None
+    docstring = ''
+    consecutive_newlines = 0
+    # Remove all leading and trailing whitespace in the documentation block
+    for c in raw_doc.strip():
+        if c == '\n':
+            consecutive_newlines += 1
+            if consecutive_newlines > 1:
+                docstring += c
+        else:
+            if consecutive_newlines == 1:
+                docstring += ' '
+            consecutive_newlines = 0
+            docstring += c
+    return docstring
+
 class Field(object):
     """
     Represents a field in a composite type.
@@ -330,7 +355,8 @@ class Field(object):
         """
         self.name = name
         self.data_type = data_type
-        self.doc = doc
+        self.raw_doc = doc
+        self.doc = doc_unwrap(doc)
 
     def __repr__(self):
         return 'Field(%r, %r)' % (self.name,
@@ -414,7 +440,8 @@ class CompositeType(DataType):
         :param CompositeType super_type: If this should subtype another.
         """
         self._name = name
-        self.doc = doc
+        self.raw_doc = doc
+        self.doc = doc_unwrap(doc)
         self.fields = fields
         self.super_type = super_type
         self.examples = {}

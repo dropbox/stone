@@ -108,9 +108,11 @@ class TowerOfBabel(object):
 
     def _create_alias(self, env, item):
         if item.name in env:
-            raise InvalidSpec('Symbol %r already defined.' % item.name)
+            raise InvalidSpec('Line %d: Symbol %r already defined.' %
+                              (item.lineno, item.name))
         elif item.type_ref.name not in env:
-            raise InvalidSpec('Symbol %r is undefined.' % item.data_type_name)
+            raise InvalidSpec('Line %d: Symbol %r is undefined.' %
+                              (item.lineno, item.type_ref.name))
 
         obj = env[item.type_ref.name]
         if inspect.isclass(obj):
@@ -118,8 +120,9 @@ class TowerOfBabel(object):
         elif item.type_ref.attrs:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise InvalidSpec('Attributes cannot be specified for instantiated '
-                              'type %r.' % item.type_ref.name)
+            raise InvalidSpec('Line %d: Attributes cannot be specified for'
+                              'instantiated type %r.' %
+                              (item.lineno, item.type_ref.name))
         else:
             ref = env[item.type_ref.name]
             if item.type_ref.nullable:
@@ -132,7 +135,8 @@ class TowerOfBabel(object):
         if item.composite_type == 'struct':
             if item.extends:
                 if item.extends not in env:
-                    raise InvalidSpec('Data type %r is undefined.' % item.extends)
+                    raise InvalidSpec('Line %d: Data type %r is undefined.' %
+                                      (item.lineno, item.extends))
                 else:
                     super_type = env.get(item.extends)
             api_type_fields = []
@@ -146,7 +150,9 @@ class TowerOfBabel(object):
             for babel_field in item.fields:
                 api_type_field = self._create_union_field(env, babel_field)
                 if isinstance(babel_field, BabelSymbolField) and babel_field.catch_all:
-                    assert not catch_all_field, 'Only one catch all symbol per Union.'
+                    if catch_all_field is not None:
+                        raise InvalidSpec('Line %d: Only one catch all symbol '
+                                          'per Union.' % babel_field.lineno)
                     catch_all_field = api_type_field
                 api_type_fields.append(api_type_field)
             api_type = Union(item.name, item.doc, api_type_fields, super_type,
@@ -172,12 +178,14 @@ class TowerOfBabel(object):
             babelapi.data_type.StructField: A field of a struct.
         """
         if babel_field.type_ref.name not in env:
-            raise InvalidSpec('Symbol %r is undefined.' % babel_field.type_ref.name)
+            raise InvalidSpec('Line %d: Symbol %r is undefined.' %
+                              (babel_field.lineno, babel_field.type_ref.name))
         else:
             data_type = self._resolve_type(env, babel_field.type_ref)
             if data_type.nullable and babel_field.has_default:
-                raise InvalidSpec('Field %r cannot be a nullable type and '
-                    'have a default specified.' % babel_field.name)
+                raise InvalidSpec('Line %d: Field %r cannot be a nullable '
+                                  'type and have a default specified.' %
+                                  (babel_field.lineno, babel_field.name))
             api_type_field = StructField(
                 babel_field.name,
                 data_type,
@@ -206,7 +214,8 @@ class TowerOfBabel(object):
         if isinstance(babel_field, BabelSymbolField):
             api_type_field = UnionField(babel_field.name, Symbol(), babel_field.doc)
         elif babel_field.type_ref.name not in env:
-            raise InvalidSpec('Symbol %r is undefined.' % babel_field.type_ref.name)
+            raise InvalidSpec('Line %d: Symbol %r is undefined.' %
+                              (babel_field.lineno, babel_field.type_ref.name))
         else:
             data_type = self._resolve_type(
                 env,
@@ -229,8 +238,9 @@ class TowerOfBabel(object):
         elif type_ref.attrs:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise InvalidSpec('Attributes cannot be specified for instantiated '
-                              'type %r.' % type_ref.name)
+            raise InvalidSpec('Line %d: Attributes cannot be specified for '
+                              'instantiated type %r.' %
+                              (type_ref.lineno, type_ref.name))
         else:
             # The data_type could be nullable if this is an alias to a nullable
             # type. Or, the type reference itself could be nullable.
@@ -249,7 +259,8 @@ class TowerOfBabel(object):
         for (k, v) in attrs:
             if isinstance(v, BabelTypeRef):
                 if v.name not in env:
-                    raise InvalidSpec('Symbol %r is undefined' % v.name)
+                    raise InvalidSpec('Line %d: Symbol %r is undefined' %
+                                      (v.lineno, v.name))
                 else:
                     new_attr = (k, self._resolve_type(env, v))
                     new_attrs.append(new_attr)
@@ -264,10 +275,9 @@ class TowerOfBabel(object):
         else:
             if self._debug:
                 self._logger.info('Description: %r' % desc)
-            self._logger.error('First declaration in a babel must be a '
-                               'namespace. Possibly caused by preceding '
-                               'errors.')
-            sys.exit(1)
+            raise InvalidSpec('Line %d: First declaration in a babel must be '
+                              'a namespace. Possibly caused by preceding '
+                              'errors.' % desc[0].lineno)
 
         namespace = self.api.ensure_namespace(namespace_decl.name)
         env = copy.copy(self.default_env)
@@ -294,8 +304,8 @@ class TowerOfBabel(object):
                 )
                 namespace.add_route(route)
             else:
-                raise Exception('Unknown Babel Declaration Type %r'
-                                % item.__class__.__name__)
+                raise AssertionError('Unknown Babel Declaration Type %r' %
+                                     item.__class__.__name__)
 
         # Coverage is specified as a forward declaration so here's where we
         # resolve the symbols.
