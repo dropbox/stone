@@ -87,7 +87,7 @@ class _BoundedInteger(PrimitiveType):
         range inherent to the defined type.
         """
         if min_value is not None:
-            assert isinstance(max_value, numbers.Integral), (
+            assert isinstance(min_value, numbers.Integral), (
                 'min_value must be an integral number'
             )
             if min_value < self.minimum:

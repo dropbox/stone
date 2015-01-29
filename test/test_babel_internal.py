@@ -134,6 +134,10 @@ class TestBabelInternal(unittest.TestCase):
             i.check(-5)
         self.assertIn('-5 is less than 0', cm.exception.args[0])
 
+        # check that bad ranges are rejected
+        self.assertRaises(AssertionError, lambda: Int64(min_value=0.1))
+        self.assertRaises(AssertionError, lambda: Int64(max_value='10'))
+
     def test_boolean(self):
 
         b = Boolean()
@@ -170,6 +174,10 @@ class TestBabelInternal(unittest.TestCase):
         with self.assertRaises(AssertionError) as cm:
             Float32(min_value=0, max_value=10**50)
         self.assertIn('greater than the maximum value', cm.exception.args[0])
+
+        # check that bad ranges are rejected
+        self.assertRaises(AssertionError, lambda: Float64(min_value=1j))
+        self.assertRaises(AssertionError, lambda: Float64(max_value='10'))
 
     def test_timestamp(self):
         t = Timestamp('%a, %d %b %Y %H:%M:%S')
