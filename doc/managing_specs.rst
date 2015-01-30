@@ -1,9 +1,9 @@
-********************
-Managing Large Specs
-********************
+**************
+Managing Specs
+**************
 
-Here we cover several strategies for dealing with a large number of routes
-and types.
+Here we cover several strategies for dealing with larger projects composed of
+many specs, routes, and user-defined types.
 
 Using Namespaces
 ================
@@ -22,12 +22,11 @@ If a spec is growing large and unwieldy with thousands of lines, it might make
 sense to split the namespace across multiple spec files.
 
 All you need to do is create multiple ``.babel`` files with the same
-`namespace <write_spec.rst#namespace>`_ definition. Code generators cannot
+`Namespace <lang_ref.rst#namespace>`_ definition. Code generators cannot
 distinguish between spec files--only namespaces--so no code will be affected.
 
-As explained in `Choosing a Filename <write_spec.rst#filename>`_, when
-splitting a namespace across multiple files, each file should use the namespace
-name as a prefix of its filename.
+When splitting a namespace across multiple spec files, each file should use the
+namespace name as a prefix of its filename.
 
 The ``babelapi`` command-line interface makes it easy to specify multiple
 specs::
@@ -41,15 +40,7 @@ Using Header Files
 If multiple spec files depend on the same user-defined type or alias, then you
 should move the common definition to a header file.
 
-Headers files have a ``.babelh`` extension. They're identical to regular
-``.babel`` specs in contents, except that they cannot define a namespace nor
-routes.
-
-Assuming that the header file is named ``common.babelh``, specify
-``include common`` after the namespace definition in your spec to get access
-to all data types defined in the header. These data types will be imported into
-the global environment of the spec file and will not require any reference to
-``common``.
+See how to use `Include <doc/lang_ref.rst#include>`_.
 
 Separating Public and Private Routes
 ====================================

@@ -44,13 +44,13 @@ Backwards Incompatible Changes
     * Changing the type of a struct field.
         * An old receiver may have application-layer dependencies on the field
           type. In statically typed languages deserialization will fail.
-    * Adding a new variant to a union without a `catch all symbol <lang_ref.rst#union-catch-all>`_.
-        * We expect receivers to handle all variants using a combination of
-          ``is_[variant]()`` checks and an ``else`` clause. If a new variant
+    * Adding a new tag to a union without a `catch-all symbol <lang_ref.rst#union-catch-all>`_.
+        * We expect receivers to handle all tags using a combination of
+          ``is_[tag]()`` checks and an ``else`` clause. If a new tag
           is returned, the receiver's handler code will be insufficient.
-    * Changing the type of a variant.
+    * Changing the type of a tag.
         * Assuming the original type was not `Any <lang_ref.rst#union-any>`_.
-        * Similar to the above, if a variant changes, the old receiver's
+        * Similar to the above, if a tag changes, the old receiver's
           handler code will break.
     * Changing any of the types of a route description to an incompatible one.
         * When changing a request, response, or error data type for a route,
@@ -69,22 +69,23 @@ Backwards Compatible Changes
           field is optional.
         * If the sender is newer, it will send the new field. The receiver will
           simply ignore the field that it does not understand.
-    * Change the type of a variant from the `Any data type <lang_ref.rst#union-any>`_ to something else.
-        * The older receiver will continue to see the variant as a symbol, and
+    * Change the type of a tag from the `Any data type <lang_ref.rst#union-any>`_ to something else.
+        * The older receiver will continue to see the tag as a symbol, and
           will ignore any information associated with the new data type.
-    * Adding another variant to a union that has a catch all specified.
-        * The older receiver will not understand the incoming variant, and will
-          simply set the union to its catch all variant. The application-layer
-          will handle this new variant through the same code path that handles
-          the catch all variant.
+    * Adding another tag to a union that has a catch-all specified.
+        * The older receiver will not understand the incoming tag, and will
+          simply set the union to its catch-all tag. The application-layer will
+          handle this new tag through the same code path that handles the
+          catch-all tag.
 
 Planning for Backwards Compatibility
 ====================================
 
-    * When defining a union that you're likely to add variants to in the
-      future, add a `catch all symbol variant <lang_ref.rst#union-catch-all>`_.
-    * When defining a symbol that you're likely to convert to a variant with
-      a value sometime in the future, use the `Any <lang_ref.rst#union-any>`_.
+    * When defining a union that you're likely to add tags to in the
+      future, add a `catch-all symbol <lang_ref.rst#union-catch-all>`_.
+    * When defining a symbol that you're likely to convert to a tag with
+      a value sometime in the future, use the
+      `Any data type <lang_ref.rst#union-any>`_.
 
 Leader-Clients
 ==============
@@ -118,13 +119,13 @@ A known leader can be stricter with what it receives from clients:
           should retain the behavior of ignoring unknown fields.
 
     * If the leader is acting as a recipient, it should reject all unknown
-      variants even if the union specifies a catch all.
-    * If the leader is acting as a recipient, any variant that is specified
+      tags even if the union specifies a catch-all.
+    * If the leader is acting as a recipient, any tag that is specified
       as an Any data type should be seen as a symbol in the serialization
       format since it's not possible for a client to have converted the Any
       data type to something else.
 
-[TODO] There are more nuanced backwards compatible changes such as: A variant
+[TODO] There are more nuanced backwards compatible changes such as: A tag
 can be removed if the union is only sent from the server to a client. Will this
 level of detail just lead to errors in practice?
 

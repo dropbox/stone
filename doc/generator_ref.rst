@@ -1,15 +1,20 @@
 *******************
-Generator Reference
+Writing a Generator
 *******************
 
-Generators are a way to convert a spec into some other form. Most commonly,
-a generator will target a programming language and convert a spec into
-classes and functions.
+This document explains how to write your own generator. If you're simply
+looking to use an included generator, please see `Using Generated Code
+<using_generator.rst>`_.
 
-All generators must be written as Python modules that satisfy the following
+Generators convert a spec into some other markup or code. Most commonly, a
+generator will target a programming language and convert a spec into classes
+and functions. But, generators can also create markup for things like API
+documentation.
+
+Generators are written as Python modules that satisfy the following
 conditions:
 
-1. The filename must have ``.babelg.py`` as its extension. For example,
+1. The filename must have a ``.babelg.py`` extension. For example,
    ``example.babelg.py``
 
 2. At least one class must exist in the module that extends the
@@ -17,6 +22,9 @@ conditions:
    abstract ``generate()`` method. BabelAPI automatically detects subclasses
    and calls the ``generate()`` method. All such subclasses will be called in
    ASCII order.
+
+Getting Started
+===============
 
 Here's a simple no-op generator::
 
@@ -26,6 +34,38 @@ Here's a simple no-op generator::
         def generate(self):
             pass
 
+Assuming that the generator is saved in your current directory as
+``example.babelg.py`` and that our running example spec ``users.babel`` from the
+`Language Reference <lang_ref.rst>`_ is also in the current directory. you can
+invoke the generator with the following command::
+
+    $ babelapi example.babelg.py users.babel .
+
+If you've used our `included Python generator <using_generator.rst#python-guide>`_
+then you should be aware that ``python`` is a reserved name for a generator.
+Since you're making your own generator, you have to specify the full path to
+it. That does ensure, however, that there will not be a name conflict with an
+included generator, since yours will always end in ``.babelg.py``.
+
+Generating Output Files
+=======================
+
+To create an output file, use the ``self.output_to_relative_path()`` method.
+Its only argument is the path relative to the output directory, which was
+specified as an argument to ``babelapi``, where the file should be created.
+
+Here's an example generator that creates an output file for each namespace.
+Each file is named after a respective namespace and have a ``.cpp`` extension.
+Each file contains a one line C++-style comment::
+
+    from babelapi.generator.generator import CodeGenerator
+
+    class ExampleGenerator(CodeGenerator):
+        def generate(self):
+            for namespace_name in self.api.namespaces:
+                with self.output_to_relative_path(namespace_name + '.cpp'):
+                    self.emit_line('/* {} */'.format(namespace_name))
+
 Using the API Object
 ====================
 
@@ -34,32 +74,101 @@ specs as a Python object. The object is an instance of the ``babelapi.api.Api``
 class. From this object, you can access all the defined namespaces, data types,
 and routes.
 
-Here's an example generator that creates no file output, but will print the
-``api`` object to standard out::
+Api
+---
 
-    from babelapi.generator.generator import CodeGenerator
+namespaces
+    A map from namespace name to Namespace object.
 
-    class ExampleGenerator(CodeGenerator):
-        def generate(self):
-            print self.api
+
+Namespace
+---------
+
+name
+    The name of the namespace.
+
+routes
+    A list of Route objects in the order that they were defined.
+
+route_by_name
+    A map from route name to Route object.
+
+data_types
+    A list of user-defined DataType objects in the order that they were
+    defined.
+
+data_type_by_name
+    A map from data type name to DataType object.
+
+Route
+-----
+
+name
+    The name of the route.
+
+doc
+    The documentation string for the route.
+
+request_data_type
+    A DataType object of a request.
+
+response_data_type
+    A DataType object of a response.
+
+error_data_type
+    A DataType object of an error.
+
+attrs
+    A map from string keys to Python primitive values that is a direct copy
+    of the attrs specified in the route definition.
 
 See the Python object definition for more information.
 
-Creating an Output File
-=======================
+DataType
+--------
 
-To create an output file, use the ``self.output_to_relative_path()`` function.
-Its only argument is the path relative to the output directory, which was
-specified as an argument to ``babelapi``, where the file should be created.
+name
+    The name of the data type.
 
-Here's an example generator that creates an empty output file ``empty.out``::
+nullable
+    Whether the type is nullable.
 
-    from babelapi.generator.generator import CodeGenerator
+See ``babelapi.data_type`` for all primitive type definitions and their
+attributes.
 
-    class ExampleGenerator(CodeGenerator):
-        def generate(self):
-            with self.output_to_relative_path('empty.out'):
-                pass
+Struct
+------
+
+name
+    The name of the struct.
+
+doc
+    The documentation string for the struct.
+
+all_fields
+    A list of all StructField objects that make up the struct. Required fields
+    come before optional fields.
+
+super_type
+    If it exists, it points to a DataType object (another struct) that this
+    struct inherits from.
+
+StructField
+-----------
+
+name
+    The name of the field.
+
+doc
+    The documentation string for the field.
+
+data_type
+    The DataType of the field.
+
+Union
+-----
+
+[TODO]: Need to rename fields to tags first.
 
 .. _emit_methods:
 

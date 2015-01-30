@@ -19,20 +19,22 @@ actively worked on, and the intention is to support
         * `Comments <doc/lang_ref.rst#comments>`_
         * `Namespace <doc/lang_ref.rst#namespace>`_
         * `Primitive Types <doc/lang_ref.rst#primitive-types>`_
+        * `Alias <doc/lang_ref.rst#alias>`_
         * `Struct <doc/lang_ref.rst#struct>`_
         * `Union <doc/lang_ref.rst#union>`_
-        * `Alias <doc/lang_ref.rst#alias>`_
+        * `Nullable Type <doc/lang_ref.rst#nullable-type>`_
         * `Route <doc/lang_ref.rst#route>`_
+        * `Include <doc/lang_ref.rst#include>`_
         * `Documentation <doc/lang_ref.rst#documentation>`_
         * `Formal Grammar <doc/lang_ref.rst#formal-grammar>`_
-    * `Using a Generator <doc/using_generator.rst>`_
+    * `Using Generated Code <doc/using_generator.rst>`_
         * `Compile with the CLI <doc/using_generator.rst#compile-with-the-cli>`_
-        * `Python Generation <doc/using_generator.rst#python-generation>`_
-    * `Managing Large Specs <doc/managing_large_specs.rst>`_
-        * `Using Namespaces <doc/managing_large_specs.rst#using-namespaces>`_
-        * `Splitting a Namespace Across Files <doc/managing_large_specs.rst#splitting-a-namespace-across-files>`_
-        * `Using Header Files <doc/managing_large_specs.rst#using-header-files>`_
-        * `Separating Public and Private Routes <doc/managing_large_specs.rst#separation-public-and-private-routes>`_
+        * `Python Guide <doc/using_generator.rst#python-guide>`_
+    * `Managing Specs <doc/managing_specs.rst>`_
+        * `Using Namespaces <doc/managing_specs.rst#using-namespaces>`_
+        * `Splitting a Namespace Across Files <doc/managing_specs.rst#splitting-a-namespace-across-files>`_
+        * `Using Header Files <doc/managing_specs.rst#using-header-files>`_
+        * `Separating Public and Private Routes <doc/managing_specs.rst#separation-public-and-private-routes>`_
     * `Evolving a Spec <doc/evolve_spec.rst>`_
         * `Background <doc/evolve_spec.rst#background>`_
         * `Sender-Recipient <doc/evolve_spec.rst#sender-recipient>`_
@@ -41,7 +43,7 @@ actively worked on, and the intention is to support
         * `Planning for Backwards Compatibility <doc/evolve_spec.rst#planning-for-backwards-compatibility>`_
         * `Leader-Clients <doc/evolve_spec.rst#leader-clients>`_
         * `Route Versioning <doc/evolve_spec.rst#route-versioning>`_
-    * `Generator Reference (.babelg.py) <doc/generator_ref.rst>`_
+    * `Writing a Generator (.babelg.py) <doc/generator_ref.rst>`_
         * `Using the API Object <doc/generator_ref.rst#using-the-api-object>`_
         * `Creating an Output File <doc/generator_ref.rst#creating-an-output-file>`_
         * `Emit Methods <doc/generator_ref.rst#emit-methods>`_
@@ -71,7 +73,7 @@ Babel seeks to:
 
 If we only had one protocol and one language Babel API wouldn't be needed, but
 unfortunately humanity was handicapped for good reason. See
-`Why do we have multiple programming languages?`_
+`Why do we have multiple programming languages? <doc/joke.rst>`_
 
 Assumptions
 -----------
@@ -99,17 +101,31 @@ Installation
 
 Download or clone BabelAPI, and run the following in its root directory::
 
-   $ sudo python setup.py install
+    $ sudo python setup.py install
 
 This will install a script ``babelapi`` to your PATH that can be run from the
 command line::
 
-   $ babelapi -h
+    $ babelapi -h
 
-If you did not run ``setup.py`` but have the Python package in your PYTHONPATH,
-you can replace ``babelapi`` with ``python -m babelapi.cli`` as follows::
+Alternative
+-----------
 
-   $ python -m babelapi.cli -h
+If you choose not to install ``babelapi`` using the method above, you will need
+to ensure that you have the Python packages ``ply`` and ``six``, which can be
+installed through ``pip``::
+
+    $ pip install ply>=3.4 six>=1.3.0
+
+If the ``babelapi`` package is in your PYTHONPATH, you can replace ``babelapi``
+with ``python -m babelapi.cli`` as follows::
+
+    $ python -m babelapi.cli -h
+
+If you have the ``babelapi`` package on your machine, but did not install it or
+add its location to your PYTHONPATH, you can use the following::
+
+    $ PYTOHNPATH=path/to/babelapi python -m babelapi.cli -h
 
 .. taste-of-babel:
 
@@ -200,24 +216,3 @@ Now we can interact with the specification in Python::
     ...              email='alex@example.org', status=Status.active)
     >>> json_encode(GetAccountRoute.response_data_type, a2)
     '{"status": "active", "account_id": "id-48sa2f0", "name": "Alexander the Great", "email": "alex@example.org"}'
-
-.. _why_multiple_languages:
-
-Why do we have multiple programming languages?
-==============================================
-
-From the King James version of the Bible:
-
-    4 And they said, Go to, let us build us a city and a tower, whose top may reach unto heaven; and let us make us a name, lest we be scattered abroad upon the face of the whole earth.
-
-    5 And the Lord came down to see the city and the tower, which the children of men builded.
-
-    6 And the Lord said, Behold, the people is one, and they have all one language; and this they begin to do: and now nothing will be restrained from them, which they have imagined to do.
-
-    7 Go to, let us go down, and there confound their language, that they may not understand one another's speech.
-
-    8 So the Lord scattered them abroad from thence upon the face of all the earth: and they left off to build the city.
-
-    9 Therefore is the name of it called Babel; because the Lord did there confound the language of all the earth: and from thence did the Lord scatter them abroad upon the face of all the earth.
-
-    —Genesis 11:4–9[1]

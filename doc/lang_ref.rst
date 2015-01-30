@@ -62,11 +62,11 @@ The spec should live in a file called ``users.babel``::
 Choosing a Filename
 ===================
 
-All specifications should use the extension ``.babel``. We recommend that the
+All specifications must have a ``.babel`` extension. We recommend that the
 name of the file be the same as the namespace (explained below) defined in the
-spec. If the definitions for a namespace are spread across multiple files, we
-recommend that all spec files use the namespace as a filename prefix. For
-example, ``users_public.babel`` and ``users_private.babel``.
+spec.
+
+`Headers <#include>`_ must use the ``.babelh`` extension.
 
 Comments
 ========
@@ -84,7 +84,8 @@ Specs must begin with a namespace declaration as is the case here::
    namespace users
 
 This logically groups all of the routes and data types in the spec file into
-the ``users`` namespace. A spec file may only be part of one namespace.
+the ``users`` namespace. A spec file must declare exactly one namespace, but
+multiple spec files may contribute to the same namespace.
 
 Namespaces are useful for grouping related functionality together. For example,
 the Dropbox API has a namespace devoted to all file operations (uploading,
@@ -97,31 +98,87 @@ Primitive Types
 In the example, ``String`` and ``Timestamp`` are primitive types. Here's a
 table of all primitive types and the arguments they take:
 
-======================= =======================================================
-Type                    Arguments (**bold** are required)
-======================= =======================================================
-Binary                  --
+======================= ================================= =====================
+Type                    Arguments (**bold** are required) Notes
+======================= ================================= =====================
+Binary                  --                                An array of bytes.
 Boolean                 --
-Float{32,64}            --
+Float{32,64}            * min_value
+                        * max_value
 Int{32,64}, UInt{32,64} * min_value
                         * max_value
-List                    * **data_type**: A primitive or composite type that the
-                          homogeneous list contains.
+List                    * **data_type**: A primitive or   Lists are homogeneous.
+                          composite type.
                         * min_items
                         * max_item
-String                  * min_length
+String                  * min_length                      A unicode string.
                         * max_length
-                        * pattern: A regular expression to be used for
-                          validation.
-Timestamp               * **format**: Used by the JSON-serializer since no
-                          native timestamp type is supported.
-======================= =======================================================
+                        * pattern: A regular expression
+                          to be used for validation.
+Timestamp               * **format**: Specified as a      This is used by the
+                          string understood by            JSON-serializer since
+                          strptime().                     it has no native
+                                                          timestamp data type.
+======================= ================================= =====================
+
+To specify an argument, use the argument name followed by an ``=`` and the
+value::
+
+    struct Person
+        age UInt64(max_value=130)
 
 If no arguments are needed, the parentheses can be omitted. For example::
 
     struct Example
         number Int64
         string String
+
+Here are some more examples::
+
+    struct Coordinate
+        x Int64
+        y Int64
+
+    struct Example
+        f1 Binary
+        f2 Boolean
+        f3 Float64(min_value=0)
+        # List of primitive types
+        f4 List(data_type=Int64)
+        # List of user-defined types
+        f5 List(data_type=Coordinate, max_items=10)
+        f6 String(pattern="^[A-z]+$")
+        f7 Timestamp(format="%a, %d %b %Y %H:%M:%S +0000")
+
+Mapping to a Target Language
+----------------------------
+
+Code generators map the primitive types of Babel to types in a target language.
+For more information, consult the appropriate guide in `Using Generated Code
+<using_generator.rst>`_.
+
+Alias
+=====
+
+Sometimes we prefer to use an alias, rather than re-declaring a type over and
+over again::
+
+    alias AccountId = String(min_length=10, max_length=10)
+
+In our example, declaring an ``AccountId`` alias makes future references to it
+clearer since the name provides an extra semantic hint::
+
+    struct BasicAccount
+        "Basic information about a user's account."
+
+        account_id AccountId
+            "A unique identifier for the user's account."
+
+    struct GetAccountReq
+        account_id AccountId
+
+Aliases also make refactoring easier. We only need to change the definition of
+the ``AccountId`` alias to change it everywhere.
 
 Struct
 ======
@@ -141,7 +198,7 @@ A struct is a user-defined type made up of fields that have their own types::
 A struct can be documented by specifying a string immediately following the
 struct declaration. The string can be multiple lines, as long as each
 subsequent line is at least at the indentation of the starting quote.
-Read more about documentation strings here.
+Refer to `Documentation`_ for more.
 
 After the documentation is a list of fields. Fields are formatted with the field
 name first followed by the field type. To provide documentation for a field,
@@ -178,23 +235,6 @@ structs or unions::
         status Status
             "The status of the account."
 
-Nullable Type
--------------
-
-When a field type is followed by a ``?``, the field is nullable::
-
-    name String(min_length=1)?
-
-Nullable means that the field can be unspecified, ie. ``null``. Code generators
-should use a language's native facilities for null,
-`boxed types <http://en.wikipedia.org/wiki/Object_type_(object-oriented_programming)#Boxing>`_,
-and `option types <http://en.wikipedia.org/wiki/Option_type>`_ if possible. For
-languages that do not support these features, a separate function to check for
-the presence of a field is the preferred method.
-
-A nullable type is considered optional. If it is not specified in a message,
-the receiver should not error, but instead treat the field as absent.
-
 Defaults
 --------
 
@@ -216,13 +256,11 @@ implicitly have a default of ``null``.
 
 In practice, defaults are useful when `evolving a spec <evolve_spec.rst>`_.
 
-.. struct-examples:
-
-Illustrative Examples
----------------------
+Examples
+--------
 
 Examples help you include realistic samples of data in definitions. This gives
-spec readers a concrete idea of the what typical values will look like. Also,
+spec readers a concrete idea of what typical values will look like. Also,
 examples help demonstrate how distinct fields might interact with each other.
 Lastly, generators have access to examples, which is useful when automatically
 generating documentation.
@@ -256,39 +294,67 @@ present.
 Union
 =====
 
-A union in Babel is a tagged union. A union can only "be" one of its variants
-at any given time. Like a struct, it starts with a name declaration followed
-by a documentation string::
+A union in Babel is a
+`tagged union <http://en.wikipedia.org/wiki/Tagged_union>`_. Think of it as a
+type that can store one of several different possibilities at a time. Each
+possibility has an identifier that is called a "tag". In our example, the union
+``Status`` has tags ``active`` and ``inactive``::
 
     union Status
+        "The status of a user's account."
+
         active
             "The account is active."
         inactive Timestamp(format="%a, %d %b %Y %H:%M:%S")
             "The account is inactive. The value is when the account was
             deactivated."
 
-Its list of fields are a list of variants.
+A tag can be associated with a type (``inactive`` stores a ``Timestamp``) or
+can be a `Symbol <#symbol>`_ (``active``).
+
+The primary advantage of a union is its logical expressiveness. You'll often
+encounter types that are best described as choosing between a set of options.
+Do not fall into the trap of using a struct with a field for each option, and
+relying on your application logic to enforce that only one is set.
+
+Another advantage is that for languages that support tagged unions, the
+compiler can check that your application code handles all possible cases and
+that accesses are safe. We will take advantage of such features when writing
+generators for languages with support.
+
+Like a struct, a documentation string can follow the union declaration and/or
+follow each tag definition.
 
 Symbol
 ------
 
-``active`` is a tag that is not mapped to any value. We call these symbols.
+Sometimes, a tag does not need to be mapped to any type. We call these symbols,
+but they're also known as unit types in
+`nominal type systems <http://en.wikipedia.org/wiki/Nominal_type_system>`_.
 
-Catch All Symbol
+In our running example, ``active`` is a symbol. An example of a union with all
+symbols could be::
+
+    union Shape
+        square
+        rectangle
+        circle
+
+Catch-all Symbol
 ----------------
 
 By default, we consider unions to be closed. That is, for the sake of backwards
-compatibility, a recipient of a message should never encounter a variant that
-it isn't aware of. A recipient can therefore confidently handle the case where
-a user is ``active`` or ``inactive`` and trust that no other value will ever
-be encountered.
+compatibility, a recipient of a message should never encounter a tag that it
+isn't aware of. A recipient can therefore confidently handle the case where a
+user is ``active`` or ``inactive`` and trust that no other value will ever be
+encountered.
 
 Because we anticipate that this will be constricting for APIs undergoing
-evolution, we've introduced the notion of a "catch all" symbol. If a recipient
-receives a tag that it isn't aware of, it will default the union to the catch
-all symbol variant.
+evolution, we've introduced the notion of a catch-all symbol. If a recipient
+receives a tag that it isn't aware of, it will default the union to the
+catch-all symbol.
 
-The notation is simply an ``*`` that follows a symbol variant::
+The notation is simply an ``*`` that follows a `Symbol <#symbol>`_ tag::
 
     union GetAccountErr
         no_account
@@ -304,17 +370,17 @@ to the ``unknown`` tag.
 
 We expect this to be especially useful for unions that represent the possible
 errors an endpoint might return. Recipients in the wild may have been generated
-with only a subset of the current errors, but they'll continue to function as
-long as they handle the catch all tag.
+with only a subset of the current errors, but they'll continue to function
+appropriately as long as they handle the catch-all tag.
 
-Any Data Type
--------------
+The Any data type
+-----------------
 
 Changing a symbol field to some data type is a backwards incompatible change.
 After all, if a recipient is expecting a symbol and gets back a struct, it
 isn't likely the handling code will be prepared.
 
-To avoid this, set the field to the ``Any`` type as was done here::
+To avoid this, set the tag to the ``Any`` type as was done here::
 
     union GetAccountErr
         no_account
@@ -324,7 +390,8 @@ To avoid this, set the field to the ``Any`` type as was done here::
         unknown*
 
 Now, without causing a backwards incompatibility, the data type can be
-updated to include more information::
+updated to include more information in the future. In this case, the ``Any``
+type has been changed to ``String``::
 
     union GetAccountErr
         no_account
@@ -334,16 +401,22 @@ updated to include more information::
             is text explaining why."
         unknown*
 
-Alias
-=====
+Nullable Type
+=============
 
-Sometimes we prefer to use an alias, rather than re-declaring a type over an
-over again::
+When a type is followed by a ``?``, the type is nullable::
 
-    alias AccountId = String(min_length=10, max_length=10)
+    name String(min_length=1)?
 
-In our example, declaring an ``AccountId`` alias is clearer when used and
-will make it easier to change in the future.
+Nullable means that the type can be unspecified, ie. ``null``. Code generators
+should use a language's native facilities for null,
+`boxed types <http://en.wikipedia.org/wiki/Object_type_(object-oriented_programming)#Boxing>`_,
+and `option types <http://en.wikipedia.org/wiki/Option_type>`_ if possible. For
+languages that do not support these features, a separate function to check for
+the presence of a type is the preferred method.
+
+A nullable type is considered optional. If it is not specified in a message,
+the receiver should not error, but instead treat it as absent.
 
 Route
 =====
@@ -357,8 +430,11 @@ The route is named ``get_account``. ``GetAccountReq`` is the data type of
 the request to the route. ``Account`` is the data type of a response from the
 route. ``GetAccountErr`` is the data type of an error response.
 
-Similar to structs and unions, a documentation string must follow the route
-name declaration.
+Similar to structs and unions, a documentation string may follow the route
+signature.
+
+Attributes
+----------
 
 A full description of an API route tends to require vocabulary that is specific
 to a service. For example, the Dropbox API needs a way to specify some routes
@@ -379,11 +455,48 @@ followed by an arbitrary set of ``key=value`` pairs::
 
 Code generators will populate a route object with these attributes.
 
+Include
+=======
+
+You can move type and alias definitions from your spec (``.babel``) to a header
+file (``.babelh``). Unlike regular specs, headers cannot contain a namespace
+directive nor route definitions.
+
+For example, we can move the definition of ``AccountId`` and ``BasicAccount``
+into a file called ``common.babelh``::
+
+    # We define an AccountId as being a 10-character string
+    # once here to avoid declaring it each time.
+    alias AccountId = String(min_length=10, max_length=10)
+
+    struct BasicAccount
+        "Basic information about a user's account."
+
+        account_id AccountId
+            "A unique identifier for the user's account."
+        email String(pattern="^[^@]+@[^@]+\.[^@]+$")
+            "The e-mail address of the user."
+
+Now in ``users.babel``, we can add an ``include`` statement under the namespace
+directive as follows::
+
+    namespace users
+
+    include common
+
+During compilation, the data types in ``common.babelh`` will be added to the
+global environment of the spec file and will not require any reference to
+``common``.
+
+All header files must live in the same folder as the specs that rely on them.
+Also, all ``include`` directives must come immediately after ``namespace``
+directive or another ``include``.
+
 Documentation
 =============
 
 Documentation strings are an important part of specifications, which is why
-they're a part of routes, structs, struct fields, unions, and union variants.
+they're a part of routes, structs, struct fields, unions, and union tags.
 It's expected that there should be documentation for almost every place that
 documentation strings are possible. It's not required only because some
 definitions are self-explanatory or adding documentation would be redundant, as
@@ -395,11 +508,13 @@ documentation into the language objects that represent routes, structs, and
 unions. Generators for API documentation will find documentation strings
 especially useful.
 
-Stubs
------
+References
+----------
 
-Stubs help tailor documentation strings to a specific language. Stubs are of
-the following format::
+References help generators tailor Babel documentation strings for a target
+programming language.
+
+References have the following format::
 
     :tag:`value`
 
@@ -411,19 +526,13 @@ route
 type
     A reference to a data type, whether a primitive or composite type.
 field
-    A reference to a field of a struct or a variant of a union.
+    A reference to a field of a struct or a tag of a union.
 link
     A hyperlink. The format of the value is "<description...> <url>".
     Generators should convert this to a hyperlink for the target language.
 val
     A value. Generators should convert this to the native representation of the
     value for the target language.
-
-Include
-=======
-
-Including header files is covered in
-`Managing Large Specs: Using Headers <managing_large_specs.rst#using-headers>`_.
 
 Formal Grammar
 ===============
@@ -434,12 +543,54 @@ Specification::
     Namespace ::= 'namespace' Identifier
     Include ::= 'include' Identifier
     Definition ::= Alias | Route | Struct | Union
-    PrimitiveType ::= Binary | Boolean | Float32 | Float64 | Int32 | Int64
-                  | UInt32 | UInt64 | String | Timestamp
-    Alias ::= 'alias' Identifier '=' PrimitiveType
-    Inheritance ::= 'extends' Identifier
-    Struct ::= 'struct' Identifier Inheritance?
-    Union ::= 'union' Identifier
-    Route ::= 'route' Identifier '(' Identifier ',' Identifier ',' Identifier ')'
+    Alias ::= 'alias' Identifier '=' TypeRef
 
-TODO: Finish this section.
+Struct::
+
+    Struct ::= 'struct' Identifier Inheritance? NL INDENT Doc? Field* Example* DEDENT
+    Inheritance ::= 'extends' Identifier
+    Default ::= '=' Literal
+    Field ::= Identifier TypeRef Default? (NL INDENT Doc DEDENT)?
+
+Union::
+
+    Union ::= 'union' Identifier NL INDENT (SymbolTag|Tag)* DEDENT
+    SymbolTag ::= Identifier '*'? (NL INDENT Doc DEDENT)?
+    Tag ::= Identifier TypeRef (NL INDENT Doc DEDENT)?
+
+Route::
+
+    Route ::= 'route' Identifier '(' TypeRef ',' TypeRef ',' TypeRef ')' (NL INDENT Doc DEDENT)?
+
+Type Reference::
+
+    Attributes ::= '(' (Identifier '=' (Literal | Identifier) ','?)*  ')'
+    TypeRef ::= Identifier Attributes? '?'?
+
+Primitives::
+
+    PrimitiveType ::= 'Binary' | 'Boolean' | 'Float32' | 'Float64' | 'Int32'
+                  | 'Int64' | 'UInt32' | 'UInt64' | 'String' | 'Timestamp'
+
+Basic::
+
+    Identifier ::= (Letter | '_')? (Letter | Digit | '_')* # Should we allow trailing underscores?
+    Letter ::=  ['A'-'z']
+    Digit ::=  ['0'-'9']
+    Literal :: = BoolLiteral | FloatLiteral | IntLiteral | StringLiteral
+    BoolLiteral ::= 'true' | 'false'
+    FloatLiteral ::=  '-'? Digit* ('.' Digit+)? ('E' IntLiteral)?
+    IntLiteral ::=  '-'? Digit+
+    StringLiteral ::= '"' .* '"' # Not accurate
+    Doc ::= StringLiteral # Not accurate
+    NL = Newline
+    INDENT = Incremental indentation
+    DEDENT = Decremented indentation
+
+Specification Header::
+
+    SpecHeader ::= Definition*
+
+TODO: Need to add additional information about handling of NL, INDENT, DEDENT,
+and whitespace between tokens. Also, the attrs section of Routes and the
+examples section of Structs haven't been addressed.
