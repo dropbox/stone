@@ -12,41 +12,41 @@ import traceback
 from babelapi.compiler import Compiler
 from babelapi.babel.tower import InvalidSpec, TowerOfBabel
 
+# The parser for command line arguments
+_cmdline_parser = argparse.ArgumentParser(description='BabelAPI')
+_cmdline_parser.add_argument(
+    '-v',
+    '--verbose',
+    action='store_true',
+    help='Print debugging statements.',
+)
+_cmdline_parser.add_argument(
+    'generator',
+    type=str,
+    help='Specify a pre-packaged generator (only "python" right now), or '
+         'the path to a custom generator (.babelg.py).',
+)
+_cmdline_parser.add_argument(
+    'spec',
+    nargs='+',
+    type=str,
+    help='Path to API specifications (*.babel).',
+)
+_cmdline_parser.add_argument(
+    'output',
+    type=str,
+    help='The folder to save generated files to.',
+)
+_cmdline_parser.add_argument(
+    '--clean-build',
+    action='store_true',
+    help='The path to the template SDK for the target language.',
+)
+
 def main():
     """The entry point for the program."""
 
-    cmdline_parser = argparse.ArgumentParser(description='BabelAPI')
-    cmdline_parser.add_argument(
-        '-v',
-        '--verbose',
-        action='store_true',
-        help='Print debugging statements.',
-    )
-    cmdline_parser.add_argument(
-        'generator',
-        type=str,
-        help='Specify a pre-packaged generator (only "python" right now), or '
-             'the path to a custom generator (.babelg.py).',
-    )
-    cmdline_parser.add_argument(
-        'spec',
-        nargs='+',
-        type=str,
-        help='Path to API specifications (*.babel).',
-    )
-    cmdline_parser.add_argument(
-        'output',
-        type=str,
-        help='The folder to save generated files to.',
-    )
-
-    cmdline_parser.add_argument(
-        '--clean-build',
-        action='store_true',
-        help='The path to the template SDK for the target language.',
-    )
-
-    args = cmdline_parser.parse_args()
+    args = _cmdline_parser.parse_args()
     debug = args.verbose
     if debug:
         logging_level = logging.DEBUG
@@ -56,12 +56,24 @@ def main():
 
     if args.spec[0].startswith('+') and args.spec[0].endswith('.py'):
         # Hack: Special case for defining a spec in Python for testing purposes
+        # Use this if you want to define a Babel spec using a Python module.
+        # The module should should contain an api variable that references a
+        # :class:`babelapi.api.Api` object.
         try:
             api = imp.load_source('api', args.api[0]).api
         except ImportError as e:
             print >> sys.stderr, 'Could not import API description due to:', e
             sys.exit(1)
     else:
+        for spec_path in args.spec:
+            if not spec_path.endswith('.babel'):
+                print >> sys.stderr, \
+                    'Specification %r must have a .babel extension.' % spec_path
+                sys.exit(1)
+            if not os.path.exists(spec_path):
+                print >> sys.stderr, \
+                    'Specification %r cannot be found.' % spec_path
+                sys.exit(1)
         # TODO: Needs version
         tower = TowerOfBabel(args.spec, debug=debug)
         try:
