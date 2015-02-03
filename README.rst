@@ -17,7 +17,7 @@ actively worked on, and the intention is to support
     * `Language Reference (.babel) <doc/lang_ref.rst>`_
         * `Choosing a Filename <doc/lang_ref.rst#choosing-a-filename>`_
         * `Comments <doc/lang_ref.rst#comments>`_
-        * `Namespace <doc/lang_ref.rst#namespace>`_
+        * `Namespace <doc/lang_ref.rst#ns>`_
         * `Primitive Types <doc/lang_ref.rst#primitive-types>`_
         * `Alias <doc/lang_ref.rst#alias>`_
         * `Struct <doc/lang_ref.rst#struct>`_
@@ -49,7 +49,8 @@ actively worked on, and the intention is to support
         * `Emit Methods <doc/generator_ref.rst#emit-methods>`_
         * `Indentation <doc/generator_ref.rst#indentation>`_
         * `Examples <doc/generator_ref.rst#examples>`_
-    * `Wire Format <doc/wire_format.rst>`_
+    * `JSON Serializer <doc/json_serializer.rst>`_
+    * `Network Protocol <doc/network_protocol.rst>`_
 
 .. _motivation:
 

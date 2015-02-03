@@ -46,7 +46,7 @@ We'll compile the ``users.babel`` example from the
     INFO:babelapi.idl:Parsing spec users.babel
     INFO:babelapi.compiler:Found generator at ...
     INFO:babelapi.compiler:Running generator ...
-    INFO:bablesdk.generator.PythonGenerator:Copying babel_data_types.py to output folder
+    INFO:bablesdk.generator.PythonGenerator:Copying babel_validators.py to output folder
     INFO:bablesdk.generator.PythonGenerator:Copying babel_serializers.py to output folder
     INFO:bablesdk.generator.PythonGenerator:Generating ./users.py
 
@@ -66,8 +66,15 @@ From the above section, you can generate Python using::
     $ babelapi python users.babel .
 
 This runs the ``python`` generator on the ``users.babel`` spec. Its output
-target is ``.``, which means it will create a module called ``users.py`` in the
-current directory.
+target is ``.``, which is the current directory. A Python module is created for
+each declared namespace, so in this case only ``users.py`` is created.
+
+Two additional modules are copied into the target directory. The first,
+``babel_validators.py``, contains classes for validating Python values against
+their expected Babel types. You will not need to explicitly import this module,
+but the auto-generated Python modules depend on it. The second,
+``babel_serializers.py``, contains a ``json_encode()`` and ``json_decode()``
+function. You will need to import this module to serialize your objects.
 
 In the following sections, we'll interact with the classes generated in
 ``users.py``. For simplicity, we'll assume we've opened a Python interpreter
@@ -75,8 +82,8 @@ with the following shell command::
 
     $ python -i users.py
 
-We recommend that you place ``users.py`` in a Python package, and import it,
-when using it in a non-test project.
+For non-test projects, we recommend that you set a generation target within a
+Python package, and use Python's import facility.
 
 Primitive Types
 ---------------
@@ -84,17 +91,17 @@ Primitive Types
 The following table shows the mapping between a Babel `primitive type
 <lang_ref.rst#primitive-types>`_ and its corresponding type in Python.
 
-============================= =======================
-Primitive                     Python 2
-============================= =======================
-Binary                        str
-Boolean                       bool
-Float{32,64}                  float
-Int{32,64}, UInt{32,64}       long
-List                          list
-String                        unicode
-Timestamp                     datetime
-============================= =======================
+========================== ============ =======================================
+Primitive                  Python 2.x   Notes
+========================== ============ =======================================
+Binary                     str
+Boolean                    bool
+Float{32,64}               float        long type within range is converted.
+Int{32,64}, UInt{32,64}    long
+List                       list
+String                     unicode      str type is converted to unicode.
+Timestamp                  datetime
+========================== ============ =======================================
 
 Struct
 ------
@@ -194,43 +201,6 @@ values, use the ``get_[tag]()`` method to access the value::
     ... elif s.is_inactive():
     ...     v = s.get_inactive()
     ...     # handle inactive status
-
-Validation
-----------
-
-While structs and unions validate on assignment, that isn't sufficient for
-comprehensive validation. For example, validating on assignment does not check
-whether all required fields have been set.
-
-To do comprehensive validation, you will need to import ``babel_validators.py``
-which was dropped into the output folder of the Python generation by the Python
-generator. It includes Python classes ``Struct`` and ``Union`` which can be
-used for validation::
-
-    >>> import babel_validators as bv
-    >>> b_validator = bv.Struct(BasicAccount)
-    >>> b = BasicAccount(account_id='id-48sa2f0')
-    >>> b_validator.validate(b)
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-      ...
-    babel_validators.ValidationError: missing required field 'email'
-
-There is also a class for every Babel primitive type, each with a
-``validate()`` method for validation::
-
-    >>> bv.String().validate(42)
-    Traceback (most recent call last):
-      File "<stdin>", line 1, in <module>
-      ...
-    babel_validators.ValidationError: '42' expected to be a string, got integer
-
-Validators are especially important if you're considering looking to write a
-serializer/deserializer for Babel. For example, our included JSON serializer
-will validate all objects before converting them to their JSON representation.
-
-Future work: Rather than dropping in ``babel_validators``, it could live in a
-separate package that can be pip installed.
 
 Route
 -----

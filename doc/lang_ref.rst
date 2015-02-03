@@ -63,8 +63,7 @@ Choosing a Filename
 ===================
 
 All specifications must have a ``.babel`` extension. We recommend that the
-name of the file be the same as the namespace (explained below) defined in the
-spec.
+name of the file be the same as the `namespace <#ns>`_ defined in the spec.
 
 `Headers <#include>`_ must use the ``.babelh`` extension.
 
@@ -75,6 +74,8 @@ Any line whose first non-whitespace character is a hash ``#`` is considered a
 comment and ignored by the parser. Use comments to explain parts of the spec
 to a reader of the spec. Comments are distinct from documentation strings,
 which are parsed and accessible to generators.
+
+.. _ns:
 
 Namespace
 =========
