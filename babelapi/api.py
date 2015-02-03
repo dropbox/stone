@@ -79,7 +79,7 @@ class ApiNamespace(object):
 
     def distinct_route_io_data_types(self):
         """
-        Returns a set of data types that are referenced directly as the request
+        Returns a set of data types that are referenced directly as the request,
         response, or error data type for a route in this namespace.
         """
         data_types = set()
