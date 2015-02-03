@@ -413,15 +413,30 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit_empty_line()
 
     def _generate_struct_class_repr(self, data_type):
-        """The special __repr__() function will return a string of the class
-        name, and if the class has fields, the first field as well."""
+        """
+        Generates something like:
+
+            def __repr__(self):
+                return 'Employee(first_name={!r}, last_name={!r}, age={!r})'.format(
+                    self._first_name_value,
+                    self._last_name_value,
+                    self._age_value,
+                )
+        """
         self.emit_line('def __repr__(self):')
         with self.indent():
             if data_type.all_fields:
-                self.emit_line("return '{0}({1}=%r)' % self._{1}_value".format(
+                constructor_kwargs_fmt = ', '.join(
+                    '{}={{!r}}'.format(self.lang.format_variable(f.name, True))
+                    for f in data_type.all_fields)
+                self.emit_line("return '{}({})'.format(".format(
                     self._class_name_for_validator(data_type),
-                    data_type.all_fields[0].name,
+                    constructor_kwargs_fmt,
                 ))
+                with self.indent():
+                    for f in data_type.all_fields:
+                        self.emit_line("self._{}_value,".format(self.lang.format_variable(f.name)))
+                self.emit_line(")")
             else:
                 self.emit_line("return '%s()'"
                                % self._class_name_for_validator(data_type))
