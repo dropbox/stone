@@ -77,6 +77,18 @@ class ApiNamespace(object):
 
         return linearized_data_types
 
+    def distinct_route_io_data_types(self):
+        """
+        Returns a set of data types that are referenced directly as the request
+        response, or error data type for a route in this namespace.
+        """
+        data_types = set()
+        for route in self.routes:
+            data_types.add(route.request_data_type)
+            data_types.add(route.response_data_type)
+            data_types.add(route.error_data_type)
+        return data_types
+
 class ApiRoute(object):
     """
     Represents an API endpoint.

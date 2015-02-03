@@ -731,6 +731,8 @@ def is_composite_type(data_type):
     return isinstance(data_type, CompositeType)
 def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
+def is_empty(data_type):
+    return data_type == Empty
 def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
 def is_list_type(data_type):
