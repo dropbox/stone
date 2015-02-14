@@ -455,14 +455,18 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_wrapped_lines(self.docf(data_type.doc))
                 self.emit_empty_line()
                 for field in data_type.fields:
-                    if is_symbol_type(field.data_type):
-                        ivar_doc = ':ivar {}: {}'.format(self.lang.format_class(field.name),
-                                                         self.docf(field.doc))
-                    elif is_composite_type(field.data_type):
+                    if is_symbol_type(field.data_type) or is_any_type(field.data_type):
                         ivar_doc = ':ivar {}: {}'.format(
-                            self.lang.format_class(field.name),
-                            self.docf(field.doc),
-                        )
+                            self.lang.format_variable(field.name), self.docf(field.doc))
+                    elif is_composite_type(field.data_type):
+                        ivar_doc = ':ivar {} {}: {}'.format(
+                            self.lang.format_class(field.data_type.name),
+                            self.lang.format_variable(field.name),
+                            self.docf(field.doc))
+                    else:
+                        ivar_doc = ':ivar {} {}: {}'.format(
+                            self._python_type_mapping(field.data_type),
+                            self.lang.format_variable(field.name), field.doc)
                     self.emit_wrapped_indented_lines(ivar_doc)
                 self.emit_line('"""')
             self.emit_empty_line()
