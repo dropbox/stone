@@ -208,9 +208,13 @@ class TowerOfBabel(object):
                     default_value = babel_field.default
                 if not (babel_field.type_ref.nullable and default_value is None):
                     # Verify that the type of the default value is correct for this field
-                    data_type.check(default_value)
+                    try:
+                        data_type.check(default_value)
+                    except ValueError as e:
+                        raise InvalidSpec('Line %d: Field %r has an invalid '
+                            'default: %s' % (babel_field.lineno,
+                                             babel_field.name, e))
                 api_type_field.set_default(default_value)
-
         return api_type_field
 
     def _create_union_field(self, env, babel_field):

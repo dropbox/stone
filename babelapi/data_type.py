@@ -660,7 +660,8 @@ class Union(CompositeType):
         self.catch_all_field = catch_all_field
 
     def check(self, val):
-        assert isinstance(val, TagRef), 'Expected TagRef, got %r' % type(val)
+        if not isinstance(val, TagRef):
+            raise ValueError('%r is not a tag of %s' % (val, self.name))
         for field in self.all_fields:
             if val.tag_name == field.name:
                 if not is_symbol_type(field.data_type):
@@ -678,8 +679,8 @@ class Union(CompositeType):
     def has_example(self, label):
         for field in self.fields:
             if (isinstance(field, Field)
-                and isinstance(field.data_type, CompositeType)
-                and field.data_type.has_example(label)):
+                    and isinstance(field.data_type, CompositeType)
+                    and field.data_type.has_example(label)):
 
                 return True
         else:
