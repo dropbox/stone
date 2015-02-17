@@ -70,10 +70,12 @@ name of the file be the same as the `namespace <#ns>`_ defined in the spec.
 Comments
 ========
 
-Any line whose first non-whitespace character is a hash ``#`` is considered a
-comment and ignored by the parser. Use comments to explain parts of the spec
-to a reader of the spec. Comments are distinct from documentation strings,
-which are parsed and accessible to generators.
+Any text between a hash ``#`` and a newline is considered a comment. Comments
+can take up an entire line, or they can be added to the end of a line.
+
+Use comments to explain a section of the spec to a reader of the spec. Unlike
+`documentation <#documentation>`_ strings, comments are not accessible to
+generators as they are ignored by the parser.
 
 .. _ns:
 

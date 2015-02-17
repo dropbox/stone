@@ -229,9 +229,29 @@ class BabelLexer(object):
         return t
 
     # Ignore comments.
+    # There are two types of comments.
+    # 1. Comments that take up a full line. These lines are ignored entirely.
+    # 2. Comments that come after tokens in the same line. These comments
+    #    are ignored, but, we still need to emit a NEWLINE since this rule
+    #    takes all trailing newlines.
     def t_comment(self, token):
         r'[#][^\n]*\n+'
         token.lexer.lineno += token.value.count('\n')
+        # Scan backwards from the comment to the start of the line to figure
+        # out which type of comment this is.
+        i = token.lexpos - 1
+        while i >= 0:
+            if token.lexer.lexdata[i] == '\n':
+                # Comment takes the full line so ignore entirely.
+                return
+            elif token.lexer.lexdata[i] != ' ':
+                # Comment is only a partial line. Preserve newline token.
+                newline_token = self._create_token('NEWLINE', '\n',
+                    token.lineno, token.lexpos + len(token.value) - 1)
+                newline_token.lexer = token.lexer
+                # Call the newline handler since we may need to indent/dedent.
+                return self.t_NEWLINE(newline_token)
+            i -= 1
 
     # Define a rule so we can track line numbers
     def t_NEWLINE(self, newline_token):

@@ -27,6 +27,27 @@ class TestBabel(unittest.TestCase):
         self.assertIsInstance(out[0], BabelNamespace)
         self.assertEqual(out[0].name, 'files')
 
+    def test_comments(self):
+        text = """
+# comment at top
+namespace files
+
+# another full line comment
+alias Rev = String # partial line comment
+
+struct S # comment before INDENT
+    "Doc"
+    # inner comment
+    f1 UInt64 # partial line comment
+    # trailing comment
+
+# footer comment
+"""
+        out = self.parser.parse(text)
+        self.assertIsInstance(out[0], BabelNamespace)
+        self.assertIsInstance(out[1], BabelAlias)
+        self.assertEqual(out[2].name, 'S')
+
     def test_alias_decl(self):
 
         # test first line a newline
