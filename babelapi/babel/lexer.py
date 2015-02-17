@@ -94,6 +94,7 @@ class BabelLexer(object):
        'KEYWORD',
        'PATH',
        'PIPE',
+       'DOT',
     )
 
     # Whitespace tokens
@@ -126,6 +127,7 @@ class BabelLexer(object):
     )
 
     # Regular expression rules for simple tokens
+    t_DOT = r'\.'
     t_LPAR  = r'\('
     t_RPAR  = r'\)'
     t_EQ = r'='

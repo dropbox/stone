@@ -17,6 +17,7 @@ from babelapi.data_type import (
     is_string_type,
     is_struct_type,
     is_symbol_type,
+    is_tag_ref,
     is_timestamp_type,
     is_union_type,
 )
@@ -351,6 +352,14 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line('pass')
             self.emit_empty_line()
 
+    def _generate_python_value(self, value):
+        if is_tag_ref(value):
+            return '{}.{}'.format(
+                self._class_name_for_validator(value.union_data_type),
+                self.lang.format_variable(value.tag_name))
+        else:
+            return self.lang.format_obj(value)
+
     def _generate_struct_class_properties(self, data_type):
         """
         Each field of the struct has a corresponding setter and getter.
@@ -378,7 +387,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     if field.data_type.nullable:
                         self.emit_line('return None')
                     elif field.has_default:
-                        self.emit_line('return {}'.format(self.lang.format_obj(field.default)))
+                        self.emit_line('return {}'.format(
+                            self._generate_python_value(field.default)))
                     else:
                         self.emit_line(
                             'raise AttributeError("missing required field %r")'

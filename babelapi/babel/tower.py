@@ -22,6 +22,7 @@ from babelapi.data_type import (
     String,
     Struct,
     Symbol,
+    TagRef,
     Timestamp,
     UInt32,
     UInt64,
@@ -37,6 +38,7 @@ from babelapi.babel.parser import (
     BabelNamespace,
     BabelRouteDef,
     BabelSymbolField,
+    BabelTagRef,
     BabelTypeDef,
     BabelTypeRef,
 )
@@ -195,10 +197,20 @@ class TowerOfBabel(object):
                 deprecated=babel_field.deprecated,
             )
             if babel_field.has_default:
-                if not (babel_field.type_ref.nullable and babel_field.default is None):
+                if isinstance(babel_field.default, BabelTagRef):
+                    if babel_field.default.union_name is not None:
+                        raise InvalidSpec('Line %d: Field %r has a qualified '
+                            'default which is unnecessary since the type %r '
+                            'is known' % (babel_field.lineno, babel_field.name,
+                                          babel_field.default.union_name))
+                    default_value = TagRef(data_type, babel_field.default.tag)
+                else:
+                    default_value = babel_field.default
+                if not (babel_field.type_ref.nullable and default_value is None):
                     # Verify that the type of the default value is correct for this field
-                    data_type.check(babel_field.default)
-                api_type_field.set_default(babel_field.default)
+                    data_type.check(default_value)
+                api_type_field.set_default(default_value)
+
         return api_type_field
 
     def _create_union_field(self, env, babel_field):

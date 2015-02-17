@@ -660,24 +660,20 @@ class Union(CompositeType):
         self.catch_all_field = catch_all_field
 
     def check(self, val):
-        if isinstance(val, dict):
-            assert isinstance(val, dict), 'val must be a dict'
-            assert len(val.keys()) == 1, 'Union should only have 1 tag specified'
-
-            tag = val.keys()[0]
-            for field in self.fields:
-                if tag == field.name:
-                    return field.check(val[tag])
-            else:
-                raise KeyError('Tag %r is not valid variant' % tag)
-        elif isinstance(val, str):
-            for field in self.fields:
-                if val == field.name:
-                    return None
-            else:
-                raise KeyError('Tag %r is not a valid variant' % val)
+        assert isinstance(val, TagRef), 'Expected TagRef, got %r' % type(val)
+        for field in self.all_fields:
+            if val.tag_name == field.name:
+                if not is_symbol_type(field.data_type):
+                    raise ValueError('invalid tag reference to non-symbol %r' %
+                                     val.tag_name)
+                return None
         else:
-            raise ValueError('val must be a dict or str')
+            raise ValueError('unknown tag %r for %s' % (val.tag_name, self.name))
+
+    @property
+    def all_fields(self):
+        """Returns a list of all fields."""
+        return self.fields
 
     def has_example(self, label):
         for field in self.fields:
@@ -733,6 +729,19 @@ class Union(CompositeType):
     def __repr__(self):
         return 'Union(%r, %r)' % (self.name, self.fields)
 
+class TagRef(object):
+    """
+    Used when an ID in Babel refers to a tag of a union.
+    TODO(kelkabany): Support tag values.
+    """
+
+    def __init__(self, union_data_type, tag_name):
+        self.union_data_type = union_data_type
+        self.tag_name = tag_name
+
+    def __repr__(self):
+        return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
+
 Empty = Struct('Empty', None, [])
 
 def is_any_type(data_type):
@@ -759,6 +768,8 @@ def is_symbol_type(data_type):
     return isinstance(data_type, Symbol)
 def is_struct_type(data_type):
     return isinstance(data_type, Struct)
+def is_tag_ref(val):
+    return isinstance(val, TagRef)
 def is_timestamp_type(data_type):
     return isinstance(data_type, Timestamp)
 def is_union_type(data_type):

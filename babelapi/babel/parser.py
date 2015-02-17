@@ -104,6 +104,24 @@ class BabelTypeRef(_Element):
             self.nullable,
         )
 
+class BabelTagRef(_Element):
+    def __init__(self, lineno, lexpos, tag, union_name=None):
+        """
+        Args:
+            name (str): Name of the referenced type.
+            attrs (list): List of attributes for the type.
+            nullable (bool): Whether the type is nullable (can be null)
+        """
+        super(BabelTagRef, self).__init__(lineno, lexpos)
+        self.tag = tag
+        self.union_name = union_name
+
+    def __repr__(self):
+        return 'BabelTagRef({!r}, {!r})'.format(
+            self.tag,
+            self.union_name,
+        )
+
 class BabelField(_Element):
     """
     Represents both a field of a struct and a field of a union.
@@ -326,6 +344,14 @@ class BabelParser(object):
         'type_ref : ID attributes_group nullable'
         p[0] = BabelTypeRef(p.lineno(1), p.lexpos(1), p[1], p[2], p[3])
 
+    def p_tag_ref(self, p):
+        """tag_ref : ID DOT ID
+                   | ID"""
+        if len(p) > 2:
+            p[0] = BabelTagRef(p.lineno(1), p.lexpos(1), p[3], p[1])
+        else:
+            p[0] = BabelTagRef(p.lineno(1), p.lexpos(1), p[1])
+
     # --------------------------------------------------------------
     # Structs
     #
@@ -394,14 +420,15 @@ class BabelParser(object):
                        | empty"""
         p[0] = (p[1] == 'deprecated')
 
-    def p_eq_primitive(self, p):
-        'eq_primitive : EQ primitive'
-        p[0] = p[2]
-
     def p_default_option(self, p):
-        """default_option : eq_primitive
+        """default_option : EQ primitive
+                          | EQ tag_ref
                           | empty"""
-        p[0] = p[1]
+        if p[1]:
+            if isinstance(p[2], BabelTagRef):
+                p[0] = p[2]
+            else:
+                p[0] = p[2]
 
     def p_field(self, p):
         """field : ID type_ref default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT

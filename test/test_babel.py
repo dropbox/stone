@@ -5,6 +5,7 @@ from babelapi.babel.parser import (
     BabelAlias,
     BabelParser,
     BabelSymbolField,
+    BabelTagRef,
 )
 
 class TestBabel(unittest.TestCase):
@@ -212,6 +213,23 @@ union Error
 """
         out = self.parser.parse(text)
         self.assertTrue(out[1].fields[2].catch_all)
+
+    def test_composition(self):
+        text = """
+namespace files
+
+union UploadMode
+    add
+    overwrite
+
+struct Upload
+    path String
+    mode UploadMode = add
+"""
+        out = self.parser.parse(text)
+        self.assertEqual(out[2].name, 'Upload')
+        self.assertIsInstance(out[2].fields[1].default, BabelTagRef)
+        self.assertEqual(out[2].fields[1].default.tag, 'add')
 
     def test_route_decl(self):
 
