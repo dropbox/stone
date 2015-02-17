@@ -2,13 +2,13 @@ import copy
 import inspect
 import logging
 import os
-import sys
 
 from babelapi.babel.parser import BabelParser
 from babelapi.data_type import (
     Any,
     Binary,
     Boolean,
+    DataType,
     Empty,
     StructField,
     UnionField,
@@ -18,6 +18,7 @@ from babelapi.data_type import (
     Int64,
     List,
     Null,
+    ParameterError,
     String,
     Struct,
     Symbol,
@@ -116,7 +117,8 @@ class TowerOfBabel(object):
 
         obj = env[item.type_ref.name]
         if inspect.isclass(obj):
-            env[item.name] = obj(**dict(item.type_ref.attrs))
+            env[item.name] = self._instantiate_data_type(
+                obj, dict(item.type_ref.attrs), item.lineno)
         elif item.type_ref.attrs:
             # An instance of a type cannot have any additional
             # attributes specified.
@@ -228,12 +230,62 @@ class TowerOfBabel(object):
             )
         return api_type_field
 
+    def _instantiate_data_type(self, data_type_class, data_type_attrs, lineno):
+        """
+        Responsible for instantiating a data type with additional attributes.
+        This method ensures that the specified attributes are valid.
+
+        Args:
+            data_type_class (DataType): The class to instantiate.
+            data_type_attrs (dict): A map from str -> values of attributes.
+                These will be passed into the constructor of data_type_class
+                as keyword arguments.
+
+        Returns:
+            babelapi.data_type.DataType: A parameterized instance.
+        """
+        assert issubclass(data_type_class, DataType), \
+            'Expected babelapi.data_type.DataType, got %r' % data_type_class
+
+        argspec = inspect.getargspec(data_type_class.__init__)
+        argspec.args.remove('self')
+        num_args = len(argspec.args)
+        # Unfortunately, argspec.defaults is None if there are no defaults
+        num_defaults = len(argspec.defaults or ())
+
+        # Map from arg name to bool indicating whether the arg has a default
+        args = {}
+        for i, key in enumerate(argspec.args):
+            args[key] = (i >= num_args - num_defaults)
+
+        # Report any unknown arguments
+        for key in data_type_attrs:
+            if key not in args:
+                raise InvalidSpec('Line %d: Unknown argument %r to %s type' %
+                    (lineno, key, data_type_class.__name__))
+            del args[key]
+
+        # Report any missing arguments
+        for key in args:
+            if not args[key]:
+                raise InvalidSpec('Line %d: Missing argument %r for %s type' %
+                    (lineno, argspec.args[0], data_type_class.__name__))
+
+        try:
+            return data_type_class(**data_type_attrs)
+        except ParameterError as e:
+            # Each data type validates its own attributes, and will raise a
+            # ParameterError if the type or value is bad.
+            raise InvalidSpec('Line %d: Bad argument to %s type: %s' %
+                              (lineno, data_type_class.__name__, e.args[0]))
+
     def _resolve_type(self, env, type_ref):
         """Resolves the data type referenced by type_ref."""
         obj = env[type_ref.name]
         if inspect.isclass(obj):
             resolved_data_type_attrs = self._resolve_attrs(env, type_ref.attrs)
-            data_type = obj(**dict(resolved_data_type_attrs))
+            data_type = self._instantiate_data_type(
+                obj, dict(resolved_data_type_attrs), type_ref.lineno)
             data_type.nullable = type_ref.nullable
         elif type_ref.attrs:
             # An instance of a type cannot have any additional

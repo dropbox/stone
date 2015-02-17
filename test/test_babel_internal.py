@@ -7,6 +7,7 @@ from babelapi.data_type import (
     Int32,
     Int64,
     List,
+    ParameterError,
     String,
     Symbol,
     Timestamp,
@@ -135,8 +136,8 @@ class TestBabelInternal(unittest.TestCase):
         self.assertIn('-5 is less than 0', cm.exception.args[0])
 
         # check that bad ranges are rejected
-        self.assertRaises(AssertionError, lambda: Int64(min_value=0.1))
-        self.assertRaises(AssertionError, lambda: Int64(max_value='10'))
+        self.assertRaises(ParameterError, lambda: Int64(min_value=0.1))
+        self.assertRaises(ParameterError, lambda: Int64(max_value='10'))
 
     def test_boolean(self):
 
@@ -167,17 +168,17 @@ class TestBabelInternal(unittest.TestCase):
             f.check(101)
         self.assertIn('is greater than', cm.exception.args[0])
 
-        with self.assertRaises(AssertionError) as cm:
+        with self.assertRaises(ParameterError) as cm:
              Float64(min_value=0, max_value=10**330)
         self.assertIn('too large for a float', cm.exception.args[0])
 
-        with self.assertRaises(AssertionError) as cm:
+        with self.assertRaises(ParameterError) as cm:
             Float32(min_value=0, max_value=10**50)
         self.assertIn('greater than the maximum value', cm.exception.args[0])
 
         # check that bad ranges are rejected
-        self.assertRaises(AssertionError, lambda: Float64(min_value=1j))
-        self.assertRaises(AssertionError, lambda: Float64(max_value='10'))
+        self.assertRaises(ParameterError, lambda: Float64(min_value=1j))
+        self.assertRaises(ParameterError, lambda: Float64(max_value='10'))
 
     def test_timestamp(self):
         t = Timestamp('%a, %d %b %Y %H:%M:%S')

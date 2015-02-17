@@ -17,6 +17,10 @@ import numbers
 import re
 import six
 
+class ParameterError(Exception):
+    """Raised when a data type is parameterized with a bad type or value."""
+    pass
+
 class DataType(object):
     """
     Abstract class representing a data type.
@@ -30,6 +34,11 @@ class DataType(object):
     # When this is in a context where nullability is relevant, this should be
     # set to True or False.
     nullable = None
+
+    def __init__(self):
+        """No-op. Exists so that introspection can be certain that an init
+        method exists."""
+        pass
 
     @property
     def name(self):
@@ -87,21 +96,19 @@ class _BoundedInteger(PrimitiveType):
         range inherent to the defined type.
         """
         if min_value is not None:
-            assert isinstance(min_value, numbers.Integral), (
-                'min_value must be an integral number'
-            )
+            if not isinstance(min_value, numbers.Integral):
+                raise ParameterError('min_value must be an integral number')
             if min_value < self.minimum:
-                raise ValueError('min_value cannot be less than the minimum '
-                                 'value for this type (%s < %s)'
-                                 % (min_value, self.minimum))
+                raise ParameterError('min_value cannot be less than the '
+                    'minimum value for this type (%s < %s)' %
+                    (min_value, self.minimum))
         if max_value is not None:
-            assert isinstance(max_value, numbers.Integral), (
-                'max_value must be an integral number'
-            )
+            if not isinstance(max_value, numbers.Integral):
+                raise ParameterError('max_value must be an integral number')
             if max_value > self.maximum:
-                raise ValueError('max_value cannot be greater than the maximum '
-                                 'value for this type (%s < %s)'
-                                 % (max_value, self.maximum))
+                raise ParameterError('max_value cannot be greater than the '
+                    'maximum value for this type (%s < %s)' %
+                    (max_value, self.maximum))
         self.min_value = min_value
         self.max_value = max_value
 
@@ -154,27 +161,27 @@ class _BoundedFloat(PrimitiveType):
         range inherent to the defined type.
         """
         if min_value is not None:
-            assert isinstance(min_value, numbers.Real), \
-                'min_value must be a real number'
+            if not isinstance(min_value, numbers.Real):
+                raise ParameterError('min_value must be a real number')
             if not isinstance(min_value, float):
                 try:
                     min_value = float(min_value)
                 except OverflowError:
-                    raise AssertionError('min_value is too small for a float')
+                    raise ParameterError('min_value is too small for a float')
             if self.minimum is not None and min_value < self.minimum:
-                raise AssertionError('min_value cannot be less than the '
+                raise ParameterError('min_value cannot be less than the '
                                      'minimum value for this type (%f < %f)' %
                                      (min_value, self.minimum))
         if max_value is not None:
-            assert isinstance(max_value, numbers.Real), \
-                'max_value must be a real number'
+            if not isinstance(max_value, numbers.Real):
+                raise ParameterError('max_value must be a real number')
             if not isinstance(max_value, float):
                 try:
                     max_value = float(max_value)
                 except OverflowError:
-                    raise AssertionError('max_value is too large for a float')
+                    raise ParameterError('max_value is too large for a float')
             if self.maximum is not None and max_value > self.maximum:
-                raise AssertionError('max_value cannot be greater than the '
+                raise ParameterError('max_value cannot be greater than the '
                                      'maximum value for this type (%f < %f)' %
                                      (max_value, self.maximum))
         self.min_value = min_value
@@ -222,17 +229,18 @@ class Boolean(PrimitiveType):
 class String(PrimitiveType):
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
-            assert isinstance(min_length, numbers.Integral), (
-                'min_length must be an integral number'
-            )
-            assert min_length >= 0, 'min_length must be >= 0'
+            if not isinstance(min_length, numbers.Integral):
+                raise ParameterError('min_length must be an integral number')
+            if min_length < 0:
+                raise ParameterError('min_length must be >= 0')
         if max_length is not None:
-            assert isinstance(max_length, numbers.Integral), (
-                'max_length must be an integral number'
-            )
-            assert max_length > 0, 'max_length must be > 0'
+            if not isinstance(max_length, numbers.Integral):
+                raise ParameterError('max_length must be an integral number')
+            if max_length < 1:
+                raise ParameterError('max_length must be > 0')
         if min_length and max_length:
-            assert max_length >= min_length, 'max_length must be >= min_length'
+            if max_length < min_length:
+                raise ParameterError('max_length must be >= min_length')
 
         self.min_length = min_length
         self.max_length = max_length
@@ -240,10 +248,14 @@ class String(PrimitiveType):
         self.pattern_re = None
 
         if pattern:
+            if not isinstance(pattern, six.string_types):
+                raise ParameterError('pattern must be a string')
             try:
                 self.pattern_re = re.compile(pattern)
             except re.error as e:
-                raise ValueError('Regex {!r} failed: {}'.format(pattern, e.args[0]))
+                raise ParameterError(
+                    'could not compile regex pattern {!r}: {}'.format(
+                        pattern, e.args[0]))
 
     def check(self, val):
         if not isinstance(val, six.string_types):
@@ -262,6 +274,8 @@ class Timestamp(PrimitiveType):
     """Should support any timestamp format, not just the Dropbox format."""
 
     def __init__(self, format):
+        if not isinstance(format, six.string_types):
+            raise ParameterError('format must be a string')
         self.format = format
 
     def check(self, val):
@@ -277,12 +291,12 @@ class List(DataType):
     def __init__(self, data_type, min_items=None, max_items=None):
         self.data_type = data_type
 
-        if min_items is not None:
-            assert min_items >= 0, 'min_items must be >= 0'
-        if max_items is not None:
-            assert max_items > 0, 'max_items must be > 0'
-        if min_items and max_items:
-            assert max_items >= min_items, 'max_length must be >= min_length'
+        if min_items is not None and min_items < 0:
+            raise ParameterError('min_items must be >= 0')
+        if max_items is not None and max_items < 1:
+            raise ParameterError('max_items must be > 0')
+        if min_items and max_items and max_items < min_items:
+            raise ParameterError('max_length must be >= min_length')
 
         self.min_items = min_items
         self.max_items = max_items
