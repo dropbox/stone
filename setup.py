@@ -20,6 +20,8 @@ dist = setup(
     packages=['babelapi',
               'babelapi.babel',
               'babelapi.generator',
+              'babelapi.generator.target',
+              'babelapi.generator.target.python',
               'babelapi.lang'],
     long_description=open('README.rst').read(),
     platforms=['CPython 2.6', 'CPython 2.7'],      
