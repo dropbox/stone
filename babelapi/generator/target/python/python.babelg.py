@@ -127,30 +127,35 @@ class PythonGenerator(CodeGeneratorMonolingual):
         elif is_timestamp_type(data_type):
             return 'datetime.datetime'
         elif is_composite_type(data_type):
-            return self._class_name_for_validator(data_type)
+            return self._class_name_for_data_type(data_type)
         elif is_list_type(data_type):
             # PyCharm understands this description format for a list
             return 'list of [{}]'.format(self._python_type_mapping(data_type.data_type))
         else:
             raise TypeError('Unknown data type %r' % data_type)
 
-    def _class_name_for_validator(self, data_type):
+    def _class_name_for_data_type(self, data_type):
+        assert is_composite_type(data_type), \
+            'Expected composite type, got %r' % type(data_type)
         return self.lang.format_class(data_type.name)
-
-    def _class_declaration_for_validator(self, data_type):
-        if data_type.super_type:
-            extends = self._class_name_for_validator(data_type.super_type)
-        else:
-            extends = 'object'
-        return 'class {}({}):'.format(self._class_name_for_validator(data_type), extends)
 
     #
     # Struct Types
     #
 
+    def _class_declaration_for_struct(self, data_type):
+        assert is_struct_type(data_type), \
+            'Expected struct, got %r' % type(data_type)
+        if data_type.super_type:
+            extends = self._class_name_for_data_type(data_type.super_type)
+        else:
+            extends = 'object'
+        return 'class {}({}):'.format(
+            self._class_name_for_data_type(data_type), extends)
+
     def _generate_struct_class(self, data_type):
         """Defines a Python class that represents a struct in Babel."""
-        self.emit_line(self._class_declaration_for_validator(data_type))
+        self.emit_line(self._class_declaration_for_struct(data_type))
         with self.indent():
             if data_type.doc:
                 self.emit_line('"""')
@@ -276,7 +281,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         tuples, where each tuple is (field name, validator).
         """
         if data_type.super_type:
-            super_type_class_name = self._class_name_for_validator(data_type.super_type)
+            super_type_class_name = self._class_name_for_data_type(data_type.super_type)
         else:
             super_type_class_name = None
 
@@ -328,7 +333,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
             # Call the parent constructor if a super type exists
             if data_type.super_type:
-                class_name = self._class_name_for_validator(data_type)
+                class_name = self._class_name_for_data_type(data_type)
                 self.emit_line('super({}, self).__init__'.format(class_name),
                                trailing_newline=False)
                 self._generate_func_arg_list([self.lang.format_method(f.name, True)
@@ -355,7 +360,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
     def _generate_python_value(self, value):
         if is_tag_ref(value):
             return '{}.{}'.format(
-                self._class_name_for_validator(value.union_data_type),
+                self._class_name_for_data_type(value.union_data_type),
                 self.lang.format_variable(value.tag_name))
         else:
             return self.lang.format_obj(value)
@@ -440,7 +445,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     '{}={{!r}}'.format(self.lang.format_variable(f.name, True))
                     for f in data_type.all_fields)
                 self.emit_line("return '{}({})'.format(".format(
-                    self._class_name_for_validator(data_type),
+                    self._class_name_for_data_type(data_type),
                     constructor_kwargs_fmt,
                 ))
                 with self.indent():
@@ -449,16 +454,26 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit_line(")")
             else:
                 self.emit_line("return '%s()'"
-                               % self._class_name_for_validator(data_type))
+                               % self._class_name_for_data_type(data_type))
         self.emit_empty_line()
 
     #
     # Tagged Union Types
     #
+    
+    def _class_declaration_for_union(self, data_type):
+        assert is_union_type(data_type), \
+            'Expected union, got %r' % type(data_type)
+        if data_type.subtype:
+            extends = self._class_name_for_data_type(data_type.subtype)
+        else:
+            extends = 'object'
+        return 'class {}({}):'.format(
+            self._class_name_for_data_type(data_type), extends)
 
     def _generate_union_class(self, data_type):
         """Defines a Python class that represents a union in Babel."""
-        self.emit_line(self._class_declaration_for_validator(data_type))
+        self.emit_line(self._class_declaration_for_union(data_type))
         with self.indent():
             if data_type.doc:
                 self.emit_line('"""')
@@ -502,7 +517,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                                                         validator_name))
         if data_type.catch_all_field:
             self.emit_line('_catch_all_ = %r' % data_type.catch_all_field.name)
-        else:
+        elif not data_type.subtype:
             self.emit_line('_catch_all_ = None')
 
         # Generate stubs for class variables so that IDEs like PyCharms have an
@@ -519,8 +534,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
         self._generate_union_class_tagmap_for_reflection(data_type)
 
     def _generate_union_class_tagmap_for_reflection(self, data_type):
-        assert not data_type.super_type, 'Unsupported: Inheritance of unions'
-
         self.emit_line('_tagmap_ = {')
         with self.indent():
             for field in data_type.fields:
@@ -528,6 +541,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 validator_name = '_{0}_validator'.format(var_name)
                 self.emit_line("'{}': {},".format(var_name, validator_name))
         self.emit_line('}')
+        if data_type.subtype:
+            self.emit_line('_tagmap_.update({}._tagmap_)'.format(
+                self._class_name_for_data_type(data_type.subtype)))
         self.emit_empty_line()
 
     def _generate_union_class_init(self, data_type):
@@ -536,12 +552,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         to the tag."""
         self.emit_line('def __init__(self, tag, value=None):')
         with self.indent():
-            # Call the parent constructor if a super type exists
-            if data_type.super_type:
-                class_name = self._class_name_for_validator(data_type)
-                self.emit_line('super({}, self).__init__()'.format(class_name))
-
-            for field in data_type.fields:
+            for field in data_type.all_fields:
                 field_var_name = self.lang.format_variable(field.name)
                 if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
                     self.emit_line('self._{} = None'.format(field_var_name))
@@ -608,10 +619,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
         with self.indent():
             if data_type.fields:
                 self.emit_line("return '{}(%r)' % self._tag".format(
-                    self._class_name_for_validator(data_type),
+                    self._class_name_for_data_type(data_type),
                 ))
             else:
-                self.emit_line("return '{}()'".format(self._class_name_for_validator(data_type)))
+                self.emit_line("return '{}()'".format(self._class_name_for_data_type(data_type)))
         self.emit_empty_line()
 
     def _generate_union_class_symbol_creators(self, data_type):

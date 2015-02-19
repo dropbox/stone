@@ -458,14 +458,14 @@ class BabelParser(object):
     # symbol_field demonstrates the notation for a catch all variant.
 
     def p_union(self, p):
-        'union : UNION ID NEWLINE INDENT docsection field_list example_list DEDENT'
-        p[0] = BabelTypeDef(p.lineno(1), p.lexpos(1), p[1], p[2])
-        if p[5]:
-            p[0].set_doc(p[5])
-        if p[6] is not None:
-            p[0].set_fields(p[6])
-        if p[7]:
-            for label, text, example in p[7]:
+        'union : UNION ID inheritance NEWLINE INDENT docsection field_list example_list DEDENT'
+        p[0] = BabelTypeDef(p.lineno(1), p.lexpos(1), p[1], p[2], extends=p[3])
+        if p[6]:
+            p[0].set_doc(p[6])
+        if p[7] is not None:
+            p[0].set_fields(p[7])
+        if p[8]:
+            for label, text, example in p[8]:
                 p[0].add_example(label, text, example)
 
     def p_asterix_option(self, p):

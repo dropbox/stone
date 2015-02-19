@@ -440,7 +440,7 @@ class CompositeType(DataType):
 
     DEFAULT_EXAMPLE_LABEL = 'default'
 
-    def __init__(self, name, doc, fields, super_type=None):
+    def __init__(self, name, doc, fields):
         """
         Creates a CompositeType.
 
@@ -451,13 +451,11 @@ class CompositeType(DataType):
         :param str doc: Description of type.
         :param list(Field) fields: Ordered list of fields for type.
         :param dict example: An example of the type as a JSON-compatible dict.
-        :param CompositeType super_type: If this should subtype another.
         """
         self._name = name
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self.fields = fields
-        self.super_type = super_type
         self.examples = {}
 
     @property
@@ -491,10 +489,15 @@ class Struct(CompositeType):
 
     composite_type = 'struct'
 
+    # TODO(kelkabany): Rename super_type -> supertype
     def __init__(self, name, doc, fields, super_type=None, coverage_names=None):
-        super(Struct, self).__init__(name, doc, fields, super_type=super_type)
+        """
+        :param Struct super_type: If this should subtype another.
+        """
+        super(Struct, self).__init__(name, doc, fields)
         self.coverage_names = coverage_names
         self.coverage = []
+        self.super_type = super_type
 
     def has_coverage(self):
         return bool(self.coverage_names)
@@ -655,9 +658,13 @@ class Union(CompositeType):
 
     composite_type = 'union'
 
-    def __init__(self, name, doc, fields, super_type=None, catch_all_field=None):
-        super(Union, self).__init__(name, doc, fields, super_type=super_type)
+    def __init__(self, name, doc, fields, subtype=None, catch_all_field=None):
+        """
+        :param Union subtype: If this should supertype another.
+        """
+        super(Union, self).__init__(name, doc, fields)
         self.catch_all_field = catch_all_field
+        self.subtype = subtype
 
     def check(self, val):
         if not isinstance(val, TagRef):
@@ -673,8 +680,15 @@ class Union(CompositeType):
 
     @property
     def all_fields(self):
-        """Returns a list of all fields."""
-        return self.fields
+        """
+        Returns a list of all fields. Subtype fields come before this type's
+        fields.
+        """
+        fields = []
+        if self.subtype:
+            fields.extend(self.subtype.all_fields)
+        fields.extend([f for f in self.fields])
+        return fields
 
     def has_example(self, label):
         for field in self.fields:

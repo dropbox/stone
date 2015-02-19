@@ -158,6 +158,21 @@ struct QuotaInfo
         self.assertIn('default', out[1].examples)
         self.assertIn('pro', out[1].examples)
 
+        # test with inheritance
+        text = """
+namespace test
+
+struct S1
+    f1 UInt64
+
+struct S2 extends S1
+    f2 String
+"""
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'S1')
+        self.assertEqual(out[2].name, 'S2')
+        self.assertEqual(out[2].extends, 'S1')
+
         # test with coverage
         text = """
 namespace files
@@ -213,6 +228,21 @@ union Error
 """
         out = self.parser.parse(text)
         self.assertTrue(out[1].fields[2].catch_all)
+
+        # test with inheritance
+        text = """
+namespace test
+
+union U1
+    t1 UInt64
+
+union U2 extends U1
+    t2 String
+"""
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'U1')
+        self.assertEqual(out[2].name, 'U2')
+        self.assertEqual(out[2].extends, 'U1')
 
     def test_composition(self):
         text = """

@@ -376,8 +376,8 @@ class Struct(Composite):
         # makes it easier to return one subclass for two routes, one of which
         # relies on the parent class.
         if not isinstance(val, self.definition):
-            raise ValidationError('expected type %s, got %s'
-                % (self.definition.__name__, generic_type_name(val)))
+            raise ValidationError('expected type %s, got %s' %
+                (self.definition.__name__, generic_type_name(val)))
 
 class Union(Composite):
 
@@ -409,13 +409,18 @@ class Union(Composite):
         return val
 
     def validate_type_only(self, val):
-        """Use this when you only want to validate that the type of an object
-        is correct, but not yet validate each field."""
-        # We don't allow subclasses because there should be no subclassing of
-        # union classes.
-        if type(val) is not self.definition:
-            raise ValidationError('expected type %s, got %s'
-                % (self.definition.__name__, generic_type_name(val)))
+        """
+        Use this when you only want to validate that the type of an object
+        is correct, but not yet validate each field.
+
+        We check whether val is a Python parent class of the definition. This
+        is because Union subtyping works in the opposite direction of Python
+        inheritance. For example, if a union U2 extends U1 in Python, this
+        validator will accept U1 in places where U2 is expected.
+        """
+        if not issubclass(self.definition, type(val)):
+            raise ValidationError('expected type %s or subtype, got %s' %
+                (self.definition.__name__, generic_type_name(val)))
 
 class Any(Validator):
     """

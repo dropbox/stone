@@ -135,8 +135,8 @@ class TowerOfBabel(object):
             env[item.name] = ref
 
     def _create_type(self, env, item):
-        super_type = None
         if item.composite_type == 'struct':
+            super_type = None
             if item.extends:
                 if item.extends not in env:
                     raise InvalidSpec('Line %d: Data type %r is undefined.' %
@@ -147,19 +147,40 @@ class TowerOfBabel(object):
             for babel_field in item.fields:
                 api_type_field = self._create_struct_field(env, babel_field)
                 api_type_fields.append(api_type_field)
-            api_type = Struct(item.name, item.doc, api_type_fields, super_type, item.coverage)
+            api_type = Struct(item.name, item.doc, api_type_fields, super_type,
+                              item.coverage)
         elif item.composite_type == 'union':
+            subtype = None
+            if item.extends:
+                if item.extends not in env:
+                    raise InvalidSpec('Line %d: Data type %r is undefined.' %
+                                      (item.lineno, item.extends))
+                else:
+                    subtype = env.get(item.extends)
             api_type_fields = []
             catch_all_field = None
             for babel_field in item.fields:
                 api_type_field = self._create_union_field(env, babel_field)
-                if isinstance(babel_field, BabelSymbolField) and babel_field.catch_all:
+                if (isinstance(babel_field, BabelSymbolField)
+                        and babel_field.catch_all):
                     if catch_all_field is not None:
-                        raise InvalidSpec('Line %d: Only one catch all symbol '
+                        raise InvalidSpec('Line %d: Only one catch-all symbol '
                                           'per Union.' % babel_field.lineno)
+
+                    # Verify that no subtype already has a catch-all symbol.
+                    # Do this here so that we still have access to line nums.
+                    cur_subtype = subtype
+                    while cur_subtype:
+                        if cur_subtype.catch_all_field:
+                            raise InvalidSpec('Line %d: Subtype %r already '
+                                'declared a catch-all symbol.' %
+                                (babel_field.lineno, cur_subtype.name))
+                        cur_subtype = cur_subtype.subtype
+
                     catch_all_field = api_type_field
                 api_type_fields.append(api_type_field)
-            api_type = Union(item.name, item.doc, api_type_fields, super_type,
+
+            api_type = Union(item.name, item.doc, api_type_fields, subtype,
                              catch_all_field)
         else:
             raise AssertionError('Unknown composite_type %r' %

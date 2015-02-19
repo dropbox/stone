@@ -210,12 +210,16 @@ specify a string on a new indented line following the field declaration.
 Inheritance
 -----------
 
-Using the ``extends`` keyword, a struct will inherit all the fields of another
-struct::
+Using the ``extends`` keyword, a struct can declare itself a subtype of another
+struct, known as the supertype. The subtype inherit all the fields of the
+supertype::
 
     struct Account extends BasicAccount
 
 ``Account`` inherits ``account_id`` and ``email`` from ``BasicAccount``.
+
+A feature common to object-oriented programming, a subtype may be used in place
+of a supertype.
 
 Composition
 -----------
@@ -403,6 +407,27 @@ type has been changed to ``String``::
             "Insufficient privileges to query account information. The value
             is text explaining why."
         unknown*
+
+Inheritance
+-----------
+
+Using the ``extends`` keyword, a union can declare itself as a supertype of
+another union, known as the subtype. The supertype will have all the tags of
+the subtype::
+
+    union DeleteAccountError extends GetAccountError
+
+``DeleteAccount`` inherits the tags ``no_account``, ``perm_denied``, and
+``unknown`` from ``GetAccountError``. Since ``GetAccountError`` has already
+defined a catch-all symbol, ``DeleteAccountError`` or any other supertype
+cannot declare another catch-all.
+
+Note that the supertype/subtype relationship created by ``extends`` between two
+unions is the opposite of an ``extends`` between two structs. It's stated this
+way to maintain the invariant that a subtype may be used in place of a
+supertype. Specifically, a ``GetAccountError`` can be used in place of
+``DeleteAccountError`` because a handler will be prepared for all possibilities
+of ``GetAccountError`` since they are a subset of ``DeleteAccountError``.
 
 Nullable Type
 =============
