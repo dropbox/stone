@@ -113,7 +113,7 @@ Int{32,64}, UInt{32,64} * min_value
 List                    * **data_type**: A primitive or   Lists are homogeneous.
                           composite type.
                         * min_items
-                        * max_item
+                        * max_items
 String                  * min_length                      A unicode string.
                         * max_length
                         * pattern: A regular expression
