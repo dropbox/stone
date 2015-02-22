@@ -489,15 +489,14 @@ class Struct(CompositeType):
 
     composite_type = 'struct'
 
-    # TODO(kelkabany): Rename super_type -> supertype
-    def __init__(self, name, doc, fields, super_type=None, coverage_names=None):
+    def __init__(self, name, doc, fields, supertype=None, coverage_names=None):
         """
-        :param Struct super_type: If this should subtype another.
+        :param Struct supertype: If this should subtype another.
         """
         super(Struct, self).__init__(name, doc, fields)
         self.coverage_names = coverage_names
         self.coverage = []
-        self.super_type = super_type
+        self.supertype = supertype
 
     def has_coverage(self):
         return bool(self.coverage_names)
@@ -510,12 +509,12 @@ class Struct(CompositeType):
         for coverage_name in self.coverage_names:
             if coverage_name in env:
                 data_type = env[coverage_name]
-                if data_type.super_type is None:
+                if data_type.supertype is None:
                     raise ValueError('All coverage must be subtypes of %r'
                                      % self.name)
-                if data_type.super_type != self:
+                if data_type.supertype != self:
                     raise ValueError('All coverage must subtype %r not %r'
-                                     % (self.name, data_type.super_type.name))
+                                     % (self.name, data_type.supertype.name))
                 self.coverage.append(data_type)
             else:
                 raise KeyError('No data type named %s' % coverage_name)
@@ -548,8 +547,8 @@ class Struct(CompositeType):
             omitted.
         """
         fields = []
-        if self.super_type:
-            fields.extend(self.super_type._filter_fields(filter_function))
+        if self.supertype:
+            fields.extend(self.supertype._filter_fields(filter_function))
         fields.extend(filter(filter_function, self.fields))
         return fields
 

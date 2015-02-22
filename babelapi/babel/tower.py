@@ -136,18 +136,18 @@ class TowerOfBabel(object):
 
     def _create_type(self, env, item):
         if item.composite_type == 'struct':
-            super_type = None
+            supertype = None
             if item.extends:
                 if item.extends not in env:
                     raise InvalidSpec('Line %d: Data type %r is undefined.' %
                                       (item.lineno, item.extends))
                 else:
-                    super_type = env.get(item.extends)
+                    supertype = env.get(item.extends)
             api_type_fields = []
             for babel_field in item.fields:
                 api_type_field = self._create_struct_field(env, babel_field)
                 api_type_fields.append(api_type_field)
-            api_type = Struct(item.name, item.doc, api_type_fields, super_type,
+            api_type = Struct(item.name, item.doc, api_type_fields, supertype,
                               item.coverage)
         elif item.composite_type == 'union':
             subtype = None

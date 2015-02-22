@@ -67,8 +67,8 @@ class ApiNamespace(object):
         def add_data_type(data_type):
             if data_type in seen_data_types:
                 return
-            if hasattr(data_type, 'super_type') and data_type.super_type:
-                add_data_type(data_type.super_type)
+            if hasattr(data_type, 'supertype') and data_type.supertype:
+                add_data_type(data_type.supertype)
             elif hasattr(data_type, 'subtype') and data_type.subtype:
                 add_data_type(data_type.subtype)
             linearized_data_types.append(data_type)

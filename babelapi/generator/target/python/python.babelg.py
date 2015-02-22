@@ -146,8 +146,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
     def _class_declaration_for_struct(self, data_type):
         assert is_struct_type(data_type), \
             'Expected struct, got %r' % type(data_type)
-        if data_type.super_type:
-            extends = self._class_name_for_data_type(data_type.super_type)
+        if data_type.supertype:
+            extends = self._class_name_for_data_type(data_type.supertype)
         else:
             extends = 'object'
         return 'class {}({}):'.format(
@@ -280,27 +280,28 @@ class PythonGenerator(CodeGeneratorMonolingual):
         names. Also, declares a _fields_ class attribute which is a list of
         tuples, where each tuple is (field name, validator).
         """
-        if data_type.super_type:
-            super_type_class_name = self._class_name_for_data_type(data_type.super_type)
+        if data_type.supertype:
+            supertype_class_name = self._class_name_for_data_type(data_type.supertype)
         else:
-            super_type_class_name = None
+            supertype_class_name = None
 
-        if super_type_class_name:
-            self.emit_line('_field_names_ = %s._field_names_.union(set((' % super_type_class_name)
+        if supertype_class_name:
+            self.emit_line('_field_names_ = %s._field_names_.union(set((' %
+                           supertype_class_name)
         else:
             self.emit_line('_field_names_ = set((')
         with self.indent():
             for field in data_type.fields:
                 self.emit_line("'{}',".format(self.lang.format_variable(field.name)))
 
-        if super_type_class_name:
+        if supertype_class_name:
             self.emit_line(')))')
         else:
             self.emit_line('))')
         self.emit_empty_line()
 
-        if super_type_class_name:
-            self.emit_line('_fields_ = {}._fields_ + ['.format(super_type_class_name))
+        if supertype_class_name:
+            self.emit_line('_fields_ = {}._fields_ + ['.format(supertype_class_name))
         else:
             self.emit_line('_fields_ = [')
 
@@ -332,12 +333,12 @@ class PythonGenerator(CodeGeneratorMonolingual):
             lineno = self.lineno
 
             # Call the parent constructor if a super type exists
-            if data_type.super_type:
+            if data_type.supertype:
                 class_name = self._class_name_for_data_type(data_type)
                 self.emit_line('super({}, self).__init__'.format(class_name),
                                trailing_newline=False)
                 self._generate_func_arg_list([self.lang.format_method(f.name, True)
-                                              for f in data_type.super_type.fields])
+                                              for f in data_type.supertype.fields])
                 self.emit_empty_line()
 
             # initialize each field
