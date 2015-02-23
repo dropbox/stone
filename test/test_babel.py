@@ -42,12 +42,17 @@ struct S # comment before INDENT
     f1 UInt64 # partial line comment
     # trailing comment
 
+struct S2 # struct def following comment
+    # start with comment
+    f1 String # end with partial-line comment
+
 # footer comment
 """
         out = self.parser.parse(text)
         self.assertIsInstance(out[0], BabelNamespace)
         self.assertIsInstance(out[1], BabelAlias)
         self.assertEqual(out[2].name, 'S')
+        self.assertEqual(out[3].name, 'S2')
 
     def test_alias_decl(self):
 

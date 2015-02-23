@@ -236,6 +236,8 @@ class BabelLexer(object):
     # 2. Comments that come after tokens in the same line. These comments
     #    are ignored, but, we still need to emit a NEWLINE since this rule
     #    takes all trailing newlines.
+    # Regardless of comment type, the following line must be checked for a
+    # DEDENT or INDENT.
     def t_comment(self, token):
         r'[#][^\n]*\n+'
         token.lexer.lineno += token.value.count('\n')
@@ -243,35 +245,50 @@ class BabelLexer(object):
         # out which type of comment this is.
         i = token.lexpos - 1
         while i >= 0:
-            if token.lexer.lexdata[i] == '\n':
-                # Comment takes the full line so ignore entirely.
-                return
-            elif token.lexer.lexdata[i] != ' ':
-                # Comment is only a partial line. Preserve newline token.
+            if token.lexer.lexdata[i] == '\n' or token.lexer.lexdata[i] != ' ':
                 newline_token = self._create_token('NEWLINE', '\n',
                     token.lineno, token.lexpos + len(token.value) - 1)
                 newline_token.lexer = token.lexer
-                # Call the newline handler since we may need to indent/dedent.
-                return self.t_NEWLINE(newline_token)
+                dent_tokens = self._search_for_next_line_dent(newline_token)
+                if token.lexer.lexdata[i] == '\n':
+                    # Comment takes the full line so ignore entirely.
+                    return dent_tokens
+                elif token.lexer.lexdata[i] != ' ':
+                    # Comment is only a partial line. Preserve newline token.
+                    if dent_tokens:
+                        dent_tokens.tokens.insert(0, newline_token)
+                        return dent_tokens
+                    else:
+                        return newline_token
             i -= 1
 
     # Define a rule so we can track line numbers
     def t_NEWLINE(self, newline_token):
         r'\n+'
-
-        # Count lines
         newline_token.lexer.lineno += newline_token.value.count('\n')
+        dent_tokens = self._search_for_next_line_dent(newline_token)
+        if dent_tokens:
+            dent_tokens.tokens.insert(0, newline_token)
+            return dent_tokens
+        else:
+            return newline_token
 
-        tokens = [newline_token]
-
+    def _search_for_next_line_dent(self, newline_token):
+        """
+        Starting from a newline token that isn't followed by another newline
+        token, returns any indent or dedent tokens that immediately follow.
+        If indentation doesn't change, returns None.
+        """
+        assert newline_token.type == 'NEWLINE', \
+            'Can only search for a dent starting from a newline.'
         next_line_pos = newline_token.lexpos + len(newline_token.value)
         if next_line_pos == len(newline_token.lexer.lexdata):
             # Reached end of file
-            return newline_token
+            return None
 
         line = newline_token.lexer.lexdata[next_line_pos:].splitlines()[0]
         if not line:
-            return newline_token
+            return None
 
         indent = len(line) - len(line.lstrip())
         indent_spaces = indent - self.cur_indent
@@ -279,12 +296,14 @@ class BabelLexer(object):
             raise Exception('Indent was not divisible by 4.')
 
         indent_delta = indent_spaces / 4
+        if indent_delta == 0:
+            # There was no change in indentation
+            return None
         dent_type = 'INDENT' if indent_delta > 0 else 'DEDENT'
         dent_token = self._create_token(dent_type, '\t', newline_token.lineno + 1, next_line_pos)
 
-        tokens.extend([dent_token] * abs(indent_delta))
+        tokens = [dent_token] * abs(indent_delta)
         self.cur_indent = indent
-
         return MultiToken(tokens)
 
     # A string containing ignored characters (spaces and tabs)
