@@ -92,9 +92,29 @@ class TestPythonGen(unittest.TestCase):
         b.validate('\x00')
 
     def test_timestamp_data_type(self):
+        class UTC(datetime.tzinfo):
+            def utcoffset(self, dt):
+                return datetime.timedelta(0)
+            def tzname(self, dt):
+                return 'UTC'
+            def dst(self, dt):
+                return datetime.timedelta(0)
+        class PST(datetime.tzinfo):
+            def utcoffset(self, dt):
+                return datetime.timedelta(-8)
+            def tzname(self, dt):
+                return 'PST'
+            def dst(self, dt):
+                return datetime.timedelta(0)
         t = bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000')
         self.assertRaises(bv.ValidationError, lambda: t.validate('abcd'))
-        t.validate(datetime.datetime.utcnow())
+        now = datetime.datetime.utcnow()
+        t.validate(now)
+        # Accept a tzinfo only if it's UTC
+        t.validate(now.replace(tzinfo=UTC()))
+        # Do not accept a non-UTC tzinfo
+        self.assertRaises(bv.ValidationError,
+                          lambda: t.validate(now.replace(tzinfo=PST())))
 
     def test_list_data_type(self):
         l = bv.List(bv.String(), min_items=1, max_items=10)

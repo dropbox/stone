@@ -298,8 +298,10 @@ class Timestamp(Primitive):
         if not isinstance(val, datetime.datetime):
             raise ValidationError('expected timestamp, got %s'
                                   % generic_type_name(val))
-        elif val.tzinfo is not None:
-            raise ValidationError('timestamp should not have a timezone set')
+        elif val.tzinfo is not None and \
+                        val.tzinfo.utcoffset(val).total_seconds() != 0:
+            raise ValidationError('timestamp should have either a UTC '
+                                  'timezone or none set at all')
         return val
 
 class List(Primitive):
