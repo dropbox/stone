@@ -1,7 +1,12 @@
 from collections import OrderedDict
 from distutils.version import StrictVersion
 
-from babelapi.data_type import Empty, doc_unwrap
+from babelapi.data_type import (
+    Empty,
+    doc_unwrap,
+    is_composite_type,
+    is_list_type,
+)
 
 class Api(object):
     """
@@ -81,14 +86,22 @@ class ApiNamespace(object):
 
     def distinct_route_io_data_types(self):
         """
-        Returns a set of data types that are referenced directly as the request,
+        Returns all user-defined data types that are referenced as the request,
         response, or error data type for a route in this namespace.
+
+        The List data type is never returned because it isn't user-defined, but
+        if it contains a user-defined type, then that type is included in the
+        return set.
         """
         data_types = set()
         for route in self.routes:
-            data_types.add(route.request_data_type)
-            data_types.add(route.response_data_type)
-            data_types.add(route.error_data_type)
+            for dtype in (route.request_data_type, route.response_data_type,
+                          route.error_data_type):
+                while is_list_type(dtype):
+                    dtype = dtype.data_type
+                if not is_composite_type(dtype):
+                    continue
+                data_types.add(dtype)
         return data_types
 
 class ApiRoute(object):

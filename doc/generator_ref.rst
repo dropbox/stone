@@ -100,6 +100,12 @@ data_types
 data_type_by_name
     A map from data type name to DataType object.
 
+distinct_route_io_data_types()
+    A set of all user-defined data types that are referenced as either a
+    request, response, or error data type of a route. If a route has a List
+    data type, then the contained data type is returned if it's a user-defined
+    type.
+
 Route
 -----
 
