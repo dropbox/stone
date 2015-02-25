@@ -788,3 +788,5 @@ def is_timestamp_type(data_type):
     return isinstance(data_type, Timestamp)
 def is_union_type(data_type):
     return isinstance(data_type, Union)
+def is_numeric_type(data_type):
+    return is_integer_type(data_type) or is_float_type(data_type)

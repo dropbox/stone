@@ -77,6 +77,19 @@ class Generator(object):
         self.cur_indent -= dent
 
     @contextmanager
+    def block(self, header='', dent=None, delim=('{','}')):
+        if header:
+            self.emit_line('{} {}'.format(header, delim[0]))
+        else:
+            self.emit_line(delim[0])
+        self.emit_empty_line()
+
+        with self.indent(dent):
+            yield
+
+        self.emit_line(delim[1])
+
+    @contextmanager
     def indent_to_cur_col(self):
         """
         For the duration of the context manager, indentation will be set to the
