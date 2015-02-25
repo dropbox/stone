@@ -82,7 +82,6 @@ class Generator(object):
             self.emit_line('{} {}'.format(header, delim[0]))
         else:
             self.emit_line(delim[0])
-        self.emit_empty_line()
 
         with self.indent(dent):
             yield
