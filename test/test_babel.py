@@ -121,7 +121,6 @@ struct QuotaInfo
     quota UInt64
         "The user's total quota allocation (bytes)."
 """
-
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
@@ -140,7 +139,6 @@ struct QuotaInfo
     example default
         quota=64000
 """
-
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertIn('default', out[1].examples)
@@ -193,6 +191,28 @@ struct File
 """
         out = self.parser.parse(text)
         self.assertEqual(out[1].coverage, ['Folder', 'File'])
+
+        # test with defaults
+        text = """
+namespace ns
+struct S
+    n1 Int32 = -5
+    n2 Int32 = 5
+    f1 Float64 = -1.
+    f2 Float64 = -4.2
+    f3 Float64 = -5e-3
+    f4 Float64 = -5.1e-3
+"""
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'S')
+        self.assertEqual(out[1].fields[0].name, 'n1')
+        self.assertTrue(out[1].fields[0].has_default)
+        self.assertEqual(out[1].fields[0].default, -5)
+        self.assertEqual(out[1].fields[1].default, 5)
+        self.assertEqual(out[1].fields[2].default, -1)
+        self.assertEqual(out[1].fields[3].default, -4.2)
+        self.assertEqual(out[1].fields[4].default, -5e-3)
+        self.assertEqual(out[1].fields[5].default, -5.1e-3)
 
     def test_union_decl(self):
         # test union with only symbols
