@@ -12,7 +12,7 @@ from babelapi.babel.parser import BabelTypeRef
 from babelapi.data_type import DataType, _BoundedInteger, _BoundedFloat
 from babelapi.data_type import List, String, Timestamp
 from babelapi.data_type import Struct, Symbol, Union
-from babelapi.generator.generator import CodeGenerator
+from babelapi.generator import CodeGenerator
 
 
 class UnbabelGenerator(CodeGenerator):

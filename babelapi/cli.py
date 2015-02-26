@@ -23,14 +23,13 @@ _cmdline_parser.add_argument(
 _cmdline_parser.add_argument(
     'generator',
     type=str,
-    help='Specify a pre-packaged generator (only "python" right now), or '
-         'the path to a custom generator (.babelg.py).',
+    help='Specify the path to a generator. It must have a .babelg.py extension.',
 )
 _cmdline_parser.add_argument(
     'spec',
     nargs='+',
     type=str,
-    help='Path to API specifications (*.babel).',
+    help='Path to API specifications. Each must have a .babel extension.',
 )
 _cmdline_parser.add_argument(
     'output',
@@ -94,18 +93,9 @@ def main():
                 'You must fix the above parsing errors for generation to continue.'
             sys.exit(1)
 
-    # Here we support two ways of specifying a generator. Either a name of a
-    # generator, which assumes it has been pre-packaged with babelapi, or a
-    # path to a Python module with a generator class defined within.
-    if args.generator == 'python':
-        generator = os.path.join(os.path.dirname(__file__),
-                                 'generator/target/python/python.babelg.py')
-    else:
-        generator = args.generator
-
     c = Compiler(
         api,
-        generator,
+        args.generator,
         args.output,
         clean_build=args.clean_build,
     )

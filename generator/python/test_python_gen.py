@@ -3,10 +3,9 @@ import datetime
 import json
 import unittest
 
-from babelapi.generator.target.python import (
-    babel_validators as bv
-)
-from babelapi.generator.target.python.babel_serializers import (
+import babel_validators as bv
+
+from babel_serializers import (
     json_encode,
     json_decode,
 )

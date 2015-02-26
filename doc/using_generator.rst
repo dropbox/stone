@@ -30,9 +30,10 @@ command-line interface (CLI)::
     BabelAPI
 
     positional arguments:
-      generator      Specify a pre-packaged generator (only "python" right now),
-                     or the path to a custom generator (.babelg.py).
-      spec           Path to API specifications (*.babel).
+      generator      Specify the path to a generator. It must have a .babelg.py
+                     extension.
+      spec           Path to API specifications. Each must have a .babel
+                     extension.
       output         The folder to save generated files to.
 
     optional arguments:
@@ -40,9 +41,10 @@ command-line interface (CLI)::
       -v, --verbose  Print debugging statements.
 
 We'll compile the ``users.babel`` example from the
-`Language Reference <lang_ref.rst>`_::
+`Language Reference <lang_ref.rst>`_. THe first argument is the path to the
+Python generator which can be found in the ``babelapi`` folder::
 
-    $ babelapi python users.babel .
+    $ babelapi generator/python/python.babelg.py users.babel .
     INFO:babelapi.idl:Parsing spec users.babel
     INFO:babelapi.compiler:Found generator at ...
     INFO:babelapi.compiler:Running generator ...
@@ -58,14 +60,14 @@ of the code generator to the current directory.
 Python Guide
 ============
 
-This section explains how to generate Python code and work with the Python
-classes that have been generated from a spec.
+This section explains how to use the pre-packaged Python generator and work
+with the Python classes that have been generated from a spec.
 
 From the above section, you can generate Python using::
 
-    $ babelapi python users.babel .
+    $ babelapi generator/python/python.babelg.py users.babel .
 
-This runs the ``python`` generator on the ``users.babel`` spec. Its output
+This runs the Python generator on the ``users.babel`` spec. Its output
 target is ``.``, which is the current directory. A Python module is created for
 each declared namespace, so in this case only ``users.py`` is created.
 

@@ -21,7 +21,7 @@ from babelapi.data_type import (
     is_timestamp_type,
     is_union_type,
 )
-from babelapi.generator.generator import CodeGeneratorMonolingual
+from babelapi.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
 # This will be at the top of every generated file.

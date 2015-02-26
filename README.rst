@@ -185,9 +185,10 @@ service. Our hypothetical spec lives in a file called ``users.babel``::
         "Get information about a specified user's account."
 
 Using the Python generator, we can generate a Python module that mirrors this
-specification using the command-line interface::
+specification using the command-line interface. From the top-level of the
+``babelapi`` folder, try::
 
-    $ babelapi python users.babel .
+    $ babelapi generator/python/python.babelg.py users.babel .
     INFO:babelapi.idl:Parsing spec users.babel
     INFO:babelapi.compiler:Found generator at ...
     INFO:babelapi.compiler:Running generator ...

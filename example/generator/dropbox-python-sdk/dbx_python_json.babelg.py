@@ -32,7 +32,7 @@ from babelapi.data_type import (
     is_struct_type,
     is_union_type,
 )
-from babelapi.generator.generator import CodeGeneratorMonolingual
+from babelapi.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
 base = """\

@@ -3,9 +3,6 @@ Defines data types for Babel.
 
 The goal of this module is to define all data types that are common to the
 languages and serialization formats we want to support.
-
-TODO: This file is in need of refactoring, and should take after the
-babelapi.generator.target.python.babel_validators module.
 """
 
 from abc import ABCMeta, abstractmethod

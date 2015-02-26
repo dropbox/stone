@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 
-from babelapi.generator.generator import Generator
+from babelapi.generator import Generator
 
 class UnknownGenerator(Exception): pass
 class UnknownSourceType(Exception): pass

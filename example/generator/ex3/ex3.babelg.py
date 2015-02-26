@@ -1,5 +1,5 @@
 from babelapi.data_type import Struct
-from babelapi.generator.generator import CodeGeneratorMonolingual
+from babelapi.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
 class ExamplePythonGenerator(CodeGeneratorMonolingual):
