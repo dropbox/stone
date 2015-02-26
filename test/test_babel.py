@@ -68,6 +68,18 @@ alias Rev = String
         self.assertEqual(out[1].name, 'Rev')
         self.assertEqual(out[1].type_ref.name, 'String')
 
+    def test_type_parameters(self):
+        text = """
+namespace test
+
+alias T = String(min_length=3)
+alias F = Float64(max_value=3.2e1)
+"""
+        out = self.parser.parse(text)
+        self.assertIsInstance(out[1], BabelAlias)
+        self.assertEqual(out[1].name, 'T')
+        self.assertEqual(out[1].type_ref.name, 'String')
+
     def test_struct_decl(self):
 
         # test struct decl with no docs

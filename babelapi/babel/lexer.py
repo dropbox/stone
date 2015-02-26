@@ -193,7 +193,7 @@ class BabelLexer(object):
         return token
 
     def t_FLOAT(self, token):
-        r'-?\d+\.?\d*(e-?\d+)?'
+        r'-?\d+(\.\d*(e-?\d+)?|e-?\d+)'
         token.value = float(token.value)
         return token
 
