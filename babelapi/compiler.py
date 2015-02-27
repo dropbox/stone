@@ -4,6 +4,7 @@ import imp
 import inspect
 import os
 import re
+import sys
 import shutil
 
 from babelapi.generator import Generator
@@ -121,6 +122,14 @@ class Compiler(object):
                         and issubclass(attr_value, Generator)
                         and not inspect.isabstract(attr_value)):
                     generator = attr_value(self.api, self.build_path)
-                    generator.generate()
+                    try:
+                        generator.generate()
+                    except:
+                        # Tell the user that this isn't a bug with the babel
+                        # parser but a bug with the generator they are using.
+                        self._logger.error(
+                            'Generator (%s) failed with an error:\n' %
+                            generator.__class__.__name__)
+                        raise
         else:
             raise UnknownSourceType(source_path)
