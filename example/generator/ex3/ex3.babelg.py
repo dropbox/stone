@@ -9,9 +9,9 @@ class ExamplePythonGenerator(CodeGeneratorMonolingual):
     # others use camelcase).
     lang = PythonTargetLanguage()
 
-    def generate(self):
+    def generate(self, api):
         """Generates a module for each namespace."""
-        for namespace in self.api.namespaces.values():
+        for namespace in api.namespaces.values():
             # One module per namespace is created. The module takes the name
             # of the namespace.
             with self.output_to_relative_path('{}.py'.format(namespace.name)):

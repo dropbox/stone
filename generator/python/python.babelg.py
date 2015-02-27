@@ -44,7 +44,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
     lang = PythonTargetLanguage()
 
-    def generate(self):
+    def generate(self, api):
         """
         Generates a module for each namespace.
 
@@ -52,13 +52,13 @@ class PythonGenerator(CodeGeneratorMonolingual):
         routes in the Babel spec.
         """
         cur_folder = os.path.dirname(__file__)
-        self._logger.info('Copying babel_validators.py to output folder')
+        self.logger.info('Copying babel_validators.py to output folder')
         shutil.copy(os.path.join(cur_folder, 'babel_validators.py'),
                     self.target_folder_path)
-        self._logger.info('Copying babel_serializers.py to output folder')
+        self.logger.info('Copying babel_serializers.py to output folder')
         shutil.copy(os.path.join(cur_folder, 'babel_serializers.py'),
                     self.target_folder_path)
-        for namespace in self.api.namespaces.values():
+        for namespace in api.namespaces.values():
             with self.output_to_relative_path('{}.py'.format(namespace.name)):
                 self._generate_base_namespace_module(namespace)
 

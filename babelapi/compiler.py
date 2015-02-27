@@ -121,9 +121,9 @@ class Compiler(object):
                 if (inspect.isclass(attr_value)
                         and issubclass(attr_value, Generator)
                         and not inspect.isabstract(attr_value)):
-                    generator = attr_value(self.api, self.build_path)
+                    generator = attr_value(self.build_path)
                     try:
-                        generator.generate()
+                        generator.generate(self.api)
                     except:
                         # Tell the user that this isn't a bug with the babel
                         # parser but a bug with the generator they are using.

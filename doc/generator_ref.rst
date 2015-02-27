@@ -50,7 +50,7 @@ included generator, since yours will always end in ``.babelg.py``.
 Generating Output Files
 =======================
 
-To create an output file, use the ``self.output_to_relative_path()`` method.
+To create an output file, use the ``output_to_relative_path()`` method.
 Its only argument is the path relative to the output directory, which was
 specified as an argument to ``babelapi``, where the file should be created.
 
@@ -61,16 +61,16 @@ Each file contains a one line C++-style comment::
     from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
-        def generate(self):
-            for namespace_name in self.api.namespaces:
+        def generate(self, api):
+            for namespace_name in api.namespaces:
                 with self.output_to_relative_path(namespace_name + '.cpp'):
                     self.emit_line('/* {} */'.format(namespace_name))
 
 Using the API Object
 ====================
 
-Code generators have a ``self.api`` member variable, which represents the input
-specs as a Python object. The object is an instance of the ``babelapi.api.Api``
+The ``generate`` method receives an ``api`` variable, which represents the API
+spec as a Python object. The object is an instance of the ``babelapi.api.Api``
 class. From this object, you can access all the defined namespaces, data types,
 and routes.
 
@@ -218,7 +218,7 @@ manager for adding incremental indentation. Here's an example::
     from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
-        def generate(self):
+        def generate(self, api):
             with self.output_to_relative_path('ex_indent.out'):
                 with self.indent()
                     self.emit_line('hello')
@@ -237,7 +237,6 @@ future.
 
 Helpers for Code Generation
 ===========================
-
 
 ``generate_multiline_list(items, before='', after='', delim=('(', ')'), compact=True, sep=',', skip_last_sep=False)``
     Given a list of items, emits one item per line. This is convenient for
@@ -270,6 +269,19 @@ Helpers for Code Generation
     space and then ``after``. ``dent`` is the amount to indent the block. If
     none, the default indentation increment is used.
 
+Generator Instance Variables
+============================
+
+logger
+    This is an instance of the `logging.Logger
+    <https://docs.python.org/2/library/logging.html#logger-objects>`_ class
+    from the Python standard library. Messages written to the logger will be
+    output to standard error as the generator runs.
+
+target_folder_path
+    The path to the output folder. Use this when the
+    ``output_to_relative_path`` method is insufficient for your purposes.
+
 Examples
 ========
 
@@ -285,10 +297,10 @@ We'll create a generator ``ex1.babelg.py`` that generates a file called
     from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
-        def generate(self):
+        def generate(self, api):
             """Generates a file that lists each namespace."""
             with self.output_to_relative_path('ex1.out'):
-                for namespace in self.api.namespaces.values():
+                for namespace in api.namespaces.values():
                     self.emit(namespace.name)
 
 We use ``output_to_relative_path()`` a member of ``CodeGenerator`` to specify
@@ -314,9 +326,9 @@ a ``noop()`` function::
     from babelapi.generator import CodeGenerator
 
     class ExamplePythonGenerator(CodeGenerator):
-        def generate(self):
+        def generate(self, api):
             """Generates a module for each namespace."""
-            for namespace in self.api.namespaces.values():
+            for namespace in api.namespaces.values():
                 # One module per namespace is created. The module takes the name
                 # of the namespace.
                 with self.output_to_relative_path('{}.py'.format(namespace.name)):
@@ -365,9 +377,9 @@ declared::
         # others use camelcase).
         lang = PythonTargetLanguage()
 
-        def generate(self):
+        def generate(self, api):
             """Generates a module for each namespace."""
-            for namespace in self.api.namespaces.values():
+            for namespace in api.namespaces.values():
                 # One module per namespace is created. The module takes the name
                 # of the namespace.
                 with self.output_to_relative_path('{}.py'.format(namespace.name)):

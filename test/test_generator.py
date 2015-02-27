@@ -15,7 +15,7 @@ from babelapi.generator import CodeGenerator
 
 class Tester(CodeGenerator):
     """A no-op generator used to test helper methods."""
-    def generate(self):
+    def generate(self, api):
         pass
 
 class TestGenerator(unittest.TestCase):
@@ -40,13 +40,13 @@ class TestGenerator(unittest.TestCase):
         self.assertNotIn(s, route_io)
 
     def test_code_generator_helpers(self):
-        t = Tester(None, None)
+        t = Tester(None)
         self.assertEqual(t.filter_out_none_valued_keys({}), {})
         self.assertEqual(t.filter_out_none_valued_keys({'a': None}), {})
         self.assertEqual(t.filter_out_none_valued_keys({'a': None, 'b': 3}), {'b': 3})
 
     def test_code_generator_basic_emitters(self):
-        t = Tester(None, None)
+        t = Tester(None)
 
         # Check basic emit
         t.emit('hello')
@@ -87,7 +87,7 @@ hello
         t.clear_output_buffer()
 
     def test_code_generator_list_gen(self):
-        t = Tester(None, None)
+        t = Tester(None)
 
         t.generate_multiline_list(['a=1', 'b=2'])
         expected = """\
@@ -164,7 +164,7 @@ def func(
         t.clear_output_buffer()
 
     def test_code_generator_block_gen(self):
-        t = Tester(None, None)
+        t = Tester(None)
 
         with t.block('int sq(int x)', ';'):
             t.emit('return x*x;')

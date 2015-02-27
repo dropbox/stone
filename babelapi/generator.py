@@ -20,8 +20,8 @@ class Generator(object):
 
     2. Use the family of emit*() functions to write to the output file.
 
-    The api attribute holds all information parsed from the specs, and should
-    be used during generation.
+    The target_folder_path attribute is the path to the folder where all
+    generated files should be created.
     """
 
     __metaclass__ = ABCMeta
@@ -29,10 +29,14 @@ class Generator(object):
     # Can be overridden by a subclass
     tabs_for_indents = False
 
-    def __init__(self, api, target_folder_path):
-        self._logger = logging.getLogger('bablesdk.generator.%s'
-                                         % self.__class__.__name__)
-        self.api = api
+    def __init__(self, target_folder_path):
+        """
+        Args:
+            target_folder_path (str): Path to the folder where all generated
+                files should be created.
+        """
+        self.logger = logging.getLogger('Generator<%s>' %
+                                        self.__class__.__name__)
         self.target_folder_path = target_folder_path
         # Output is a list of strings that should be concatenated together for
         # the final output.
@@ -41,10 +45,13 @@ class Generator(object):
         self.cur_indent = 0
 
     @abstractmethod
-    def generate(self):
+    def generate(self, api):
         """
         Subclasses should override this method. It's the entry point that is
         invoked by the rest of the toolchain.
+
+        Args:
+            api (babelapi.api.Api): The API specification.
         """
         raise NotImplemented
 
@@ -57,7 +64,7 @@ class Generator(object):
         Clears the output buffer on enter and exit.
         """
         full_path = os.path.join(self.target_folder_path, relative_path)
-        self._logger.info('Generating %s', full_path)
+        self.logger.info('Generating %s', full_path)
         self.output = []
         yield
         with open(full_path, 'w') as f:
@@ -278,6 +285,6 @@ class CodeGeneratorMonolingual(CodeGenerator):
     # An instance of a :class:`babelapi.lang.lang.TargetLanguage` object.
     lang = None
 
-    def __init__(self, api, target_folder_path):
+    def __init__(self, target_folder_path):
         assert self.lang, 'Language must be specified'
-        super(CodeGeneratorMonolingual, self).__init__(api, target_folder_path)
+        super(CodeGeneratorMonolingual, self).__init__(target_folder_path)
