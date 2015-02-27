@@ -1,5 +1,4 @@
 import json
-import pprint
 
 from babelapi.lang.lang import TargetLanguage
 from babelapi.data_type import (

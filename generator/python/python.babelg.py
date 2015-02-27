@@ -453,7 +453,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
     #
     # Tagged Union Types
     #
-    
+
     def _class_declaration_for_union(self, data_type):
         assert is_union_type(data_type), \
             'Expected union, got %r' % type(data_type)
