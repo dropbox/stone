@@ -18,17 +18,17 @@ conditions:
    ``example.babelg.py``
 
 2. At least one class must exist in the module that extends the
-   ``babelapi.generator.generator.CodeGenerator`` class and implements the
-   abstract ``generate()`` method. BabelAPI automatically detects subclasses
-   and calls the ``generate()`` method. All such subclasses will be called in
-   ASCII order.
+   ``babelapi.generator.CodeGenerator`` class and implements the abstract
+   ``generate()`` method. BabelAPI automatically detects subclasses and calls
+   the ``generate()`` method. All such subclasses will be called in ASCII
+   order.
 
 Getting Started
 ===============
 
 Here's a simple no-op generator::
 
-    from babelapi.generator.generator import CodeGenerator
+    from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self):
@@ -58,7 +58,7 @@ Here's an example generator that creates an output file for each namespace.
 Each file is named after a respective namespace and have a ``.cpp`` extension.
 Each file contains a one line C++-style comment::
 
-    from babelapi.generator.generator import CodeGenerator
+    from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self):
@@ -212,10 +212,10 @@ serve a different purpose.
 Indentation
 ===========
 
-The ``babelapi.generator.generator.CodeGenerator`` class provides a context
+The ``babelapi.generator.CodeGenerator`` class provides a context
 manager for adding incremental indentation. Here's an example::
 
-    from babelapi.generator.generator import CodeGenerator
+    from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self):
@@ -282,14 +282,14 @@ Example 1: List All Namespaces
 We'll create a generator ``ex1.babelg.py`` that generates a file called
 ``ex1.out``. Each line in the file will be the name of a defined namespace::
 
-    from babelapi.generator.generator import CodeGenerator
+    from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self):
             """Generates a file that lists each namespace."""
             with self.output_to_relative_path('ex1.out'):
                 for namespace in self.api.namespaces.values():
-                    self.emit_line(namespace.name)
+                    self.emit(namespace.name)
 
 We use ``output_to_relative_path()`` a member of ``CodeGenerator`` to specify
 where the output of our ``emit*()`` calls go (See more emit_methods_).
@@ -311,7 +311,7 @@ Example 2: A Python module for each Namespace
 Now we'll create a Python module for each namespace. Each module will define
 a ``noop()`` function::
 
-    from babelapi.generator.generator import CodeGenerator
+    from babelapi.generator import CodeGenerator
 
     class ExamplePythonGenerator(CodeGenerator):
         def generate(self):
@@ -323,9 +323,9 @@ a ``noop()`` function::
                     self._generate_namespace_module(namespace)
 
         def _generate_namespace_module(self, namespace):
-            self.emit_line('def noop():')
+            self.emit('def noop():')
             with self.indent():
-                self.emit_line('pass')
+                self.emit('pass')
 
 Note how we used the ``self.indent()`` context manager to increase the
 indentation level by a default 4 spaces. If you want to use tabs instead,
@@ -354,8 +354,8 @@ for each struct in our specification. We'll extend from
 ``MonolingualCodeGenerator``, which enforces that a ``lang`` class variable is
 declared::
 
-    from babelapi.data_type import Struct
-    from babelapi.generator.generator import CodeGeneratorMonolingual
+    from babelapi.data_type import is_struct_type
+    from babelapi.generator import CodeGeneratorMonolingual
     from babelapi.lang.python import PythonTargetLanguage
 
     class ExamplePythonGenerator(CodeGeneratorMonolingual):
@@ -375,43 +375,37 @@ declared::
 
         def _generate_namespace_module(self, namespace):
             for data_type in namespace.linearize_data_types():
-                if not isinstance(data_type, Struct):
-                    # Do not handle Union types
+                if not is_struct_type(data_type):
+                    # Only handle user-defined structs (avoid unions and primitives)
                     continue
 
                 # Define a class for each struct
                 class_def = 'class {}(object):'.format(self.lang.format_class(data_type.name))
-                self.emit_line(class_def)
+                self.emit(class_def)
 
                 with self.indent():
                     if data_type.doc:
-                        self.emit_line('"""')
-                        self.emit_wrapped_lines(data_type.doc)
-                        self.emit_line('"""')
+                        self.emit('"""')
+                        self.emit_wrapped_text(data_type.doc)
+                        self.emit('"""')
 
-                    self.emit_empty_line()
+                    self.emit()
 
                     # Define constructor to take each field
-                    self.emit_line('def __init__', trailing_newline=False)
                     args = ['self']
                     for field in data_type.fields:
                         args.append(self.lang.format_variable(field.name))
-                    self._generate_func_arg_list(args)
-                    self.emit(':')
-                    self.emit_empty_line()
+                    self.generate_multiline_list(args, 'def __init__', ':')
 
                     with self.indent():
                         if data_type.fields:
+                            self.emit()
                             # Body of init should assign all init vars
                             for field in data_type.fields:
                                 if field.doc:
-                                    self.emit_wrapped_lines(field.doc, prefix='# ')
+                                    self.emit_wrapped_text(field.doc, '# ', '# ')
                                 member_name = self.lang.format_variable(field.name)
-                                self.emit_line('self.{0} = {0}'.format(member_name))
+                                self.emit('self.{0} = {0}'.format(member_name))
                         else:
-                            self.emit_line('pass')
-                self.emit_empty_line()
-
-One new method of ``CodeGenerator`` that was used is ``generate_func_arg_list(args)``.
-It helps you generate a list of arguments in a function declaration or invocation
-enclosed by parentheses.
+                            self.emit('pass')
+                self.emit()

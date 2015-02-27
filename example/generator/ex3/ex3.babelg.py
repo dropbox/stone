@@ -1,4 +1,4 @@
-from babelapi.data_type import Struct
+from babelapi.data_type import is_struct_type
 from babelapi.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
 
@@ -19,39 +19,37 @@ class ExamplePythonGenerator(CodeGeneratorMonolingual):
 
     def _generate_namespace_module(self, namespace):
         for data_type in namespace.linearize_data_types():
-            if not isinstance(data_type, Struct):
-                # Do not handle Union types
+            if not is_struct_type(data_type):
+                # Only handle user-defined structs (avoid unions and primitives)
                 continue
 
             # Define a class for each struct
             class_def = 'class {}(object):'.format(self.lang.format_class(data_type.name))
-            self.emit_line(class_def)
+            self.emit(class_def)
 
             with self.indent():
                 if data_type.doc:
-                    self.emit_line('"""')
-                    self.emit_wrapped_lines(data_type.doc)
-                    self.emit_line('"""')
+                    self.emit('"""')
+                    self.emit_wrapped_text(data_type.doc)
+                    self.emit('"""')
 
-                self.emit_empty_line()
+                self.emit()
 
                 # Define constructor to take each field
-                self.emit_line('def __init__', trailing_newline=False)
                 args = ['self']
                 for field in data_type.fields:
                     args.append(self.lang.format_variable(field.name))
-                self._generate_func_arg_list(args)
-                self.emit(':')
-                self.emit_empty_line()
+                self.generate_multiline_list(args, 'def __init__', ':')
 
                 with self.indent():
                     if data_type.fields:
+                        self.emit()
                         # Body of init should assign all init vars
                         for field in data_type.fields:
                             if field.doc:
-                                self.emit_wrapped_lines(field.doc, prefix='# ')
+                                self.emit_wrapped_text(field.doc, '# ', '# ')
                             member_name = self.lang.format_variable(field.name)
-                            self.emit_line('self.{0} = {0}'.format(member_name))
+                            self.emit('self.{0} = {0}'.format(member_name))
                     else:
-                        self.emit_line('pass')
-            self.emit_empty_line()
+                        self.emit('pass')
+            self.emit()

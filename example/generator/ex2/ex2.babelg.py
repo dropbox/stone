@@ -10,6 +10,6 @@ class ExamplePythonGenerator(CodeGenerator):
                 self._generate_namespace_module(namespace)
 
     def _generate_namespace_module(self, namespace):
-        self.emit_line('def noop():')
+        self.emit('def noop():')
         with self.indent():
-            self.emit_line('pass')
+            self.emit('pass')
