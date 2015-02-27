@@ -181,31 +181,33 @@ Union
 Emit*() Methods
 ===============
 
-There are several ``emit*()`` methods that you can use from a ``CodeGenerator``
-that each serve a different purpose.
+There are several ``emit*()`` methods included in a ``CodeGenerator`` that each
+serve a different purpose.
 
-``emit(s)``
-    The input string is written to the output file.
+``emit(s='')``
+    Adds indentation, then the input string, and lastly a newline to the output
+    buffer. If ``s`` is an empty string (default) then an empty line is created
+    with no indentation.
 
-``emit_line(s, trailing_newline=True)``
-    The current indentation level followed by the input string is written to the
-    output file. If ``trailing_newline`` is True (default) then a newline is
-    written as well.
+``emit_wrapped_text(s, initial_prefix='', subsequent_prefix='', width=80, break_long_words=False, break_on_hyphens=False)``
+    Adds the input string to the output buffer with indentation and wrapping.
+    The wrapping is performed by the ``textwrap.fill`` Python library
+    function.
 
-``emit_wrapped_lines(s, prefix='', width=80, trailing_newline=True, first_line_prefix=True)``
-    The current indentation level followed by the input prefix (assuming
-    ``first_line_prefix`` is ``True``) are written to the output file. The
-    input string is then written into lines with each line starting with the
-    indentation level and prefix. This is ideal for generating blocks of
-    comments. Wrapping is done by words, and all trailing space in a line is
-    truncated.
+    ``initial_prefix`` is prepended to the first line of the wrapped string.
+    ``subsequent_prefix`` is prepended to every line after the first. ``width``
+    is the target width of each line including indentation and prefixes.
 
-``emit_empty_line()``
-    Writes an empty line to the output file.
+    If true, ``break_long_words`` breaks words longer than width.  If false,
+    those words will not be broken, and some lines might be longer
+    than width. If true, ``break_on_hyphens`` allows breaking hyphenated words;
+    wrapping will occur preferably on whitespaces and right after the hyphen
+    in compound words.
 
-``emit_indent()``
-    Writes the number of spaces for the current indentation level to the output
-    file.
+``emit_raw(s)``
+    Adds the input string to the output buffer. The string must end in a
+    newline. It may contain any number of newline characters. No indentation is
+    generated.
 
 Indentation
 ===========
@@ -232,6 +234,41 @@ The contents of ``ex_indent.out`` is::
 
 Indentation is always four spaces. We plan to make this customizable in the
 future.
+
+Helpers for Code Generation
+===========================
+
+
+``generate_multiline_list(items, before='', after='', delim=('(', ')'), compact=True, sep=',', skip_last_sep=False)``
+    Given a list of items, emits one item per line. This is convenient for
+    function prototypes and invocations, as well as for instantiating arrays,
+    sets, and maps in some languages.
+
+    ``items`` is the list of strings that make up the list. ``before`` is the
+    string that comes before the list of items. ``after`` is the string that
+    follows the list of items. The first element of ``delim`` is added
+    immediately following ``before``, and the second element is added
+    prior to ``after``.
+
+    If ``compact`` is true, the enclosing parentheses are on the same lines as
+    the first and last list item.
+
+    ``sep`` is the string that follows each list item when compact is true. If
+    compact is false, the separator is omitted for the last item.
+    ``skip_last_sep`` indicates whether the last line should have a trailing
+    separator. This parameter only applies when ``compact`` is false.
+
+``block(before='', after='', delim=('{','}'), dent=None)``
+    A context manager that emits configurable lines before and after an
+    indented block of text. This is convenient for class and function
+    definitions in some languages.
+
+    ``before`` is the string to be output in the first line which is not
+    indented. ``after`` is the string to be output in the last line which is
+    also not indented. The first element of ``delim`` is added immediately
+    following ``before`` and a space. The second element is added prior to a
+    space and then ``after``. ``dent`` is the amount to indent the block. If
+    none, the default indentation increment is used.
 
 Examples
 ========

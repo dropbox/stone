@@ -19,6 +19,9 @@ class Generator(object):
             ...
 
     2. Use the family of emit*() functions to write to the output file.
+
+    The api attribute holds all information parsed from the specs, and should
+    be used during generation.
     """
 
     __metaclass__ = ABCMeta
@@ -39,8 +42,10 @@ class Generator(object):
 
     @abstractmethod
     def generate(self):
-        """Subclasses should override this method. It's the entry point for
-        all code generation given the api description."""
+        """
+        Subclasses should override this method. It's the entry point that is
+        invoked by the rest of the toolchain.
+        """
         raise NotImplemented
 
     @contextmanager
@@ -49,7 +54,7 @@ class Generator(object):
         Sets up generator so that all emits are directed towards the new file
         created at :param:`relative_path`.
 
-        Clears output buffer on enter, and on exit.
+        Clears the output buffer on enter and exit.
         """
         full_path = os.path.join(self.target_folder_path, relative_path)
         self._logger.info('Generating %s', full_path)
@@ -59,14 +64,22 @@ class Generator(object):
             f.write(''.join(self.output))
         self.output = []
 
+    def output_buffer_to_string(self):
+        """Returns the contents of the output buffer as a string."""
+        return ''.join(self.output)
+
+    def clear_output_buffer(self):
+        self.output = []
+
     @contextmanager
     def indent(self, dent=None):
         """
         For the duration of the context manager, indentation will be increased
         by dent. Dent is in units of spaces or tabs depending on the value of
-        the class variable tabs_for_indents.
+        the class variable tabs_for_indents. If dent is None, indentation will
+        increase by either four spaces or one tab.
         """
-        assert dent != 0, 'Cannot specify relative indent of 0'
+        assert dent is None or dent > 0, 'dent must be a whole number.'
         if dent is None:
             if self.tabs_for_indents:
                 dent = 1
@@ -76,92 +89,75 @@ class Generator(object):
         yield
         self.cur_indent -= dent
 
-    @contextmanager
-    def block(self, header='', dent=None, delim=('{','}')):
-        if header:
-            self.emit_line('{} {}'.format(header, delim[0]))
-        else:
-            self.emit_line(delim[0])
-
-        with self.indent(dent):
-            yield
-
-        self.emit_line(delim[1])
-
-    @contextmanager
-    def indent_to_cur_col(self):
-        """
-        For the duration of the context manager, indentation will be set to the
-        current column marked by the "cursor". The cursor is what column of the
-        current line the next emit call would begin writing at.
-        """
-        dent = 0
-        for s in self.output[::-1]:
-            index = s.rfind('\n')
-            if index == -1:
-                dent += len(s)
-            else:
-                dent += len(s) - index - 1
-                break
-        dent_diff = dent - self.cur_indent
-        self.cur_indent += dent_diff
-        yield
-        self.cur_indent -= dent_diff
-
     def make_indent(self):
-        """Returns a string representing an indent. Indents can be either
-        spaces or tabs, depending on the value of the class variable
-        tabs_for_indents."""
+        """
+        Returns a string representing the current indentation. Indents can be
+        either spaces or tabs, depending on the value of the class variable
+        tabs_for_indents.
+        """
         if self.tabs_for_indents:
             return '\t' * self.cur_indent
         else:
             return ' ' * self.cur_indent
 
-    def emit(self, s):
-        """Adds the input string to the output buffer."""
+    def emit_raw(self, s):
+        """
+        Adds the input string to the output buffer. The string must end in a
+        newline. It may contain any number of newline characters. No
+        indentation is generated.
+        """
         self.lineno += s.count('\n')
         self.output.append(s)
+        if len(s) > 0 and s[-1] != '\n':
+            raise AssertionError(
+                'Input string to emit_raw must end with a newline.')
 
-    def emit_indent(self):
-        """Adds an indent into the output buffer."""
-        self.emit(self.make_indent())
-
-    def emit_line(self, s, trailing_newline=True):
-        """Adds an indent, then the input string, and lastly a newline to the
-        output buffer. If you want the input string to potentially span across
-        multiple lines, see :func:`emit_string_wrap`."""
-        self.emit_indent()
-        self.emit(s)
-        if trailing_newline:
-            self.emit('\n')
-
-    def emit_empty_line(self):
-        """Adds a newline to the output buffer."""
-        self.emit('\n')
-
-    def emit_wrapped_lines(self, s, prefix='', width=80, trailing_newline=True, first_line_prefix=True):
+    def emit(self, s=''):
         """
-        Adds the input string to the output buffer with wrapping.
+        Adds indentation, then the input string, and lastly a newline to the
+        output buffer. If s is an empty string (default) then an empty line is
+        created with no indentation.
+        """
+        assert isinstance(s, basestring), 's must be a string type'
+        assert '\n' not in s, \
+            'String to emit cannot contain newline strings.'
+        if s:
+            self.emit_raw('%s%s\n' % (self.make_indent(), s))
+        else:
+            self.emit_raw('\n')
+
+    def emit_wrapped_text(self, s, initial_prefix='', subsequent_prefix='',
+            width=80, break_long_words=False, break_on_hyphens=False):
+        """
+        Adds the input string to the output buffer with indentation and
+        wrapping. The wrapping is performed by the :func:`textwrap.fill` Python
+        library function.
 
         Args:
-            s: The input string to wrap.
-            prefix: The string to prepend to every line of the wrapped string.
-                Does not include indenting in the prefix as those are injected
-                automatically on every line.
-            width: The target width of each line including indentation and text.
+            s (str): The input string to wrap.
+            initial_prefix (str): The string to prepend to the first line of
+                the wrapped string. Note that the current indentation is
+                already added to each line.
+            subsequent_prefix (str): The string to prepend to every line after
+                the first. Note that the current indentation is already added
+                to each line.
+            width (int): The target width of each line including indentation
+                and text.
+            break_long_words (bool): Break words longer than width.  If false,
+                those words will not be broken, and some lines might be longer
+                than width.
+            break_on_hyphens (bool): Allow breaking hyphenated words. If true,
+                wrapping will occur preferably on whitespaces and right after
+                hyphens part of compound words.
         """
-        indent = self.make_indent() + prefix
-        if first_line_prefix:
-            initial_indent = indent
-        else:
-            initial_indent = self.make_indent()
-
-        self.emit(textwrap.fill(s,
-                                initial_indent=initial_indent,
-                                subsequent_indent=indent,
-                                width=80))
-        if trailing_newline:
-            self.emit('\n')
+        indent = self.make_indent()
+        self.emit_raw(textwrap.fill(s,
+                                    initial_indent=indent+initial_prefix,
+                                    subsequent_indent=indent+subsequent_prefix,
+                                    width=width,
+                                    break_long_words=break_long_words,
+                                    break_on_hyphens=break_on_hyphens,
+                                    ) + '\n')
 
 class CodeGenerator(Generator):
     """
@@ -169,7 +165,7 @@ class CodeGenerator(Generator):
     Contains helper functions specific to code generation.
     """
 
-    def _filter_out_none_valued_keys(self, d):
+    def filter_out_none_valued_keys(self, d):
         """Given a dict, returns a new dict with all the same key/values except
         for keys that had values of None."""
         new_d = {}
@@ -178,45 +174,101 @@ class CodeGenerator(Generator):
                 new_d[k] = v
         return new_d
 
-    def _generate_func_arg_list(self, args, compact=True):
+    def generate_multiline_list(self, items, before='', after='',
+                delim=('(', ')'), compact=True, sep=',', skip_last_sep=False):
         """
-        Given a list of arguments to a function, emits the args, one per line
-        with a trailing comma. The arguments are enclosed in parentheses making
-        this convenient way to create argument lists in function prototypes and
-        calls.
+        Given a list of items, emits one item per line.
+
+        This is convenient for function prototypes and invocations, as well as
+        for instantiating arrays, sets, and maps in some languages.
+
+        TODO(kelkabany): A generator that uses tabs cannot be used with this
+            if compact is false.
 
         Args:
-            args: List of strings where each string is an argument.
-            compact: In compact mode, the enclosing parentheses are on the same
-                lines as the first and last argument.
+            items (list[str]): Should contain the items to generate a list of.
+            before (str): The string to come before the list of items.
+            after (str): The string to follow the list of items.
+            delim (str, str): The first element is added immediately following
+                `before`. The second element is added prior to `after`.
+            compact (bool): In compact mode, the enclosing parentheses are on
+                the same lines as the first and last list item.
+            sep (str): The string that follows each list item when compact is
+                true. If compact is false, the separator is omitted for the
+                last item.
+            skip_last_sep (bool): When compact is false, whether the last line
+                should have a trailing separator. Ignored when compact is true.
         """
-        self.emit('(')
-        if len(args) == 0:
-            self.emit(')')
+        assert len(delim) == 2 and isinstance(delim[0], str) and \
+            isinstance(delim[1], str), 'delim must be a tuple of two strings.'
+
+        if len(items) == 0:
+            self.emit(before + delim[0] + delim[1] + after)
             return
-        elif len(args) == 1:
-            self.emit(args[0])
-            self.emit(')')
-        else:
-            if compact:
-                with self.indent_to_cur_col():
-                    args = args[:]
-                    self.emit(args.pop(0))
-                    self.emit(',')
-                    self.emit_empty_line()
-                    for (i, arg) in enumerate(args):
-                        if i == len(args) - 1:
-                            self.emit_line(arg, trailing_newline=False)
-                        else:
-                            self.emit_line(arg + ',')
-                    self.emit(')')
+        if len(items) == 1:
+            self.emit(before + delim[0] + items[0] + delim[1] + after)
+            return
+
+        if compact:
+            self.emit(before + delim[0] + items[0] + sep)
+            def emit_list(items):
+                items = items[1:]
+                for (i, item) in enumerate(items):
+                    if i == len(items) - 1:
+                        self.emit(item + delim[1] + after)
+                    else:
+                        self.emit(item + sep)
+            if before or delim[0]:
+                with self.indent(len(before) + len(delim[0])):
+                    emit_list(items)
             else:
-                self.emit_empty_line()
-                with self.indent():
-                    for arg in args:
-                        self.emit_line(arg + ',')
-                self.emit_indent()
-                self.emit(')')
+                emit_list(items)
+        else:
+            if before or delim[0]:
+                self.emit(before + delim[0])
+            with self.indent():
+                for (i, item) in enumerate(items):
+                    if i == len(items) - 1 and skip_last_sep:
+                        self.emit(item)
+                    else:
+                        self.emit(item + sep)
+            if delim[1] or after:
+                self.emit(delim[1] + after)
+            elif delim[1]:
+                self.emit(delim[1])
+
+    @contextmanager
+    def block(self, before='', after='', delim=('{','}'), dent=None):
+        """
+        A context manager that emits configurable lines before and after an
+        indented block of text.
+
+        This is convenient for class and function definitions in some
+        languages.
+
+        Args:
+            before (str): The string to be output in the first line which is
+                not indented..
+            after (str): The string to be output in the last line which is
+                not indented.
+            delim (str, str): The first element is added immediately following
+                `before` and a space. The second element is added prior to a
+                space and then `after`.
+            dent (int): The amount to indent the block. If none, the default
+                indentation increment is used (four spaces or one tab).
+        """
+        assert len(delim) == 2 and isinstance(delim[0], str) and \
+            isinstance(delim[1], str), 'delim must be a tuple of two strings.'
+
+        if before:
+            self.emit('{} {}'.format(before, delim[0]))
+        else:
+            self.emit(delim[0])
+
+        with self.indent(dent):
+            yield
+
+        self.emit(delim[1] + after)
 
 class CodeGeneratorMonolingual(CodeGenerator):
     """Identical to CodeGenerator, except that an additional attribute `lang`
