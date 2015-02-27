@@ -102,9 +102,6 @@ class Compiler(object):
     def _process_file(self, source_path):
         """Renders a source file into its final form."""
 
-        with open(source_path) as f:
-            file_contents = f.read()
-
         if self._is_babel_generator(source_path):
             self._logger.info('Running generator at %s', source_path)
             # If there's no preamble, then we assume this is a Python file
