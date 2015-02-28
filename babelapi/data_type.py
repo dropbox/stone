@@ -642,7 +642,7 @@ class Struct(CompositeType):
                         raise Exception('No example with label %r for subtype '
                                         '%r' % (label, field.data_type.name))
                 elif (isinstance(field.data_type, List) and
-                          isinstance(field.data_type.data_type, CompositeType)):
+                        isinstance(field.data_type.data_type, CompositeType)):
                     example_copy[field.name] = [field.data_type.data_type.get_example(label)]
             return example_copy
 
@@ -704,9 +704,8 @@ class Union(CompositeType):
     def get_example(self, label):
         for field in self.fields:
             if (isinstance(field, Field)
-                and isinstance(field.data_type, CompositeType)
-                and field.data_type.has_example(label)):
-
+                    and isinstance(field.data_type, CompositeType)
+                    and field.data_type.has_example(label)):
                 return {field.name: field.data_type.get_example(label)}
         else:
             # Fallback to checking for direct symbols

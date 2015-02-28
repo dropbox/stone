@@ -169,7 +169,7 @@ class TestBabelInternal(unittest.TestCase):
         self.assertIn('is greater than', cm.exception.args[0])
 
         with self.assertRaises(ParameterError) as cm:
-             Float64(min_value=0, max_value=10**330)
+            Float64(min_value=0, max_value=10**330)
         self.assertIn('too large for a float', cm.exception.args[0])
 
         with self.assertRaises(ParameterError) as cm:
@@ -197,8 +197,8 @@ class TestBabelInternal(unittest.TestCase):
             'QuotaInfo',
             "Information about a user's space quota.",
             [
-             StructField('quota', UInt64(), 'Total amount of space.'),
-             ],
+                StructField('quota', UInt64(), 'Total amount of space.'),
+            ],
         )
 
         # add a example that doesn't fit the definition of a struct
@@ -222,8 +222,8 @@ class TestBabelInternal(unittest.TestCase):
             'AccountInfo',
             "Information about an account.",
             [
-             StructField('account_id', String(), 'Unique identifier for account.'),
-             StructField('quota_info', quota_info, 'Quota')
+                StructField('account_id', String(), 'Unique identifier for account.'),
+                StructField('quota_info', quota_info, 'Quota')
             ],
         )
 
@@ -249,7 +249,8 @@ class TestBabelInternal(unittest.TestCase):
             'Policy for managing write conflicts.',
             [
                 UnionField('reject', Symbol(), 'On a write conflict, reject the new file.'),
-                UnionField('overwrite', Symbol(), 'On a write conflict, overwrite the existing file.'),
+                UnionField('overwrite', Symbol(),
+                           'On a write conflict, overwrite the existing file.'),
                 UnionField('update_if_matching_parent_rev',
                       update_parent_rev,
                       'On a write conflict, overwrite the existing file.'),

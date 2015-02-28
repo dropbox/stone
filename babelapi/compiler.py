@@ -4,7 +4,6 @@ import imp
 import inspect
 import os
 import re
-import sys
 import shutil
 
 from babelapi.generator import Generator

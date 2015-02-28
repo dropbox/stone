@@ -100,7 +100,7 @@ class UnbabelGenerator(CodeGenerator):
         (List, ['data_type', 'min_items', 'max_items']),
         (String, ['min_length', 'max_length', 'pattern']),
         (Timestamp, ['format']),
-        ]
+    ]
 
     def format_data_type(self, data_type):
         """Helper function to format a data type.

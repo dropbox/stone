@@ -21,8 +21,8 @@ dist = setup(
               'babelapi.babel',
               'babelapi.lang'],
     long_description=open('README.rst').read(),
-    platforms=['CPython 2.6', 'CPython 2.7'],      
-    entry_points = {
+    platforms=['CPython 2.6', 'CPython 2.7'],
+    entry_points={
         'console_scripts': ['babelapi=babelapi.cli:main'],
     },
     classifiers=[
@@ -34,5 +34,5 @@ dist = setup(
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        ],
+    ],
 )

@@ -8,23 +8,13 @@ specific at all.
 
 import re
 from babelapi.data_type import (
-    Binary,
-    Boolean,
     CompositeType,
-    Float32,
-    Float64,
-    Field,
     Int32,
     Int64,
-    List,
-    Null,
     String,
-    Struct,
     SymbolField,
-    Timestamp,
     UInt32,
     UInt64,
-    Union,
 )
 from babelapi.data_type import (
     is_composite_type,
@@ -291,7 +281,7 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
             if data_type.fields:
                 for field in data_type.fields:
                     if (is_union_type(field.data_type)
-                        and field.data_type.unique_field_data_types()):
+                            and field.data_type.unique_field_data_types()):
 
                         # This is an optimization for the developer experience.
                         # Without optimzation, the developer needs to instantiate a
@@ -331,10 +321,10 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                                     ))
                         self.emit_empty_line()
                     else:
-                        assert_type = "assert isinstance({0}, {1}), '{0} must be of type {1}'".format(
-                            field.name,
-                            self._is_instance_type(field.data_type),
-                        )
+                        assert_type = ("assert isinstance({0}, {1}), '{0} must be of type {1}'"
+                            .format(
+                                field.name,
+                                self._is_instance_type(field.data_type)))
                         if field.nullable or field.optional:
                             # We conflate nullability and optionality in Python
                             self.emit_line('if {} is not None:'.format(field.name))
@@ -406,7 +396,6 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
             self.emit_line('return d')
         self.emit_empty_line()
 
-
     def _class_name_for_data_type(self, data_type):
         return self.lang.format_class(data_type.name)
 
@@ -471,8 +460,9 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
                 if isinstance(field, SymbolField):
                     self.emit_line('{} = object()'.format(self.lang.format_class(field.name)))
                 elif is_composite_type(field.data_type):
-                    self.emit_line('{0} = {1}'.format(self.lang.format_class(field.name),
-                                                      self._class_name_for_data_type(field.data_type)))
+                    self.emit_line('{0} = {1}'.format(
+                        self.lang.format_class(field.name),
+                        self._class_name_for_data_type(field.data_type)))
                 else:
                     raise ValueError('Only symbols and composite types for union fields.')
             self.emit_empty_line()
@@ -513,16 +503,16 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
 
                 for field in data_type.fields:
                     if not isinstance(field, SymbolField):
-                        assert_type = "assert isinstance({0}, {1}), '{0} must be of type {1}'".format(
-                            field.name,
-                            self._is_instance_type(field.data_type),
-                        )
+                        assert_type = ("assert isinstance({0}, {1}), '{0} must be of type {1}'"
+                            .format(
+                                field.name,
+                                self._is_instance_type(field.data_type)))
                     else:
-                        assert_type = "assert isinstance({0}, {1}), '{0} must be of type {2}'".format(
-                            field.name,
-                            'bool',
-                            'bool',
-                        )
+                        assert_type = ("assert isinstance({0}, {1}), '{0} must be of type {2}'"
+                            .format(
+                                field.name,
+                                'bool',
+                                'bool'))
                     self.emit_line('if {} is not None:'.format(field.name))
                     with self.indent():
                         self.emit_line(assert_type)
@@ -706,7 +696,8 @@ class DbxPythonSDKGenerator(CodeGeneratorMonolingual):
         with self.indent():
             extra_request_args = None
             if response_binary_body:
-                extra_request_args = [('download_path', 'str', 'Path on local machine to save file.')]
+                extra_request_args = [
+                    ('download_path', 'str', 'Path on local machine to save file.')]
             self._generate_docstring_for_func(
                 request_data_type,
                 response_data_type,

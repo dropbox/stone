@@ -40,7 +40,8 @@ class RubyTargetLanguage(TargetLanguage):
         return RubyTargetLanguage._type_table.get(data_type.__class__, data_type.name)
 
     def format_obj(self, o):
-        assert not isinstance(o, dict), "Bad argument to format_obj: pprint's dict formatting is not valid Ruby."
+        assert not isinstance(o, dict), \
+            "Bad argument to format_obj: pprint's dict formatting is not valid Ruby."
         if o is True:
             return 'true'
         if o is False:

@@ -195,7 +195,7 @@ def _json_decode_helper(data_type, obj, strict, validate_primitives=True):
                 setattr(o, name, v)
         data_type.validate(o)
     elif isinstance(data_type, bv.Union):
-        val = None # Symbols do not have values
+        val = None  # Symbols do not have values
         if isinstance(obj, six.string_types):
             # Variant is a symbol
             tag = obj

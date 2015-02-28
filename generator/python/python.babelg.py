@@ -217,7 +217,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         the appropriate validation object in Python.
         """
         if is_list_type(data_type):
-            v ='bv.List({})'.format(
+            v = 'bv.List({})'.format(
                 self._func_args_from_dict({
                     'item_validator': self._determine_validator_type(data_type.data_type),
                     'min_items': data_type.min_items,
@@ -654,7 +654,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit('{!r}: ({!r}, bv.FunctionSignature('.format(route.name, host_ident))
                 with self.indent():
                     self.emit('bv.FunctionStyle.{},'.format(style_enum))
-                    for t in (route.request_data_type, route.response_data_type, route.error_data_type):
+                    for t in (route.request_data_type, route.response_data_type,
+                              route.error_data_type):
                         self.emit('{},'.format(self._determine_validator_type(t)))
                 self.emit(')),')
         self.emit('}')

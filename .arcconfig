@@ -3,5 +3,11 @@
   "conduit_uri" : "https://tails.corp.dropbox.com/api/",
   "copyright_holder" : "Dropbox",
   "repository.callsign": "BABEL",
-  "immutable_history": false
+  "immutable_history": false,
+
+  "lint_engine": "BabelLintEngine",
+
+  "phutil_libraries": {
+    "babel-arcanist-utils": ".arc_lib"
+  }
 }

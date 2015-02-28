@@ -55,10 +55,12 @@ class BabelLexer(object):
             else:
                 if r is None and self.cur_indent > 0:
                     if self.last_token and self.last_token.type not in ('NEWLINE', 'LINE'):
-                        newline_token = self._create_token('NEWLINE', '\n', self.lex.lineno, self.lex.lexpos)
+                        newline_token = self._create_token('NEWLINE', '\n', self.lex.lineno,
+                                                           self.lex.lexpos)
                         self.tokens_queue.append(newline_token)
                     dedent_count = self.cur_indent / 4
-                    dedent_token = self._create_token('DEDENT', '\t', self.lex.lineno, self.lex.lexpos)
+                    dedent_token = self._create_token('DEDENT', '\t', self.lex.lineno,
+                                                      self.lex.lexpos)
                     self.tokens_queue.extend([dedent_token] * dedent_count)
 
                     self.cur_indent = 0
@@ -90,11 +92,11 @@ class BabelLexer(object):
 
     # List of token names
     tokens = (
-       'ID',
-       'KEYWORD',
-       'PATH',
-       'PIPE',
-       'DOT',
+        'ID',
+        'KEYWORD',
+        'PATH',
+        'PIPE',
+        'DOT',
     )
 
     # Whitespace tokens
@@ -128,8 +130,8 @@ class BabelLexer(object):
 
     # Regular expression rules for simple tokens
     t_DOT = r'\.'
-    t_LPAR  = r'\('
-    t_RPAR  = r'\)'
+    t_LPAR = r'\('
+    t_RPAR = r'\)'
     t_EQ = r'='
     t_COMMA = r','
     t_PIPE = r'\|'

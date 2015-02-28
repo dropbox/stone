@@ -385,7 +385,10 @@ class BabelParser(object):
             p[0] = p[2]
 
     def p_struct(self, p):
-        'struct : STRUCT ID inheritance coverage NEWLINE INDENT docsection field_list example_list DEDENT'
+        """
+        struct : STRUCT ID inheritance coverage NEWLINE \
+                     INDENT docsection field_list example_list DEDENT
+        """
         p[0] = BabelTypeDef(p.lineno(1), p.lexpos(1), p[1], p[2], extends=p[3], coverage=p[4])
         if p[7]:
             p[0].set_doc(p[7])
