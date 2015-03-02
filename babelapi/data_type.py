@@ -773,6 +773,10 @@ def is_list_type(data_type):
     return isinstance(data_type, List)
 def is_null_type(data_type):
     return isinstance(data_type, Null)
+def is_numeric_type(data_type):
+    return is_integer_type(data_type) or is_float_type(data_type)
+def is_primitive_type(data_type):
+    return isinstance(data_type, PrimitiveType)
 def is_string_type(data_type):
     return isinstance(data_type, String)
 def is_symbol_type(data_type):
@@ -785,5 +789,3 @@ def is_timestamp_type(data_type):
     return isinstance(data_type, Timestamp)
 def is_union_type(data_type):
     return isinstance(data_type, Union)
-def is_numeric_type(data_type):
-    return is_integer_type(data_type) or is_float_type(data_type)
