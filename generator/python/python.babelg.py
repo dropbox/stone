@@ -374,6 +374,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit('"""')
                 if field.doc:
                     self.emit_wrapped_text(self.docf(field.doc))
+                    # Sphinx wants an extra line between the text and the
+                    # rtype declaration.
+                    self.emit()
                 self.emit(':rtype: {}'.format(self._python_type_mapping(field.data_type)))
                 self.emit('"""')
                 self.emit('if self._{}_present:'.format(field_name))
