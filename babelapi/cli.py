@@ -85,7 +85,7 @@ def main():
                 print >> sys.stderr, 'A traceback is included below in case ' \
                     'this is a bug in Babel.\n', traceback.format_exc()
             else:
-                print >> sys.stderr, 'If the error is not clear, try using ' \
+                print >> sys.stderr, 'If the error is unclear, try using ' \
                                      'the -v flag.'
             sys.exit(1)
         if api is None:

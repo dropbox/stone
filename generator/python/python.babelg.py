@@ -75,39 +75,32 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 raise TypeError('Cannot handle type %r' % type(data_type))
         self._generate_routes(namespace)
 
-    def emit_doc_text(self, s):
-        """Emits wrapped lines. All lines after the first are indented."""
-        self.emit_wrapped_text(s,
-                               initial_prefix='',
-                               subsequent_prefix='    ')
-
-    def docf(self, doc):
+    def _docf(self, tag, val):
         """
-        Substitutes tags in Babel docs with their Python-doc-friendly
-        counterparts. A tag has the following format:
-
-        :<tag>:`<value>`
-
-        Example tags are 'route' and 'struct'.
+        Callback used as the handler argument to process_docs(). This converts
+        Babel doc references to Sphinx-friendly annotations.
         """
-        if not doc:
-            return
-        for match in doc_sub_tag_re.finditer(doc):
-            matched_text = match.group(0)
-            tag = match.group('tag')
-            val = match.group('val')
-            if tag == 'struct':
-                doc = doc.replace(matched_text, ':class:`{}`'.format(val))
-            elif tag == 'route':
-                doc = doc.replace(matched_text, val)
-            elif tag == 'link':
-                anchor, link = val.rsplit(' ', 1)
-                doc = doc.replace(matched_text, '`{} <{}>`_'.format(anchor, link))
-            elif tag == 'val':
-                doc = doc.replace(matched_text, '{}'.format(self.lang.format_obj(val)))
+        if tag == 'type':
+            return ':class:`{}`'.format(val)
+        elif tag == 'route':
+            # TODO(kelkabany): This generator doesn't generate methods for
+            # routes. But, for a generator that does, it would be nice to
+            # override this to make it reference the proper method.
+            return val
+        elif tag == 'link':
+            anchor, link = val.rsplit(' ', 1)
+            return '`{} <{}>`_'.format(anchor, link)
+        elif tag == 'val':
+            if val == 'null':
+                return 'None'
+            elif val == 'true' or val == 'false':
+                return val.capitalize()
             else:
-                doc = doc.replace(matched_text, '``{}``'.format(val))
-        return doc
+                return val
+        elif tag == 'field':
+            return '``{}``'.format(val)
+        else:
+            raise RuntimeError('Unknown doc ref tag %r' % tag)
 
     def _python_type_mapping(self, data_type):
         """Map Babel data types to their most natural equivalent in Python
@@ -159,13 +152,15 @@ class PythonGenerator(CodeGeneratorMonolingual):
         with self.indent():
             if data_type.doc:
                 self.emit('"""')
-                self.emit_wrapped_text(self.docf(data_type.doc))
+                self.emit_wrapped_text(
+                    self.process_doc(data_type.doc, self._docf))
                 self.emit()
                 for field in data_type.fields:
                     if field.doc:
-                        self.emit_doc_text(':ivar {}: {}'.format(
+                        self.emit_wrapped_text(':ivar {}: {}'.format(
                             self.lang.format_variable(field.name),
-                            self.docf(field.doc)))
+                            self.process_doc(field.doc, self._docf)),
+                            subsequent_prefix='    ')
                 self.emit('"""')
             self.emit()
 
@@ -373,11 +368,13 @@ class PythonGenerator(CodeGeneratorMonolingual):
             with self.indent():
                 self.emit('"""')
                 if field.doc:
-                    self.emit_wrapped_text(self.docf(field.doc))
+                    self.emit_wrapped_text(
+                        self.process_doc(field.doc, self._docf))
                     # Sphinx wants an extra line between the text and the
                     # rtype declaration.
                     self.emit()
-                self.emit(':rtype: {}'.format(self._python_type_mapping(field.data_type)))
+                self.emit(':rtype: {}'.format(
+                    self._python_type_mapping(field.data_type)))
                 self.emit('"""')
                 self.emit('if self._{}_present:'.format(field_name))
                 with self.indent():
@@ -473,22 +470,24 @@ class PythonGenerator(CodeGeneratorMonolingual):
         with self.indent():
             if data_type.doc:
                 self.emit('"""')
-                self.emit_wrapped_text(self.docf(data_type.doc))
+                self.emit_wrapped_text(
+                    self.process_doc(data_type.doc, self._docf))
                 self.emit()
                 for field in data_type.fields:
                     if is_symbol_type(field.data_type) or is_any_type(field.data_type):
                         ivar_doc = ':ivar {}: {}'.format(
-                            self.lang.format_variable(field.name), self.docf(field.doc))
+                            self.lang.format_variable(field.name),
+                            self.process_doc(field.doc, self._docf))
                     elif is_composite_type(field.data_type):
                         ivar_doc = ':ivar {} {}: {}'.format(
                             self.lang.format_class(field.data_type.name),
                             self.lang.format_variable(field.name),
-                            self.docf(field.doc))
+                            self.process_doc(field.doc, self._docf))
                     else:
                         ivar_doc = ':ivar {} {}: {}'.format(
                             self._python_type_mapping(field.data_type),
                             self.lang.format_variable(field.name), field.doc)
-                    self.emit_doc_text(ivar_doc)
+                    self.emit_wrapped_text(ivar_doc, subsequent_prefix='    ')
                 self.emit('"""')
             self.emit()
 

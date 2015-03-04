@@ -355,19 +355,22 @@ class Field(object):
     def __init__(self,
                  name,
                  data_type,
-                 doc):
+                 doc,
+                 token):
         """
         Creates a new Field.
 
         :param str name: Name of the field.
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
-        :param bool deprecated: Whether the field is deprecated.
+        :param token: Raw field definition from the parser.
+        :type token: babelapi.babel.parser.BabelField
         """
         self.name = name
         self.data_type = data_type
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
+        self._token = token
 
     def __repr__(self):
         return 'Field(%r, %r)' % (self.name,
@@ -382,6 +385,7 @@ class StructField(Field):
                  name,
                  data_type,
                  doc,
+                 token,
                  deprecated=False):
         """
         Creates a new Field.
@@ -389,9 +393,11 @@ class StructField(Field):
         :param str name: Name of the field.
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
+        :param token: Raw field definition from the parser.
+        :type token: babelapi.babel.parser.BabelField
         :param bool deprecated: Whether the field is deprecated.
         """
-        super(StructField, self).__init__(name, data_type, doc)
+        super(StructField, self).__init__(name, data_type, doc, token)
         self.deprecated = deprecated
         self.has_default = False
         self._default = None
@@ -425,8 +431,9 @@ class UnionField(Field):
                  name,
                  data_type,
                  doc,
+                 token,
                  catch_all=False):
-        super(UnionField, self).__init__(name, data_type, doc)
+        super(UnionField, self).__init__(name, data_type, doc, token)
         self.catch_all = catch_all
 
 class CompositeType(DataType):
@@ -437,7 +444,7 @@ class CompositeType(DataType):
 
     DEFAULT_EXAMPLE_LABEL = 'default'
 
-    def __init__(self, name, doc, fields):
+    def __init__(self, name, doc, fields, token):
         """
         Creates a CompositeType.
 
@@ -447,12 +454,14 @@ class CompositeType(DataType):
         :param str name: Name of type.
         :param str doc: Description of type.
         :param list(Field) fields: Ordered list of fields for type.
-        :param dict example: An example of the type as a JSON-compatible dict.
+        :param token: Raw type definition from the parser.
+        :type token: babelapi.babel.parser.BabelTypeDef
         """
         self._name = name
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self.fields = fields
+        self._token = token
         self.examples = {}
 
     @property
@@ -486,11 +495,15 @@ class Struct(CompositeType):
 
     composite_type = 'struct'
 
-    def __init__(self, name, doc, fields, supertype=None, coverage_names=None):
+    def __init__(self, name, doc, fields, token, supertype=None,
+                 coverage_names=None):
         """
         :param Struct supertype: If this should subtype another.
+
+        See CompositeType for other parameter definitions.
+        TODO(kelkabany): Remove coverage concept.
         """
-        super(Struct, self).__init__(name, doc, fields)
+        super(Struct, self).__init__(name, doc, fields, token)
         self.coverage_names = coverage_names
         self.coverage = []
         self.supertype = supertype
@@ -654,11 +667,16 @@ class Union(CompositeType):
 
     composite_type = 'union'
 
-    def __init__(self, name, doc, fields, subtype=None, catch_all_field=None):
+    def __init__(self, name, doc, fields, token, subtype=None,
+                 catch_all_field=None):
         """
         :param Union subtype: If this should supertype another.
+        :param UnionField catch_all_field: The field designated as the
+            catch-all. This field should be a member of the list of fields.
+
+        See CompositeType for other parameter definitions.
         """
-        super(Union, self).__init__(name, doc, fields)
+        super(Union, self).__init__(name, doc, fields, token)
         self.catch_all_field = catch_all_field
         self.subtype = subtype
 
@@ -752,7 +770,7 @@ class TagRef(object):
     def __repr__(self):
         return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
 
-Empty = Struct('Empty', None, [])
+Empty = Struct('Empty', None, [], None)
 
 def is_any_type(data_type):
     return isinstance(data_type, Any)

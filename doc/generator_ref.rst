@@ -269,6 +269,17 @@ Helpers for Code Generation
     space and then ``after``. ``dent`` is the amount to indent the block. If
     none, the default indentation increment is used.
 
+``process_doc(doc, handler)``
+    Helper for parsing documentation `references <lang_ref.rst#doc-refs>`_ in
+    Babel docstrings and replacing them with more suitable annotations for the
+    target language.
+
+    ``doc`` is the docstring to scan for references. ``handler`` is a function
+     you define with the following signature: `(tag: str, value: str) -> str`.
+     ``handler`` will be called for every reference found in the docstring with
+     the tag and value parsed for you. The returned string will be substituted
+     in the docstring for the reference.
+
 Generator Instance Variables
 ============================
 

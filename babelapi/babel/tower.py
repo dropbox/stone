@@ -2,6 +2,7 @@ import copy
 import inspect
 import logging
 import os
+import re
 
 from babelapi.babel.parser import BabelParser
 from babelapi.data_type import (
@@ -44,6 +45,11 @@ from babelapi.babel.parser import (
 )
 
 class InvalidSpec(Exception): pass
+
+# Patterns for references in documentation
+doc_ref_re = re.compile(r':(?P<tag>[A-z]+):`(?P<val>.*?)`')
+doc_ref_val_re = re.compile(
+    r'^(null|true|false|-?\d+(\.\d*)?(e-?\d+)?|"[^\\"]*")$')
 
 class TowerOfBabel(object):
 
@@ -111,8 +117,9 @@ class TowerOfBabel(object):
 
     def _create_alias(self, env, item):
         if item.name in env:
-            raise InvalidSpec('Line %d: Symbol %r already defined.' %
-                              (item.lineno, item.name))
+            raise InvalidSpec(
+                'Line %d: Symbol %r already defined on line %d.' %
+                (item.lineno, item.name, env[item.name]._token.lineno))
         elif item.type_ref.name not in env:
             raise InvalidSpec('Line %d: Symbol %r is undefined.' %
                               (item.lineno, item.type_ref.name))
@@ -121,10 +128,12 @@ class TowerOfBabel(object):
         if inspect.isclass(obj):
             env[item.name] = self._instantiate_data_type(
                 obj, dict(item.type_ref.attrs), item.lineno)
+        elif isinstance(obj, ApiRoute):
+            raise InvalidSpec('Line %d: Cannot alias a route.' % item.lineno)
         elif item.type_ref.attrs:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise InvalidSpec('Line %d: Attributes cannot be specified for'
+            raise InvalidSpec('Line %d: Attributes cannot be specified for '
                               'instantiated type %r.' %
                               (item.lineno, item.type_ref.name))
         else:
@@ -135,6 +144,15 @@ class TowerOfBabel(object):
             env[item.name] = ref
 
     def _create_type(self, env, item):
+        if item.name in env:
+            # TODO(kelkabany): This reports the wrong line number for the
+            # original definition if an alias was the source of the name
+            # conflict. It reports the line the aliased type was defined,
+            # rather than the alias itself. Since aliases aren't tracked in
+            # the environment, fixing this will require a refactor.
+            raise InvalidSpec(
+                'Line %d: Symbol %r already defined on line %d.' %
+                (item.lineno, item.name, env[item.name]._token.lineno))
         if item.composite_type == 'struct':
             supertype = None
             if item.extends:
@@ -147,8 +165,8 @@ class TowerOfBabel(object):
             for babel_field in item.fields:
                 api_type_field = self._create_struct_field(env, babel_field)
                 api_type_fields.append(api_type_field)
-            api_type = Struct(item.name, item.doc, api_type_fields, supertype,
-                              item.coverage)
+            api_type = Struct(item.name, item.doc, api_type_fields, item,
+                              supertype, item.coverage)
         elif item.composite_type == 'union':
             subtype = None
             if item.extends:
@@ -180,8 +198,8 @@ class TowerOfBabel(object):
                     catch_all_field = api_type_field
                 api_type_fields.append(api_type_field)
 
-            api_type = Union(item.name, item.doc, api_type_fields, subtype,
-                             catch_all_field)
+            api_type = Union(item.name, item.doc, api_type_fields, item,
+                             subtype, catch_all_field)
         else:
             raise AssertionError('Unknown composite_type %r' %
                                  item.composite_type)
@@ -215,6 +233,7 @@ class TowerOfBabel(object):
                 babel_field.name,
                 data_type,
                 babel_field.doc,
+                babel_field,
                 deprecated=babel_field.deprecated,
             )
             if babel_field.has_default:
@@ -251,7 +270,8 @@ class TowerOfBabel(object):
             babelapi.data_type.UnionField: A field of a union.
         """
         if isinstance(babel_field, BabelSymbolField):
-            api_type_field = UnionField(babel_field.name, Symbol(), babel_field.doc)
+            api_type_field = UnionField(babel_field.name, Symbol(),
+                                        babel_field.doc, babel_field)
         elif babel_field.type_ref.name not in env:
             raise InvalidSpec('Line %d: Symbol %r is undefined.' %
                               (babel_field.lineno, babel_field.type_ref.name))
@@ -264,6 +284,7 @@ class TowerOfBabel(object):
                 babel_field.name,
                 data_type,
                 babel_field.doc,
+                babel_field,
             )
         return api_type_field
 
@@ -324,6 +345,9 @@ class TowerOfBabel(object):
             data_type = self._instantiate_data_type(
                 obj, dict(resolved_data_type_attrs), type_ref.lineno)
             data_type.nullable = type_ref.nullable
+        elif isinstance(obj, ApiRoute):
+            raise InvalidSpec('Line %d: A route is not a valid field type.' %
+                              type_ref.lineno)
         elif type_ref.attrs:
             # An instance of a type cannot have any additional
             # attributes specified.
@@ -357,6 +381,37 @@ class TowerOfBabel(object):
                 new_attrs.append((k, v))
         return new_attrs
 
+    def _create_route(self, env, item):
+        """
+        Constructs a route and adds it to the environment.
+
+        Args:
+            env (dict): The environment of defined symbols. A new key is added
+                corresponding to the name of this new route.
+            item (BabelRouteDef): Raw route definition from the parser.
+
+        Returns:
+            babelapi.api.ApiRoute: A fully-defined route.
+        """
+        if item.name in env:
+            raise InvalidSpec(
+                'Line %d: Symbol %r already defined on line %d.' %
+                (item.lineno, item.name, env[item.name]._token.lineno))
+        request_data_type = self._resolve_type(env, item.request_type_ref)
+        response_data_type = self._resolve_type(env, item.response_type_ref)
+        error_data_type = self._resolve_type(env, item.error_type_ref)
+        route = ApiRoute(
+            item.name,
+            item.doc,
+            request_data_type,
+            response_data_type,
+            error_data_type,
+            item.attrs,
+            item,
+        )
+        env[route.name] = route
+        return route
+
     def add_to_api(self, path, desc):
 
         if isinstance(desc[0], BabelNamespace):
@@ -380,21 +435,25 @@ class TowerOfBabel(object):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
             elif isinstance(item, BabelRouteDef):
-                request_data_type = self._resolve_type(env, item.request_type_ref)
-                response_data_type = self._resolve_type(env, item.response_type_ref)
-                error_data_type = self._resolve_type(env, item.error_type_ref)
-                route = ApiRoute(
-                    item.name,
-                    item.doc,
-                    request_data_type,
-                    response_data_type,
-                    error_data_type,
-                    item.attrs,
-                )
+                route = self._create_route(env, item)
                 namespace.add_route(route)
             else:
                 raise AssertionError('Unknown Babel Declaration Type %r' %
                                      item.__class__.__name__)
+
+        # Validate the doc refs of each api entity that has a doc
+        for data_type in namespace.data_types:
+            if data_type.doc:
+                self._validate_doc_refs(
+                    env, data_type.doc, data_type._token.lineno + 1)
+            for field in data_type.fields:
+                if field.doc:
+                    self._validate_doc_refs(
+                        env, field.doc, field._token.lineno + 1, data_type)
+        for route in namespace.routes:
+            if route.doc:
+                self._validate_doc_refs(
+                    env, route.doc, route._token.lineno + 1)
 
         # Coverage is specified as a forward declaration so here's where we
         # resolve the symbols.
@@ -424,3 +483,81 @@ class TowerOfBabel(object):
             else:
                 raise AssertionError('Unknown Babel Declaration Type %r' %
                                      item.__class__.__name__)
+
+    def _validate_doc_refs(self, env, doc, lineno, type_context=None):
+        """
+        Validates that all the documentation references in a docstring are
+        formatted properly, have valid values, and make references to valid
+        symbols.
+
+        Args:
+            env (dict): The environment of defined symbols.
+            doc (str): The docstring to validate.
+            lineno (int): The line number the docstring begins on in the spec.
+            type_context (babelapi.data_type.CompositeType): If the docstring
+                belongs to a user-defined type (Struct or Union) or one of its
+                fields, set this to the type. This is needed for "field" doc
+                refs that don't name a type to be validated.
+        """
+        for match in doc_ref_re.finditer(doc):
+            tag = match.group('tag')
+            val = match.group('val')
+            if tag == 'field':
+                if '.' in val:
+                    type_name, field_name = val.split('.', 1)
+                    if type_name not in env:
+                        raise InvalidSpec(
+                            'Line %d: Bad doc reference to field %s of '
+                            'unknown type %r.' %
+                            (lineno, field_name, type_name))
+                    elif isinstance(env[type_name], ApiRoute):
+                        raise InvalidSpec(
+                            'Line %d: Bad doc reference to field %s of '
+                            'route %r.' %
+                            (lineno, field_name, type_name))
+                    elif not any(field.name == field_name
+                                 for field in env[type_name].all_fields):
+                        raise InvalidSpec(
+                            'Line %d: Bad doc reference to unknown field %r.' %
+                            (lineno, val))
+                else:
+                    # Referring to a field that's a member of this type
+                    assert type_context is not None
+                    if not any(field.name == val
+                               for field in type_context.all_fields):
+                        raise InvalidSpec(
+                            'Line %d: Bad doc reference to unknown field %r.' %
+                            (lineno, val))
+            elif tag == 'link':
+                if not (1 < val.rfind(' ') < len(val) - 1):
+                    # There must be a space somewhere in the middle of the
+                    # string to separate the title from the uri.
+                    raise InvalidSpec(
+                        'Line %d: Bad doc reference to link (need a title and '
+                        'uri separated by a space): %r.' %
+                        (lineno, val))
+            elif tag == 'route':
+                if val not in env:
+                    raise InvalidSpec(
+                        'Line %d: Unknown doc reference to route %r.' %
+                        (lineno, val))
+                elif not isinstance(env[val], ApiRoute):
+                    raise InvalidSpec('Line %d: Doc reference to type %r is '
+                        'not a struct or union.' % (lineno, val))
+            elif tag == 'type':
+                if val not in env:
+                    raise InvalidSpec(
+                        'Line %d: Unknown doc reference to type %r.' %
+                        (lineno, val))
+                elif not isinstance(env[val], (Struct, Union)):
+                    raise InvalidSpec('Line %d: Documentation reference to '
+                        'type %r is not a struct or union.' % (lineno, val))
+            elif tag == 'val':
+                if not doc_ref_val_re.match(val):
+                    raise InvalidSpec(
+                        'Line %d: Bad doc reference value %r.' %
+                        (lineno, val))
+            else:
+                raise InvalidSpec(
+                    'Line %d: Unknown doc reference tag %r.' %
+                    (lineno, tag))

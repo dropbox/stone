@@ -115,13 +115,19 @@ class ApiRoute(object):
                  request_data_type,
                  response_data_type,
                  error_data_type,
-                 attrs):
+                 attrs,
+                 token):
         """
         :param str name: Designated name of the endpoint.
         :param str doc: Description of the endpoint.
         :type request_data_type: :class:`babelapi.data_type.DataType`
         :type response_data_type: :class:`babelapi.data_type.DataType`
         :type error_data_type: :class:`babelapi.data_type.DataType`
+        :param dict attrs: Map of string keys to values that are either int,
+            float, bool, str, or None. These are the route attributes assigned
+            in the spec.
+        :param token: Raw route definition from the parser.
+        :type token: babelapi.babel.parser.BabelRouteDef
         """
 
         self.name = name
@@ -131,3 +137,4 @@ class ApiRoute(object):
         self.response_data_type = response_data_type
         self.error_data_type = error_data_type
         self.attrs = attrs
+        self._token = token

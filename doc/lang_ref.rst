@@ -520,47 +520,60 @@ All header files must live in the same folder as the specs that rely on them.
 Also, all ``include`` directives must come immediately after ``namespace``
 directive or another ``include``.
 
+.. _doc:
+
 Documentation
 =============
 
 Documentation strings are an important part of specifications, which is why
-they're a part of routes, structs, struct fields, unions, and union tags.
-It's expected that there should be documentation for almost every place that
-documentation strings are possible. It's not required only because some
-definitions are self-explanatory or adding documentation would be redundant, as
-is often the case when a struct field (with a doc) references another struct
-(with a doc).
+they can be attached to routes, structs, struct fields, unions, and union
+options. It's expected that most elements should be documented. It's not
+required only because some definitions are self-explanatory or adding
+documentation would be redundant, as is often the case when a struct field
+(with a doc) references a struct (with a doc).
 
 Documentation is accessible to generators. Code generators will inject
 documentation into the language objects that represent routes, structs, and
 unions. Generators for API documentation will find documentation strings
 especially useful.
 
+.. _doc-refs:
+
 References
 ----------
 
-References help generators tailor Babel documentation strings for a target
+References help generators tailor documentation strings for a target
 programming language.
 
 References have the following format::
 
     :tag:`value`
 
-Supported tags are ``route``, ``struct``, ``field``, ``link``, and ``val``.
+Supported tags are ``route``, ``type``, ``field``, ``link``, and ``val``.
 
 route
-    A reference to a route. Code generators should reference the class that
-    represents the route.
+    A reference to a route. The value should be the name of the route. Code
+    generators should reference the class or function that represents the route.
 type
-    A reference to a data type, whether a primitive or composite type.
+    A reference to a user-defined data type (Struct or Union). The value should
+    be the name of the user-defined type.
 field
-    A reference to a field of a struct or a tag of a union.
+    A reference to a field of a struct or a tag of a union. If the field being
+    referenced is a member of a different type than the docstring, then use the
+    format `TypeName.field_name`. Otherwise, use just the field name as the
+    value.
 link
-    A hyperlink. The format of the value is "<description...> <url>".
-    Generators should convert this to a hyperlink for the target language.
+    A hyperlink. The format of the value is ``<title...> <uri>``, e.g.
+    ``Babel Repo https://github.com/dropbox/babelapi``. Everything after the
+    last space is considered the URI. The rest is treated as the title. For
+    this reason, you should ensure that your URIs are
+    `percent encoded <http://en.wikipedia.org/wiki/Percent-encoding>`_.
+    Generators should convert this to a hyperlink understood by the target
+    language.
 val
-    A value. Generators should convert this to the native representation of the
-    value for the target language.
+    A value. Supported values include ``null``, ``true``, ``false``, integers,
+    floats, and strings. Generators should convert the value to the native
+    representation of the value for the target language.
 
 Formal Grammar
 ===============

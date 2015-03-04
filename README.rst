@@ -25,7 +25,7 @@ actively worked on, and the intention is to support
         * `Nullable Type <doc/lang_ref.rst#nullable-type>`_
         * `Route <doc/lang_ref.rst#route>`_
         * `Include <doc/lang_ref.rst#include>`_
-        * `Documentation <doc/lang_ref.rst#documentation>`_
+        * `Documentation <doc/lang_ref.rst#doc>`_
         * `Formal Grammar <doc/lang_ref.rst#formal-grammar>`_
     * `Using Generated Code <doc/using_generator.rst>`_
         * `Compile with the CLI <doc/using_generator.rst#compile-with-the-cli>`_

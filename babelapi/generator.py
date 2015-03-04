@@ -4,6 +4,8 @@ import logging
 import os
 import textwrap
 
+from babelapi.babel.tower import doc_ref_re
+
 class Generator(object):
     """
     The parent class for all generators. All generators should extend this
@@ -165,6 +167,36 @@ class Generator(object):
                                     break_long_words=break_long_words,
                                     break_on_hyphens=break_on_hyphens,
                                     ) + '\n')
+
+    @classmethod
+    def process_doc(cls, doc, handler):
+        """
+        Helper for parsing documentation references in Babel docstrings and
+        replacing them with more suitable annotations for the generated output.
+
+        Args:
+            doc (str): A Babel docstring.
+            handler: A function with the following signature:
+                `(tag: str, value: str) -> str`. It will be called for every
+                reference found in the docstring with the tag and value parsed
+                for you. The returned string will be substituted in the
+                docstring in place of the reference.
+        """
+        cur_index = 0
+        parts = []
+        for match in doc_ref_re.finditer(doc):
+            # Append the part of the doc that is not part of any reference.
+            start, end = match.span()
+            parts.append(doc[cur_index:start])
+            cur_index = end
+
+            # Call the handler with the next tag and value.
+            tag = match.group('tag')
+            val = match.group('val')
+            sub = handler(tag, val)
+            parts.append(sub)
+        parts.append(doc[cur_index:])
+        return ''.join(parts)
 
 class CodeGenerator(Generator):
     """
