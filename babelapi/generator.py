@@ -135,7 +135,7 @@ class Generator(object):
         else:
             self.emit_raw('\n')
 
-    def emit_wrapped_text(self, s, initial_prefix='', subsequent_prefix='',
+    def emit_wrapped_text(self, s, prefix='', initial_prefix='', subsequent_prefix='',
             width=80, break_long_words=False, break_on_hyphens=False):
         """
         Adds the input string to the output buffer with indentation and
@@ -144,6 +144,7 @@ class Generator(object):
 
         Args:
             s (str): The input string to wrap.
+            prefix (str): The string to prepend to *every* line.
             initial_prefix (str): The string to prepend to the first line of
                 the wrapped string. Note that the current indentation is
                 already added to each line.
@@ -160,9 +161,11 @@ class Generator(object):
                 hyphens part of compound words.
         """
         indent = self.make_indent()
+        prefix = indent + prefix
+
         self.emit_raw(textwrap.fill(s,
-                                    initial_indent=indent+initial_prefix,
-                                    subsequent_indent=indent+subsequent_prefix,
+                                    initial_indent=prefix+initial_prefix,
+                                    subsequent_indent=prefix+subsequent_prefix,
                                     width=width,
                                     break_long_words=break_long_words,
                                     break_on_hyphens=break_on_hyphens,
