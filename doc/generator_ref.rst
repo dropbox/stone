@@ -31,7 +31,7 @@ Here's a simple no-op generator::
     from babelapi.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
-        def generate(self):
+        def generate(self, api):
             pass
 
 Assuming that the generator is saved in your current directory as
@@ -40,12 +40,6 @@ Assuming that the generator is saved in your current directory as
 invoke the generator with the following command::
 
     $ babelapi example.babelg.py users.babel .
-
-If you've used our `included Python generator <using_generator.rst#python-guide>`_
-then you should be aware that ``python`` is a reserved name for a generator.
-Since you're making your own generator, you have to specify the full path to
-it. That does ensure, however, that there will not be a name conflict with an
-included generator, since yours will always end in ``.babelg.py``.
 
 Generating Output Files
 =======================

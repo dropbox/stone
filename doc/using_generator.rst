@@ -41,7 +41,7 @@ command-line interface (CLI)::
       -v, --verbose  Print debugging statements.
 
 We'll compile the ``users.babel`` example from the
-`Language Reference <lang_ref.rst>`_. THe first argument is the path to the
+`Language Reference <lang_ref.rst>`_. The first argument is the path to the
 Python generator which can be found in the ``babelapi`` folder::
 
     $ babelapi generator/python/python.babelg.py users.babel .
@@ -52,10 +52,10 @@ Python generator which can be found in the ``babelapi`` folder::
     INFO:bablesdk.generator.PythonGenerator:Copying babel_serializers.py to output folder
     INFO:bablesdk.generator.PythonGenerator:Generating ./users.py
 
-The first argument, ``python``, selects the included Python code generator.
-``users.babel`` is the spec file to compile. If we had another spec file, we
-could list it right after ``users.babel``. The ``.`` says to save the output
-of the code generator to the current directory.
+The first argument selects the included Python code generator. ``users.babel``
+is the spec file to compile. If we had another spec file, we could list it
+right after ``users.babel``. The ``.`` says to save the output of the code
+generator to the current directory.
 
 Python Guide
 ============
