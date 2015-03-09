@@ -73,7 +73,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self._generate_union_class(data_type)
             else:
                 raise TypeError('Cannot handle type %r' % type(data_type))
-        self._generate_routes(namespace)
 
     def _docf(self, tag, val):
         """
@@ -645,33 +644,3 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit('{0}.{1} = {0}({1!r})'.format(class_name, field_name))
         if lineno != self.lineno:
             self.emit()
-
-    #
-    # Routes
-    #
-
-    STYLE_MAPPING = {
-        # Maps from the 'style' attr in the Babel file to the FunctionStyle enum values.
-        None: 'RPC',
-        'upload': 'UPLOAD',
-        'download': 'DOWNLOAD',
-    }
-
-    def _generate_routes(self, namespace):
-        self.emit('FUNCTIONS = {')
-        for route in namespace.routes:
-            with self.indent():
-
-                host_ident = route.attrs.get('host')
-                if host_ident is None:
-                    host_ident = 'meta'
-
-                style_enum = self.STYLE_MAPPING[route.attrs.get('style')]
-                self.emit('{!r}: ({!r}, bv.FunctionSignature('.format(route.name, host_ident))
-                with self.indent():
-                    self.emit('bv.FunctionStyle.{},'.format(style_enum))
-                    for t in (route.request_data_type, route.response_data_type,
-                              route.error_data_type):
-                        self.emit('{},'.format(self._determine_validator_type(t)))
-                self.emit(')),')
-        self.emit('}')
