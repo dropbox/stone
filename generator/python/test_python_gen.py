@@ -182,7 +182,7 @@ class TestPythonGen(unittest.TestCase):
             _tag = None
             def __init__(self, tag, value=None):
                 self._tag = tag
-                setattr(self, '_' + tag, value)
+                self._value = value
             def get_a(self):
                 return self._a
             def get_c(self):
@@ -253,7 +253,7 @@ class TestPythonGen(unittest.TestCase):
             _catch_all = None
             def __init__(self, tag, value=None):
                 self._tag = tag
-                setattr(self, '_' + tag, value)
+                self._value = value
             def get_t(self):
                 return self._t
 
@@ -324,13 +324,13 @@ class TestPythonGen(unittest.TestCase):
             _tag = None
             def __init__(self, tag, value=None):
                 self._tag = tag
-                setattr(self, '_' + tag, value)
+                self._value = value
             def get_a(self):
-                return self._a
+                return self._value
             def get_c(self):
-                return self._c
+                return self._value
             def get_d(self):
-                return self._d
+                return self._value
         U.b = U('b')
 
         # Test primitive variant
@@ -372,17 +372,17 @@ class TestPythonGen(unittest.TestCase):
         # Test nullable primitive variant
         u = json_decode(bv.Union(U), json.dumps({'e': None}), strict=False)
         self.assertEqual(u._tag, 'e')
-        self.assertEqual(u._e, None)
+        self.assertEqual(u._value, None)
         u = json_decode(bv.Union(U), json.dumps({'e': 64}), strict=False)
         self.assertEqual(u._tag, 'e')
-        self.assertEqual(u._e, 64)
+        self.assertEqual(u._value, 64)
 
         # Test nullable composite variant
         u = json_decode(bv.Union(U), json.dumps({'f': None}), strict=False)
         self.assertEqual(u._tag, 'f')
         u = json_decode(bv.Union(U), json.dumps({'f': {'f': 'hello'}}), strict=False)
-        self.assertEqual(type(u._f), S)
-        self.assertEqual(u._f.f, 'hello')
+        self.assertEqual(type(u._value), S)
+        self.assertEqual(u._value.f, 'hello')
 
     def test_json_decoder_error_messages(self):
         class S3(object):
@@ -400,9 +400,9 @@ class TestPythonGen(unittest.TestCase):
             _catch_all = None
             def __init__(self, tag, value=None):
                 self._tag = tag
-                setattr(self, '_' + tag, value)
+                self._value = value
             def get_t(self):
-                return self._t
+                return self._value
 
         # Test that validation error references outer and inner struct
         with self.assertRaises(bv.ValidationError):

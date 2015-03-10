@@ -174,10 +174,9 @@ def _encode_union(data_type, obj):
         if isinstance(field_data_type, (bv.Any, bv.Symbol)):
             return obj._tag
         else:
-            val = getattr(obj, '_'+obj._tag)
             try:
                 encoded_val = _json_compat_obj_encode_helper(
-                    field_data_type, val)
+                    field_data_type, obj._value)
             except bv.ValidationError as e:
                 e.add_parent(obj._tag)
                 raise
