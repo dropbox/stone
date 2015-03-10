@@ -74,14 +74,15 @@ hello
         # Check text wrapping emitter
 
         with t.indent():
-            t.emit_wrapped_text('Colorless green ideas sleep furiously', '>',
-                                '|', width=13)
+            t.emit_wrapped_text('Colorless green ideas sleep furiously',
+                                prefix='$', initial_prefix='>',
+                                subsequent_prefix='|', width=13)
         expected = """\
-    >Colorless
-    |green
-    |ideas
-    |sleep
-    |furiously
+    $>Colorless
+    $|green
+    $|ideas
+    $|sleep
+    $|furiously
 """
         self.assertEqual(t.output_buffer_to_string(), expected)
         t.clear_output_buffer()

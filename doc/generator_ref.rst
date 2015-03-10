@@ -183,14 +183,17 @@ serve a different purpose.
     buffer. If ``s`` is an empty string (default) then an empty line is created
     with no indentation.
 
-``emit_wrapped_text(s, initial_prefix='', subsequent_prefix='', width=80, break_long_words=False, break_on_hyphens=False)``
+``emit_wrapped_text(s, prefix='', initial_prefix='', subsequent_prefix='', width=80, break_long_words=False, break_on_hyphens=False)``
     Adds the input string to the output buffer with indentation and wrapping.
     The wrapping is performed by the ``textwrap.fill`` Python library
     function.
 
-    ``initial_prefix`` is prepended to the first line of the wrapped string.
-    ``subsequent_prefix`` is prepended to every line after the first. ``width``
-    is the target width of each line including indentation and prefixes.
+    ``prefix`` is prepended to every line of the wrapped string.
+    ``initial_prefix`` is prepended to the first line of the wrapped string
+    ``subsequent_prefix`` is prepended to every line after the first.
+    On a line, ``prefix`` will always come before ``initial_prefix`` and
+    ``subsequent_prefix``. ``width`` is the target width of each line including
+    indentation and prefixes.
 
     If true, ``break_long_words`` breaks words longer than width.  If false,
     those words will not be broken, and some lines might be longer
