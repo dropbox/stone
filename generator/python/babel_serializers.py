@@ -167,7 +167,7 @@ def _encode_union(data_type, obj):
     """
     if obj._tag is None:
         raise bv.ValidationError('no tag set')
-    field_data_type = data_type.definition._tagmap_[obj._tag]
+    field_data_type = data_type.definition._tagmap[obj._tag]
     if field_data_type is None:
         return obj._tag
     else:
@@ -309,14 +309,14 @@ def _decode_union(data_type, obj, strict):
     if isinstance(obj, six.string_types):
         # Option is a symbol
         tag = obj
-        if tag in data_type.definition._tagmap_:
-            val_data_type = data_type.definition._tagmap_[tag]
+        if tag in data_type.definition._tagmap:
+            val_data_type = data_type.definition._tagmap[tag]
             if not isinstance(val_data_type, (bv.Any, bv.Symbol)):
                 raise bv.ValidationError(
                     "expected object for '%s', got symbol" % tag)
         else:
-            if not strict and data_type.definition._catch_all_:
-                tag = data_type.definition._catch_all_
+            if not strict and data_type.definition._catch_all:
+                tag = data_type.definition._catch_all
             else:
                 raise bv.ValidationError("unknown tag '%s'" % tag)
     elif isinstance(obj, dict):
@@ -325,8 +325,8 @@ def _decode_union(data_type, obj, strict):
             raise bv.ValidationError('expected 1 key, got %s', len(obj))
         tag = list(obj)[0]
         raw_val = obj[tag]
-        if tag in data_type.definition._tagmap_:
-            val_data_type = data_type.definition._tagmap_[tag]
+        if tag in data_type.definition._tagmap:
+            val_data_type = data_type.definition._tagmap[tag]
             if isinstance(val_data_type, bv.Symbol):
                 raise bv.ValidationError("expected symbol '%s', got object"
                                          % tag)
@@ -338,8 +338,8 @@ def _decode_union(data_type, obj, strict):
                     e.add_parent(tag)
                     raise
         else:
-            if not strict and data_type.definition._catch_all_:
-                tag = data_type.definition._catch_all_
+            if not strict and data_type.definition._catch_all:
+                tag = data_type.definition._catch_all
             else:
                 raise bv.ValidationError("unknown tag '%s'" % tag)
     else:

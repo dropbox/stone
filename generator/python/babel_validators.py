@@ -376,8 +376,9 @@ class Struct(Composite):
     def __init__(self, definition):
         """
         Args:
-            definition (class): Must have a _fields_ attribute with the
-                following structure:
+            definition (class): A generated class representing a Babel struct
+                from a spec. Must have a _fields_ attribute with the following
+                structure:
 
                 _fields_ = [(field_name, validator), ...]
 
@@ -431,17 +432,18 @@ class Union(Composite):
     def __init__(self, definition):
         """
         Args:
-            definition (class): Must have a _tagmap_ attribute with the
-                following structure:
+            definition (class): A generated class representing a Babel union
+                from a spec. Must have a _tagmap attribute with the following
+                structure:
 
-                _tagmap_ = {field_name: validator, ...}
+                _tagmap = {field_name: validator, ...}
 
                 where
                     field_name (str): Tag name.
                     validator (Validator): Tag value validator.
         """
-        assert hasattr(definition, '_tagmap_'), 'needs _tagmap_ attribute'
-        assert isinstance(definition._tagmap_, dict), '_tagmap_ must be a dict'
+        assert hasattr(definition, '_tagmap'), 'needs _tagmap attribute'
+        assert isinstance(definition._tagmap, dict), '_tagmap must be a dict'
         self.definition = definition
 
     def validate(self, val):

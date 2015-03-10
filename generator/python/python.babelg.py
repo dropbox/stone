@@ -491,6 +491,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit('"""')
             self.emit()
 
+            self._generate_union_class_slots()
             self._generate_union_class_vars(data_type)
             self._generate_union_class_init(data_type)
             self._generate_union_class_variant_creators(data_type)
@@ -498,6 +499,19 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self._generate_union_class_get_helpers(data_type)
             self._generate_union_class_repr(data_type)
         self._generate_union_class_symbol_creators(data_type)
+
+    def _generate_union_class_slots(self):
+        """Creates a slots declaration for union classes.
+
+        Slots are an optimization in Python that reduce the memory footprint
+        of instances since attributes cannot be added after declaration.
+
+        Unions only ever have two attributes: _tag and _value.
+        """
+        # TODO(kelkabany): Possible optimization is to remove _value if a
+        # union is composed of only symbols.
+        self.emit("__slots__ = ['_tag', '_value']")
+        self.emit()
 
     def _generate_union_class_vars(self, data_type):
         """
@@ -511,9 +525,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit('_{}_validator = {}'.format(field_name,
                                                         validator_name))
         if data_type.catch_all_field:
-            self.emit('_catch_all_ = %r' % data_type.catch_all_field.name)
+            self.emit('_catch_all = %r' % data_type.catch_all_field.name)
         elif not data_type.subtype:
-            self.emit('_catch_all_ = None')
+            self.emit('_catch_all = None')
 
         # Generate stubs for class variables so that IDEs like PyCharms have an
         # easier time detecting their existence.
@@ -529,13 +543,13 @@ class PythonGenerator(CodeGeneratorMonolingual):
         self._generate_union_class_tagmap_for_reflection(data_type)
 
     def _generate_union_class_tagmap_for_reflection(self, data_type):
-        with self.block('_tagmap_ ='):
+        with self.block('_tagmap ='):
             for field in data_type.fields:
                 var_name = self.lang.format_variable(field.name)
                 validator_name = '_{0}_validator'.format(var_name)
                 self.emit("'{}': {},".format(var_name, validator_name))
         if data_type.subtype:
-            self.emit('_tagmap_.update({}._tagmap_)'.format(
+            self.emit('_tagmap.update({}._tagmap)'.format(
                 self._class_name_for_data_type(data_type.subtype)))
         self.emit()
 
@@ -545,20 +559,20 @@ class PythonGenerator(CodeGeneratorMonolingual):
         to the tag."""
         self.emit('def __init__(self, tag, value=None):')
         with self.indent():
-            for field in data_type.all_fields:
-                field_var_name = self.lang.format_variable(field.name)
-                if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
-                    self.emit('self._{} = None'.format(field_var_name))
-            self.emit("assert tag in self._tagmap_, 'Invalid tag %r.' % tag")
-            self.emit('if isinstance(self._tagmap_[tag], (bv.Any, bv.Symbol)):')
+            self.emit("assert tag in self._tagmap, 'Invalid tag %r.' % tag")
+            self.emit('validator = self._tagmap[tag]')
+            self.emit('if isinstance(validator, (bv.Any, bv.Symbol)):')
             with self.indent():
                 self.emit(
                     "assert value is None, 'Do not set a value for Symbol or Any variant.'")
+            self.emit('elif isinstance(validator, (bv.Struct, bv.Union)):')
+            with self.indent():
+                self.emit('validator.validate_type_only(value)')
             self.emit('else:')
             with self.indent():
-                self.emit('self._tagmap_[tag].validate(value)')
-            self.emit("setattr(self, '_' + tag, value)")
+                self.emit('validator.validate(value)')
             self.emit('self._tag = tag')
+            self.emit('self._value = value')
             self.emit()
 
     def _generate_union_class_variant_creators(self, data_type):
@@ -600,7 +614,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     with self.indent():
                         self.emit('raise AttributeError("tag {!r} not set")'.format(
                             field_name))
-                    self.emit('return self._{}'.format(field_name))
+                    self.emit('return self._value')
                 self.emit()
 
     def _generate_union_class_repr(self, data_type):

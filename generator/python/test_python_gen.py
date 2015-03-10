@@ -173,12 +173,12 @@ class TestPythonGen(unittest.TestCase):
             _field_names_ = {'f'}
             _fields_ = [('f', bv.String())]
         class U(object):
-            _tagmap_ = {'a': bv.Int64(),
-                        'b': bv.Symbol(),
-                        'c': bv.Struct(S),
-                        'd': bv.List(bv.Int64()),
-                        'e': bv.Nullable(bv.Int64()),
-                        'f': bv.Nullable(bv.Struct(S))}
+            _tagmap = {'a': bv.Int64(),
+                       'b': bv.Symbol(),
+                       'c': bv.Struct(S),
+                       'd': bv.List(bv.Int64()),
+                       'e': bv.Nullable(bv.Int64()),
+                       'f': bv.Nullable(bv.Struct(S))}
             _tag = None
             def __init__(self, tag, value=None):
                 self._tag = tag
@@ -248,9 +248,9 @@ class TestPythonGen(unittest.TestCase):
             _field_names_ = {'f'}
             _fields_ = [('f', bv.Struct(S2))]
         class U(object):
-            _tagmap_ = {'t': bv.Nullable(bv.Struct(S))}
+            _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
-            _catch_all_ = None
+            _catch_all = None
             def __init__(self, tag, value=None):
                 self._tag = tag
                 setattr(self, '_' + tag, value)
@@ -314,13 +314,13 @@ class TestPythonGen(unittest.TestCase):
             _field_names_ = {'f'}
             _fields_ = [('f', bv.String())]
         class U(object):
-            _tagmap_ = {'a': bv.Int64(),
-                        'b': bv.Symbol(),
-                        'c': bv.Struct(S),
-                        'd': bv.List(bv.Int64()),
-                        'e': bv.Nullable(bv.Int64()),
-                        'f': bv.Nullable(bv.Struct(S))}
-            _catch_all_ = 'b'
+            _tagmap = {'a': bv.Int64(),
+                       'b': bv.Symbol(),
+                       'c': bv.Struct(S),
+                       'd': bv.List(bv.Int64()),
+                       'e': bv.Nullable(bv.Int64()),
+                       'f': bv.Nullable(bv.Struct(S))}
+            _catch_all = 'b'
             _tag = None
             def __init__(self, tag, value=None):
                 self._tag = tag
@@ -395,9 +395,9 @@ class TestPythonGen(unittest.TestCase):
             _field_names_ = {'f'}
             _fields_ = [('f', bv.Struct(S2))]
         class U(object):
-            _tagmap_ = {'t': bv.Nullable(bv.Struct(S))}
+            _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
-            _catch_all_ = None
+            _catch_all = None
             def __init__(self, tag, value=None):
                 self._tag = tag
                 setattr(self, '_' + tag, value)
