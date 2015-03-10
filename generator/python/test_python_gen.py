@@ -237,6 +237,53 @@ class TestPythonGen(unittest.TestCase):
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u),
                          json.dumps({'f': {'f': 'hello'}}))
 
+    def test_json_encoder_error_messages(self):
+        class S3(object):
+            _field_names_ = {'j'}
+            _fields_ = [('j', bv.UInt64(max_value=10))]
+        class S2(object):
+            _field_names_ = {'i'}
+            _fields_ = [('i', bv.Struct(S3))]
+        class S(object):
+            _field_names_ = {'f'}
+            _fields_ = [('f', bv.Struct(S2))]
+        class U(object):
+            _tagmap_ = {'t': bv.Nullable(bv.Struct(S))}
+            _tag = None
+            _catch_all_ = None
+            def __init__(self, tag, value=None):
+                self._tag = tag
+                setattr(self, '_' + tag, value)
+            def get_t(self):
+                return self._t
+
+        s = S()
+        s.f = S2()
+        s._f_present = True
+        s.f.i = S3()
+        s.f._i_present = True
+        s.f.i._j_present = False
+
+        # Test that validation error references outer and inner struct
+        with self.assertRaises(bv.ValidationError):
+            try:
+                json_encode(bv.Struct(S), s)
+            except bv.ValidationError as e:
+                prefix = 'f.i: '
+                self.assertEqual(prefix, str(e)[:len(prefix)])
+                raise
+
+        u = U('t', s)
+
+        # Test that validation error references outer union and inner structs
+        with self.assertRaises(bv.ValidationError):
+            try:
+                json_encode(bv.Union(U), u)
+            except bv.ValidationError as e:
+                prefix = 't.f.i: '
+                self.assertEqual(prefix, str(e)[:len(prefix)])
+                raise
+
     def test_json_decoder(self):
         self.assertEqual(json_decode(bv.String(), json.dumps('abc')), 'abc')
         self.assertRaises(bv.ValidationError,
@@ -336,3 +383,41 @@ class TestPythonGen(unittest.TestCase):
         u = json_decode(bv.Union(U), json.dumps({'f': {'f': 'hello'}}), strict=False)
         self.assertEqual(type(u._f), S)
         self.assertEqual(u._f.f, 'hello')
+
+    def test_json_decoder_error_messages(self):
+        class S3(object):
+            _field_names_ = {'j'}
+            _fields_ = [('j', bv.UInt64(max_value=10))]
+        class S2(object):
+            _field_names_ = {'i'}
+            _fields_ = [('i', bv.Struct(S3))]
+        class S(object):
+            _field_names_ = {'f'}
+            _fields_ = [('f', bv.Struct(S2))]
+        class U(object):
+            _tagmap_ = {'t': bv.Nullable(bv.Struct(S))}
+            _tag = None
+            _catch_all_ = None
+            def __init__(self, tag, value=None):
+                self._tag = tag
+                setattr(self, '_' + tag, value)
+            def get_t(self):
+                return self._t
+
+        # Test that validation error references outer and inner struct
+        with self.assertRaises(bv.ValidationError):
+            try:
+                json_decode(bv.Struct(S), json.dumps({'f': {'i': {}}}), strict=False)
+            except bv.ValidationError as e:
+                prefix = 'f.i: '
+                self.assertEqual(prefix, str(e)[:len(prefix)])
+                raise
+
+        # Test that validation error references outer union and inner structs
+        with self.assertRaises(bv.ValidationError):
+            try:
+                json_decode(bv.Union(U), json.dumps({'t': {'f': {'i': {}}}}), strict=False)
+            except bv.ValidationError as e:
+                prefix = 't.f.i: '
+                self.assertEqual(prefix, str(e)[:len(prefix)])
+                raise

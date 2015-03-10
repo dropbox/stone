@@ -25,7 +25,39 @@ else:
     _binary_types = (bytes, buffer)
 
 class ValidationError(Exception):
-    pass
+    """Raised when a value doesn't pass validation by its validator."""
+
+    def __init__(self, message):
+        """
+        Args:
+            message (str): Error message detailing validation failure.
+        """
+        super(ValidationError, self).__init__(message)
+        self.message = message
+        self._parents = []
+
+    def add_parent(self, parent):
+        """
+        Args:
+            parent (str): Adds the parent to the top of the tree of references
+                that lead to the validator that failed.
+        """
+        self._parents.append(parent)
+
+    def __str__(self):
+        """
+        Returns:
+            str: A descriptive message of the validation error that may also
+                include the path to the validator that failed.
+        """
+        if self._parents:
+            return '{}: {}'.format('.'.join(self._parents[::-1]), self.message)
+        else:
+            return self.message
+
+    def __repr__(self):
+        # Not a perfect repr, but includes the error location information.
+        return 'ValidationError(%r)' % str(self)
 
 def generic_type_name(v):
     """Return a descriptive type name that isn't Python specific. For example,
@@ -359,20 +391,33 @@ class Struct(Composite):
 
     def validate(self, val):
         """
-        For a val to pass validation, each required field must be present as
-        an object attribute. This assumes that each field has already been
-        validated by the object, so it does not explicitly check them.
+        For a val to pass validation, val must be of the correct type and have
+        all required fields present.
         """
         self.validate_type_only(val)
+        self.validate_fields_only(val)
+        return val
+
+    def validate_fields_only(self, val):
+        """
+        To pass field validation, no required field should be missing.
+
+        This method assumes that the contents of each field have already been
+        validated on assignment, so it's merely a presence check.
+
+        FIXME(kelkabany): Since the definition object does not maintain a list
+        of which fields are required, all fields are scanned.
+        """
         for field_name, _ in self.definition._fields_:
             if not hasattr(val, field_name):
                 raise ValidationError("missing required field '%s'" %
                                       field_name)
-        return val
 
     def validate_type_only(self, val):
-        """Use this when you only want to validate that the type of an object
-        is correct, but not yet validate each field."""
+        """
+        Use this when you only want to validate that the type of an object
+        is correct, but not yet validate each field.
+        """
         # Since the definition maintains the list of fields for serialization,
         # we're okay with a subclass that might have extra information. This
         # makes it easier to return one subclass for two routes, one of which
