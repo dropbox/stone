@@ -1,3 +1,4 @@
+from collections import defaultdict
 import copy
 import inspect
 import logging
@@ -91,6 +92,10 @@ class TowerOfBabel(object):
                 self._scriptures.append((path, scripture))
 
         self.parser = BabelParser(debug=debug)
+        # Map of namespace name (str) -> environment (dict)
+        self.env_by_namespace = {}
+        # Map of namespace name (str) ->  set of paths to parsed headers
+        self.includes_by_namespace = defaultdict(set)
 
     def parse(self):
         """Parses each Babel file and returns an API description. Returns None
@@ -424,25 +429,45 @@ class TowerOfBabel(object):
                               'errors.' % desc[0].lineno)
 
         namespace = self.api.ensure_namespace(namespace_decl.name)
-        env = copy.copy(self.default_env)
+        # Keep lists of all the types and routes added just from this spec.
+        data_types = []
+        routes = []
+        # Because there might have already been a spec that was part of this
+        # same namespace, the environment might already exist.
+        if namespace.name in self.env_by_namespace:
+            env = self.env_by_namespace[namespace.name]
+        else:
+            env = copy.copy(self.default_env)
+            self.env_by_namespace[namespace.name] = env
 
         for item in desc:
             if isinstance(item, BabelInclude):
-                self._include_babelh(env, os.path.dirname(path), item.target)
+                # Only re-parse and include the header for this namespace if
+                # we haven't already done so.
+                full_path = os.path.join(os.path.dirname(path), item.target)
+                if full_path not in self.includes_by_namespace[namespace.name]:
+                    self._include_babelh(namespace, env, os.path.dirname(path),
+                                         item.target)
+                    self.includes_by_namespace[namespace.name] = full_path
+                    self._logger.info(
+                        'Done parsing header spec, resuming parsing %s',
+                        os.path.basename(path))
             elif isinstance(item, BabelAlias):
                 self._create_alias(env, item)
             elif isinstance(item, BabelTypeDef):
                 api_type = self._create_type(env, item)
+                data_types.append(api_type)
                 namespace.add_data_type(api_type)
             elif isinstance(item, BabelRouteDef):
                 route = self._create_route(env, item)
+                routes.append(route)
                 namespace.add_route(route)
             else:
                 raise AssertionError('Unknown Babel Declaration Type %r' %
                                      item.__class__.__name__)
 
         # Validate the doc refs of each api entity that has a doc
-        for data_type in namespace.data_types:
+        for data_type in data_types:
             if data_type.doc:
                 self._validate_doc_refs(
                     env, data_type.doc, data_type._token.lineno + 1)
@@ -450,7 +475,7 @@ class TowerOfBabel(object):
                 if field.doc:
                     self._validate_doc_refs(
                         env, field.doc, field._token.lineno + 1, data_type)
-        for route in namespace.routes:
+        for route in routes:
             if route.doc:
                 self._validate_doc_refs(
                     env, route.doc, route._token.lineno + 1)
@@ -463,10 +488,12 @@ class TowerOfBabel(object):
         # TODO(kelkabany): Check to make sure that no other type that is not
         # covered extends a data type that enforces coverage.
 
-    def _include_babelh(self, env, path, name):
+    def _include_babelh(self, namespace, env, path, name):
         babelh_path = os.path.join(path, name) + '.babelh'
         if not os.path.exists(babelh_path):
             raise InvalidSpec('Babel header %r does not exist.' % babelh_path)
+
+        self._logger.info("Parsing included header spec '%s'" % name)
 
         with open(babelh_path) as f:
             scripture = f.read()
@@ -474,12 +501,19 @@ class TowerOfBabel(object):
         desc = self.parser.parse(scripture)
 
         for item in desc[:]:
-            if isinstance(item, BabelInclude):
-                self._include_babelh(env, os.path.dirname(path), item.target)
-            elif isinstance(item, BabelAlias):
+            if isinstance(item, BabelAlias):
                 self._create_alias(env, item)
             elif isinstance(item, BabelTypeDef):
-                self._create_type(env, item)
+                api_type = self._create_type(env, item)
+                namespace.add_data_type(api_type)
+            elif isinstance(item, BabelInclude):
+                raise InvalidSpec(
+                    "Line %d: Cannot use 'include' in header spec." %
+                    item.lineno)
+            elif isinstance(item, BabelRouteDef):
+                raise InvalidSpec(
+                    'Line %d: Cannot define route in header spec.' %
+                    item.lineno)
             else:
                 raise AssertionError('Unknown Babel Declaration Type %r' %
                                      item.__class__.__name__)
