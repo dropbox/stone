@@ -224,7 +224,7 @@ class TestPythonGen(unittest.TestCase):
         # Test nullable primitive variant
         u = U('e', None)
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u),
-                         json.dumps({'e': None}))
+                         json.dumps('e'))
         u = U('e', 64)
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u),
                          json.dumps({'e': 64}))
@@ -232,7 +232,7 @@ class TestPythonGen(unittest.TestCase):
         # Test nullable composite variant
         u = U('f', None)
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u),
-                         json.dumps({'f': None}))
+                         json.dumps('f'))
         u = U('f', c)
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u),
                          json.dumps({'f': {'f': 'hello'}}))
@@ -309,6 +309,41 @@ class TestPythonGen(unittest.TestCase):
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps(None)), None)
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps('abc')), 'abc')
 
+    def test_json_decoder_struct(self):
+        class S(object):
+            _field_names_ = {'f', 'g'}
+            _fields_ = [('f', bv.String()),
+                        ('g', bv.Nullable(bv.String()))]
+            _g = None
+            @property
+            def f(self):
+                return self._f
+            @f.setter
+            def f(self, val):
+                self._f = val
+            @property
+            def g(self):
+                return self._g
+            @g.setter
+            def g(self, val):
+                self._g = val
+
+        # Required struct fields must be present
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Struct(S), json.dumps({})))
+        json_decode(bv.Struct(S), json.dumps({'f': 't'}))
+
+        # Struct fields cannot have null value
+        msg = json.dumps({'f': 't', 'g': None})
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Struct(S), msg))
+
+        # Unknown struct fields raise error if strict
+        msg = json.dumps({'f': 't', 'z': 123})
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Struct(S), msg, strict=True))
+        json_decode(bv.Struct(S), msg, strict=False)
+
     def test_json_decoder_union(self):
         class S(object):
             _field_names_ = {'f'}
@@ -370,19 +405,27 @@ class TestPythonGen(unittest.TestCase):
         self.assertEqual(u, None)
 
         # Test nullable primitive variant
-        u = json_decode(bv.Union(U), json.dumps({'e': None}), strict=False)
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Union(U), json.dumps({'e': None})))
+        u = json_decode(bv.Union(U), json.dumps('e'))
         self.assertEqual(u._tag, 'e')
         self.assertEqual(u._value, None)
         u = json_decode(bv.Union(U), json.dumps({'e': 64}), strict=False)
         self.assertEqual(u._tag, 'e')
         self.assertEqual(u._value, 64)
+        # Reject objects with one null value (should be a string of the tag)
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Union(U), json.dumps({'e': None})))
 
         # Test nullable composite variant
-        u = json_decode(bv.Union(U), json.dumps({'f': None}), strict=False)
+        u = json_decode(bv.Union(U), json.dumps('f'))
         self.assertEqual(u._tag, 'f')
         u = json_decode(bv.Union(U), json.dumps({'f': {'f': 'hello'}}), strict=False)
         self.assertEqual(type(u._value), S)
         self.assertEqual(u._value.f, 'hello')
+        # Reject objects with one null value (should be a string of the tag)
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Union(U), json.dumps({'f': None})))
 
     def test_json_decoder_error_messages(self):
         class S3(object):

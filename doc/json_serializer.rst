@@ -41,20 +41,22 @@ converts to::
     }
 
 If an optional (has a default or is nullable) field is not specified, the key
-should be omitted. For example::
+should be omitted. For example, given the following spec::
 
     struct SurveyAnswer
         age Int64
         name String = "John Doe"
         address String?
 
-If ``name`` and ``address`` are unspecified, this serializes to::
+If ``name`` and ``address`` are unset and ``age`` is 28, then the struct
+serializes to::
 
     {
      "age": 28
     }
 
-It's important to avoid setting a key to a ``null`` value.
+Setting ``name`` or ``address`` to ``null`` is not a valid serialization;
+deserializers will raise an error.
 
 Union
 =====
@@ -72,8 +74,8 @@ If the ``number`` tag is populated with ``42``, this serializes to::
       "number": 42
     }
 
-In the case of a symbol tag, then the union serializes to a string of the tag
-name. For example::
+In the case of a symbol, the union serializes to a string of the tag name.
+For example::
 
     union U
         a
@@ -86,6 +88,20 @@ This serializes to either::
 or::
 
     "b"
+
+Likewise, if a tag has a nullable value that is unset, then the union
+serializes to a string of the tag name. For example::
+
+    union U
+        a Int64?
+        b String
+
+If ``a`` is selected with an unset value, this serializes to::
+
+    "number"
+
+It is not a valid serialization to use a JSON object with a ``number`` key
+and ``null`` value; deserializers will raise an error.
 
 The Any data type serializes as a symbol. However, a deserializer must not
 assume that an Any will be received as a symbol. It must handle the symbol

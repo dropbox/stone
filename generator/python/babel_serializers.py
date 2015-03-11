@@ -171,7 +171,9 @@ def _encode_union(data_type, obj):
     if field_data_type is None:
         return obj._tag
     else:
-        if isinstance(field_data_type, (bv.Any, bv.Symbol)):
+        if (isinstance(field_data_type, (bv.Any, bv.Symbol)) or
+                (isinstance(field_data_type, bv.Nullable) and
+                 obj._value is None)):
             return obj._tag
         else:
             try:
@@ -288,6 +290,8 @@ def _decode_struct(data_type, obj, strict):
     o = data_type.definition()
     for name, field_data_type in data_type.definition._fields_:
         if name in obj:
+            if obj[name] is None:
+                raise bv.ValidationError("field '%s' has null value" % key)
             try:
                 v = _json_compat_obj_decode_helper(
                     field_data_type, obj[name], strict)
@@ -306,11 +310,11 @@ def _decode_union(data_type, obj, strict):
     """
     val = None  # Symbols do not have values
     if isinstance(obj, six.string_types):
-        # Option is a symbol
+        # Union member has no associated value
         tag = obj
         if tag in data_type.definition._tagmap:
             val_data_type = data_type.definition._tagmap[tag]
-            if not isinstance(val_data_type, (bv.Any, bv.Symbol)):
+            if not isinstance(val_data_type, (bv.Any, bv.Symbol, bv.Nullable)):
                 raise bv.ValidationError(
                     "expected object for '%s', got symbol" % tag)
         else:
@@ -319,16 +323,19 @@ def _decode_union(data_type, obj, strict):
             else:
                 raise bv.ValidationError("unknown tag '%s'" % tag)
     elif isinstance(obj, dict):
-        # Option is not a symbol
+        # Union member has value
         if len(obj) != 1:
             raise bv.ValidationError('expected 1 key, got %s', len(obj))
         tag = list(obj)[0]
         raw_val = obj[tag]
         if tag in data_type.definition._tagmap:
             val_data_type = data_type.definition._tagmap[tag]
-            if isinstance(val_data_type, bv.Symbol):
-                raise bv.ValidationError("expected symbol '%s', got object"
-                                         % tag)
+            if isinstance(val_data_type, bv.Nullable) and raw_val is None:
+                raise bv.ValidationError(
+                    "expected string '%s', got object with null value" % tag)
+            elif isinstance(val_data_type, bv.Symbol):
+                raise bv.ValidationError("expected symbol '%s', got object" %
+                                         tag)
             elif not isinstance(val_data_type, bv.Any):
                 try:
                     val = _json_compat_obj_decode_helper(
