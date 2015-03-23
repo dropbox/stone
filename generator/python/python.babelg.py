@@ -324,7 +324,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 class_name = self._class_name_for_data_type(data_type)
                 self.generate_multiline_list(
                     [self.lang.format_method(f.name, True)
-                     for f in data_type.supertype.fields],
+                     for f in data_type.supertype.all_fields],
                     before='super({}, self).__init__'.format(class_name))
 
             # initialize each field
