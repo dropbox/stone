@@ -21,6 +21,12 @@ _cmdline_parser.add_argument(
     help='Print debugging statements.',
 )
 _cmdline_parser.add_argument(
+    '-q',
+    '--quiet',
+    action='store_true',
+    help='Only print error messages.',
+)
+_cmdline_parser.add_argument(
     'generator',
     type=str,
     help='Specify the path to a generator. It must have a .babelg.py extension.',
@@ -47,10 +53,16 @@ def main():
 
     args = _cmdline_parser.parse_args()
     debug = args.verbose
+    quiet = args.quiet
+
+    if debug and quiet:
+        print >> sys.stderr, "Can't use both -q/--quiet and -v/--verbose."
+
+    logging_level = logging.INFO
+    if quiet:
+        logging_level = logging.WARNING
     if debug:
         logging_level = logging.DEBUG
-    else:
-        logging_level = logging.INFO
     logging.basicConfig(level=logging_level)
 
     if args.spec[0].startswith('+') and args.spec[0].endswith('.py'):
