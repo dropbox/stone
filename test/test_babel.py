@@ -4,7 +4,7 @@ from babelapi.babel.parser import (
     BabelNamespace,
     BabelAlias,
     BabelParser,
-    BabelSymbolField,
+    BabelVoidField,
     BabelTagRef,
 )
 
@@ -244,11 +244,11 @@ union Role
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'Role')
         self.assertEqual(out[1].doc, 'The role a user may have in a shared folder.')
-        self.assertIsInstance(out[1].fields[0], BabelSymbolField)
+        self.assertIsInstance(out[1].fields[0], BabelVoidField)
         self.assertEqual(out[1].fields[0].name, 'owner')
-        self.assertIsInstance(out[1].fields[1], BabelSymbolField)
+        self.assertIsInstance(out[1].fields[1], BabelVoidField)
         self.assertEqual(out[1].fields[1].name, 'viewer')
-        self.assertIsInstance(out[1].fields[2], BabelSymbolField)
+        self.assertIsInstance(out[1].fields[2], BabelVoidField)
         self.assertEqual(out[1].fields[2].name, 'editor')
 
         # TODO: Test a union that includes a struct.
@@ -303,7 +303,7 @@ struct Upload
         text = """
 namespace users
 
-route GetAccountInfo(Null, Null, Null)
+route GetAccountInfo(Void, Void, Void)
 """
         # Test route definition with no docstring
         self.parser.parse(text)
@@ -314,21 +314,21 @@ namespace users
 struct AccountInfo
     email String
 
-route GetAccountInfo(AccountInfo, Null, Null)
+route GetAccountInfo(AccountInfo, Void, Void)
     "Gets the account info for a user"
 """
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'AccountInfo')
         self.assertEqual(out[2].name, 'GetAccountInfo')
         self.assertEqual(out[2].request_type_ref.name, 'AccountInfo')
-        self.assertEqual(out[2].response_type_ref.name, 'Null')
-        self.assertEqual(out[2].error_type_ref.name, 'Null')
+        self.assertEqual(out[2].response_type_ref.name, 'Void')
+        self.assertEqual(out[2].error_type_ref.name, 'Void')
 
         # Test raw documentation
         text = """
 namespace users
 
-route GetAccountInfo(Null, Null, Null)
+route GetAccountInfo(Void, Void, Void)
     "0
 
     1

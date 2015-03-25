@@ -44,12 +44,10 @@ Backwards Incompatible Changes
     * Changing the type of a struct field.
         * An old receiver may have application-layer dependencies on the field
           type. In statically typed languages deserialization will fail.
-    * Adding a new tag to a union without a `catch-all symbol <lang_ref.rst#union-catch-all>`_.
-        * We expect receivers to handle all tags using a combination of
-          ``is_[tag]()`` checks and an ``else`` clause. If a new tag
-          is returned, the receiver's handler code will be insufficient.
-    * Changing the type of a tag.
-        * Assuming the original type was not `Any <lang_ref.rst#union-any>`_.
+    * Adding a new tag to a union without a `catch-all tag <lang_ref.rst#union-catch-all>`_.
+        * We expect receivers to exhaustively handle all tags. If a new tag is
+          returned, the receiver's handler code will be insufficient.
+    * Changing the type of a tag with a non-Void type.
         * Similar to the above, if a tag changes, the old receiver's
           handler code will break.
     * Changing any of the types of a route description to an incompatible one.
@@ -63,15 +61,17 @@ Backwards Compatible Changes
 ----------------------------
 
     * Adding a new route.
+    * Changing the name of a stuct, union, or alias.
     * Adding a field to a struct that is optional or has a default.
         * If the receiver is newer, it will either set the field to the
           default, or mark the field as unset, which is acceptable since the
           field is optional.
         * If the sender is newer, it will send the new field. The receiver will
           simply ignore the field that it does not understand.
-    * Change the type of a tag from the `Any data type <lang_ref.rst#union-any>`_ to something else.
-        * The older receiver will continue to see the tag as a symbol, and
-          will ignore any information associated with the new data type.
+    * Change the type of a tag from Void to anything else.
+        * The older receiver will ignore information associated with the new
+          data type and continue to present a tag with no value to the
+          application.
     * Adding another tag to a union that has a catch-all specified.
         * The older receiver will not understand the incoming tag, and will
           simply set the union to its catch-all tag. The application-layer will
@@ -82,10 +82,7 @@ Planning for Backwards Compatibility
 ====================================
 
     * When defining a union that you're likely to add tags to in the
-      future, add a `catch-all symbol <lang_ref.rst#union-catch-all>`_.
-    * When defining a symbol that you're likely to convert to a tag with
-      a value sometime in the future, use the
-      `Any data type <lang_ref.rst#union-any>`_.
+      future, add a `catch-all tag <lang_ref.rst#union-catch-all>`_.
 
 Leader-Clients
 ==============
@@ -120,10 +117,9 @@ A known leader can be stricter with what it receives from clients:
 
     * If the leader is acting as a recipient, it should reject all unknown
       tags even if the union specifies a catch-all.
-    * If the leader is acting as a recipient, any tag that is specified
-      as an Any data type should be seen as a symbol in the serialization
-      format since it's not possible for a client to have converted the Any
-      data type to something else.
+    * If the leader is acting as a recipient, any tag with type Void should
+      have no associated value in the serialized message since it's not
+      possible for a client to have converted the data type to something else.
 
 [TODO] There are more nuanced backwards compatible changes such as: A tag
 can be removed if the union is only sent from the server to a client. Will this

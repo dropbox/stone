@@ -6,20 +6,18 @@ import os
 import re
 import shutil
 from babelapi.data_type import (
-    is_any_type,
     is_binary_type,
     is_boolean_type,
     is_composite_type,
     is_float_type,
     is_integer_type,
     is_list_type,
-    is_null_type,
     is_string_type,
     is_struct_type,
-    is_symbol_type,
     is_tag_ref,
     is_timestamp_type,
     is_union_type,
+    is_void_type,
 )
 from babelapi.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
@@ -114,7 +112,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             return 'float'
         elif is_integer_type(data_type):
             return 'long'
-        elif is_null_type(data_type):
+        elif is_void_type(data_type):
             return 'None'
         elif is_timestamp_type(data_type):
             return 'datetime.datetime'
@@ -473,7 +471,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     self.process_doc(data_type.doc, self._docf))
                 self.emit()
                 for field in data_type.fields:
-                    if is_symbol_type(field.data_type) or is_any_type(field.data_type):
+                    if is_void_type(field.data_type):
                         ivar_doc = ':ivar {}: {}'.format(
                             self.lang.format_variable(field.name),
                             self.process_doc(field.doc, self._docf))
@@ -531,7 +529,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         # Generate stubs for class variables so that IDEs like PyCharms have an
         # easier time detecting their existence.
         for field in data_type.fields:
-            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
+            if is_void_type(field.data_type):
                 field_name = self.lang.format_variable(field.name)
                 self.emit('# Attribute is overwritten below the class definition')
                 self.emit('{} = None'.format(field_name))
@@ -560,10 +558,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
         with self.indent():
             self.emit("assert tag in self._tagmap, 'Invalid tag %r.' % tag")
             self.emit('validator = self._tagmap[tag]')
-            self.emit('if isinstance(validator, (bv.Any, bv.Symbol)):')
+            self.emit('if isinstance(validator, bv.Void):')
             with self.indent():
                 self.emit(
-                    "assert value is None, 'Do not set a value for Symbol or Any variant.'")
+                    "assert value is None, 'Void type union member must have None value.'")
             self.emit('elif isinstance(validator, (bv.Struct, bv.Union)):')
             with self.indent():
                 self.emit('validator.validate_type_only(value)')
@@ -580,7 +578,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         can be used to construct a union with that variant selected.
         """
         for field in data_type.fields:
-            if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
+            if not is_void_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
                 field_name_reserved_check = self.lang.format_method(field.name, True)
                 self.emit('@classmethod')
@@ -605,7 +603,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
 
-            if not is_symbol_type(field.data_type) and not is_any_type(field.data_type):
+            if not is_void_type(field.data_type):
                 # generate getter for field
                 self.emit('def get_{}(self):'.format(field_name))
                 with self.indent():
@@ -639,7 +637,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         class_name = self.lang.format_class(data_type.name)
         lineno = self.lineno
         for field in data_type.fields:
-            if is_symbol_type(field.data_type) or is_any_type(field.data_type):
+            if is_void_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
                 self.emit('{0}.{1} = {0}({1!r})'.format(class_name, field_name))
         if lineno != self.lineno:

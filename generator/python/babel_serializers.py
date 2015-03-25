@@ -171,7 +171,7 @@ def _encode_union(data_type, obj):
     if field_data_type is None:
         return obj._tag
     else:
-        if (isinstance(field_data_type, (bv.Any, bv.Symbol)) or
+        if (isinstance(field_data_type, bv.Void) or
                 (isinstance(field_data_type, bv.Nullable) and
                  obj._value is None)):
             return obj._tag
@@ -190,7 +190,9 @@ def _make_json_friendly(data_type, val):
     Convert a primitive type to a Python type that can be serialized by the
     json package.
     """
-    if isinstance(data_type, bv.Timestamp):
+    if isinstance(data_type, bv.Void):
+        return None
+    elif isinstance(data_type, bv.Timestamp):
         return val.strftime(data_type.format)
     elif isinstance(data_type, bv.Binary):
         return base64.b64encode(val)
@@ -308,13 +310,13 @@ def _decode_union(data_type, obj, strict):
     The data_type argument must be a Union.
     See json_compat_obj_decode() for argument descriptions.
     """
-    val = None  # Symbols do not have values
+    val = None
     if isinstance(obj, six.string_types):
         # Union member has no associated value
         tag = obj
         if tag in data_type.definition._tagmap:
             val_data_type = data_type.definition._tagmap[tag]
-            if not isinstance(val_data_type, (bv.Any, bv.Symbol, bv.Nullable)):
+            if not isinstance(val_data_type, (bv.Void, bv.Nullable)):
                 raise bv.ValidationError(
                     "expected object for '%s', got symbol" % tag)
         else:
@@ -333,10 +335,14 @@ def _decode_union(data_type, obj, strict):
             if isinstance(val_data_type, bv.Nullable) and raw_val is None:
                 raise bv.ValidationError(
                     "expected string '%s', got object with null value" % tag)
-            elif isinstance(val_data_type, bv.Symbol):
-                raise bv.ValidationError("expected symbol '%s', got object" %
-                                         tag)
-            elif not isinstance(val_data_type, bv.Any):
+            elif isinstance(val_data_type, bv.Void):
+                if strict:
+                    raise bv.ValidationError("expected tag '%s', got object" %
+                                             tag)
+                else:
+                    # Ignore the raw value.
+                    val = None
+            else:
                 try:
                     val = _json_compat_obj_decode_helper(
                         val_data_type, raw_val, strict)
@@ -390,6 +396,8 @@ def _make_babel_friendly(data_type, val, validate):
             return base64.b64decode(val)
         except TypeError:
             raise bv.ValidationError('invalid base64-encoded binary')
+    elif isinstance(data_type, bv.Void):
+        return None
     else:
         if validate:
             data_type.validate(val)

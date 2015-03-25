@@ -9,10 +9,10 @@ from babelapi.data_type import (
     List,
     ParameterError,
     String,
-    Symbol,
     Timestamp,
     UInt32,
     UInt64,
+    Void,
 )
 
 from babelapi.data_type import (
@@ -251,8 +251,8 @@ class TestBabelInternal(unittest.TestCase):
             'WriteConflictPolicy',
             'Policy for managing write conflicts.',
             [
-                UnionField('reject', Symbol(), 'On a write conflict, reject the new file.', None),
-                UnionField('overwrite', Symbol(),
+                UnionField('reject', Void(), 'On a write conflict, reject the new file.', None),
+                UnionField('overwrite', Void(),
                            'On a write conflict, overwrite the existing file.', None),
                 UnionField('update_if_matching_parent_rev',
                       update_parent_rev,

@@ -56,16 +56,7 @@ class DataType(object):
 class PrimitiveType(DataType):
     pass
 
-class Null(PrimitiveType):
-    def check(self, val):
-        if val is not None:
-            raise ValueError('%r is not a valid null type' % val)
-
-class Any(PrimitiveType):
-    def check(self, val):
-        pass
-
-class Symbol(PrimitiveType):
+class Void(PrimitiveType):
     def check(self, val):
         raise NotImplemented
 
@@ -685,8 +676,8 @@ class Union(CompositeType):
             raise ValueError('%r is not a tag of %s' % (val, self.name))
         for field in self.all_fields:
             if val.tag_name == field.name:
-                if not is_symbol_type(field.data_type):
-                    raise ValueError('invalid tag reference to non-symbol %r' %
+                if not is_void_type(field.data_type):
+                    raise ValueError('invalid reference to non-void tag %r' %
                                      val.tag_name)
                 return None
         else:
@@ -713,7 +704,7 @@ class Union(CompositeType):
                 return True
         else:
             for field in self.fields:
-                if is_symbol_type(field.data_type) and field.name == label:
+                if is_void_type(field.data_type) and field.name == label:
                     return True
 
             return False
@@ -726,9 +717,9 @@ class Union(CompositeType):
                     and field.data_type.has_example(label)):
                 return {field.name: field.data_type.get_example(label)}
         else:
-            # Fallback to checking for direct symbols
+            # Fallback to checking for tags of the same name as the label.
             for field in self.fields:
-                if is_symbol_type(field.data_type) and field.name == label:
+                if is_void_type(field.data_type) and field.name == label:
                     return field.name
             else:
                 return None
@@ -746,7 +737,7 @@ class Union(CompositeType):
         """
         data_type_names = set()
         for field in self.fields:
-            if not is_symbol_type(field.data_type):
+            if not is_void_type(field.data_type):
                 if field.data_type.name in data_type_names:
                     return False
                 else:
@@ -770,10 +761,6 @@ class TagRef(object):
     def __repr__(self):
         return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
 
-Empty = Struct('Empty', None, [], None)
-
-def is_any_type(data_type):
-    return isinstance(data_type, Any)
 def is_binary_type(data_type):
     return isinstance(data_type, Binary)
 def is_boolean_type(data_type):
@@ -782,22 +769,16 @@ def is_composite_type(data_type):
     return isinstance(data_type, CompositeType)
 def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
-def is_empty(data_type):
-    return data_type == Empty
 def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
 def is_list_type(data_type):
     return isinstance(data_type, List)
-def is_null_type(data_type):
-    return isinstance(data_type, Null)
 def is_numeric_type(data_type):
     return is_integer_type(data_type) or is_float_type(data_type)
 def is_primitive_type(data_type):
     return isinstance(data_type, PrimitiveType)
 def is_string_type(data_type):
     return isinstance(data_type, String)
-def is_symbol_type(data_type):
-    return isinstance(data_type, Symbol)
 def is_struct_type(data_type):
     return isinstance(data_type, Struct)
 def is_tag_ref(val):
@@ -806,3 +787,5 @@ def is_timestamp_type(data_type):
     return isinstance(data_type, Timestamp)
 def is_union_type(data_type):
     return isinstance(data_type, Union)
+def is_void_type(data_type):
+    return isinstance(data_type, Void)

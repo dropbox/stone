@@ -17,7 +17,7 @@ class TestPythonGen(unittest.TestCase):
         generated code.
     """
 
-    def test_string_data_type(self):
+    def test_string_validator(self):
         s = bv.String(min_length=1, max_length=5, pattern='[A-z]+')
         # Not a string
         self.assertRaises(bv.ValidationError, lambda: s.validate(1))
@@ -32,13 +32,13 @@ class TestPythonGen(unittest.TestCase):
         # Check that the validator is converting all strings to unicode
         self.assertEqual(type(s.validate('a')), unicode)
 
-    def test_boolean_data_type(self):
+    def test_boolean_validator(self):
         b = bv.Boolean()
         b.validate(True)
         b.validate(False)
         self.assertRaises(bv.ValidationError, lambda: b.validate(1))
 
-    def test_integer_data_type(self):
+    def test_integer_validator(self):
         i = bv.UInt32(min_value=10, max_value=100)
         # Not an integer
         self.assertRaises(bv.ValidationError, lambda: i.validate(1.4))
@@ -54,7 +54,7 @@ class TestPythonGen(unittest.TestCase):
         # non-sensical min_value
         self.assertRaises(AssertionError, lambda: bv.UInt32(min_value=1.3))
 
-    def test_float_data_type(self):
+    def test_float_validator(self):
         f64 = bv.Float64()
         # Too large for a float to represent
         self.assertRaises(bv.ValidationError, lambda: f64.validate(10**310))
@@ -79,7 +79,7 @@ class TestPythonGen(unittest.TestCase):
         # Passes
         f32.validate(0)
 
-    def test_binary_data_type(self):
+    def test_binary_validator(self):
         b = bv.Binary(min_length=1, max_length=10)
         # Not a valid binary type
         self.assertRaises(bv.ValidationError, lambda: b.validate(u'asdf'))
@@ -90,7 +90,7 @@ class TestPythonGen(unittest.TestCase):
         # Passes
         b.validate('\x00')
 
-    def test_timestamp_data_type(self):
+    def test_timestamp_validator(self):
         class UTC(datetime.tzinfo):
             def utcoffset(self, dt):
                 return datetime.timedelta(0)
@@ -115,7 +115,7 @@ class TestPythonGen(unittest.TestCase):
         self.assertRaises(bv.ValidationError,
                           lambda: t.validate(now.replace(tzinfo=PST())))
 
-    def test_list_data_type(self):
+    def test_list_validator(self):
         l = bv.List(bv.String(), min_items=1, max_items=10)
         # Not a valid list type
         self.assertRaises(bv.ValidationError, lambda: l.validate('a'))
@@ -128,7 +128,7 @@ class TestPythonGen(unittest.TestCase):
         # Passes
         l.validate(['a'])
 
-    def test_nullable_data_type(self):
+    def test_nullable_validator(self):
         n = bv.Nullable(bv.String())
         # Absent case
         n.validate(None)
@@ -139,19 +139,25 @@ class TestPythonGen(unittest.TestCase):
         # Stacking nullables isn't supported by our JSON wire format
         self.assertRaises(AssertionError,
                           lambda: bv.Nullable(bv.Nullable(bv.String())))
+        self.assertRaises(AssertionError,
+                          lambda: bv.Nullable(bv.Void()))
 
-    def test_struct_data_type(self):
+    def test_void_validator(self):
+        v = bv.Void()
+        # Passes: Only case that validates
+        v.validate(None)
+        # Fails validation
+        self.assertRaises(bv.ValidationError, lambda: v.validate(123))
+
+    def test_struct_validator(self):
         class C(object):
             _fields_ = [('f', bv.String())]
             f = None
         s = bv.Struct(C)
         self.assertRaises(bv.ValidationError, lambda: s.validate(object()))
 
-    def test_any_data_type(self):
-        a = bv.Any()
-        a.validate(object())
-
     def test_json_encoder(self):
+        self.assertEqual(json_encode(bv.Void(), None), json.dumps(None))
         self.assertEqual(json_encode(bv.String(), 'abc'), json.dumps('abc'))
         self.assertEqual(json_encode(bv.String(), u'\u2650'), json.dumps(u'\u2650'))
         self.assertEqual(json_encode(bv.UInt32(), 123), json.dumps(123))
@@ -174,7 +180,7 @@ class TestPythonGen(unittest.TestCase):
             _fields_ = [('f', bv.String())]
         class U(object):
             _tagmap = {'a': bv.Int64(),
-                       'b': bv.Symbol(),
+                       'b': bv.Void(),
                        'c': bv.Struct(S),
                        'd': bv.List(bv.Int64()),
                        'e': bv.Nullable(bv.Int64()),
@@ -309,6 +315,10 @@ class TestPythonGen(unittest.TestCase):
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps(None)), None)
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps('abc')), 'abc')
 
+        self.assertEqual(json_decode(bv.Void(), json.dumps(None)), None)
+        # Check that void can take any input if strict is False.
+        self.assertEqual(json_decode(bv.Void(), json.dumps(12345), strict=False), None)
+
     def test_json_decoder_struct(self):
         class S(object):
             _field_names_ = {'f', 'g'}
@@ -350,7 +360,7 @@ class TestPythonGen(unittest.TestCase):
             _fields_ = [('f', bv.String())]
         class U(object):
             _tagmap = {'a': bv.Int64(),
-                       'b': bv.Symbol(),
+                       'b': bv.Void(),
                        'c': bv.Struct(S),
                        'd': bv.List(bv.Int64()),
                        'e': bv.Nullable(bv.Int64()),
@@ -372,11 +382,13 @@ class TestPythonGen(unittest.TestCase):
         u = json_decode(bv.Union(U), json.dumps({'a': 64}))
         self.assertEqual(u.get_a(), 64)
 
-        # Test symbol variant
+        # Test void variant
         u = json_decode(bv.Union(U), json.dumps('b'))
         self.assertEqual(u._tag, 'b')
         self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Union(U), json.dumps([1,2])))
+                          lambda: json_decode(bv.Union(U), json.dumps({'b': [1,2]})))
+        u = json_decode(bv.Union(U), json.dumps({'b': [1,2]}), strict=False)
+        self.assertEqual(u._tag, 'b')
 
         # Test struct variant
         u = json_decode(bv.Union(U), json.dumps({'c': {'f': 'hello'}}))

@@ -2,7 +2,6 @@ from collections import OrderedDict
 from distutils.version import StrictVersion
 
 from babelapi.data_type import (
-    Empty,
     doc_unwrap,
     is_composite_type,
     is_list_type,
@@ -58,16 +57,6 @@ class ApiNamespace(object):
         """
         linearized_data_types = []
         seen_data_types = set()
-
-        found_empty = False
-        for route in self.routes:
-            for data_type in (route.request_data_type, route.response_data_type,
-                              route.error_data_type):
-                if data_type == Empty and not found_empty:
-                    linearized_data_types.append(Empty)
-                    seen_data_types.add(Empty)
-                    found_empty = True
-                    break
 
         def add_data_type(data_type):
             if data_type in seen_data_types:

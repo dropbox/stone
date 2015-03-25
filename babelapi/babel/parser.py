@@ -155,9 +155,9 @@ class BabelField(_Element):
             self.type_ref,
         )
 
-class BabelSymbolField(_Element):
+class BabelVoidField(_Element):
     def __init__(self, lineno, lexpos, name, catch_all):
-        super(BabelSymbolField, self).__init__(lineno, lexpos)
+        super(BabelVoidField, self).__init__(lineno, lexpos)
         self.name = name
         self.catch_all = catch_all
         self.doc = None
@@ -166,7 +166,7 @@ class BabelSymbolField(_Element):
     def __str__(self):
         return self.__repr__()
     def __repr__(self):
-        return 'BabelSymbolField({!r}, {!r})'.format(
+        return 'BabelVoidField({!r}, {!r})'.format(
             self.name,
             self.catch_all,
         )
@@ -454,11 +454,11 @@ class BabelParser(object):
     # union U
     #     "This is a docstring for the union"
     #
-    #     symbol_field*
-    #         "Docstring for symbol"
+    #     void_field*
+    #         "Docstring for field with type Void"
     #     typed_field String
     #
-    # symbol_field demonstrates the notation for a catch all variant.
+    # void_field demonstrates the notation for a catch all variant.
 
     def p_union(self, p):
         'union : UNION ID inheritance NEWLINE INDENT docsection field_list example_list DEDENT'
@@ -476,10 +476,10 @@ class BabelParser(object):
                           | empty"""
         p[0] = (p[1] is not None)
 
-    def p_field_symbol(self, p):
+    def p_field_void(self, p):
         """field : ID asterix_option NEWLINE
                  | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
-        p[0] = BabelSymbolField(p.lineno(1), p.lexpos(1), p[1], p[2])
+        p[0] = BabelVoidField(p.lineno(1), p.lexpos(1), p[1], p[2])
         if len(p) > 4:
             p[0].set_doc(p[5])
 

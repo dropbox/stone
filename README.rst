@@ -177,7 +177,7 @@ service. Our hypothetical spec lives in a file called ``users.babel``::
     union GetAccountErr
         no_account
             "No account with the requested id could be found."
-        perm_denied Any
+        perm_denied
             "Insufficient privileges to query account information."
         unknown*
 

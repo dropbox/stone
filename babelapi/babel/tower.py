@@ -7,11 +7,9 @@ import re
 
 from babelapi.babel.parser import BabelParser
 from babelapi.data_type import (
-    Any,
     Binary,
     Boolean,
     DataType,
-    Empty,
     StructField,
     UnionField,
     Float32,
@@ -19,16 +17,15 @@ from babelapi.data_type import (
     Int32,
     Int64,
     List,
-    Null,
     ParameterError,
     String,
     Struct,
-    Symbol,
     TagRef,
     Timestamp,
     UInt32,
     UInt64,
     Union,
+    Void,
 )
 from babelapi.api import (
     Api,
@@ -39,7 +36,7 @@ from babelapi.babel.parser import (
     BabelInclude,
     BabelNamespace,
     BabelRouteDef,
-    BabelSymbolField,
+    BabelVoidField,
     BabelTagRef,
     BabelTypeDef,
     BabelTypeRef,
@@ -68,12 +65,10 @@ class TowerOfBabel(object):
         UInt32,
         UInt64,
         Union,
+        Void,
     ]
 
     default_env = {data_type.__name__: data_type for data_type in data_types}
-    default_env['Any'] = Any()
-    default_env['Empty'] = Empty
-    default_env['Null'] = Null()
 
     # FIXME: Version should not have a default.
     def __init__(self, paths, version='0.1b1', debug=False):
@@ -184,19 +179,19 @@ class TowerOfBabel(object):
             catch_all_field = None
             for babel_field in item.fields:
                 api_type_field = self._create_union_field(env, babel_field)
-                if (isinstance(babel_field, BabelSymbolField)
+                if (isinstance(babel_field, BabelVoidField)
                         and babel_field.catch_all):
                     if catch_all_field is not None:
-                        raise InvalidSpec('Line %d: Only one catch-all symbol '
+                        raise InvalidSpec('Line %d: Only one catch-all tag '
                                           'per Union.' % babel_field.lineno)
 
-                    # Verify that no subtype already has a catch-all symbol.
+                    # Verify that no subtype already has a catch-all tag.
                     # Do this here so that we still have access to line nums.
                     cur_subtype = subtype
                     while cur_subtype:
                         if cur_subtype.catch_all_field:
                             raise InvalidSpec('Line %d: Subtype %r already '
-                                'declared a catch-all symbol.' %
+                                'declared a catch-all tag.' %
                                 (babel_field.lineno, cur_subtype.name))
                         cur_subtype = cur_subtype.subtype
 
@@ -230,7 +225,11 @@ class TowerOfBabel(object):
                               (babel_field.lineno, babel_field.type_ref.name))
         else:
             data_type = self._resolve_type(env, babel_field.type_ref)
-            if data_type.nullable and babel_field.has_default:
+            if isinstance(data_type, Void):
+                raise InvalidSpec('Line %d: Struct field %r cannot have a '
+                                  'Void type.' %
+                                  (babel_field.lineno, babel_field.name))
+            elif data_type.nullable and babel_field.has_default:
                 raise InvalidSpec('Line %d: Field %r cannot be a nullable '
                                   'type and have a default specified.' %
                                   (babel_field.lineno, babel_field.name))
@@ -274,8 +273,8 @@ class TowerOfBabel(object):
         Returns:
             babelapi.data_type.UnionField: A field of a union.
         """
-        if isinstance(babel_field, BabelSymbolField):
-            api_type_field = UnionField(babel_field.name, Symbol(),
+        if isinstance(babel_field, BabelVoidField):
+            api_type_field = UnionField(babel_field.name, Void(),
                                         babel_field.doc, babel_field)
         elif babel_field.type_ref.name not in env:
             raise InvalidSpec('Line %d: Symbol %r is undefined.' %
@@ -285,6 +284,10 @@ class TowerOfBabel(object):
                 env,
                 babel_field.type_ref,
             )
+            if isinstance(data_type, Void):
+                raise InvalidSpec('Line %d: Union member %r cannot have Void '
+                                  'type explicit, omit Void instead.' %
+                                  (babel_field.lineno, babel_field.name))
             api_type_field = UnionField(
                 babel_field.name,
                 data_type,
@@ -345,7 +348,10 @@ class TowerOfBabel(object):
     def _resolve_type(self, env, type_ref):
         """Resolves the data type referenced by type_ref."""
         obj = env[type_ref.name]
-        if inspect.isclass(obj):
+        if obj is Void and type_ref.nullable:
+            raise InvalidSpec('Line %d: Void cannot be marked nullable.' %
+                              type_ref.lineno)
+        elif inspect.isclass(obj):
             resolved_data_type_attrs = self._resolve_attrs(env, type_ref.attrs)
             data_type = self._instantiate_data_type(
                 obj, dict(resolved_data_type_attrs), type_ref.lineno)

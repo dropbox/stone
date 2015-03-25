@@ -52,7 +52,7 @@ The spec should live in a file called ``users.babel``::
     union GetAccountErr
         no_account
             "No account with the requested id could be found."
-        perm_denied Any
+        perm_denied
             "Insufficient privileges to query account information."
         unknown*
 
@@ -122,6 +122,7 @@ Timestamp               * **format**: Specified as a      This is used by the
                           string understood by            JSON-serializer since
                           strptime().                     it has no native
                                                           timestamp data type.
+Void                    --
 ======================= ================================= =====================
 
 To specify an argument, use the argument name followed by an ``=`` and the
@@ -316,39 +317,24 @@ possibility has an identifier that is called a "tag". In our example, the union
             "The account is inactive. The value is when the account was
             deactivated."
 
-A tag can be associated with a type (``inactive`` stores a ``Timestamp``) or
-can be a `Symbol <#symbol>`_ (``active``).
+A tag is associated with a type (``inactive`` stores a ``Timestamp``). If the
+type is omitted as in the case of ``active``, the type is implicitly ``Void``.
 
 The primary advantage of a union is its logical expressiveness. You'll often
 encounter types that are best described as choosing between a set of options.
-Do not fall into the trap of using a struct with a field for each option, and
-relying on your application logic to enforce that only one is set.
+Avoid the common anti-pattern of using a struct with a nullable field for each
+option, and relying on your application logic to enforce that only one is set.
 
 Another advantage is that for languages that support tagged unions, the
 compiler can check that your application code handles all possible cases and
-that accesses are safe. We will take advantage of such features when writing
-generators for languages with support.
+that accesses are safe. Generators will take advantage of such features when
+they are available in the target language.
 
 Like a struct, a documentation string can follow the union declaration and/or
 follow each tag definition.
 
-Symbol
-------
-
-Sometimes, a tag does not need to be mapped to any type. We call these symbols,
-but they're also known as unit types in
-`nominal type systems <http://en.wikipedia.org/wiki/Nominal_type_system>`_.
-
-In our running example, ``active`` is a symbol. An example of a union with all
-symbols could be::
-
-    union Shape
-        square
-        rectangle
-        circle
-
-Catch-all Symbol
-----------------
+Catch-all Tag
+-------------
 
 By default, we consider unions to be closed. That is, for the sake of backwards
 compatibility, a recipient of a message should never encounter a tag that it
@@ -357,16 +343,17 @@ user is ``active`` or ``inactive`` and trust that no other value will ever be
 encountered.
 
 Because we anticipate that this will be constricting for APIs undergoing
-evolution, we've introduced the notion of a catch-all symbol. If a recipient
+evolution, we've introduced the notion of a catch-all tag. If a recipient
 receives a tag that it isn't aware of, it will default the union to the
-catch-all symbol.
+catch-all tag.
 
-The notation is simply an ``*`` that follows a `Symbol <#symbol>`_ tag::
+The notation is simply an ``*`` that follows a tag with an omitted type, ie.
+its type is Void::
 
     union GetAccountErr
         no_account
             "No account with the requested id could be found."
-        perm_denied Any
+        perm_denied
             "Insufficient privileges to query account information."
         unknown*
 
@@ -376,37 +363,9 @@ previously known is received (e.g. ``bad_account``), the union will default
 to the ``unknown`` tag.
 
 We expect this to be especially useful for unions that represent the possible
-errors an endpoint might return. Recipients in the wild may have been generated
+errors a route might return. Recipients in the wild may have been generated
 with only a subset of the current errors, but they'll continue to function
 appropriately as long as they handle the catch-all tag.
-
-The Any data type
------------------
-
-Changing a symbol field to some data type is a backwards incompatible change.
-After all, if a recipient is expecting a symbol and gets back a struct, it
-isn't likely the handling code will be prepared.
-
-To avoid this, set the tag to the ``Any`` type as was done here::
-
-    union GetAccountErr
-        no_account
-            "No account with the requested id could be found."
-        perm_denied Any
-            "Insufficient privileges to query account information."
-        unknown*
-
-Now, without causing a backwards incompatibility, the data type can be
-updated to include more information in the future. In this case, the ``Any``
-type has been changed to ``String``::
-
-    union GetAccountErr
-        no_account
-            "No account with the requested id could be found."
-        perm_denied String
-            "Insufficient privileges to query account information. The value
-            is text explaining why."
-        unknown*
 
 Inheritance
 -----------
@@ -419,8 +378,8 @@ the subtype::
 
 ``DeleteAccount`` inherits the tags ``no_account``, ``perm_denied``, and
 ``unknown`` from ``GetAccountError``. Since ``GetAccountError`` has already
-defined a catch-all symbol, ``DeleteAccountError`` or any other supertype
-cannot declare another catch-all.
+defined a catch-all tag, ``DeleteAccountError`` or any other supertype cannot
+declare another catch-all.
 
 Note that the supertype/subtype relationship created by ``extends`` between two
 unions is the opposite of an ``extends`` between two structs. It's stated this
@@ -595,8 +554,8 @@ Struct::
 
 Union::
 
-    Union ::= 'union' Identifier NL INDENT (SymbolTag|Tag)* DEDENT
-    SymbolTag ::= Identifier '*'? (NL INDENT Doc DEDENT)?
+    Union ::= 'union' Identifier NL INDENT (VoidTag|Tag)* DEDENT
+    VoidTag ::= Identifier '*'? (NL INDENT Doc DEDENT)?
     Tag ::= Identifier TypeRef (NL INDENT Doc DEDENT)?
 
 Route::

@@ -166,14 +166,11 @@ Union
 For each union in your spec, you will see a corresponding Python class of the
 same name.
 
-You do not use a union class's constructor directly. To select a symbol (or a
-`Any data type <lang_ref.rst#union-any>`_) tag, use the class attribute of
-the same name::
+You do not use a union class's constructor directly. To select a tag with a
+void type, use the class attribute of the same name::
 
-    >>> GetAccountErr.no_account # symbol
+    >>> GetAccountErr.no_account
     GetAccountErr('no_account')
-    >>> GetAccountErr.perm_denied # Any data type
-    GetAccountErr('perm_denied')
 
 To select a tag with a value, use the class method of the same name and pass
 in an argument to serve as the value.

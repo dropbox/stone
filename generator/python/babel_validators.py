@@ -471,21 +471,12 @@ class Union(Composite):
             raise ValidationError('expected type %s or subtype, got %s' %
                 (self.definition.__name__, generic_type_name(val)))
 
-class Any(Validator):
-    """
-    A special type that accepts any value. Only valid as the data type of a
-    union variant.
-    """
-    def validate(self, val):
-        return val
+class Void(Primitive):
 
-class Symbol(Validator):
-    """
-    Only valid as the data type of a union variant. This type should be thought
-    of as a value-less variant.
-    """
     def validate(self, val):
-        raise AssertionError('No value validates as a symbol.')
+        if val is not None:
+            raise ValidationError('expected NoneType, got %s' %
+                                  generic_type_name(val))
 
 class Nullable(Primitive):
 
@@ -494,6 +485,8 @@ class Nullable(Primitive):
             'validator must be for a primitive or composite type'
         assert not isinstance(validator, Nullable), \
             'nullables cannot be stacked'
+        assert not isinstance(validator, Void), \
+            'void cannot be made nullable'
         self.validator = validator
 
     def validate(self, val):

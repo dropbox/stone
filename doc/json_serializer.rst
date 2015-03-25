@@ -20,6 +20,7 @@ List                       Array
 String                     String
 Timestamp                  String: Encoded using strftime() based on the
                            Timestamp's format argument.
+Void                       Null
 ========================== ====================================================
 
 Struct
@@ -74,8 +75,8 @@ If the ``number`` tag is populated with ``42``, this serializes to::
       "number": 42
     }
 
-In the case of a symbol, the union serializes to a string of the tag name.
-For example::
+In the case of a tag with a Void type, the union serializes to a string of the
+tag name. For example::
 
     union U
         a
@@ -102,7 +103,3 @@ If ``a`` is selected with an unset value, this serializes to::
 
 It is not a valid serialization to use a JSON object with a ``number`` key
 and ``null`` value; deserializers will raise an error.
-
-The Any data type serializes as a symbol. However, a deserializer must not
-assume that an Any will be received as a symbol. It must handle the symbol
-case, and the case where the Any has been converted to another data type.

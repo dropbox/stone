@@ -297,7 +297,6 @@ Data Type Classification Helpers
 useful when generators need to discriminate between types. The following are
 available::
 
-    is_any_type(data_type)
     is_binary_type(data_type)
     is_boolean_type(data_type)
     is_composite_type(data_type)
@@ -305,15 +304,14 @@ available::
     is_empty(data_type)
     is_float_type(data_type)
     is_list_type(data_type)
-    is_null_type(data_type)
     is_numeric_type(data_type)
     is_primitive_type(data_type)
     is_string_type(data_type)
-    is_symbol_type(data_type)
     is_struct_type(data_type)
     is_tag_ref(val)
     is_timestamp_type(data_type)
     is_union_type(data_type)
+    is_void_type(data_type)
 
 Examples
 ========
