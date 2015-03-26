@@ -148,7 +148,7 @@ service. Our hypothetical spec lives in a file called ``users.babel``::
     union Status
         active
             "The account is active."
-        inactive Timestamp(format="%a, %d %b %Y %H:%M:%S")
+        inactive Timestamp("%a, %d %b %Y %H:%M:%S")
             "The account is inactive. The value is when the account was
             deactivated."
 

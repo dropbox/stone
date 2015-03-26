@@ -127,10 +127,10 @@ class TowerOfBabel(object):
         obj = env[item.type_ref.name]
         if inspect.isclass(obj):
             env[item.name] = self._instantiate_data_type(
-                obj, dict(item.type_ref.attrs), item.lineno)
+                obj, item.type_ref.args, item.lineno)
         elif isinstance(obj, ApiRoute):
             raise InvalidSpec('Line %d: Cannot alias a route.' % item.lineno)
-        elif item.type_ref.attrs:
+        elif item.type_ref.args[0] or item.type_ref.args[1]:
             # An instance of a type cannot have any additional
             # attributes specified.
             raise InvalidSpec('Line %d: Attributes cannot be specified for '
@@ -296,7 +296,7 @@ class TowerOfBabel(object):
             )
         return api_type_field
 
-    def _instantiate_data_type(self, data_type_class, data_type_attrs, lineno):
+    def _instantiate_data_type(self, data_type_class, data_type_args, lineno):
         """
         Responsible for instantiating a data type with additional attributes.
         This method ensures that the specified attributes are valid.
@@ -319,26 +319,40 @@ class TowerOfBabel(object):
         # Unfortunately, argspec.defaults is None if there are no defaults
         num_defaults = len(argspec.defaults or ())
 
+        pos_args, kw_args = data_type_args
+
+        if (num_args - num_defaults) > len(pos_args):
+            # Report if a positional argument is missing
+            raise InvalidSpec(
+                'Line %d: Missing positional argument %r for %s type' %
+                (lineno, argspec.args[len(pos_args)],
+                 data_type_class.__name__))
+        elif (num_args - num_defaults) < len(pos_args):
+            # Report if there are too many positional arguments
+            raise InvalidSpec(
+                'Line %d: Too many positional arguments for %s type' %
+                (lineno, data_type_class.__name__)
+            )
+
         # Map from arg name to bool indicating whether the arg has a default
         args = {}
         for i, key in enumerate(argspec.args):
             args[key] = (i >= num_args - num_defaults)
 
-        # Report any unknown arguments
-        for key in data_type_attrs:
+        for key in kw_args:
+            # Report any unknown keyword arguments
             if key not in args:
                 raise InvalidSpec('Line %d: Unknown argument %r to %s type' %
                     (lineno, key, data_type_class.__name__))
+            # Report any positional args that are defined as keywords args.
+            if not args[key]:
+                raise InvalidSpec(
+                    'Line %d: Positional argument %r cannot be specified as a '
+                    'keyword argument' % (lineno, key))
             del args[key]
 
-        # Report any missing arguments
-        for key in args:
-            if not args[key]:
-                raise InvalidSpec('Line %d: Missing argument %r for %s type' %
-                    (lineno, argspec.args[0], data_type_class.__name__))
-
         try:
-            return data_type_class(**data_type_attrs)
+            return data_type_class(*pos_args, **kw_args)
         except ParameterError as e:
             # Each data type validates its own attributes, and will raise a
             # ParameterError if the type or value is bad.
@@ -352,14 +366,14 @@ class TowerOfBabel(object):
             raise InvalidSpec('Line %d: Void cannot be marked nullable.' %
                               type_ref.lineno)
         elif inspect.isclass(obj):
-            resolved_data_type_attrs = self._resolve_attrs(env, type_ref.attrs)
+            resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
-                obj, dict(resolved_data_type_attrs), type_ref.lineno)
+                obj, resolved_data_type_args, type_ref.lineno)
             data_type.nullable = type_ref.nullable
         elif isinstance(obj, ApiRoute):
             raise InvalidSpec('Line %d: A route is not a valid field type.' %
                               type_ref.lineno)
-        elif type_ref.attrs:
+        elif type_ref.args[0] or type_ref.args[1]:
             # An instance of a type cannot have any additional
             # attributes specified.
             raise InvalidSpec('Line %d: Attributes cannot be specified for '
@@ -374,23 +388,26 @@ class TowerOfBabel(object):
                 data_type.nullable = True
         return data_type
 
-    def _resolve_attrs(self, env, attrs):
+    def _resolve_args(self, env, args):
         """
-        Resolves type references in data type attributes to data types in
+        Resolves type references in data type arguments to data types in
         the environment.
         """
-        new_attrs = []
-        for (k, v) in attrs:
+        pos_args, kw_args = args
+
+        def check_value(v):
             if isinstance(v, BabelTypeRef):
                 if v.name not in env:
                     raise InvalidSpec('Line %d: Symbol %r is undefined' %
                                       (v.lineno, v.name))
                 else:
-                    new_attr = (k, self._resolve_type(env, v))
-                    new_attrs.append(new_attr)
+                    return self._resolve_type(env, v)
             else:
-                new_attrs.append((k, v))
-        return new_attrs
+                return v
+
+        new_pos_args = [check_value(pos_arg) for pos_arg in pos_args]
+        new_kw_args = {k: check_value(v) for k, v in kw_args.iteritems()}
+        return new_pos_args, new_kw_args
 
     def _create_route(self, env, item):
         """

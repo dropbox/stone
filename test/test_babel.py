@@ -68,17 +68,29 @@ alias Rev = String
         self.assertEqual(out[1].name, 'Rev')
         self.assertEqual(out[1].type_ref.name, 'String')
 
-    def test_type_parameters(self):
+    def test_type_args(self):
         text = """
 namespace test
 
 alias T = String(min_length=3)
 alias F = Float64(max_value=3.2e1)
+alias Numbers = List(UInt64)
 """
         out = self.parser.parse(text)
         self.assertIsInstance(out[1], BabelAlias)
         self.assertEqual(out[1].name, 'T')
         self.assertEqual(out[1].type_ref.name, 'String')
+        self.assertEqual(out[1].type_ref.args[1]['min_length'], 3)
+
+        self.assertIsInstance(out[2], BabelAlias)
+        self.assertEqual(out[2].name, 'F')
+        self.assertEqual(out[2].type_ref.name, 'Float64')
+        self.assertEqual(out[2].type_ref.args[1]['max_value'], 3.2e1)
+
+        self.assertIsInstance(out[3], BabelAlias)
+        self.assertEqual(out[3].name, 'Numbers')
+        self.assertEqual(out[3].type_ref.name, 'List')
+        self.assertEqual(out[3].type_ref.args[0][0].name, 'UInt64')
 
     def test_struct_decl(self):
 
@@ -372,7 +384,7 @@ strct AccountInfo
     email String
 """
         self.parser.parse(text)
-        ttype, tvalue, lineno = self.parser.errors[0]
+        ttype, tvalue, lineno, msg = self.parser.errors[0]
         self.assertEqual(ttype, 'ID')
         self.assertEqual(tvalue, 'strct')
         self.assertEqual(lineno, 4)

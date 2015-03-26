@@ -85,22 +85,22 @@ class BabelTypeDef(_Element):
         )
 
 class BabelTypeRef(_Element):
-    def __init__(self, lineno, lexpos, name, attrs, nullable):
+    def __init__(self, lineno, lexpos, name, args, nullable):
         """
         Args:
             name (str): Name of the referenced type.
-            attrs (list): List of attributes for the type.
+            args (tuple[list, dict]): Arguments to type.
             nullable (bool): Whether the type is nullable (can be null)
         """
         super(BabelTypeRef, self).__init__(lineno, lexpos)
         self.name = name
-        self.attrs = attrs
+        self.args = args
         self.nullable = nullable
 
     def __repr__(self):
-        return 'BabelTypeRef({!r}, {!r}, {!r})'.format(
+        return 'BabelTypeRef({!r}, {!r})'.format(
             self.name,
-            self.attrs,
+            self.args,
             self.nullable,
         )
 
@@ -108,9 +108,8 @@ class BabelTagRef(_Element):
     def __init__(self, lineno, lexpos, tag, union_name=None):
         """
         Args:
-            name (str): Name of the referenced type.
-            attrs (list): List of attributes for the type.
-            nullable (bool): Whether the type is nullable (can be null)
+            tag (str): Name of the referenced type.
+            union_name (str): The name of the union the tag belongs to.
         """
         super(BabelTagRef, self).__init__(lineno, lexpos)
         self.tag = tag
@@ -226,9 +225,12 @@ class BabelParser(object):
         errors = []
         for char, lineno in self.lexer.errors:
             errors.append('Line %d: Illegal character %r' % (lineno, char))
-        for token_type, token_value, lineno in self.errors:
-            errors.append('Line %d: Unexpected %s with value %r' %
-                              (lineno, token_type, token_value))
+        for token_type, token_value, lineno, msg in self.errors:
+            if msg is None:
+                errors.append('Line %d: Unexpected %s with value %r' %
+                                  (lineno, token_type, token_value))
+            else:
+                errors.append(msg)
         return errors
 
     # --------------------------------------------------------------
@@ -303,37 +305,64 @@ class BabelParser(object):
     # 2. Field data types
     #    struct S
     #        f TypeRef
-    # 3. In attributes of type references
+    # 3. In arguments to type references
     #    struct S
     #        f TypeRef(key=TypeRef)
     #
-    # A type reference can have attributes:
-    #     TypeRef(key1=value1, ...)
-    # If it has no attributes, the parentheses can be omitted.
+    # A type reference can have positional and keyword arguments:
+    #     TypeRef(value1, ..., kwarg1=kwvalue1)
+    # If it has no arguments, the parentheses can be omitted.
     #
-    # If a type reference has a '?' suffix, it is an option type.
+    # If a type reference has a '?' suffix, it is a nullable type.
 
-    def p_attribute_kv(self, p):
-        """attribute : ID EQ primitive
-                     | ID EQ type_ref"""
-        p[0] = (p[1], p[3])
+    def p_pos_arg(self, p):
+        """pos_arg : primitive
+                   | type_ref"""
+        p[0] = p[1]
 
-    def p_attributes_list_create(self, p):
-        """attributes_list : attribute"""
+    def p_pos_args_list_create(self, p):
+        """pos_args_list : pos_arg"""
         p[0] = [p[1]]
 
-    def p_attributes_list_extend(self, p):
-        """attributes_list : attributes_list COMMA attribute"""
+    def p_pos_args_list_extend(self, p):
+        """pos_args_list : pos_args_list COMMA pos_arg"""
         p[0] = p[1]
         p[0].append(p[3])
 
-    def p_attributes_group(self, p):
-        """attributes_group : LPAR attributes_list RPAR
-                            | empty"""
-        if p[1] is not None:
-            p[0] = p[2]
+    def p_kw_arg(self, p):
+        """kw_arg : ID EQ primitive
+                  | ID EQ type_ref"""
+        p[0] = {p[1]: p[3]}
+
+    def p_kw_args(self, p):
+        """kw_args : kw_arg"""
+        p[0] = p[1]
+
+    def p_kw_args_update(self, p):
+        """kw_args : kw_args COMMA kw_arg"""
+        p[0] = p[1]
+        for key in p[3]:
+            if key in p[1]:
+                msg = 'Line %d: Keyword argument %r defined more than once.' % (
+                    p.lineno(3), key)
+                self.errors.append(('kw_arg', key, p.lineno(3), msg))
+        p[0].update(p[3])
+
+    def p_args(self, p):
+        """args : LPAR pos_args_list COMMA kw_args RPAR
+                | LPAR pos_args_list RPAR
+                | LPAR kw_args RPAR
+                | LPAR RPAR
+                | empty"""
+        if len(p) > 3:
+            if p[3] == ',':
+                p[0] = (p[2], p[4])
+            elif isinstance(p[2], dict):
+                p[0] = ([], p[2])
+            else:
+                p[0] = (p[2], {})
         else:
-            p[0] = []
+            p[0] = ([], {})
 
     def p_field_nullable(self, p):
         """nullable : Q
@@ -341,7 +370,7 @@ class BabelParser(object):
         p[0] = p[1] == '?'
 
     def p_type_ref(self, p):
-        'type_ref : ID attributes_group nullable'
+        'type_ref : ID args nullable'
         p[0] = BabelTypeRef(p.lineno(1), p.lexpos(1), p[1], p[2], p[3])
 
     def p_tag_ref(self, p):
@@ -616,4 +645,4 @@ class BabelParser(object):
                            token.type,
                            token.value,
                            token.lineno)
-        self.errors.append((token.type, token.value, token.lineno))
+        self.errors.append((token.type, token.value, token.lineno, None))

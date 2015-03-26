@@ -27,7 +27,7 @@ The spec should live in a file called ``users.babel``::
     union Status
         active
             "The account is active."
-        inactive Timestamp(format="%a, %d %b %Y %H:%M:%S")
+        inactive Timestamp("%a, %d %b %Y %H:%M:%S")
             "The account is inactive. The value is when the account was
             deactivated."
 
@@ -102,7 +102,8 @@ In the example, ``String`` and ``Timestamp`` are primitive types. Here's a
 table of all primitive types and the arguments they take:
 
 ======================= ================================= =====================
-Type                    Arguments (**bold** are required) Notes
+Type                    Arguments (**bold** are required  Notes
+                        and positional)
 ======================= ================================= =====================
 Binary                  --                                An array of bytes.
 Boolean                 --
@@ -125,13 +126,19 @@ Timestamp               * **format**: Specified as a      This is used by the
 Void                    --
 ======================= ================================= =====================
 
-To specify an argument, use the argument name followed by an ``=`` and the
-value::
+Positional arguments (bold in the above table) are always required and appear
+at the beginning of an argument list::
+
+    struct ShoppingList
+        items List(String)
+
+Keyword arguments are optional and are preceded by the argument name and an
+``=``::
 
     struct Person
         age UInt64(max_value=130)
 
-If no arguments are needed, the parentheses can be omitted. For example::
+If no arguments are needed, the parentheses can be omitted::
 
     struct Example
         number Int64
@@ -148,11 +155,11 @@ Here are some more examples::
         f2 Boolean
         f3 Float64(min_value=0)
         # List of primitive types
-        f4 List(data_type=Int64)
+        f4 List(Int64)
         # List of user-defined types
-        f5 List(data_type=Coordinate, max_items=10)
+        f5 List(Coordinate, max_items=10)
         f6 String(pattern="^[A-z]+$")
-        f7 Timestamp(format="%a, %d %b %Y %H:%M:%S +0000")
+        f7 Timestamp("%a, %d %b %Y %H:%M:%S +0000")
 
 Mapping to a Target Language
 ----------------------------
@@ -231,7 +238,7 @@ structs or unions::
     union Status
         active
             "The account is active."
-        inactive Timestamp(format="%a, %d %b %Y %H:%M:%S")
+        inactive Timestamp("%a, %d %b %Y %H:%M:%S")
             "The account is inactive. The value is when the account was
             deactivated."
 
@@ -313,7 +320,7 @@ possibility has an identifier that is called a "tag". In our example, the union
 
         active
             "The account is active."
-        inactive Timestamp(format="%a, %d %b %Y %H:%M:%S")
+        inactive Timestamp("%a, %d %b %Y %H:%M:%S")
             "The account is inactive. The value is when the account was
             deactivated."
 
