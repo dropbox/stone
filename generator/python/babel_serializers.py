@@ -255,7 +255,7 @@ def json_compat_obj_decode(data_type, obj, strict=True):
         See json_decode().
     """
     if isinstance(data_type, bv.Primitive):
-        return _make_babel_friendly(data_type, obj, True)
+        return _make_babel_friendly(data_type, obj, strict, True)
     else:
         return _json_compat_obj_decode_helper(data_type, obj, strict)
 
@@ -264,18 +264,17 @@ def _json_compat_obj_decode_helper(data_type, obj, strict):
     See json_compat_obj_decode() for argument descriptions.
     """
     if isinstance(data_type, bv.Struct):
-        o = _decode_struct(data_type, obj, strict)
+        return _decode_struct(data_type, obj, strict)
     elif isinstance(data_type, bv.Union):
-        o = _decode_union(data_type, obj, strict)
+        return _decode_union(data_type, obj, strict)
     elif isinstance(data_type, bv.List):
-        o = _decode_list(data_type, obj, strict)
+        return _decode_list(data_type, obj, strict)
     elif isinstance(data_type, bv.Nullable):
-        o = _decode_nullable(data_type, obj, strict)
+        return _decode_nullable(data_type, obj, strict)
     elif isinstance(data_type, bv.Primitive):
-        return _make_babel_friendly(data_type, obj, False)
+        return _make_babel_friendly(data_type, obj, strict, False)
     else:
         raise AssertionError('Cannot handle type %r.' % data_type)
-    return o
 
 def _decode_struct(data_type, obj, strict):
     """
@@ -381,7 +380,7 @@ def _decode_nullable(data_type, obj, strict):
     else:
         return None
 
-def _make_babel_friendly(data_type, val, validate):
+def _make_babel_friendly(data_type, val, strict, validate):
     """
     Convert a Python object to a type that will pass validation by its
     validator.
@@ -397,6 +396,8 @@ def _make_babel_friendly(data_type, val, validate):
         except TypeError:
             raise bv.ValidationError('invalid base64-encoded binary')
     elif isinstance(data_type, bv.Void):
+        if strict and val is not None:
+            raise bv.ValidationError("expected null, got value")
         return None
     else:
         if validate:

@@ -320,6 +320,9 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_decode(bv.Void(), json.dumps(None)), None)
         # Check that void can take any input if strict is False.
         self.assertEqual(json_decode(bv.Void(), json.dumps(12345), strict=False), None)
+        # Check that an error is raised if strict is True and there's a non-null value
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Void(), json.dumps(12345), strict=True))
 
     def test_json_decoder_struct(self):
         class S(object):
