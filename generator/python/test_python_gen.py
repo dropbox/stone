@@ -1,6 +1,10 @@
 import base64
 import datetime
+import imp
 import json
+import os
+import shutil
+import subprocess
 import unittest
 
 import babel_validators as bv
@@ -10,11 +14,9 @@ from babel_serializers import (
     json_decode,
 )
 
-class TestPythonGen(unittest.TestCase):
+class TestDropInModules(unittest.TestCase):
     """
-    Tests the Python Generator.
-    TODO(kelkabany): Currently tests only the dependencies, and not the
-        generated code.
+    Tests the babel_serializers and babel_validators modules.
     """
 
     def test_string_validator(self):
@@ -476,3 +478,62 @@ class TestPythonGen(unittest.TestCase):
                 prefix = 't.f.i: '
                 self.assertEqual(prefix, str(e)[:len(prefix)])
                 raise
+
+
+test_spec = """\
+namespace ns
+
+struct A
+    a String
+    b Int64
+
+struct B extends A
+    c Binary
+
+struct C extends B
+    d Float64
+
+union U
+    t0
+    t1 String
+"""
+
+class TestGeneratedPython(unittest.TestCase):
+
+    def setUp(self):
+
+        # Sanity check: babelapi must be importable for the compiler to work
+        __import__('babelapi')
+
+        # Write spec to file for babelapi
+        with open('ns.babel', 'w') as f:
+            f.write(test_spec)
+
+        # Compile spec by calling out to babelapi
+        p = subprocess.Popen(
+            ['python', '-m', 'babelapi.cli', 'python.babelg.py', 'ns.babel', 'output/'],
+            stderr=subprocess.PIPE)
+        if p.wait() != 0:
+            raise AssertionError('Could not execute babelapi tool: %r' %
+                                 p.stderr.read())
+
+        self.ns = imp.load_source('ns', 'output/ns.py')
+
+    def test_objs(self):
+
+        # Test initializing struct params (also tests parent class fields)
+        a = self.ns.C(a='test', b=123, c='\x00', d=3.14)
+        self.assertEqual(a.a, 'test')
+        self.assertEqual(a.b, 123)
+        self.assertEqual(a.c, '\x00')
+        self.assertEqual(a.d, 3.14)
+
+        # Test that void union member is available as a class attribute
+        self.assertIsInstance(self.ns.U.t0, self.ns.U)
+
+        # Test that non-void union member is callable (should be a method)
+        self.assertTrue(callable(self.ns.U.t1))
+
+    def tearDown(self):
+        shutil.rmtree('output')
+        os.remove('ns.babel')
