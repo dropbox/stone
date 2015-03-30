@@ -57,6 +57,7 @@ def main():
 
     if debug and quiet:
         print >> sys.stderr, "Can't use both -q/--quiet and -v/--verbose."
+        sys.exit(1)
 
     logging_level = logging.INFO
     if quiet:
