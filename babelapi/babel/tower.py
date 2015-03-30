@@ -342,13 +342,13 @@ class TowerOfBabel(object):
         for key in kw_args:
             # Report any unknown keyword arguments
             if key not in args:
-                raise InvalidSpec('Line %d: Unknown argument %r to %s type' %
+                raise InvalidSpec('Line %d: Unknown argument %r to %s type.' %
                     (lineno, key, data_type_class.__name__))
             # Report any positional args that are defined as keywords args.
             if not args[key]:
                 raise InvalidSpec(
                     'Line %d: Positional argument %r cannot be specified as a '
-                    'keyword argument' % (lineno, key))
+                    'keyword argument.' % (lineno, key))
             del args[key]
 
         try:
@@ -361,6 +361,9 @@ class TowerOfBabel(object):
 
     def _resolve_type(self, env, type_ref):
         """Resolves the data type referenced by type_ref."""
+        if type_ref.name not in env:
+            raise InvalidSpec('Line %d: Symbol %r is undefined.' %
+                              (type_ref.lineno, type_ref.name))
         obj = env[type_ref.name]
         if obj is Void and type_ref.nullable:
             raise InvalidSpec('Line %d: Void cannot be marked nullable.' %
@@ -398,7 +401,7 @@ class TowerOfBabel(object):
         def check_value(v):
             if isinstance(v, BabelTypeRef):
                 if v.name not in env:
-                    raise InvalidSpec('Line %d: Symbol %r is undefined' %
+                    raise InvalidSpec('Line %d: Symbol %r is undefined.' %
                                       (v.lineno, v.name))
                 else:
                     return self._resolve_type(env, v)

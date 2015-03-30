@@ -7,6 +7,10 @@ from babelapi.babel.parser import (
     BabelVoidField,
     BabelTagRef,
 )
+from babelapi.babel.tower import (
+    InvalidSpec,
+    TowerOfBabel,
+)
 
 class TestBabel(unittest.TestCase):
     """
@@ -388,3 +392,16 @@ strct AccountInfo
         self.assertEqual(ttype, 'ID')
         self.assertEqual(tvalue, 'strct')
         self.assertEqual(lineno, 4)
+
+        text = """\
+namespace users
+
+route test_route(Blah, Blah, Blah)
+"""
+        res = self.parser.parse(text)
+
+        t = TowerOfBabel([])
+
+        with self.assertRaises(InvalidSpec) as cm:
+            t.add_to_api('test.babel', res)
+        self.assertIn("Symbol 'Blah' is undefined", cm.exception.args[0])
