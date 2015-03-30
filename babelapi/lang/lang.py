@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import re
 
 _split_words_capitalization_re = re.compile(

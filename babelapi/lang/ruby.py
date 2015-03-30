@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import pprint
 
 # language by language regex for finding what functions have already been defined

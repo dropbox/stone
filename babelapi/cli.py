@@ -2,6 +2,8 @@
 A command-line interface for BabelAPI.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import argparse
 import imp
 import logging
@@ -56,7 +58,7 @@ def main():
     quiet = args.quiet
 
     if debug and quiet:
-        print >> sys.stderr, "Can't use both -q/--quiet and -v/--verbose."
+        print("Can't use both -q/--quiet and -v/--verbose.", file=sys.stderr)
         sys.exit(1)
 
     logging_level = logging.INFO
@@ -74,36 +76,34 @@ def main():
         try:
             api = imp.load_source('api', args.api[0]).api
         except ImportError as e:
-            print >> sys.stderr, 'Could not import API description due to:', e
+            print('Could not import API description due to:', e, file=sys.stderr)
             sys.exit(1)
     else:
         for spec_path in args.spec:
             if not spec_path.endswith('.babel'):
-                print >> sys.stderr, \
-                    'Specification %r must have a .babel extension.' % spec_path
+                print('Specification %r must have a .babel extension.' % spec_path,
+                      file=sys.stderr)
                 sys.exit(1)
             if not os.path.exists(spec_path):
-                print >> sys.stderr, \
-                    'Specification %r cannot be found.' % spec_path
+                print('Specification %r cannot be found.' % spec_path,
+                      file=sys.stderr)
                 sys.exit(1)
         # TODO: Needs version
         tower = TowerOfBabel(args.spec, debug=debug)
         try:
             api = tower.parse()
         except InvalidSpec as e:
-            print >> sys.stderr, 'Specification had error(s). You must fix ' \
-                'these to continue:\n'
-            print >> sys.stderr, e, '\n'
+            print('Specification had error(s). You must fix these to continue:\n\n',
+                  '%s\n' % e, file=sys.stderr)
             if debug:
-                print >> sys.stderr, 'A traceback is included below in case ' \
-                    'this is a bug in Babel.\n', traceback.format_exc()
+                print('A traceback is included below in case this is a bug in Babel.\n',
+                      traceback.format_exc(), file=sys.stderr)
             else:
-                print >> sys.stderr, 'If the error is unclear, try using ' \
-                                     'the -v flag.'
+                print('If the error is unclear, try using the -v flag.', file=sys.stderr)
             sys.exit(1)
         if api is None:
-            print >> sys.stderr, \
-                'You must fix the above parsing errors for generation to continue.'
+            print('You must fix the above parsing errors for generation to continue.',
+                  file=sys.stderr)
             sys.exit(1)
 
     c = Compiler(

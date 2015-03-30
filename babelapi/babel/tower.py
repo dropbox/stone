@@ -1,9 +1,13 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from collections import defaultdict
 import copy
 import inspect
 import logging
 import os
 import re
+import six
+import sys
 
 from babelapi.babel.parser import BabelParser
 from babelapi.data_type import (
@@ -96,16 +100,20 @@ class TowerOfBabel(object):
         """Parses each Babel file and returns an API description. Returns None
         if an error was encountered during parsing."""
         for path, scripture in self._scriptures:
-            self._logger.info('Parsing spec %s', path)
-            res = self.parse_scripture(scripture)
-            if self.parser.got_errors_parsing():
-                for error in self.parser.get_error_strings():
-                    self._logger.error(error)
-                return None
-            elif res:
-                self.add_to_api(path, res)
-            else:
-                self._logger.warn('No output generated from file')
+            try:
+                self._logger.info('Parsing spec %s', path)
+                res = self.parse_scripture(scripture)
+                if self.parser.got_errors_parsing():
+                    for error in self.parser.get_error_strings():
+                        self._logger.error(error)
+                    return None
+                elif res:
+                    self.add_to_api(path, res)
+                else:
+                    self._logger.warn('No output generated from file')
+            except InvalidSpec as e:
+                new_e = InvalidSpec("%s: %s" % (path, e))
+                six.reraise(type(new_e), new_e, sys.exc_info()[2])
         return self.api
 
     def parse_scripture(self, scripture):
@@ -409,7 +417,7 @@ class TowerOfBabel(object):
                 return v
 
         new_pos_args = [check_value(pos_arg) for pos_arg in pos_args]
-        new_kw_args = {k: check_value(v) for k, v in kw_args.iteritems()}
+        new_kw_args = {k: check_value(v) for k, v in kw_args.items()}
         return new_pos_args, new_kw_args
 
     def _create_route(self, env, item):

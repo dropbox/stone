@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import logging
 import ply.lex as lex
 
@@ -58,7 +60,7 @@ class BabelLexer(object):
                         newline_token = self._create_token('NEWLINE', '\n', self.lex.lineno,
                                                            self.lex.lexpos)
                         self.tokens_queue.append(newline_token)
-                    dedent_count = self.cur_indent / 4
+                    dedent_count = self.cur_indent // 4
                     dedent_token = self._create_token('DEDENT', '\t', self.lex.lineno,
                                                       self.lex.lexpos)
                     self.tokens_queue.extend([dedent_token] * dedent_count)
@@ -297,7 +299,7 @@ class BabelLexer(object):
         if indent_spaces % 4 > 0:
             raise Exception('Indent was not divisible by 4.')
 
-        indent_delta = indent_spaces / 4
+        indent_delta = indent_spaces // 4
         if indent_delta == 0:
             # There was no change in indentation
             return None

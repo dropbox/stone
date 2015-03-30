@@ -1,7 +1,10 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
 import logging
 import os
+import six
 import textwrap
 
 from babelapi.babel.tower import doc_ref_re
@@ -127,7 +130,7 @@ class Generator(object):
         output buffer. If s is an empty string (default) then an empty line is
         created with no indentation.
         """
-        assert isinstance(s, basestring), 's must be a string type'
+        assert isinstance(s, six.text_type), 's must be a string type'
         assert '\n' not in s, \
             'String to emit cannot contain newline strings.'
         if s:
@@ -211,7 +214,7 @@ class CodeGenerator(Generator):
         """Given a dict, returns a new dict with all the same key/values except
         for keys that had values of None."""
         new_d = {}
-        for k, v in d.iteritems():
+        for k, v in d.items():
             if v is not None:
                 new_d[k] = v
         return new_d

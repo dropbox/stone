@@ -5,6 +5,8 @@ The goal of this module is to define all data types that are common to the
 languages and serialization formats we want to support.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import copy
