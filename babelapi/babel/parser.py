@@ -201,7 +201,7 @@ class BabelParser(object):
     tokens = BabelLexer.tokens
 
     # Ply feature: Starting grammar rule
-    start = 'spec'
+    start = str('spec')  # PLY wants a 'str' instance; this makes it work in Python 2 and 3
 
     def __init__(self, debug=False):
         self.debug = debug

@@ -1,5 +1,8 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import os
 import shutil
+import six
 
 from contextlib import contextmanager
 
@@ -103,7 +106,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             name = self.class_data_type(thing)
             if thing.supertype:
                 extensions.append(self.class_data_type(thing.supertype))
-        elif isinstance(thing, basestring):
+        elif isinstance(thing, six.text_type):
             name = thing
         else:
             raise TypeError("trying to generate class block for unknown type %r" % thing)

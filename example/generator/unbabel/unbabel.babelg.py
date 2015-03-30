@@ -7,6 +7,9 @@ Current limitations:
 - Aliases are lost (they are expanded in-line)
 - Docstrings are reformatted
 """
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+import six
 
 from babelapi.babel.parser import BabelTypeRef
 from babelapi.data_type import DataType, _BoundedInteger, _BoundedFloat
@@ -132,10 +135,10 @@ class UnbabelGenerator(CodeGenerator):
 
     def format_value(self, val):
         """Helper function to format a value."""
-        if isinstance(val, str):
+        if isinstance(val, six.text_type):
             return self.format_string(val)
         else:
-            return str(val)
+            return six.text_type(val)
 
     def format_string(self, val):
         """Helper function to format a string."""

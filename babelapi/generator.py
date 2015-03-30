@@ -128,7 +128,7 @@ class Generator(six.with_metaclass(ABCMeta)):
         output buffer. If s is an empty string (default) then an empty line is
         created with no indentation.
         """
-        assert isinstance(s, six.text_type), 's must be a string type'
+        assert isinstance(s, six.text_type), 's must be a unicode string'
         assert '\n' not in s, \
             'String to emit cannot contain newline strings.'
         if s:
@@ -243,7 +243,7 @@ class CodeGenerator(Generator):
                 should have a trailing separator. Ignored when compact is true.
         """
         assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
-            isinstance(delim[1], six.text_type), 'delim must be a tuple of two strings.'
+            isinstance(delim[1], six.text_type), 'delim must be a tuple of two unicode strings.'
 
         if len(items) == 0:
             self.emit(before + delim[0] + delim[1] + after)
@@ -301,7 +301,7 @@ class CodeGenerator(Generator):
                 indentation increment is used (four spaces or one tab).
         """
         assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
-            isinstance(delim[1], six.text_type), 'delim must be a tuple of two strings.'
+            isinstance(delim[1], six.text_type), 'delim must be a tuple of two unicode strings.'
 
         if before:
             self.emit('{} {}'.format(before, delim[0]))
