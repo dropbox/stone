@@ -9,7 +9,7 @@ import textwrap
 
 from babelapi.babel.tower import doc_ref_re
 
-class Generator(object):
+class Generator(six.with_metaclass(ABCMeta)):
     """
     The parent class for all generators. All generators should extend this
     class to be recognized as such.
@@ -28,8 +28,6 @@ class Generator(object):
     The target_folder_path attribute is the path to the folder where all
     generated files should be created.
     """
-
-    __metaclass__ = ABCMeta
 
     # Can be overridden by a subclass
     tabs_for_indents = False
@@ -58,7 +56,7 @@ class Generator(object):
         Args:
             api (babelapi.api.Api): The API specification.
         """
-        raise NotImplemented
+        raise NotImplementedError
 
     @contextmanager
     def output_to_relative_path(self, relative_path):
@@ -244,8 +242,8 @@ class CodeGenerator(Generator):
             skip_last_sep (bool): When compact is false, whether the last line
                 should have a trailing separator. Ignored when compact is true.
         """
-        assert len(delim) == 2 and isinstance(delim[0], str) and \
-            isinstance(delim[1], str), 'delim must be a tuple of two strings.'
+        assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
+            isinstance(delim[1], six.text_type), 'delim must be a tuple of two strings.'
 
         if len(items) == 0:
             self.emit(before + delim[0] + delim[1] + after)
@@ -302,8 +300,8 @@ class CodeGenerator(Generator):
             dent (int): The amount to indent the block. If none, the default
                 indentation increment is used (four spaces or one tab).
         """
-        assert len(delim) == 2 and isinstance(delim[0], str) and \
-            isinstance(delim[1], str), 'delim must be a tuple of two strings.'
+        assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
+            isinstance(delim[1], six.text_type), 'delim must be a tuple of two strings.'
 
         if before:
             self.emit('{} {}'.format(before, delim[0]))
