@@ -88,11 +88,11 @@ class TestDropInModules(unittest.TestCase):
         # Not a valid binary type
         self.assertRaises(bv.ValidationError, lambda: b.validate(u'asdf'))
         # Too short
-        self.assertRaises(bv.ValidationError, lambda: b.validate(''))
+        self.assertRaises(bv.ValidationError, lambda: b.validate(b''))
         # Too long
-        self.assertRaises(bv.ValidationError, lambda: b.validate('\x00'*11))
+        self.assertRaises(bv.ValidationError, lambda: b.validate(b'\x00'*11))
         # Passes
-        b.validate('\x00')
+        b.validate(b'\x00')
 
     def test_timestamp_validator(self):
         class UTC(datetime.tzinfo):
@@ -173,7 +173,7 @@ class TestDropInModules(unittest.TestCase):
         now = datetime.datetime.utcnow()
         self.assertEqual(json_encode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), now),
                          json.dumps(now.strftime(f)))
-        b = '\xff' * 5
+        b = b'\xff' * 5
         self.assertEqual(json_encode(bv.Binary(), b), json.dumps(base64.b64encode(b)))
         self.assertEqual(json_encode(bv.Nullable(bv.String()), None), json.dumps(None))
         self.assertEqual(json_encode(bv.Nullable(bv.String()), u'abc'), json.dumps('abc'))
@@ -312,7 +312,7 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_decode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'),
                                      json.dumps(now.strftime(f))),
                          now)
-        b = '\xff' * 5
+        b = b'\xff' * 5
         self.assertEqual(json_decode(bv.Binary(), json.dumps(base64.b64encode(b))), b)
         self.assertRaises(bv.ValidationError,
                           lambda: json_decode(bv.Binary(), json.dumps(1)))
@@ -527,10 +527,10 @@ class TestGeneratedPython(unittest.TestCase):
     def test_objs(self):
 
         # Test initializing struct params (also tests parent class fields)
-        a = self.ns.C(a='test', b=123, c='\x00', d=3.14)
+        a = self.ns.C(a='test', b=123, c=b'\x00', d=3.14)
         self.assertEqual(a.a, 'test')
         self.assertEqual(a.b, 123)
-        self.assertEqual(a.c, '\x00')
+        self.assertEqual(a.c, b'\x00')
         self.assertEqual(a.d, 3.14)
 
         # Test that void union member is available as a class attribute

@@ -14,6 +14,7 @@ from babelapi.data_type import (
     is_float_type,
     is_integer_type,
     is_list_type,
+    is_numeric_type,
     is_string_type,
     is_struct_type,
     is_tag_ref,
@@ -197,7 +198,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         lineno = self.lineno
         for field in data_type.fields:
             field_name = self.lang.format_variable(field.name)
-            validator_name = self._determine_validator_type(field.data_type)
+            validator_name = self._generate_validator_constructor(field.data_type)
             self.emit('_{}_validator = {}'.format(field_name,
                                                   validator_name))
         if lineno != self.lineno:
@@ -205,65 +206,82 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         self._generate_struct_class_fields_for_reflection(data_type)
 
-    def _determine_validator_type(self, data_type):
+    def _generate_validator_constructor(self, data_type):
         """
         Given a Babel data type, returns a string that can be used to construct
         the appropriate validation object in Python.
         """
         if is_list_type(data_type):
-            v = 'bv.List({})'.format(
-                self._func_args_from_dict({
-                    'item_validator': self._determine_validator_type(data_type.data_type),
-                    'min_items': data_type.min_items,
-                    'max_items': data_type.max_items,
-                })
+            v = self._generate_func_call(
+                'bv.List',
+                args=[
+                    self._generate_validator_constructor(data_type.data_type)],
+                kwargs=[
+                    ('min_items', data_type.min_items),
+                    ('max_items', data_type.max_items)],
             )
-        elif is_float_type(data_type):
-            v = 'bv.{}({})'.format(
-                data_type.name,
-                self._func_args_from_dict({
-                    'min_value': data_type.min_value,
-                    'max_value': data_type.max_value,
-                })
-            )
-        elif is_integer_type(data_type):
-            v = 'bv.{}({})'.format(
-                data_type.name,
-                self._func_args_from_dict({
-                    'min_value': data_type.min_value,
-                    'max_value': data_type.max_value,
-                })
+        elif is_numeric_type(data_type):
+            v = self._generate_func_call(
+                'bv.{}'.format(data_type.name),
+                kwargs=[
+                    ('min_value', data_type.min_value),
+                    ('max_value', data_type.max_value)],
             )
         elif is_string_type(data_type):
-            v = 'bv.String({})'.format(
-                self._func_args_from_dict({
-                    'min_length': data_type.min_length,
-                    'max_length': data_type.max_length,
-                    'pattern': repr(data_type.pattern),
-                })
+            pattern = None
+            if data_type.pattern is not None:
+                pattern = repr(data_type.pattern)
+            v = self._generate_func_call(
+                'bv.String',
+                kwargs=[
+                    ('min_length', data_type.min_length),
+                    ('max_length', data_type.max_length),
+                    ('pattern', pattern)],
             )
         elif is_timestamp_type(data_type):
-            v = 'bv.Timestamp({})'.format(
-                self._func_args_from_dict({
-                    'format': repr(data_type.format),
-                })
+            v = self._generate_func_call(
+                'bv.Timestamp',
+                args=[repr(data_type.format)],
             )
         elif is_struct_type(data_type):
-            v = 'bv.Struct({})'.format(
-                self.lang.format_class(data_type.name),
+            v = self._generate_func_call(
+                'bv.Struct',
+                args=[self.lang.format_class(data_type.name)],
             )
         elif is_union_type(data_type):
-            v = 'bv.Union({})'.format(
-                self.lang.format_class(data_type.name),
+            v = self._generate_func_call(
+                'bv.Union',
+                args=[self.lang.format_class(data_type.name)],
             )
         else:
-            v = 'bv.{}()'.format(
-                data_type.name,
-            )
+            v = self._generate_func_call('bv.{}'.format(data_type.name))
         if data_type.nullable:
-            return 'bv.Nullable({})'.format(v)
+            return self._generate_func_call('bv.Nullable', args=[v])
         else:
             return v
+
+    @classmethod
+    def _generate_func_call(cls, name, args=None, kwargs=None):
+        """
+        Generates code to call a function.
+
+        Args:
+            name (str): The function name.
+            args (list[str]): Each positional argument.
+            kwargs (list[tuple]): Each tuple is (arg: str, value: str). If
+                value is None, then the keyword argument is omitted. Otherwise,
+                if the value is not a string, then str() is called on it.
+
+        Returns:
+            str: Code to call a function.
+        """
+        all_args = []
+        if args:
+            all_args.extend(args)
+        if kwargs:
+            all_args.extend('{}={}'.format(k, v)
+                            for k, v in kwargs if v is not None)
+        return '{}({})'.format(name, ', '.join(all_args))
 
     def _generate_struct_class_fields_for_reflection(self, data_type):
         """
@@ -520,7 +538,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         lineno = self.lineno
         for field in data_type.fields:
             field_name = self.lang.format_variable(field.name)
-            validator_name = self._determine_validator_type(field.data_type)
+            validator_name = self._generate_validator_constructor(field.data_type)
             self.emit('_{}_validator = {}'.format(field_name,
                                                         validator_name))
         if data_type.catch_all_field:

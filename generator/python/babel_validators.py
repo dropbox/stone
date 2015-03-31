@@ -323,7 +323,7 @@ class Timestamp(Primitive):
     def __init__(self, format):
         """format must be composed of format codes that the C standard (1989)
         supports, most notably in its strftime() function."""
-        assert isinstance(format, str), 'format must be a string'
+        assert isinstance(format, six.text_type), 'format must be a string'
         self.format = format
 
     def validate(self, val):
