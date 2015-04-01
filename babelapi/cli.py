@@ -48,16 +48,17 @@ def main():
     """The entry point for the program."""
 
     args = _cmdline_parser.parse_args()
+    debug = False
     if args.verbose is None:
         logging_level = logging.WARNING
     elif args.verbose == 1:
         logging_level = logging.INFO
     elif args.verbose == 2:
         logging_level = logging.DEBUG
+        debug = True
     else:
         print('error: I can only be so garrulous, try -vv.', file=sys.stderr)
         sys.exit(1)
-    debug = args.verbose > 1
 
     logging.basicConfig(level=logging_level)
 

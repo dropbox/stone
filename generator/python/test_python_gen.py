@@ -8,6 +8,7 @@ import os
 import shutil
 import six
 import subprocess
+import sys
 import unittest
 
 import babel_validators as bv
@@ -520,11 +521,16 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Compile spec by calling out to babelapi
         p = subprocess.Popen(
-            ['python', '-m', 'babelapi.cli', 'python.babelg.py', 'ns.babel', 'output/'],
+            [sys.executable,
+             '-m',
+             'babelapi.cli',
+             'python.babelg.py',
+             'ns.babel',
+             'output/'],
             stderr=subprocess.PIPE)
         if p.wait() != 0:
-            raise AssertionError('Could not execute babelapi tool: %r' %
-                                 p.stderr.read())
+            raise AssertionError('Could not execute babelapi tool: %s' %
+                                 p.stderr.read().decode('ascii'))
 
         self.ns = imp.load_source('ns', 'output/ns.py')
 
