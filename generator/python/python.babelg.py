@@ -406,7 +406,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                             self._generate_python_value(field.default)))
                     else:
                         self.emit(
-                            'raise AttributeError("missing required field %r")'
+                            "raise AttributeError(\"missing required field '%s'\")"
                             % field_name
                         )
             self.emit()
@@ -542,7 +542,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit('_{}_validator = {}'.format(field_name,
                                                         validator_name))
         if data_type.catch_all_field:
-            self.emit('_catch_all = %r' % data_type.catch_all_field.name)
+            self.emit("_catch_all = '%s'" % data_type.catch_all_field.name)
         elif not data_type.subtype:
             self.emit('_catch_all = None')
 
@@ -604,7 +604,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit('@classmethod')
                 self.emit('def {}(cls, val):'.format(field_name_reserved_check))
                 with self.indent():
-                    self.emit('return cls({!r}, val)'.format(field_name))
+                    self.emit("return cls('{}', val)".format(field_name))
                 self.emit()
 
     def _generate_union_class_is_set(self, data_type):
@@ -612,7 +612,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             field_name = self.lang.format_method(field.name)
             self.emit('def is_{}(self):'.format(field_name))
             with self.indent():
-                self.emit('return self._tag == {!r}'.format(field_name))
+                self.emit("return self._tag == '{}'".format(field_name))
             self.emit()
 
     def _generate_union_class_get_helpers(self, data_type):
@@ -629,8 +629,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 with self.indent():
                     self.emit('if not self.is_{}():'.format(field_name))
                     with self.indent():
-                        self.emit('raise AttributeError("tag {!r} not set")'.format(
-                            field_name))
+                        self.emit(
+                            'raise AttributeError("tag \'{}\' not set")'.format(
+                                field_name))
                     self.emit('return self._value')
                 self.emit()
 
@@ -641,12 +642,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """
         self.emit('def __repr__(self):')
         with self.indent():
-            if data_type.fields:
-                self.emit("return '{}(%r)' % self._tag".format(
-                    self._class_name_for_data_type(data_type),
-                ))
-            else:
-                self.emit("return '{}()'".format(self._class_name_for_data_type(data_type)))
+            self.emit("return '{}(%r)' % self._tag".format(
+                self._class_name_for_data_type(data_type),
+            ))
         self.emit()
 
     def _generate_union_class_symbol_creators(self, data_type):
@@ -659,6 +657,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             if is_void_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
-                self.emit('{0}.{1} = {0}({1!r})'.format(class_name, field_name))
+                self.emit("{0}.{1} = {0}('{1}')".format(class_name, field_name))
         if lineno != self.lineno:
             self.emit()
