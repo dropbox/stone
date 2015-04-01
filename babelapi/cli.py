@@ -23,12 +23,6 @@ _cmdline_parser.add_argument(
     help='Print debugging statements.',
 )
 _cmdline_parser.add_argument(
-    '-q',
-    '--quiet',
-    action='store_true',
-    help='Only print error messages.',
-)
-_cmdline_parser.add_argument(
     'generator',
     type=str,
     help='Specify the path to a generator. It must have a .babelg.py extension.',
