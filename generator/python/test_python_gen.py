@@ -6,6 +6,7 @@ import imp
 import json
 import os
 import shutil
+import six
 import subprocess
 import unittest
 
@@ -34,7 +35,7 @@ class TestDropInModules(unittest.TestCase):
         # Passes
         s.validate('a')
         # Check that the validator is converting all strings to unicode
-        self.assertEqual(type(s.validate('a')), unicode)
+        self.assertEqual(type(s.validate('a')), six.text_type)
 
     def test_boolean_validator(self):
         b = bv.Boolean()
@@ -174,7 +175,8 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), now),
                          json.dumps(now.strftime(f)))
         b = b'\xff' * 5
-        self.assertEqual(json_encode(bv.Binary(), b), json.dumps(base64.b64encode(b)))
+        self.assertEqual(json_encode(bv.Binary(), b),
+                         json.dumps(base64.b64encode(b).decode('ascii')))
         self.assertEqual(json_encode(bv.Nullable(bv.String()), None), json.dumps(None))
         self.assertEqual(json_encode(bv.Nullable(bv.String()), u'abc'), json.dumps('abc'))
 
@@ -313,7 +315,9 @@ class TestDropInModules(unittest.TestCase):
                                      json.dumps(now.strftime(f))),
                          now)
         b = b'\xff' * 5
-        self.assertEqual(json_decode(bv.Binary(), json.dumps(base64.b64encode(b))), b)
+        self.assertEqual(json_decode(bv.Binary(),
+                                     json.dumps(base64.b64encode(b).decode('ascii'))),
+                         b)
         self.assertRaises(bv.ValidationError,
                           lambda: json_decode(bv.Binary(), json.dumps(1)))
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps(None)), None)

@@ -195,7 +195,7 @@ def _make_json_friendly(data_type, val):
     elif isinstance(data_type, bv.Timestamp):
         return val.strftime(data_type.format)
     elif isinstance(data_type, bv.Binary):
-        return base64.b64encode(val)
+        return base64.b64encode(val).decode('ascii')
     elif isinstance(data_type, bv.Integer) and isinstance(val, bool):
         # A bool is a subclass of an int so it passes Integer validation. But,
         # we want the bool to be encoded as an Integer (1/0) rather than T/F.
