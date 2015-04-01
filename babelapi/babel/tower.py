@@ -46,7 +46,31 @@ from babelapi.babel.parser import (
     BabelTypeRef,
 )
 
-class InvalidSpec(Exception): pass
+class InvalidSpec(Exception):
+    """Raise this to indicate there was an error in a specification."""
+
+    def __init__(self, msg, lineno, path=None):
+        """
+        Args:
+            msg: Error message intended for the spec writer to read.
+            lineno: The line number the error occurred on.
+            path: Path to the spec file with the error.
+        """
+        assert isinstance(msg, six.text_type)
+        assert isinstance(lineno, six.integer_types)
+        self.msg = msg
+        self.lineno = lineno
+        self.path = path
+
+    def __str__(self):
+        return repr(self)
+
+    def __repr__(self):
+        return 'InvalidSpec({!r}, {!r}, {!r})'.format(
+            self.msg,
+            self.lineno,
+            self.path,
+        )
 
 def quote(s):
     assert s.replace('_', '').isalnum(), \
@@ -109,15 +133,16 @@ class TowerOfBabel(object):
                 self._logger.info('Parsing spec %s', path)
                 res = self.parse_scripture(scripture)
                 if self.parser.got_errors_parsing():
-                    for error in self.parser.get_error_strings():
-                        self._logger.error(error)
-                    return None
+                    # TODO(kelkabany): We only support showing a single error
+                    # at a time.
+                    msg, lineno = self.parser.get_errors()[0]
+                    raise InvalidSpec(msg, lineno)
                 elif res:
                     self.add_to_api(path, res)
                 else:
                     self._logger.warn('No output generated from file')
             except InvalidSpec as e:
-                new_e = InvalidSpec("%s: %s" % (path, e))
+                new_e = InvalidSpec(e.msg, e.lineno, path)
                 six.reraise(type(new_e), new_e, sys.exc_info()[2])
         return self.api
 
@@ -131,24 +156,28 @@ class TowerOfBabel(object):
     def _create_alias(self, env, item):
         if item.name in env:
             raise InvalidSpec(
-                'Line %d: Symbol %s already defined on line %d.' %
-                (item.lineno, quote(item.name), env[item.name]._token.lineno))
+                'Symbol %s already defined on line %d.' %
+                (quote(item.name), env[item.name]._token.lineno),
+                item.lineno)
+
         elif item.type_ref.name not in env:
-            raise InvalidSpec('Line %d: Symbol %s is undefined.' %
-                              (item.lineno, quote(item.type_ref.name)))
+            raise InvalidSpec(
+                'Symbol %s is undefined.' % (quote(item.type_ref.name)),
+                item.lineno)
 
         obj = env[item.type_ref.name]
         if inspect.isclass(obj):
             env[item.name] = self._instantiate_data_type(
                 obj, item.type_ref.args, item.lineno)
         elif isinstance(obj, ApiRoute):
-            raise InvalidSpec('Line %d: Cannot alias a route.' % item.lineno)
+            raise InvalidSpec('Cannot alias a route.', item.lineno)
         elif item.type_ref.args[0] or item.type_ref.args[1]:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise InvalidSpec('Line %d: Attributes cannot be specified for '
-                              'instantiated type %s.' %
-                              (item.lineno, quote(item.type_ref.name)))
+            raise InvalidSpec(
+                'Attributes cannot be specified for instantiated type %s.' %
+                (quote(item.type_ref.name)),
+                item.lineno)
         else:
             ref = env[item.type_ref.name]
             if item.type_ref.nullable:
@@ -164,14 +193,16 @@ class TowerOfBabel(object):
             # rather than the alias itself. Since aliases aren't tracked in
             # the environment, fixing this will require a refactor.
             raise InvalidSpec(
-                'Line %d: Symbol %s already defined on line %d.' %
-                (item.lineno, quote(item.name), env[item.name]._token.lineno))
+                'Symbol %s already defined on line %d.' %
+                (quote(item.name), env[item.name]._token.lineno),
+                item.lineno)
         if item.composite_type == 'struct':
             supertype = None
             if item.extends:
                 if item.extends not in env:
-                    raise InvalidSpec('Line %d: Data type %s is undefined.' %
-                                      (item.lineno, quote(item.extends)))
+                    raise InvalidSpec(
+                        'Data type %s is undefined.' % quote(item.extends),
+                        item.lineno)
                 else:
                     supertype = env.get(item.extends)
             api_type_fields = []
@@ -184,8 +215,9 @@ class TowerOfBabel(object):
             subtype = None
             if item.extends:
                 if item.extends not in env:
-                    raise InvalidSpec('Line %d: Data type %s is undefined.' %
-                                      (item.lineno, quote(item.extends)))
+                    raise InvalidSpec(
+                        'Data type %s is undefined.' % quote(item.extends),
+                        item.lineno)
                 else:
                     subtype = env.get(item.extends)
             api_type_fields = []
@@ -195,17 +227,18 @@ class TowerOfBabel(object):
                 if (isinstance(babel_field, BabelVoidField)
                         and babel_field.catch_all):
                     if catch_all_field is not None:
-                        raise InvalidSpec('Line %d: Only one catch-all tag '
-                                          'per Union.' % babel_field.lineno)
+                        raise InvalidSpec('Only one catch-all tag per Union.',
+                                          babel_field.lineno)
 
                     # Verify that no subtype already has a catch-all tag.
                     # Do this here so that we still have access to line nums.
                     cur_subtype = subtype
                     while cur_subtype:
                         if cur_subtype.catch_all_field:
-                            raise InvalidSpec('Line %d: Subtype %s already '
-                                'declared a catch-all tag.' %
-                                (babel_field.lineno, quote(cur_subtype.name)))
+                            raise InvalidSpec(
+                                'Subtype %s already declared a catch-all tag.' %
+                                quote(cur_subtype.name),
+                                babel_field.lineno)
                         cur_subtype = cur_subtype.subtype
 
                     catch_all_field = api_type_field
@@ -234,18 +267,21 @@ class TowerOfBabel(object):
             babelapi.data_type.StructField: A field of a struct.
         """
         if babel_field.type_ref.name not in env:
-            raise InvalidSpec('Line %d: Symbol %s is undefined.' %
-                (babel_field.lineno, quote(babel_field.type_ref.name)))
+            raise InvalidSpec(
+                'Symbol %s is undefined.' % quote(babel_field.type_ref.name),
+                babel_field.lineno)
         else:
             data_type = self._resolve_type(env, babel_field.type_ref)
             if isinstance(data_type, Void):
-                raise InvalidSpec('Line %d: Struct field %s cannot have a '
-                                  'Void type.' %
-                                  (babel_field.lineno, quote(babel_field.name)))
+                raise InvalidSpec(
+                    'Struct field %s cannot have a Void type.' %
+                    quote(babel_field.name),
+                    babel_field.lineno)
             elif data_type.nullable and babel_field.has_default:
-                raise InvalidSpec('Line %d: Field %s cannot be a nullable '
+                raise InvalidSpec('Field %s cannot be a nullable '
                                   'type and have a default specified.' %
-                                  (babel_field.lineno, quote(babel_field.name)))
+                                  quote(babel_field.name),
+                                  babel_field.lineno)
             api_type_field = StructField(
                 babel_field.name,
                 data_type,
@@ -256,11 +292,12 @@ class TowerOfBabel(object):
             if babel_field.has_default:
                 if isinstance(babel_field.default, BabelTagRef):
                     if babel_field.default.union_name is not None:
-                        raise InvalidSpec('Line %d: Field %s has a qualified '
-                            'default which is unnecessary since the type %s '
-                            'is known' % (babel_field.lineno,
-                                          quote(babel_field.name),
-                                          quote(babel_field.default.union_name)))
+                        raise InvalidSpec(
+                            'Field %s has a qualified default which is '
+                            'unnecessary since the type %s is known' %
+                            (quote(babel_field.name),
+                             quote(babel_field.default.union_name)),
+                            babel_field.lineno)
                     default_value = TagRef(data_type, babel_field.default.tag)
                 else:
                     default_value = babel_field.default
@@ -269,10 +306,10 @@ class TowerOfBabel(object):
                     try:
                         data_type.check(default_value)
                     except ValueError as e:
-                        raise InvalidSpec('Line %d: Field %s has an invalid '
-                            'default: %s' % (babel_field.lineno,
-                                             quote(babel_field.name),
-                                             e))
+                        raise InvalidSpec(
+                            'Field %s has an invalid default: %s' %
+                            (quote(babel_field.name), e),
+                            babel_field.lineno)
                 api_type_field.set_default(default_value)
         return api_type_field
 
@@ -292,17 +329,19 @@ class TowerOfBabel(object):
             api_type_field = UnionField(babel_field.name, Void(),
                                         babel_field.doc, babel_field)
         elif babel_field.type_ref.name not in env:
-            raise InvalidSpec('Line %d: Symbol %s is undefined.' %
-                (babel_field.lineno, quote(babel_field.type_ref.name)))
+            raise InvalidSpec('Symbol %s is undefined.' %
+                quote(babel_field.type_ref.name),
+                babel_field.lineno)
         else:
             data_type = self._resolve_type(
                 env,
                 babel_field.type_ref,
             )
             if isinstance(data_type, Void):
-                raise InvalidSpec('Line %d: Union member %s cannot have Void '
+                raise InvalidSpec('Union member %s cannot have Void '
                                   'type explicit, omit Void instead.' %
-                                  (babel_field.lineno, quote(babel_field.name)))
+                                  quote(babel_field.name),
+                                  babel_field.lineno)
             api_type_field = UnionField(
                 babel_field.name,
                 data_type,
@@ -339,15 +378,16 @@ class TowerOfBabel(object):
         if (num_args - num_defaults) > len(pos_args):
             # Report if a positional argument is missing
             raise InvalidSpec(
-                'Line %d: Missing positional argument %s for %s type' %
-                (lineno, quote(argspec.args[len(pos_args)]),
-                 quote(data_type_class.__name__)))
+                'Missing positional argument %s for %s type' %
+                (quote(argspec.args[len(pos_args)]),
+                 quote(data_type_class.__name__)),
+                lineno)
         elif (num_args - num_defaults) < len(pos_args):
             # Report if there are too many positional arguments
             raise InvalidSpec(
-                'Line %d: Too many positional arguments for %s type' %
-                (lineno, quote(data_type_class.__name__))
-            )
+                'Too many positional arguments for %s type' %
+                quote(data_type_class.__name__),
+                lineno)
 
         # Map from arg name to bool indicating whether the arg has a default
         args = {}
@@ -357,13 +397,15 @@ class TowerOfBabel(object):
         for key in kw_args:
             # Report any unknown keyword arguments
             if key not in args:
-                raise InvalidSpec('Line %d: Unknown argument %s to %s type.' %
-                    (lineno, quote(key), quote(data_type_class.__name__)))
+                raise InvalidSpec('Unknown argument %s to %s type.' %
+                    (quote(key), quote(data_type_class.__name__)),
+                    lineno)
             # Report any positional args that are defined as keywords args.
             if not args[key]:
                 raise InvalidSpec(
-                    'Line %d: Positional argument %s cannot be specified as a '
-                    'keyword argument.' % (lineno, quote(key)))
+                    'Positional argument %s cannot be specified as a '
+                    'keyword argument.' % quote(key),
+                    lineno)
             del args[key]
 
         try:
@@ -371,17 +413,19 @@ class TowerOfBabel(object):
         except ParameterError as e:
             # Each data type validates its own attributes, and will raise a
             # ParameterError if the type or value is bad.
-            raise InvalidSpec('Line %d: Bad argument to %s type: %s' %
-                (lineno, quote(data_type_class.__name__), e.args[0]))
+            raise InvalidSpec('Bad argument to %s type: %s' %
+                (quote(data_type_class.__name__), e.args[0]),
+                lineno)
 
     def _resolve_type(self, env, type_ref):
         """Resolves the data type referenced by type_ref."""
         if type_ref.name not in env:
-            raise InvalidSpec('Line %d: Symbol %s is undefined.' %
-                              (type_ref.lineno, quote(type_ref.name)))
+            raise InvalidSpec(
+                'Symbol %s is undefined.' % quote(type_ref.name),
+                type_ref.lineno)
         obj = env[type_ref.name]
         if obj is Void and type_ref.nullable:
-            raise InvalidSpec('Line %d: Void cannot be marked nullable.' %
+            raise InvalidSpec('Void cannot be marked nullable.',
                               type_ref.lineno)
         elif inspect.isclass(obj):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
@@ -389,14 +433,15 @@ class TowerOfBabel(object):
                 obj, resolved_data_type_args, type_ref.lineno)
             data_type.nullable = type_ref.nullable
         elif isinstance(obj, ApiRoute):
-            raise InvalidSpec('Line %d: A route is not a valid field type.' %
+            raise InvalidSpec('A route is not a valid field type.',
                               type_ref.lineno)
         elif type_ref.args[0] or type_ref.args[1]:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise InvalidSpec('Line %d: Attributes cannot be specified for '
+            raise InvalidSpec('Attributes cannot be specified for '
                               'instantiated type %s.' %
-                              (type_ref.lineno, quote(type_ref.name)))
+                              quote(type_ref.name),
+                              type_ref.lineno)
         else:
             # The data_type could be nullable if this is an alias to a nullable
             # type. Or, the type reference itself could be nullable.
@@ -416,8 +461,9 @@ class TowerOfBabel(object):
         def check_value(v):
             if isinstance(v, BabelTypeRef):
                 if v.name not in env:
-                    raise InvalidSpec('Line %d: Symbol %s is undefined.' %
-                                      (v.lineno, quote(v.name)))
+                    raise InvalidSpec(
+                        'Symbol %s is undefined.' % quote(v.name),
+                        v.lineno)
                 else:
                     return self._resolve_type(env, v)
             else:
@@ -441,8 +487,9 @@ class TowerOfBabel(object):
         """
         if item.name in env:
             raise InvalidSpec(
-                'Line %d: Symbol %s already defined on line %d.' %
-                (item.lineno, quote(item.name), env[item.name]._token.lineno))
+                'Symbol %s already defined on line %d.' %
+                (quote(item.name), env[item.name]._token.lineno),
+                item.lineno)
         request_data_type = self._resolve_type(env, item.request_type_ref)
         response_data_type = self._resolve_type(env, item.response_type_ref)
         error_data_type = self._resolve_type(env, item.error_type_ref)
@@ -465,9 +512,9 @@ class TowerOfBabel(object):
         else:
             if self._debug:
                 self._logger.info('Description: %r' % desc)
-            raise InvalidSpec('Line %d: First declaration in a babel must be '
+            raise InvalidSpec('First declaration in a babel must be '
                               'a namespace. Possibly caused by preceding '
-                              'errors.' % desc[0].lineno)
+                              'errors.', desc[0].lineno)
 
         namespace = self.api.ensure_namespace(namespace_decl.name)
         # Keep lists of all the types and routes added just from this spec.
@@ -488,7 +535,7 @@ class TowerOfBabel(object):
                 full_path = os.path.join(os.path.dirname(path), item.target)
                 if full_path not in self.includes_by_namespace[namespace.name]:
                     self._include_babelh(namespace, env, os.path.dirname(path),
-                                         item.target)
+                                         item)
                     self.includes_by_namespace[namespace.name] = full_path
                     self._logger.info(
                         'Done parsing header spec, resuming parsing %s',
@@ -529,13 +576,14 @@ class TowerOfBabel(object):
         # TODO(kelkabany): Check to make sure that no other type that is not
         # covered extends a data type that enforces coverage.
 
-    def _include_babelh(self, namespace, env, path, name):
-        babelh_path = os.path.join(path, name) + '.babelh'
+    def _include_babelh(self, namespace, env, path, item):
+        babelh_path = os.path.join(path, item.target) + '.babelh'
         if not os.path.exists(babelh_path):
-            raise InvalidSpec('Babel header %s does not exist.' %
-                              quote(babelh_path))
+            raise InvalidSpec(
+                'Babel header %s does not exist.' % quote(babelh_path),
+                item.lineno)
 
-        self._logger.info("Parsing included header spec '%s'" % name)
+        self._logger.info("Parsing included header spec '%s'" % item.target)
 
         with open(babelh_path) as f:
             scripture = f.read()
@@ -550,12 +598,10 @@ class TowerOfBabel(object):
                 namespace.add_data_type(api_type)
             elif isinstance(item, BabelInclude):
                 raise InvalidSpec(
-                    "Line %d: Cannot use 'include' in header spec." %
-                    item.lineno)
+                    "Cannot use 'include' in header spec.", item.lineno)
             elif isinstance(item, BabelRouteDef):
                 raise InvalidSpec(
-                    'Line %d: Cannot define route in header spec.' %
-                    item.lineno)
+                    'Cannot define route in header spec.', item.lineno)
             else:
                 raise AssertionError('Unknown Babel Declaration Type %r' %
                                      item.__class__.__name__)
@@ -583,58 +629,58 @@ class TowerOfBabel(object):
                     type_name, field_name = val.split('.', 1)
                     if type_name not in env:
                         raise InvalidSpec(
-                            'Line %d: Bad doc reference to field %s of '
-                            'unknown type %s.' %
-                            (lineno, field_name, quote(type_name)))
+                            'Bad doc reference to field %s of '
+                            'unknown type %s.' % (field_name, quote(type_name)),
+                            lineno)
                     elif isinstance(env[type_name], ApiRoute):
                         raise InvalidSpec(
-                            'Line %d: Bad doc reference to field %s of '
-                            'route %s.' %
-                            (lineno, quote(field_name), quote(type_name)))
+                            'Bad doc reference to field %s of route %s.' %
+                            (quote(field_name), quote(type_name)),
+                            lineno)
                     elif not any(field.name == field_name
                                  for field in env[type_name].all_fields):
                         raise InvalidSpec(
-                            'Line %d: Bad doc reference to unknown field %s.' %
-                            (lineno, quote(val)))
+                            'Bad doc reference to unknown field %s.' % quote(val),
+                            lineno)
                 else:
                     # Referring to a field that's a member of this type
                     assert type_context is not None
                     if not any(field.name == val
                                for field in type_context.all_fields):
                         raise InvalidSpec(
-                            'Line %d: Bad doc reference to unknown field %s.' %
-                            (lineno, quote(val)))
+                            'Bad doc reference to unknown field %s.' %
+                            quote(val),
+                            lineno)
             elif tag == 'link':
                 if not (1 < val.rfind(' ') < len(val) - 1):
                     # There must be a space somewhere in the middle of the
                     # string to separate the title from the uri.
                     raise InvalidSpec(
-                        'Line %d: Bad doc reference to link (need a title and '
-                        'uri separated by a space): %s.' %
-                        (lineno, quote(val)))
+                        'Bad doc reference to link (need a title and '
+                        'uri separated by a space): %s.' % quote(val),
+                        lineno)
             elif tag == 'route':
                 if val not in env:
                     raise InvalidSpec(
-                        'Line %d: Unknown doc reference to route %s.' %
-                        (lineno, quote(val)))
+                        'Unknown doc reference to route %s.' % quote(val),
+                        lineno)
                 elif not isinstance(env[val], ApiRoute):
-                    raise InvalidSpec('Line %d: Doc reference to type %s is '
-                        'not a struct or union.' % (lineno, quote(val)))
+                    raise InvalidSpec(
+                        'Doc reference to type %s is not a struct or union.' %
+                        quote(val), lineno)
             elif tag == 'type':
                 if val not in env:
                     raise InvalidSpec(
-                        'Line %d: Unknown doc reference to type %s.' %
-                        (lineno, quote(val)))
+                        'Unknown doc reference to type %s.' % quote(val),
+                        lineno)
                 elif not isinstance(env[val], (Struct, Union)):
-                    raise InvalidSpec('Line %d: Documentation reference to '
-                        'type %s is not a struct or union.' %
-                        (lineno, quote(val)))
+                    raise InvalidSpec(
+                        'Documentation reference to type %s is not a struct '
+                        'or union.' % quote(val), lineno)
             elif tag == 'val':
                 if not doc_ref_val_re.match(val):
                     raise InvalidSpec(
-                        'Line %d: Bad doc reference value %s.' %
-                        (lineno, quote(val)))
+                        'Bad doc reference value %s.' % quote(val), lineno)
             else:
                 raise InvalidSpec(
-                    'Line %d: Unknown doc reference tag %s.' %
-                    (lineno, quote(tag)))
+                    'Unknown doc reference tag %s.' % quote(tag), lineno)

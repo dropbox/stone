@@ -406,4 +406,4 @@ route test_route(Blah, Blah, Blah)
 
         with self.assertRaises(InvalidSpec) as cm:
             t.add_to_api('test.babel', res)
-        self.assertIn("Symbol 'Blah' is undefined", cm.exception.args[0])
+        self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)

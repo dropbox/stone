@@ -19,7 +19,7 @@ _cmdline_parser = argparse.ArgumentParser(description='BabelAPI')
 _cmdline_parser.add_argument(
     '-v',
     '--verbose',
-    action='store_true',
+    action='count',
     help='Print debugging statements.',
 )
 _cmdline_parser.add_argument(
@@ -54,18 +54,17 @@ def main():
     """The entry point for the program."""
 
     args = _cmdline_parser.parse_args()
-    debug = args.verbose
-    quiet = args.quiet
-
-    if debug and quiet:
-        print("Can't use both -q/--quiet and -v/--verbose.", file=sys.stderr)
-        sys.exit(1)
-
-    logging_level = logging.INFO
-    if quiet:
+    if args.verbose is None:
         logging_level = logging.WARNING
-    if debug:
+    elif args.verbose == 1:
+        logging_level = logging.INFO
+    elif args.verbose == 2:
         logging_level = logging.DEBUG
+    else:
+        print('error: I can only be so garrulous, try -vv.', file=sys.stderr)
+        sys.exit(1)
+    debug = args.verbose > 1
+
     logging.basicConfig(level=logging_level)
 
     if args.spec[0].startswith('+') and args.spec[0].endswith('.py'):
@@ -76,16 +75,18 @@ def main():
         try:
             api = imp.load_source('api', args.api[0]).api
         except ImportError as e:
-            print('Could not import API description due to:', e, file=sys.stderr)
+            print('error: Could not import API description due to:',
+                  e, file=sys.stderr)
             sys.exit(1)
     else:
         for spec_path in args.spec:
             if not spec_path.endswith('.babel'):
-                print('Specification %r must have a .babel extension.' % spec_path,
+                print('error: Specification %r must have a .babel extension.' %
+                      spec_path,
                       file=sys.stderr)
                 sys.exit(1)
             if not os.path.exists(spec_path):
-                print('Specification %r cannot be found.' % spec_path,
+                print('error: Specification %r cannot be found.' % spec_path,
                       file=sys.stderr)
                 sys.exit(1)
         # TODO: Needs version
@@ -93,13 +94,10 @@ def main():
         try:
             api = tower.parse()
         except InvalidSpec as e:
-            print('Specification had error(s). You must fix these to continue:\n\n',
-                  '%s\n' % e, file=sys.stderr)
+            print('%s:%s: error: %s' % (e.path, e.lineno, e.msg), file=sys.stderr)
             if debug:
                 print('A traceback is included below in case this is a bug in Babel.\n',
                       traceback.format_exc(), file=sys.stderr)
-            else:
-                print('If the error is unclear, try using the -v flag.', file=sys.stderr)
             sys.exit(1)
         if api is None:
             print('You must fix the above parsing errors for generation to continue.',

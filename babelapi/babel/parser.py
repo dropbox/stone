@@ -221,18 +221,23 @@ class BabelParser(object):
         """Whether the lexer or parser had errors."""
         return self.errors or self.lexer.errors
 
-    def get_error_strings(self):
-        """Call this if got_errors_parsing() returns True to get a list of
-        error strings."""
+    def get_errors(self):
+        """
+        If got_errors_parsing() returns True, call this to get the errors.
+
+        Returns:
+            list[tuple[msg: str, lineno: int]]
+        """
         errors = []
         for char, lineno in self.lexer.errors:
-            errors.append('Line %d: Illegal character %r' % (lineno, char))
+            errors.append(("Illegal character '%s'" % char, lineno))
         for token_type, token_value, lineno, msg in self.errors:
             if msg is None:
-                errors.append('Line %d: Unexpected %s with value %r' %
-                                  (lineno, token_type, token_value))
+                errors.append(
+                    ('Unexpected %s with value %r' % (token_type, token_value),
+                     lineno))
             else:
-                errors.append(msg)
+                errors.append((msg, lineno))
         return errors
 
     # --------------------------------------------------------------
@@ -345,9 +350,8 @@ class BabelParser(object):
         p[0] = p[1]
         for key in p[3]:
             if key in p[1]:
-                msg = 'Line %d: Keyword argument %r defined more than once.' % (
-                    p.lineno(3), key)
-                self.errors.append(('kw_arg', key, p.lineno(3), msg))
+                msg = "Keyword argument '%s' defined more than once." % key
+                self.errors.append(('kw_arg', key, p.lineno(2), msg))
         p[0].update(p[3])
 
     def p_args(self, p):
