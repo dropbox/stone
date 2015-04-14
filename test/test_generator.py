@@ -179,6 +179,17 @@ int sq(int x) {
         self.assertEqual(t.output_buffer_to_string(), expected)
         t.clear_output_buffer()
 
+        with t.block('int sq(int x)', allman=True):
+            t.emit('return x*x;')
+        expected = """\
+int sq(int x)
+{
+    return x*x;
+}
+"""
+        self.assertEqual(t.output_buffer_to_string(), expected)
+        t.clear_output_buffer()
+
         with t.block('int sq(int x)', delim=('<', '>'), dent=8):
             t.emit('return x*x;')
         expected = """\

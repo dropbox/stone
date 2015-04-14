@@ -281,7 +281,7 @@ class CodeGenerator(Generator):
                 self.emit(delim[1])
 
     @contextmanager
-    def block(self, before='', after='', delim=('{','}'), dent=None):
+    def block(self, before='', after='', delim=('{','}'), dent=None, allman=False):
         """
         A context manager that emits configurable lines before and after an
         indented block of text.
@@ -299,13 +299,19 @@ class CodeGenerator(Generator):
                 space and then `after`.
             dent (int): The amount to indent the block. If none, the default
                 indentation increment is used (four spaces or one tab).
+            allman (bool): Indicates whether to use `Allman` style indentation,
+                or the default `K&R` style. If there is no `before` string this
+                is ignored. For more details about indent styles see
+                http://en.wikipedia.org/wiki/Indent_style
         """
         assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
             isinstance(delim[1], six.text_type), 'delim must be a tuple of two unicode strings.'
 
-        if before:
+        if before and not allman:
             self.emit('{} {}'.format(before, delim[0]))
         else:
+            if before:
+                self.emit(before)
             self.emit(delim[0])
 
         with self.indent(dent):

@@ -254,7 +254,7 @@ Helpers for Code Generation
     ``skip_last_sep`` indicates whether the last line should have a trailing
     separator. This parameter only applies when ``compact`` is false.
 
-``block(before='', after='', delim=('{','}'), dent=None)``
+``block(before='', after='', delim=('{','}'), dent=None, allman=False)``
     A context manager that emits configurable lines before and after an
     indented block of text. This is convenient for class and function
     definitions in some languages.
@@ -264,7 +264,10 @@ Helpers for Code Generation
     also not indented. The first element of ``delim`` is added immediately
     following ``before`` and a space. The second element is added prior to a
     space and then ``after``. ``dent`` is the amount to indent the block. If
-    none, the default indentation increment is used.
+    none, the default indentation increment is used. ``allman`` indicates
+    whether to use ``Allman`` style indentation instead of the default ``K&R``
+    style.  For more about indent styles see `Wikipedia
+    <http://en.wikipedia.org/wiki/Indent_style>`_.
 
 ``process_doc(doc, handler)``
     Helper for parsing documentation `references <lang_ref.rst#doc-refs>`_ in
