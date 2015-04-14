@@ -58,7 +58,7 @@ Each file contains a one line C++-style comment::
         def generate(self, api):
             for namespace_name in api.namespaces:
                 with self.output_to_relative_path(namespace_name + '.cpp'):
-                    self.emit_line('/* {} */'.format(namespace_name))
+                    self.emit('/* {} */'.format(namespace_name))
 
 Using the API Object
 ====================
@@ -149,7 +149,7 @@ all_fields
     A list of all StructField objects that make up the struct. Required fields
     come before optional fields.
 
-super_type
+supertype
     If it exists, it points to a DataType object (another struct) that this
     struct inherits from.
 
@@ -218,11 +218,11 @@ manager for adding incremental indentation. Here's an example::
         def generate(self, api):
             with self.output_to_relative_path('ex_indent.out'):
                 with self.indent()
-                    self.emit_line('hello')
+                    self.emit('hello')
                     self._output_world()
         def _output_world(self):
             with self.indent():
-                self.emit_line('world')
+                self.emit('world')
 
 The contents of ``ex_indent.out`` is::
 
