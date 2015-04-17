@@ -11,7 +11,7 @@ import os
 import sys
 import traceback
 
-from babelapi.compiler import Compiler
+from babelapi.compiler import Compiler, GeneratorException
 from babelapi.babel.tower import InvalidSpec, TowerOfBabel
 
 # The parser for command line arguments
@@ -74,38 +74,70 @@ def main():
                   e, file=sys.stderr)
             sys.exit(1)
     else:
+        specs = []
         for spec_path in args.spec:
             if not spec_path.endswith('.babel'):
-                print('error: Specification %r must have a .babel extension.' %
-                      spec_path,
+                print("error: Specification '%s' must have a .babel extension."
+                      % spec_path,
                       file=sys.stderr)
                 sys.exit(1)
-            if not os.path.exists(spec_path):
-                print('error: Specification %r cannot be found.' % spec_path,
+            elif not os.path.exists(spec_path):
+                print("error: Specification '%s' cannot be found." % spec_path,
                       file=sys.stderr)
                 sys.exit(1)
+            else:
+                with open(spec_path) as f:
+                    specs.append((spec_path, f.read()))
+
         # TODO: Needs version
-        tower = TowerOfBabel(args.spec, debug=debug)
+        tower = TowerOfBabel(specs, debug=debug)
+
         try:
             api = tower.parse()
         except InvalidSpec as e:
             print('%s:%s: error: %s' % (e.path, e.lineno, e.msg), file=sys.stderr)
             if debug:
-                print('A traceback is included below in case this is a bug in Babel.\n',
-                      traceback.format_exc(), file=sys.stderr)
+                print('A traceback is included below in case this is a bug in '
+                      'Babel.\n', traceback.format_exc(), file=sys.stderr)
             sys.exit(1)
         if api is None:
-            print('You must fix the above parsing errors for generation to continue.',
-                  file=sys.stderr)
+            print('You must fix the above parsing errors for generation to '
+                  'continue.', file=sys.stderr)
             sys.exit(1)
+
+    if not os.path.exists(args.generator):
+        print("error: Generator '%s' cannot be found." % args.generator,
+              file=sys.stderr)
+        sys.exit(1)
+    elif not os.path.isfile(args.generator):
+        print("error: Generator '%s' must be a file." % args.generator,
+              file=sys.stderr)
+        sys.exit(1)
+    elif not Compiler.is_babel_generator(args.generator):
+        print("%s: error: Generator '%s' must have a .babelg.py extension." %
+              args.generator, file=sys.stderr)
+        sys.exit(1)
+    else:
+        try:
+            generator_module = imp.load_source('user_generator', args.generator)
+        except:
+            print('%s: error: Importing generator module raised an exception:' %
+                  args.generator, file=sys.stderr)
+            raise
 
     c = Compiler(
         api,
-        args.generator,
+        generator_module,
         args.output,
         clean_build=args.clean_build,
     )
-    c.build()
+    try:
+        c.build()
+    except GeneratorException as e:
+        print('%s: error: %s raised an exception:\n%s' %
+              (args.generator, e.generator_name, e.traceback),
+              file=sys.stderr)
+        sys.exit(1)
 
     if not sys.argv[0].endswith('babelapi'):
         # If we aren't running from an entry_point, then return api to make it

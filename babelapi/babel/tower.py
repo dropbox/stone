@@ -104,20 +104,20 @@ class TowerOfBabel(object):
     default_env = {data_type.__name__: data_type for data_type in data_types}
 
     # FIXME: Version should not have a default.
-    def __init__(self, paths, version='0.1b1', debug=False):
-        """Creates a new tower of babel."""
+    def __init__(self, specs, version='0.1b1', debug=False):
+        """Creates a new tower of babel.
 
+        :type specs: List[Tuple[path: str, text: str]]
+        :param specs: `path` is never accessed and is only used to report the
+            location of a bad spec to the user. `spec` is the text contents of
+            a spec (.babel) file.
+        """
+
+        self._specs = specs
         self._debug = debug
         self._logger = logging.getLogger('babelapi.idl')
 
         self.api = Api(version=version)
-
-        # A list of all (path, raw text) of API descriptions
-        self._scriptures = []
-        for path in paths:
-            with open(path) as f:
-                scripture = f.read()
-                self._scriptures.append((path, scripture))
 
         self.parser = BabelParser(debug=debug)
         # Map of namespace name (str) -> environment (dict)
@@ -126,12 +126,12 @@ class TowerOfBabel(object):
         self.includes_by_namespace = defaultdict(set)
 
     def parse(self):
-        """Parses each Babel file and returns an API description. Returns None
-        if an error was encountered during parsing."""
-        for path, scripture in self._scriptures:
+        """Parses the text of each spec and returns an API description. Returns
+        None if an error was encountered during parsing."""
+        for path, text in self._specs:
             try:
                 self._logger.info('Parsing spec %s', path)
-                res = self.parse_scripture(scripture)
+                res = self.parse_spec(text)
                 if self.parser.got_errors_parsing():
                     # TODO(kelkabany): We only support showing a single error
                     # at a time.
@@ -146,12 +146,12 @@ class TowerOfBabel(object):
                 six.reraise(type(new_e), new_e, sys.exc_info()[2])
         return self.api
 
-    def parse_scripture(self, scripture):
+    def parse_spec(self, spec):
         """Parses a single Babel file."""
         if self._debug:
-            self.parser.test_lexing(scripture)
+            self.parser.test_lexing(spec)
 
-        return self.parser.parse(scripture)
+        return self.parser.parse(spec)
 
     def _create_alias(self, env, item):
         if item.name in env:

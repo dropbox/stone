@@ -1,39 +1,44 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import errno
 import logging
-import imp
 import inspect
 import os
-import re
 import shutil
+import traceback
 
 from babelapi.generator import Generator
 
-class UnknownGenerator(Exception): pass
-class UnknownSourceType(Exception): pass
-class MissingBabelPreamble(Exception): pass
+class GeneratorException(Exception):
+    """Saves the traceback of an exception raised by a generator."""
+
+    def __init__(self, generator_name, traceback):
+        """
+        :type generator_name: str
+        :type traceback: str
+        """
+        self.generator_name = generator_name
+        self.traceback = traceback
 
 class Compiler(object):
     """
-    Takes a Babel API representation and generator path as input, and generates
-    output files into the output folder.
+    Applies a collection of generators found in a single generator module to an
+    API specification.
     """
 
-    first_line_re = re.compile('babelapi\((?P<generator>\w+)\)')
-    template_extension = '.babelt'
     generator_extension = '.babelg'
 
     def __init__(self,
                  api,
-                 generator_path,
+                 generator_module,
                  build_path,
                  clean_build=False):
         """
         Creates a Compiler.
 
         :param babelapi.api.Api api: A Babel description of the API.
-        :param str generator_path: Path to generator.
+        :param generator_module: Python module that contains at least one
+            top-level class definition that descends from a
+            :class:`babelapi.generator.Generator`.
         :param str build_path: Location to save compiled sources to. If None,
             source files are compiled into the same directories.
         :param bool clean_build: If True, the build_path is removed before
@@ -42,7 +47,7 @@ class Compiler(object):
         self._logger = logging.getLogger('babelapi.compiler')
 
         self.api = api
-        self.generator_path = generator_path
+        self.generator_module = generator_module
         self.build_path = build_path
 
         # Remove existing build directory if it's a clean build
@@ -56,17 +61,8 @@ class Compiler(object):
         if os.path.exists(self.build_path) and not os.path.isdir(self.build_path):
             self._logger.error('Output path must be a folder if it already exists')
             return
-
-        if os.path.exists(self.generator_path):
-            if os.path.isdir(self.generator_path):
-                self._logger.error('Folder specified as generator at %s',
-                                   self.generator_path)
-            else:
-                self._logger.info('Found generator at %s', self.generator_path)
-                Compiler._mkdir(self.build_path)
-                self._process_file(self.generator_path)
-        else:
-            self._logger.error('Could not find generator at %s', self.generator_path)
+        Compiler._mkdir(self.build_path)
+        self._execute_generator_on_spec()
 
     @staticmethod
     def _mkdir(path):
@@ -82,7 +78,7 @@ class Compiler(object):
                 raise
 
     @classmethod
-    def _is_babel_generator(cls, path):
+    def is_babel_generator(cls, path):
         """
         Returns True if the file name matches the format of a babel generator,
         ie. its inner extension of "babelg". For example: xyz.babelg.py
@@ -91,43 +87,21 @@ class Compiler(object):
         _, second_ext = os.path.splitext(path_without_ext)
         return second_ext == cls.generator_extension
 
-    @staticmethod
-    def _get_babel_template_target_file(path):
-        """
-        Returns the path that a template should compile to.
-        """
-        path_without_ext, first_ext = os.path.splitext(path)
-        path_without_babel_ext, second_ext = os.path.splitext(path_without_ext)
-        return path_without_babel_ext + first_ext
-
-    def _process_file(self, source_path):
+    def _execute_generator_on_spec(self):
         """Renders a source file into its final form."""
 
-        if self._is_babel_generator(source_path):
-            self._logger.info('Running generator at %s', source_path)
-            # If there's no preamble, then we assume this is a Python file
-            # that defines a generator.
-            generator_module = imp.load_source('user_generator', source_path)
-            try:
-                os.remove(source_path + 'c')
-            except OSError as e:
-                if e.errno != errno.ENOENT:
-                    raise
-
-            for attr_key in dir(generator_module):
-                attr_value = getattr(generator_module, attr_key)
-                if (inspect.isclass(attr_value)
-                        and issubclass(attr_value, Generator)
-                        and not inspect.isabstract(attr_value)):
-                    generator = attr_value(self.build_path)
-                    try:
-                        generator.generate(self.api)
-                    except:
-                        # Tell the user that this isn't a bug with the babel
-                        # parser but a bug with the generator they are using.
-                        self._logger.error(
-                            'Generator (%s) failed with an error:\n' %
-                            generator.__class__.__name__)
-                        raise
-        else:
-            raise UnknownSourceType(source_path)
+        for attr_key in dir(self.generator_module):
+            attr_value = getattr(self.generator_module, attr_key)
+            if (inspect.isclass(attr_value) and
+                    issubclass(attr_value, Generator) and
+                    not inspect.isabstract(attr_value)):
+                self._logger.info('Running generator: %s', attr_value.__name__)
+                generator = attr_value(self.build_path)
+                try:
+                    generator.generate(self.api)
+                except:
+                    # Wrap this exception so that it isn't thought of as a bug
+                    # in the babel parser, but rather a bug in the generator.
+                    # Remove the last char of the traceback b/c it's a newline.
+                    raise GeneratorException(attr_value.__name__,
+                                             traceback.format_exc()[:-1])
