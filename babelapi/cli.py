@@ -11,8 +11,9 @@ import os
 import sys
 import traceback
 
-from babelapi.compiler import Compiler, GeneratorException
-from babelapi.babel.tower import InvalidSpec, TowerOfBabel
+from .babel.exception import InvalidSpec
+from .babel.tower import TowerOfBabel
+from .compiler import Compiler, GeneratorException
 
 # The parser for command line arguments
 _cmdline_parser = argparse.ArgumentParser(description='BabelAPI')

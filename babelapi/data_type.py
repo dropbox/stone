@@ -16,6 +16,8 @@ import numbers
 import re
 import six
 
+from .babel.exception import InvalidSpec
+
 class ParameterError(Exception):
     """Raised when a data type is parameterized with a bad type or value."""
     pass
@@ -456,6 +458,16 @@ class CompositeType(DataType):
         self.fields = fields
         self._token = token
         self.examples = {}
+        self._fields_by_name = {}  # Dict[str, Field]
+
+        # Check that no two fields share the same name.
+        for field in self.fields:
+            if field.name in self._fields_by_name:
+                orig_lineno = self._fields_by_name[field.name]._token.lineno
+                raise InvalidSpec("Field '%s' already defined on line %s." %
+                                  (field.name, orig_lineno),
+                                  field._token.lineno)
+            self._fields_by_name[field.name] = field
 
     @property
     def name(self):
@@ -500,6 +512,19 @@ class Struct(CompositeType):
         self.coverage_names = coverage_names
         self.coverage = []
         self.supertype = supertype
+
+        # Check that the fields for this type do not match any of the fields of
+        # its parents.
+        cur_type = self.supertype
+        while cur_type:
+            for field in self.fields:
+                if field.name in cur_type._fields_by_name:
+                    lineno = cur_type._fields_by_name[field.name]._token.lineno
+                    raise InvalidSpec(
+                        "Field '%s' already defined in parent '%s' on line %d."
+                        % (field.name, cur_type.name, lineno),
+                        field._token.lineno)
+            cur_type = cur_type.supertype
 
     def has_coverage(self):
         return bool(self.coverage_names)
@@ -672,6 +697,19 @@ class Union(CompositeType):
         super(Union, self).__init__(name, doc, fields, token)
         self.catch_all_field = catch_all_field
         self.subtype = subtype
+
+        # TODO(kelkabany): When supertype/subtype are renamed to parent_type,
+        # this logic can be moved to the CompositeType super class.
+        cur_type = self.subtype
+        while cur_type:
+            for field in self.fields:
+                if field.name in cur_type._fields_by_name:
+                    lineno = cur_type._fields_by_name[field.name]._token.lineno
+                    raise InvalidSpec(
+                        "Field '%s' already defined in parent '%s' on line %d."
+                        % (field.name, cur_type.name, lineno),
+                        field._token.lineno)
+            cur_type = cur_type.subtype
 
     def check(self, val):
         if not isinstance(val, TagRef):

@@ -407,3 +407,125 @@ route test_route(Blah, Blah, Blah)
         with self.assertRaises(InvalidSpec) as cm:
             t.add_to_api('test.babel', res)
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
+
+    def test_struct_semantics(self):
+        # Test duplicate fields
+        text = """\
+namespace test
+
+struct A
+    a UInt64
+    a String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('already defined', cm.exception.msg)
+
+        # Test duplicate field name -- earlier being in a parent type
+        text = """\
+namespace test
+
+struct A
+    a UInt64
+
+struct B extends A
+    b String
+
+struct C extends B
+    a String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('already defined in parent', cm.exception.msg)
+
+        # Test extending from wrong type
+        text = """\
+namespace test
+
+union A
+    a
+
+struct B extends A
+    b UInt64
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('struct can only extend another struct', cm.exception.msg)
+
+    def test_union_semantics(self):
+        # Test duplicate fields
+        text = """\
+namespace test
+
+union A
+    a UInt64
+    a String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('already defined', cm.exception.msg)
+
+        # Test duplicate field name -- earlier being in a parent type
+        text = """\
+namespace test
+
+union A
+    a UInt64
+
+union B extends A
+    b String
+
+union C extends B
+    a String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('already defined in parent', cm.exception.msg)
+
+        # Test two catch-alls
+        text = """\
+namespace test
+
+union A
+    a*
+    b*
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('Only one catch-all tag', cm.exception.msg)
+
+        # Test existing catch-all in parent type
+        text = """\
+namespace test
+
+union A
+    a*
+
+union B extends A
+    b*
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('already declared a catch-all tag', cm.exception.msg)
+
+        # Test extending from wrong type
+        text = """\
+namespace test
+
+struct A
+    a UInt64
+
+union B extends A
+    b UInt64
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('union can only extend another union', cm.exception.msg)

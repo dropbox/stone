@@ -9,8 +9,11 @@ import re
 import six
 import sys
 
-from babelapi.babel.parser import BabelParser
-from babelapi.data_type import (
+from ..api import (
+    Api,
+    ApiRoute,
+)
+from ..data_type import (
     Binary,
     Boolean,
     DataType,
@@ -31,46 +34,19 @@ from babelapi.data_type import (
     Union,
     Void,
 )
-from babelapi.api import (
-    Api,
-    ApiRoute,
-)
-from babelapi.babel.parser import (
+
+from .exception import InvalidSpec
+from .parser import (
     BabelAlias,
     BabelInclude,
     BabelNamespace,
+    BabelParser,
     BabelRouteDef,
     BabelVoidField,
     BabelTagRef,
     BabelTypeDef,
     BabelTypeRef,
 )
-
-class InvalidSpec(Exception):
-    """Raise this to indicate there was an error in a specification."""
-
-    def __init__(self, msg, lineno, path=None):
-        """
-        Args:
-            msg: Error message intended for the spec writer to read.
-            lineno: The line number the error occurred on.
-            path: Path to the spec file with the error.
-        """
-        assert isinstance(msg, six.text_type)
-        assert isinstance(lineno, six.integer_types)
-        self.msg = msg
-        self.lineno = lineno
-        self.path = path
-
-    def __str__(self):
-        return repr(self)
-
-    def __repr__(self):
-        return 'InvalidSpec({!r}, {!r}, {!r})'.format(
-            self.msg,
-            self.lineno,
-            self.path,
-        )
 
 def quote(s):
     assert s.replace('_', '').isalnum(), \
@@ -203,8 +179,12 @@ class TowerOfBabel(object):
                     raise InvalidSpec(
                         'Data type %s is undefined.' % quote(item.extends),
                         item.lineno)
-                else:
-                    supertype = env.get(item.extends)
+                supertype = env[item.extends]
+                if not isinstance(supertype, Struct):
+                    raise InvalidSpec(
+                        'A struct can only extend another struct: '
+                        '%s is not a struct.' % quote(item.extends),
+                        item.lineno)
             api_type_fields = []
             for babel_field in item.fields:
                 api_type_field = self._create_struct_field(env, babel_field)
@@ -218,8 +198,12 @@ class TowerOfBabel(object):
                     raise InvalidSpec(
                         'Data type %s is undefined.' % quote(item.extends),
                         item.lineno)
-                else:
-                    subtype = env.get(item.extends)
+                subtype = env[item.extends]
+                if not isinstance(subtype, Union):
+                    raise InvalidSpec(
+                        'A union can only extend another union: '
+                        '%s is not a union.' % quote(item.extends),
+                        item.lineno)
             api_type_fields = []
             catch_all_field = None
             for babel_field in item.fields:
@@ -243,7 +227,6 @@ class TowerOfBabel(object):
 
                     catch_all_field = api_type_field
                 api_type_fields.append(api_type_field)
-
             api_type = Union(item.name, item.doc, api_type_fields, item,
                              subtype, catch_all_field)
         else:
