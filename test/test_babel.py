@@ -206,22 +206,6 @@ struct S2 extends S1
         self.assertEqual(out[2].name, 'S2')
         self.assertEqual(out[2].extends, 'S1')
 
-        # test with coverage
-        text = """
-namespace files
-
-struct Entry of Folder | File
-    id String
-
-struct Folder
-    children UInt64
-
-struct File
-    size UInt64
-"""
-        out = self.parser.parse(text)
-        self.assertEqual(out[1].coverage, ['Folder', 'File'])
-
         # test with defaults
         text = """
 namespace ns
@@ -529,3 +513,236 @@ union B extends A
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('union can only extend another union', cm.exception.msg)
+
+    def test_enumerated_subtypes(self):
+
+        # Test correct definition
+        text = """\
+namespace test
+
+struct Resource
+    union
+        file File
+        folder Folder
+
+struct File extends Resource
+    size UInt64
+
+struct Folder extends Resource
+    icon String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test reference to non-struct
+        text = """\
+namespace test
+
+struct Resource
+    union
+        file String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('must be a struct', cm.exception.msg)
+
+        # Test reference to undefined type
+        text = """\
+namespace test
+
+struct Resource
+    union
+        file File
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('Undefined', cm.exception.msg)
+
+        # Test reference to non-subtype
+        text = """\
+namespace test
+
+struct Resource
+    union
+        file File
+
+struct File
+    size UInt64
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('not a subtype of', cm.exception.msg)
+
+        # Test subtype listed more than once
+        text = """\
+namespace test
+
+struct Resource
+    union
+        file File
+        file2 File
+
+struct File extends Resource
+    size UInt64
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('only be specified once', cm.exception.msg)
+
+        # Test missing subtype
+        text = """\
+namespace test
+
+struct Resource
+    union
+        file File
+
+struct File extends Resource
+    size UInt64
+
+struct Folder extends Resource
+    icon String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("missing 'Folder'", cm.exception.msg)
+
+        # Test name conflict with field
+        text = """\
+namespace test
+
+struct Resource
+    union
+        file File
+    file String
+
+struct File extends Resource
+    size UInt64
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("already defined on", cm.exception.msg)
+
+        # Test name conflict with field in parent
+        text = """\
+namespace test
+
+struct A
+    union
+        b B
+    c String
+
+struct B extends A
+    union
+        c C
+
+struct C extends B
+    d String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("already defined in parent", cm.exception.msg)
+
+        # Test name conflict with union field in parent
+        text = """\
+namespace test
+
+struct A
+    union
+        b B
+    c String
+
+struct B extends A
+    union
+        b C
+
+struct C extends B
+    d String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("already defined in parent", cm.exception.msg)
+
+        # Test non-leaf with no enumerated subtypes
+        text = """\
+namespace test
+
+struct A
+    union
+        b B
+    c String
+
+struct B extends A
+    "No enumerated subtypes."
+
+struct C extends B
+    union
+        d D
+
+struct D extends C
+    e String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("cannot enumerate subtypes if parent", cm.exception.msg)
+
+        # Test if a leaf and its parent do not enumerate subtypes, but its
+        # grandparent does.
+        text = """\
+namespace test
+
+struct A
+    union
+        b B
+    c String
+
+struct B extends A
+    "No enumerated subtypes."
+
+struct C extends B
+    "No enumerated subtypes."
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("cannot be extended", cm.exception.msg)
+
+    def test_nullable(self):
+        # Test stacking nullable
+        text = """\
+namespace test
+
+alias A = String?
+alias B = A?
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'Cannot mark reference to nullable type as nullable.',
+            cm.exception.msg)
+
+# Test stacking nullable
+        text = """\
+namespace test
+
+alias A = String?
+
+struct S
+    f A?
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'Cannot mark reference to nullable type as nullable.',
+            cm.exception.msg)

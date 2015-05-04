@@ -59,6 +59,89 @@ serializes to::
 Setting ``name`` or ``address`` to ``null`` is not a valid serialization;
 deserializers will raise an error.
 
+Enumerated Subtypes
+-------------------
+
+A struct that enumerates subtypes serializes differently from a regular
+struct. Here's an example to demonstrate::
+
+    struct A
+        union
+            b B
+            c C
+        w Int64
+
+    struct B extends A
+        x Int64
+
+    struct C extends A
+        union*
+            c1 C1
+            c2 C2
+        y Int64
+
+    struct C1 extends C
+        z Int64
+
+    struct C2 extends C
+        "No new fields."
+
+Serializing ``A`` when it contains a struct ``B`` (with values of ``1`` for
+each field) appears as::
+
+    {
+     "w": 1,
+     "b": {
+      "x": 1
+     }
+    }
+
+Serializing ``A`` when it contains a struct ``C1`` appears as::
+
+    {
+     "w": 1,
+     "c": {
+      "y": 1,
+      "c1": {
+       "z": 1
+      }
+     }
+    }
+
+Serializing ``A`` when it contains a struct ``C2`` appears as::
+
+    {
+     "w": 1,
+     "c": {
+      "y": 1,
+      "c2": {}
+     }
+    }
+
+Note how type tags are treated identically to fields in the JSON object. A type
+tag always has a JSON object as its value which contains data specific to the
+referenced subtype.
+
+If the recipient receives a tag it is unaware of, it should at first apply the
+same policy it uses for fields it is unaware of. In fact, a recipient will be
+unable to determine whether the unknown JSON object key refers to a type tag or
+a field. The recipient should then determine if the tag refers to a struct
+that's a catch-all. If so, it should return that base type, otherwise, the
+message should be rejected.
+
+For example::
+
+    {
+     "w": 1,
+     "c": {
+      "y": 1,
+      "c3": {}
+     }
+    }
+
+Because ``c3`` is unknown, the recipient checks that struct ``C`` is a
+catch-all. Since it is, it deserializes the message to a ``C`` object.
+
 Union
 =====
 

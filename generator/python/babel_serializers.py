@@ -107,6 +107,8 @@ def _json_compat_obj_encode_helper(data_type, obj):
         return _encode_nullable(data_type, obj)
     elif isinstance(data_type, bv.Primitive):
         return _make_json_friendly(data_type, obj)
+    elif isinstance(data_type, bv.StructTree):
+        return _encode_struct_tree(data_type, obj)
     elif isinstance(data_type, bv.Struct):
         return _encode_struct(data_type, obj)
     elif isinstance(data_type, bv.Union):
@@ -135,15 +137,20 @@ def _encode_nullable(data_type, obj):
     else:
         return None
 
-def _encode_struct(data_type, obj):
+def _encode_struct(data_type, obj, as_root=True):
     """
-    The data_type argument must be a Struct.
+    The data_type argument must be a Struct or StructTree.
     See json_encode() for argument descriptions.
     """
     # We skip validation of fields with primitive data types in structs and
     # unions because they've already been validated on assignment.
     d = collections.OrderedDict()
-    for field_name, field_data_type in data_type.definition._fields_:
+    if as_root:
+        fields = data_type.definition._all_fields_
+    else:
+        fields = data_type.definition._fields_
+
+    for field_name, field_data_type in fields:
         try:
             val = getattr(obj, field_name)
         except AttributeError as e:
@@ -184,6 +191,25 @@ def _encode_union(data_type, obj):
                 raise
             else:
                 return {obj._tag: encoded_val}
+
+def _encode_struct_tree(data_type, obj, as_root=True):
+    """
+    Args:
+        data_type (StructTree)
+        as_root (bool): If a struct with enumerated subtypes is designated as a
+            root, then its fields including those that are inherited are
+            encoded in the outermost JSON object together.
+
+    See json_encode() for other argument descriptions.
+    """
+    o = _encode_struct(data_type, obj, as_root)
+    assert type(obj) in data_type.definition._pytype_to_tag_and_subtype_
+    tag, subtype = data_type.definition._pytype_to_tag_and_subtype_[type(obj)]
+    if isinstance(subtype, bv.StructTree):
+        o[tag] = _encode_struct_tree(subtype, obj, False)
+    else:
+        o[tag] = _encode_struct(subtype, obj, False)
+    return o
 
 def _make_json_friendly(data_type, val):
     """
@@ -263,7 +289,9 @@ def _json_compat_obj_decode_helper(data_type, obj, strict):
     """
     See json_compat_obj_decode() for argument descriptions.
     """
-    if isinstance(data_type, bv.Struct):
+    if isinstance(data_type, bv.StructTree):
+        return _decode_struct_tree(data_type, obj, strict)
+    elif isinstance(data_type, bv.Struct):
         return _decode_struct(data_type, obj, strict)
     elif isinstance(data_type, bv.Union):
         return _decode_union(data_type, obj, strict)
@@ -286,23 +314,38 @@ def _decode_struct(data_type, obj, strict):
                                  bv.generic_type_name(obj))
     if strict:
         for key in obj:
-            if key not in data_type.definition._field_names_:
+            if key not in data_type.definition._all_field_names_:
                 raise bv.ValidationError("unknown field '%s'" % key)
-    o = data_type.definition()
-    for name, field_data_type in data_type.definition._fields_:
+    ins = data_type.definition()
+    _decode_struct_fields(ins, data_type.definition._all_fields_, obj, strict)
+    # Check that all required fields have been set.
+    data_type.validate_fields_only(ins)
+    return ins
+
+def _decode_struct_fields(ins, fields, obj, strict):
+    """
+    Args:
+        ins: An instance of the class representing the data type being decoded.
+            The object will have its fields set.
+        fields: A tuple of (field_name: str, field_validator: Validator)
+        obj (dict): JSON-compatible dict that is being decoded.
+        strict (bool): See :func:`json_compat_obj_decode`.
+
+    Returns:
+        None: `ins` has its fields set based on the contents of `obj`.
+    """
+    for name, field_data_type in fields:
         if name in obj:
+            # TODO(kelkabany): Remove this once decoding is more lenient.
             if obj[name] is None:
-                raise bv.ValidationError("field '%s' has null value" % key)
+                raise bv.ValidationError("field '%s' has null value" % name)
             try:
                 v = _json_compat_obj_decode_helper(
                     field_data_type, obj[name], strict)
-                setattr(o, name, v)
+                setattr(ins, name, v)
             except bv.ValidationError as e:
                 e.add_parent(name)
                 raise
-    # Check that all required fields have been set.
-    data_type.validate_fields_only(o)
-    return o
 
 def _decode_union(data_type, obj, strict):
     """
@@ -326,7 +369,7 @@ def _decode_union(data_type, obj, strict):
     elif isinstance(obj, dict):
         # Union member has value
         if len(obj) != 1:
-            raise bv.ValidationError('expected 1 key, got %s', len(obj))
+            raise bv.ValidationError('expected 1 key, got %s' % len(obj))
         tag = list(obj)[0]
         raw_val = obj[tag]
         if tag in data_type.definition._tagmap:
@@ -357,6 +400,105 @@ def _decode_union(data_type, obj, strict):
         raise bv.ValidationError("expected string or object, got %s" %
                                  bv.generic_type_name(obj))
     return data_type.definition(tag, val)
+
+def _decode_struct_tree(data_type, obj, strict):
+    """
+    The data_type argument must be a StructTree.
+    See json_compat_obj_decode() for argument descriptions.
+    """
+    type_tags, subtype = _determine_struct_tree_subtype(data_type, obj)
+    ins = subtype.definition()
+    _decode_struct_tree_helper(data_type, obj, strict, ins, type_tags)
+    subtype.validate_fields_only(ins)
+    return ins
+
+def _determine_struct_tree_subtype(data_type, obj):
+    """
+    Searches through the JSON-object-compatible dict using the data type
+    definition to determine which of the enumerated subtypes `obj` is.
+
+    In the process of determining the subtype, the fields that represent
+    subtypes are validated as being JSON objects. Also checks that no more than
+    one subtype is specified at a single level of the hierarchy.
+    """
+    type_tags = collections.deque()
+    subtype = _determine_struct_tree_subtype_helper(type_tags, data_type, obj)
+    return type_tags, subtype
+
+def _determine_struct_tree_subtype_helper(type_tags, data_type, obj):
+    """
+    Args:
+        type_tags (deque): Appends a hierarchy of type tags found in `obj` that
+            were traversed to determine the intended subtype.
+        data_type (Struct): Will be a StructTree except in the case of a leaf,
+            in which case it will be a regular Struct.
+        obj (dict): JSON-compatible dict to be decoded.
+
+    Returns:
+        Struct: The validator to be used to decode the contents of `obj`.
+    """
+    if not isinstance(obj, dict):
+        raise bv.ValidationError('expected object, got %s' %
+                                 bv.generic_type_name(obj))
+    if not isinstance(data_type, bv.StructTree):
+        # Found leaf struct with no enumerated subtypes. Since it has
+        # no subtypes, stop the search.
+        return data_type
+
+    match = None  # Optional[Tuple[tag: str, subtype: Struct]]
+    for tag, subtype in data_type.definition._tag_to_subtype_.items():
+        if tag not in obj:
+            continue
+        if match:
+            # Error because multiple subtype tags should not be specified.
+            raise bv.ValidationError('got two subtype tags: %s and %s' %
+                                     (match[0], tag))
+        match = (tag, subtype)
+        type_tags.append(tag)
+    if match:
+        try:
+            return _determine_struct_tree_subtype_helper(
+                type_tags, match[1], obj[match[0]])
+        except bv.ValidationError as e:
+            e.add_parent(type_tags.pop())
+            raise
+    else:
+        # Could not find any subtype tag. If this struct with enumerated
+        # subtypes can act as a catch-all, then use it. Otherwise, error.
+        if not data_type.definition._is_catch_all_:
+            raise bv.ValidationError('missing subtype tag')
+        return data_type
+
+def _decode_struct_tree_helper(data_type, obj, strict, ins, type_tags,
+                               as_root=True):
+    """
+    Args:
+        ins: An instance object representing the object that will contain the
+            deserialized data.
+        type_tags (deque): The type tags that were used to determine the type
+            of the `obj`.
+        as_root (bool): If true, then all fields of `data_type` are extracted
+            from `obj`. Otherwise, only the non-inherited fields are.
+
+    See _decode_struct_tree() for descriptions of `data_type`, `obj, and
+    `strict`.
+    """
+    next_type_tag = type_tags.popleft() if type_tags else None
+    if as_root:
+        fields = data_type.definition._all_fields_
+        field_names = data_type.definition._all_field_names_
+    else:
+        fields = data_type.definition._fields_
+        field_names = data_type.definition._field_names_
+    if strict:
+        for key in obj:
+            if key not in field_names and key != next_type_tag:
+                raise bv.ValidationError("unknown field '%s'" % key)
+    _decode_struct_fields(ins, fields, obj, strict)
+    if next_type_tag:
+        subtype = data_type.definition._tag_to_subtype_[next_type_tag]
+        _decode_struct_tree_helper(
+            subtype, obj[next_type_tag], strict, ins, type_tags, False)
 
 def _decode_list(data_type, obj, strict):
     """

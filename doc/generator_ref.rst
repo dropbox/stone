@@ -130,9 +130,6 @@ DataType
 name
     The name of the data type.
 
-nullable
-    Whether the type is nullable.
-
 See ``babelapi.data_type`` for all primitive type definitions and their
 attributes.
 
@@ -152,6 +149,37 @@ all_fields
 supertype
     If it exists, it points to a DataType object (another struct) that this
     struct inherits from.
+
+is_member_of_enumerated_subtypes_tree()
+    Whether this struct enumerates subtypes or is a struct that is enumerated
+    by its parent type. Because such structs are serialized and deserialized
+    differently, use this method to detect these.
+
+enumerated_subtypes
+    A list of subtype fields. Each field has a ``name`` attribute which is the
+    tag for the subtype. Each field also has a ``data_type`` attribute that is
+    a ``Struct`` object representing the subtype.
+
+get_all_subtypes_with_tags()
+    Unlike other enumerated-subtypes-related functionality, this method returns
+    not just direct subtypes, but all subtypes of this struct. The tag of each
+    subtype is the tag of the enumerated subtype from which it descended.
+
+    The return value is a list of tuples representing subtypes. Each tuple has
+    two items. First, the type tag to be used for the subtype. Second, a
+    ``Struct`` object representing the subtype.
+
+    Use this when you need to generate a lookup table for a root struct that
+    maps a generated class representing a subtype to the tag it needs in the
+    serialized format.
+
+    Use this attribute only if the struct has enumerated subtypes.
+
+is_catch_all()
+    Indicates whether this struct should be used in the event that none of its
+    known enumerated subtypes match a received type tag.
+
+    Use this attribute only if the struct has enumerated subtypes.
 
 StructField
 -----------
@@ -307,6 +335,7 @@ available::
     is_empty(data_type)
     is_float_type(data_type)
     is_list_type(data_type)
+    is_nullable_type(data_type)
     is_numeric_type(data_type)
     is_primitive_type(data_type)
     is_string_type(data_type)

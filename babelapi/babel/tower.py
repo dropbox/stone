@@ -24,6 +24,7 @@ from ..data_type import (
     Int32,
     Int64,
     List,
+    Nullable,
     ParameterError,
     String,
     Struct,
@@ -42,10 +43,12 @@ from .parser import (
     BabelNamespace,
     BabelParser,
     BabelRouteDef,
-    BabelVoidField,
+    BabelStructDef,
     BabelTagRef,
     BabelTypeDef,
     BabelTypeRef,
+    BabelUnionDef,
+    BabelVoidField,
 )
 
 def quote(s):
@@ -143,7 +146,7 @@ class TowerOfBabel(object):
 
         obj = env[item.type_ref.name]
         if inspect.isclass(obj):
-            env[item.name] = self._instantiate_data_type(
+            dt = self._instantiate_data_type(
                 obj, item.type_ref.args, item.lineno)
         elif isinstance(obj, ApiRoute):
             raise InvalidSpec('Cannot alias a route.', item.lineno)
@@ -155,11 +158,15 @@ class TowerOfBabel(object):
                 (quote(item.type_ref.name)),
                 item.lineno)
         else:
-            ref = env[item.type_ref.name]
-            if item.type_ref.nullable:
-                ref = copy.copy(ref)
-                ref.nullable = item.type_ref.nullable
-            env[item.name] = ref
+            dt = env[item.type_ref.name]
+
+        if item.type_ref.nullable:
+            if isinstance(dt, Nullable):
+                raise InvalidSpec(
+                    'Cannot mark reference to nullable type as nullable.',
+                    item.lineno)
+            dt = Nullable(dt)
+        env[item.name] = dt
 
     def _create_type(self, env, item):
         if item.name in env:
@@ -172,7 +179,7 @@ class TowerOfBabel(object):
                 'Symbol %s already defined on line %d.' %
                 (quote(item.name), env[item.name]._token.lineno),
                 item.lineno)
-        if item.composite_type == 'struct':
+        if isinstance(item, BabelStructDef):
             supertype = None
             if item.extends:
                 if item.extends not in env:
@@ -189,9 +196,15 @@ class TowerOfBabel(object):
             for babel_field in item.fields:
                 api_type_field = self._create_struct_field(env, babel_field)
                 api_type_fields.append(api_type_field)
-            api_type = Struct(item.name, item.doc, api_type_fields, item,
-                              supertype, item.coverage)
-        elif item.composite_type == 'union':
+            try:
+                api_type = Struct(
+                    name=item.name, doc=item.doc, fields=api_type_fields,
+                    token=item, supertype=supertype)
+            except ParameterError as e:
+                raise InvalidSpec(
+                    'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
+                    item.lineno)
+        elif isinstance(item, BabelUnionDef):
             subtype = None
             if item.extends:
                 if item.extends not in env:
@@ -227,11 +240,12 @@ class TowerOfBabel(object):
 
                     catch_all_field = api_type_field
                 api_type_fields.append(api_type_field)
-            api_type = Union(item.name, item.doc, api_type_fields, item,
-                             subtype, catch_all_field)
+            api_type = Union(
+                name=item.name, doc=item.doc, fields=api_type_fields,
+                token=item, subtype=subtype, catch_all_field=catch_all_field)
         else:
-            raise AssertionError('Unknown composite_type %r' %
-                                 item.composite_type)
+            raise AssertionError('Unknown type definition %r' % type(item))
+
         for example_label, (example_text, example) in item.examples.items():
             api_type.add_example(example_label, example_text, dict(example))
         env[item.name] = api_type
@@ -260,16 +274,16 @@ class TowerOfBabel(object):
                     'Struct field %s cannot have a Void type.' %
                     quote(babel_field.name),
                     babel_field.lineno)
-            elif data_type.nullable and babel_field.has_default:
+            elif isinstance(data_type, Nullable) and babel_field.has_default:
                 raise InvalidSpec('Field %s cannot be a nullable '
                                   'type and have a default specified.' %
                                   quote(babel_field.name),
                                   babel_field.lineno)
             api_type_field = StructField(
-                babel_field.name,
-                data_type,
-                babel_field.doc,
-                babel_field,
+                name=babel_field.name,
+                data_type=data_type,
+                doc=babel_field.doc,
+                token=babel_field,
                 deprecated=babel_field.deprecated,
             )
             if babel_field.has_default:
@@ -309,8 +323,9 @@ class TowerOfBabel(object):
             babelapi.data_type.UnionField: A field of a union.
         """
         if isinstance(babel_field, BabelVoidField):
-            api_type_field = UnionField(babel_field.name, Void(),
-                                        babel_field.doc, babel_field)
+            api_type_field = UnionField(
+                name=babel_field.name, data_type=Void(), doc=babel_field.doc,
+                token=babel_field)
         elif babel_field.type_ref.name not in env:
             raise InvalidSpec('Symbol %s is undefined.' %
                 quote(babel_field.type_ref.name),
@@ -326,11 +341,8 @@ class TowerOfBabel(object):
                                   quote(babel_field.name),
                                   babel_field.lineno)
             api_type_field = UnionField(
-                babel_field.name,
-                data_type,
-                babel_field.doc,
-                babel_field,
-            )
+                name=babel_field.name, data_type=data_type,
+                doc=babel_field.doc, token=babel_field)
         return api_type_field
 
     def _instantiate_data_type(self, data_type_class, data_type_args, lineno):
@@ -414,7 +426,6 @@ class TowerOfBabel(object):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
                 obj, resolved_data_type_args, type_ref.lineno)
-            data_type.nullable = type_ref.nullable
         elif isinstance(obj, ApiRoute):
             raise InvalidSpec('A route is not a valid field type.',
                               type_ref.lineno)
@@ -426,12 +437,15 @@ class TowerOfBabel(object):
                               quote(type_ref.name),
                               type_ref.lineno)
         else:
-            # The data_type could be nullable if this is an alias to a nullable
-            # type. Or, the type reference itself could be nullable.
             data_type = env[type_ref.name]
-            if data_type.nullable or type_ref.nullable:
-                data_type = copy.copy(data_type)
-                data_type.nullable = True
+
+        if type_ref.nullable:
+            if isinstance(data_type, Nullable):
+                raise InvalidSpec(
+                    'Cannot mark reference to nullable type as nullable.',
+                    type_ref.lineno)
+            data_type = Nullable(data_type)
+
         return data_type
 
     def _resolve_args(self, env, args):
@@ -477,13 +491,13 @@ class TowerOfBabel(object):
         response_data_type = self._resolve_type(env, item.response_type_ref)
         error_data_type = self._resolve_type(env, item.error_type_ref)
         route = ApiRoute(
-            item.name,
-            item.doc,
-            request_data_type,
-            response_data_type,
-            error_data_type,
-            item.attrs,
-            item,
+            name=item.name,
+            doc=item.doc,
+            request_data_type=request_data_type,
+            response_data_type=response_data_type,
+            error_data_type=error_data_type,
+            attrs=item.attrs,
+            token=item,
         )
         env[route.name] = route
         return route
@@ -537,6 +551,46 @@ class TowerOfBabel(object):
                 raise AssertionError('Unknown Babel Declaration Type %r' %
                                      item.__class__.__name__)
 
+        # Since enumerated subtypes require forward references, resolve them
+        # now that all types are present in the environment.
+        for data_type in data_types:
+            if not (isinstance(data_type, Struct) and
+                    data_type._token.subtypes):
+                continue
+
+            subtype_fields = []
+            for subtype_field in data_type._token.subtypes[0]:
+                subtype_name = subtype_field.type_ref.name
+                lineno = subtype_field.type_ref.lineno
+                if subtype_field.type_ref.name not in env:
+                    raise InvalidSpec(
+                        'Undefined type %s.' % quote(subtype_name), lineno)
+                subtype = env[subtype_field.type_ref.name]
+                if not isinstance(subtype, Struct):
+                    raise InvalidSpec('Enumerated subtype %s must be a struct.'
+                                      % quote(subtype_name), lineno)
+                f = UnionField(
+                    subtype_field.name, subtype, None, subtype_field)
+                subtype_fields.append(f)
+            data_type.set_enumerated_subtypes(subtype_fields,
+                                              data_type._token.subtypes[1])
+
+        # In an enumerated subtypes tree, regular structs may only exist at the
+        # leaves. In other word, no regular struct may inherit from a regular
+        # struct.
+        for data_type in data_types:
+            if (not isinstance(data_type, Struct) or
+                    not data_type.has_enumerated_subtypes()):
+                continue
+
+            for subtype_field in data_type.get_enumerated_subtypes():
+                if (not subtype_field.data_type.has_enumerated_subtypes() and
+                        len(subtype_field.data_type.subtypes) > 0):
+                    raise InvalidSpec(
+                        "Subtype '%s' cannot be extended." %
+                        subtype_field.data_type.name,
+                        lineno)
+
         # Validate the doc refs of each api entity that has a doc
         for data_type in data_types:
             if data_type.doc:
@@ -550,14 +604,6 @@ class TowerOfBabel(object):
             if route.doc:
                 self._validate_doc_refs(
                     env, route.doc, route._token.lineno + 1)
-
-        # Coverage is specified as a forward declaration so here's where we
-        # resolve the symbols.
-        for data_type in namespace.data_types:
-            if isinstance(data_type, Struct) and data_type.has_coverage():
-                data_type.resolve_coverage(env)
-        # TODO(kelkabany): Check to make sure that no other type that is not
-        # covered extends a data type that enforces coverage.
 
     def _include_babelh(self, namespace, env, path, item):
         babelh_path = os.path.join(path, item.target) + '.babelh'
@@ -658,8 +704,8 @@ class TowerOfBabel(object):
                         lineno)
                 elif not isinstance(env[val], (Struct, Union)):
                     raise InvalidSpec(
-                        'Documentation reference to type %s is not a struct '
-                        'or union.' % quote(val), lineno)
+                        'Doc reference to type %s is not a struct or union.' %
+                        quote(val), lineno)
             elif tag == 'val':
                 if not doc_ref_val_re.match(val):
                     raise InvalidSpec(

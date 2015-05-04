@@ -97,7 +97,6 @@ class BabelLexer(object):
         'ID',
         'KEYWORD',
         'PATH',
-        'PIPE',
         'DOT',
     )
 
@@ -136,7 +135,6 @@ class BabelLexer(object):
     t_RPAR = r'\)'
     t_EQ = r'='
     t_COMMA = r','
-    t_PIPE = r'\|'
     t_ASTERIX = r'\*'
     t_Q = r'\?'
 
@@ -150,7 +148,6 @@ class BabelLexer(object):
         'attrs',
         'include',
         'namespace',
-        'of',
         'pass',
         'request',
         'response',
@@ -164,7 +161,6 @@ class BabelLexer(object):
         'extends': 'EXTENDS',
         'attrs': 'ATTRS',
         'include': 'INCLUDE',
-        'of': 'OF',
         'pass': 'PASS',
         'route': 'ROUTE',
         'struct': 'STRUCT',

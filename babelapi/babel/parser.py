@@ -2,17 +2,27 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import OrderedDict
 import logging
+import six
 
 import ply.yacc as yacc
 
 from babelapi.babel.lexer import BabelLexer, BabelNull
 
 class _Element(object):
+
     def __init__(self, lineno, lexpos):
+        """
+        Args:
+            lineno (int): The line number where the start of this element
+                occurs.
+            lexpos (int): The character offset into the file where this element
+                occurs.
+        """
         self.lineno = lineno
         self.lexpos = lexpos
 
 class BabelNamespace(_Element):
+
     def __init__(self, lineno, lexpos, name):
         """
         Args:
@@ -28,6 +38,7 @@ class BabelNamespace(_Element):
         return 'BabelNamespace({!r})'.format(self.name)
 
 class BabelInclude(_Element):
+
     def __init__(self, lineno, lexpos, target):
         """
         Args:
@@ -43,6 +54,7 @@ class BabelInclude(_Element):
         return 'BabelInclude({!r})'.format(self.target)
 
 class BabelAlias(_Element):
+
     def __init__(self, lineno, lexpos, name, type_ref):
         """
         Args:
@@ -57,21 +69,27 @@ class BabelAlias(_Element):
         return 'BabelAlias({!r}, {!r})'.format(self.name, self.type_ref)
 
 class BabelTypeDef(_Element):
-    def __init__(self, lineno, lexpos, composite_type, name, extends=None,
-                 coverage=None):
+
+    def __init__(self, lineno, lexpos, name, extends, doc, fields):
+        """
+        Args:
+            name (str): Name assigned to the type.
+            extends (Optional[str]); Name of the type this inherits from.
+            doc (Optional[str]): Docstring for the type.
+            fields (List[BabelField]): Fields of a type, not including
+                inherited ones.
+        """
+
         super(BabelTypeDef, self).__init__(lineno, lexpos)
-        self.composite_type = composite_type
+
+        assert isinstance(name, six.text_type), type(name)
         self.name = name
+        assert isinstance(extends, (six.text_type, type(None))), type(extends)
         self.extends = extends
-        self.doc = None
-        self.fields = []
+        assert isinstance(doc, (six.text_type, type(None)))
+        self.doc = doc
         self.examples = OrderedDict()
-        self.coverage = coverage
-
-    def set_doc(self, docstring):
-        self.doc = docstring
-
-    def set_fields(self, fields):
+        assert isinstance(fields, list)
         self.fields = fields
 
     def add_example(self, label, text, example):
@@ -79,14 +97,50 @@ class BabelTypeDef(_Element):
 
     def __str__(self):
         return self.__repr__()
+
     def __repr__(self):
-        return 'BabelType({!r}, {!r}, {!r})'.format(
-            self.composite_type,
+        return 'BabelTypeDef({!r}, {!r}, {!r})'.format(
             self.name,
+            self.extends,
+            self.fields,
+        )
+
+class BabelStructDef(BabelTypeDef):
+
+    def __init__(self, lineno, lexpos, name, extends, doc, fields,
+                 subtypes=None):
+        """
+        Args:
+            subtypes (Tuple[List[BabelSubtypeField], bool]): Inner list
+                enumerates subtypes. The bool indicates whether this struct
+                is a catch-all.
+
+        See BabelTypeDef for other constructor args.
+        """
+
+        super(BabelStructDef, self).__init__(
+            lineno, lexpos, name, extends, doc, fields)
+        assert isinstance(subtypes, (tuple, type(None))), type(subtypes)
+        self.subtypes = subtypes
+
+    def __repr__(self):
+        return 'BabelStructDef({!r}, {!r}, {!r})'.format(
+            self.name,
+            self.extends,
+            self.fields,
+        )
+
+class BabelUnionDef(BabelTypeDef):
+
+    def __repr__(self):
+        return 'BabelUnionDef({!r}, {!r}, {!r})'.format(
+            self.name,
+            self.extends,
             self.fields,
         )
 
 class BabelTypeRef(_Element):
+
     def __init__(self, lineno, lexpos, name, args, nullable):
         """
         Args:
@@ -107,6 +161,7 @@ class BabelTypeRef(_Element):
         )
 
 class BabelTagRef(_Element):
+
     def __init__(self, lineno, lexpos, tag, union_name=None):
         """
         Args:
@@ -128,6 +183,7 @@ class BabelField(_Element):
     Represents both a field of a struct and a field of a union.
     TODO(kelkabany): Split this into two different classes.
     """
+
     def __init__(self, lineno, lexpos, name, type_ref, deprecated):
         """
         Args:
@@ -157,6 +213,7 @@ class BabelField(_Element):
         )
 
 class BabelVoidField(_Element):
+
     def __init__(self, lineno, lexpos, name, catch_all):
         super(BabelVoidField, self).__init__(lineno, lexpos)
         self.name = name
@@ -172,7 +229,21 @@ class BabelVoidField(_Element):
             self.catch_all,
         )
 
+class BabelSubtypeField(_Element):
+
+    def __init__(self, lineno, lexpos, name, type_ref):
+        super(BabelSubtypeField, self).__init__(lineno, lexpos)
+        self.name = name
+        self.type_ref = type_ref
+
+    def __repr__(self):
+        return 'BabelSubtypeField({!r}, {!r})'.format(
+            self.name,
+            self.type_ref,
+        )
+
 class BabelRouteDef(_Element):
+
     def __init__(self, lineno, lexpos, name, request_type_ref,
                  response_type_ref, error_type_ref=None):
         super(BabelRouteDef, self).__init__(lineno, lexpos)
@@ -397,6 +468,42 @@ class BabelParser(object):
     #
     #     typed_field String
     #         "This is a docstring for the field"
+    #
+    # An example struct that enumerates subtypes looks as follows:
+    #
+    # struct P
+    #     union
+    #         t1 S1
+    #         t2 S2
+    #     field String
+    #
+    # struct S1 extends P
+    #     ...
+    #
+    # struct S2 extends P
+    #     ...
+    #
+
+    def p_enumerated_subtypes(self, p):
+        """enumerated_subtypes : UNION asterix_option NEWLINE INDENT subtypes_list DEDENT
+                               | empty"""
+        if len(p) > 2:
+            p[0] = (p[5], p[2])
+
+    def p_struct(self, p):
+        """struct : STRUCT ID inheritance NEWLINE \
+                     INDENT docsection enumerated_subtypes field_list example_list DEDENT"""
+        p[0] = BabelStructDef(
+            lineno=p.lineno(2),
+            lexpos=p.lexpos(2),
+            name=p[2],
+            extends=p[3],
+            doc=p[6],
+            subtypes=p[7],
+            fields=p[8])
+        if p[9] is not None:
+            for label, text, example in p[9]:
+                p[0].add_example(label, text, example)
 
     def p_inheritance(self, p):
         """inheritance : EXTENDS ID
@@ -404,34 +511,20 @@ class BabelParser(object):
         if p[1]:
             p[0] = p[2]
 
-    def p_coverage_list_create(self, p):
-        'coverage_list : ID'
-        p[0] = [p[1]]
+    def p_enumerated_subtypes_list_create(self, p):
+        """subtypes_list : subtype_field
+                         | empty"""
+        if p[1] is not None:
+            p[0] = [p[1]]
 
-    def p_coverage_list_extend(self, p):
-        'coverage_list : coverage_list PIPE ID'
+    def p_enumerated_subtypes_list_extend(self, p):
+        'subtypes_list : subtypes_list subtype_field'
         p[0] = p[1]
-        p[0].append(p[3])
+        p[0].append(p[2])
 
-    def p_coverage(self, p):
-        """coverage : OF coverage_list
-                    | empty"""
-        if p[1]:
-            p[0] = p[2]
-
-    def p_struct(self, p):
-        """
-        struct : STRUCT ID inheritance coverage NEWLINE \
-                     INDENT docsection field_list example_list DEDENT
-        """
-        p[0] = BabelTypeDef(p.lineno(1), p.lexpos(1), p[1], p[2], extends=p[3], coverage=p[4])
-        if p[7]:
-            p[0].set_doc(p[7])
-        if p[8] is not None:
-            p[0].set_fields(p[8])
-        if p[9] is not None:
-            for label, text, example in p[9]:
-                p[0].add_example(label, text, example)
+    def p_enumerated_subtype_field(self, p):
+        'subtype_field : ID type_ref NEWLINE'
+        p[0] = BabelSubtypeField(p.lineno(1), p.lexpos(1), p[1], p[2])
 
     # --------------------------------------------------------------
     # Fields
@@ -445,7 +538,9 @@ class BabelParser(object):
     def p_field_list_create(self, p):
         """field_list : field
                       | empty"""
-        if p[1] is not None:
+        if p[1] is None:
+            p[0] = []
+        else:
             p[0] = [p[1]]
 
     def p_field_list_extend(self, p):
@@ -497,11 +592,13 @@ class BabelParser(object):
 
     def p_union(self, p):
         'union : UNION ID inheritance NEWLINE INDENT docsection field_list example_list DEDENT'
-        p[0] = BabelTypeDef(p.lineno(1), p.lexpos(1), p[1], p[2], extends=p[3])
-        if p[6]:
-            p[0].set_doc(p[6])
-        if p[7] is not None:
-            p[0].set_fields(p[7])
+        p[0] = BabelUnionDef(
+            lineno=p.lineno(1),
+            lexpos=p.lexpos(1),
+            name=p[2],
+            extends=p[3],
+            doc=p[6],
+            fields=p[7])
         if p[8]:
             for label, text, example in p[8]:
                 p[0].add_example(label, text, example)
@@ -580,7 +677,7 @@ class BabelParser(object):
     def p_docsection(self, p):
         """docsection : docstring NEWLINE
                       | empty"""
-        if p[1]:
+        if p[1] is not None:
             p[0] = p[1]
 
     def p_docstring_string(self, p):

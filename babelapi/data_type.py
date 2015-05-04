@@ -32,10 +32,6 @@ class DataType(object):
 
     __metaclass__ = ABCMeta
 
-    # When this is in a context where nullability is relevant, this should be
-    # set to True or False.
-    nullable = None
-
     def __init__(self):
         """No-op. Exists so that introspection can be certain that an init
         method exists."""
@@ -60,11 +56,21 @@ class DataType(object):
 class PrimitiveType(DataType):
     pass
 
+class Nullable(DataType):
+
+    def __init__(self, data_type):
+        self.data_type = data_type
+
+    def check(self, val):
+        raise NotImplemented
+
 class Void(PrimitiveType):
+
     def check(self, val):
         raise NotImplemented
 
 class Binary(PrimitiveType):
+
     def check(self, val):
         if not isinstance(val, str):
             raise ValueError('%r is not valid binary (Python str)' % val)
@@ -82,6 +88,7 @@ class _BoundedInteger(PrimitiveType):
     When extending, specify 'minimum' and 'maximum' as class variables. This
     is the range of values supported by the data type.
     """
+
     def __init__(self, min_value=None, max_value=None):
         """
         A more restrictive minimum or maximum value can be specified than the
@@ -409,13 +416,17 @@ class StructField(Field):
             return self._default
 
     def check(self, val):
+
         if val is None:
-            if self.data_type.nullable:
+            if is_nullable_type(self.data_type):
                 return None
             else:
                 raise ValueError('val is None but type is not nullable')
         else:
-            return self.data_type.check(val)
+            if is_nullable_type(self.data_type):
+                return self.data_type.data_type.check(val)
+            else:
+                return self.data_type.check(val)
 
     def __repr__(self):
         return 'StructField(%r, %r)' % (self.name,
@@ -500,18 +511,23 @@ class Struct(CompositeType):
 
     composite_type = 'struct'
 
-    def __init__(self, name, doc, fields, token, supertype=None,
-                 coverage_names=None):
+    def __init__(self, name, doc, fields, token, supertype=None):
         """
         :param Struct supertype: If this should subtype another.
 
         See CompositeType for other parameter definitions.
-        TODO(kelkabany): Remove coverage concept.
         """
         super(Struct, self).__init__(name, doc, fields, token)
-        self.coverage_names = coverage_names
-        self.coverage = []
+        if supertype:
+            assert isinstance(supertype, Struct)
         self.supertype = supertype
+        if self.supertype:
+            self.supertype.subtypes.append(self)
+        self.subtypes = []
+
+        # These are only set if this struct enumerates subtypes.
+        self._enumerated_subtypes = None  # Optional[List[Tuple[str, DataType]]]
+        self._is_catch_all = None  # Optional[Bool]
 
         # Check that the fields for this type do not match any of the fields of
         # its parents.
@@ -525,27 +541,6 @@ class Struct(CompositeType):
                         % (field.name, cur_type.name, lineno),
                         field._token.lineno)
             cur_type = cur_type.supertype
-
-    def has_coverage(self):
-        return bool(self.coverage_names)
-
-    def resolve_coverage(self, env):
-        """
-        Struct is defined before types that it covers are defined. So use an
-        env to resolve the name of those data types into data type objects.
-        """
-        for coverage_name in self.coverage_names:
-            if coverage_name in env:
-                data_type = env[coverage_name]
-                if data_type.supertype is None:
-                    raise ValueError('All coverage must be subtypes of %r'
-                                     % self.name)
-                if data_type.supertype != self:
-                    raise ValueError('All coverage must subtype %r not %r'
-                                     % (self.name, data_type.supertype.name))
-                self.coverage.append(data_type)
-            else:
-                raise KeyError('No data type named %s' % coverage_name)
 
     def check(self, val):
         # Enforce the existence of all fields
@@ -587,7 +582,7 @@ class Struct(CompositeType):
         first, and then for this type.
         """
         def required_check(f):
-            return not f.data_type.nullable and not f.has_default
+            return not is_nullable_type(f.data_type) and not f.has_default
         return self._filter_fields(required_check)
 
     @property
@@ -597,8 +592,156 @@ class Struct(CompositeType):
         first, and then for this type.
         """
         def optional_check(f):
-            return f.data_type.nullable or f.has_default
+            return is_nullable_type(f.data_type) or f.has_default
         return self._filter_fields(optional_check)
+
+    def has_enumerated_subtypes(self):
+        """
+        Whether this struct enumerates it subtypes.
+        """
+        return bool(self._enumerated_subtypes)
+
+    def get_enumerated_subtypes(self):
+        """
+        Returns a list of subtype fields. Each field has a `name` attribute
+        which is the tag for the subtype. Each field also has a `data_type`
+        attribute that is a `Struct` object representing the subtype.
+        """
+        assert self._enumerated_subtypes is not None
+        return self._enumerated_subtypes
+
+    def is_member_of_enumerated_subtypes_tree(self):
+        """
+        Whether this struct enumerates subtypes or is a struct that is
+        enumerated by its parent type. Because such structs are serialized
+        and deserialized differently, use this method to detect these.
+        """
+        return (self.has_enumerated_subtypes() or
+                (self.supertype and self.supertype.has_enumerated_subtypes()))
+
+    def is_catch_all(self):
+        """
+        Indicates whether this struct should be used in the event that none of
+        its known enumerated subtypes match a received type tag.
+
+        Use this attribute only if the struct has enumerated subtypes.
+
+        Returns: bool
+        """
+        assert self._enumerated_subtypes is not None
+        return self._is_catch_all
+
+    def set_enumerated_subtypes(self, subtype_fields, is_catch_all):
+        """
+        Sets the list of "enumerated subtypes" for this struct. This differs
+        from regular subtyping in that each subtype is associated with a tag
+        that is used in the serialized format to indicate the subtype. Also,
+        this list of subtypes was explicitly defined in an "inner-union" in the
+        specification. The list of fields must include all defined subtypes of
+        this struct.
+
+        NOTE(kelkabany): For this to work with upcoming forward references, the
+        hierarchy of parent types for this struct must have had this method
+        called on them already.
+
+        :type subtype_fields: List[UnionField]
+        """
+        assert self._enumerated_subtypes is None, \
+            'Enumerated subtypes already set.'
+        assert isinstance(is_catch_all, bool), type(is_catch_all)
+
+        self._is_catch_all = is_catch_all
+        self._enumerated_subtypes = []
+
+        # Require that if this struct enumerates subtypes, its parent (and thus
+        # the entire hierarchy above this struct) does as well.
+        if self.supertype and not self.supertype.has_enumerated_subtypes():
+            raise InvalidSpec(
+                "'%s' cannot enumerate subtypes if parent '%s' does not." %
+                (self.name, self.supertype.name), self._token.lineno)
+
+        enumerated_subtype_names = set()  # Set[str]
+        for subtype_field in subtype_fields:
+            lineno = subtype_field._token.lineno
+
+            # Require that a subtype only has a single type tag.
+            if subtype_field.data_type.name in enumerated_subtype_names:
+                raise InvalidSpec(
+                    "Subtype '%s' can only be specified once." %
+                    subtype_field.data_type.name, lineno)
+
+            # Require that a subtype has this struct as its parent.
+            if subtype_field.data_type.supertype != self:
+                raise InvalidSpec(
+                    "'%s' is not a subtype of '%s'." %
+                    (subtype_field.data_type.name, self.name), lineno)
+
+            # Check for subtype tags that conflict with this struct's
+            # non-inherited fields.
+            if subtype_field.name in self._fields_by_name:
+                # Since the union definition comes first, use its line number
+                # as the source of the field's original declaration.
+                raise InvalidSpec(
+                    "Field '%s' already defined on line %d." %
+                    (subtype_field.name, lineno),
+                    self._fields_by_name[subtype_field.name]._token.lineno)
+
+            # Walk up parent tree hierarchy to ensure no field conflicts.
+            # Checks for conflicts with subtype tags and regular fields.
+            cur_type = self.supertype
+            while cur_type:
+                if subtype_field.name in cur_type._fields_by_name:
+                    orig_field = cur_type._fields_by_name[subtype_field.name]
+                    raise InvalidSpec(
+                        "Field '%s' already defined in parent '%s' on line %d."
+                        % (subtype_field.name, cur_type.name,
+                           orig_field._token.lineno),
+                        lineno)
+                cur_type = cur_type.supertype
+
+            # Note the discrepancy between `fields` which contains only the
+            # struct fields, and `_fields_by_name` which contains the struct
+            # fields and enumerated subtype fields.
+            self._fields_by_name[subtype_field.name] = subtype_field
+            enumerated_subtype_names.add(subtype_field.data_type.name)
+            self._enumerated_subtypes.append(subtype_field)
+
+        assert len(self._enumerated_subtypes) > 0
+
+        # Check that all known subtypes are listed in the enumeration.
+        for subtype in self.subtypes:
+            if subtype.name not in enumerated_subtype_names:
+                raise InvalidSpec(
+                    "'%s' does not enumerate all subtypes, missing '%s'" %
+                    (self.name, subtype.name),
+                    self._token.lineno)
+
+    def get_all_subtypes_with_tags(self):
+        """
+        Unlike other enumerated-subtypes-related functionality, this method
+        returns not just direct subtypes, but all subtypes of this struct. The
+        tag of each subtype is the tag of the enumerated subtype from which it
+        descended, which means that it's likely that subtypes will share the
+        same tag.
+
+        This method only applies to structs that enumerate subtypes.
+
+        Use this when you need to generate a lookup table for a root struct
+        that maps a generated class representing a subtype to the tag it needs
+        in the serialized format.
+
+        Returns:
+            List[Tuple[String, Struct]]
+        """
+        assert self.has_enumerated_subtypes(), 'Enumerated subtypes not set.'
+        subtypes_with_tags = []  # List[Tuple[String, Struct]]
+        for subtype_field in self.get_enumerated_subtypes():
+            subtypes_with_tags.append(
+                (subtype_field.name, subtype_field.data_type))
+            for subtype in subtype_field.data_type.subtypes:
+                subtypes_with_tags.append(
+                    (subtype_field.name, subtype))
+        return subtypes_with_tags
 
     def add_example(self, label, text, example):
         """
@@ -622,18 +765,24 @@ class Struct(CompositeType):
                            % (self.name, extra_fields))
 
         for field in self.all_fields:
+            if is_nullable_type(field.data_type):
+                dt = field.data_type.data_type
+                nullable_dt = True
+            else:
+                dt = field.data_type
+                nullable_dt = False
             if field.name in example:
-                if isinstance(field.data_type, CompositeType):
+                if isinstance(dt, CompositeType):
                     # An example that specifies the key as null is okay if the
                     # field permits it.
-                    if field.data_type.nullable and example[field.name] is None:
+                    if nullable_dt and example[field.name] is None:
                         ordered_example[field.name] = None
                     else:
                         raise KeyError('Field %r should not be specified since '
                                        'it is a composite type declaration.'
                                        % field.name)
-                elif isinstance(field.data_type, List):
-                    if isinstance(field.data_type.data_type, CompositeType):
+                elif isinstance(dt, List):
+                    if isinstance(dt.data_type, CompositeType):
                         raise KeyError('Field %r should not be specified '
                                        'since it is a list of composite '
                                        'types.' % field.name)
@@ -643,8 +792,8 @@ class Struct(CompositeType):
                 else:
                     field.check(example[field.name])
                     ordered_example[field.name] = example[field.name]
-            elif not isinstance(field.data_type, (CompositeType, List)) \
-                    and not field.data_type.nullable:
+            elif not isinstance(dt, (CompositeType, List)) \
+                    and not nullable_dt:
                 raise KeyError('Missing field %r in example' % field.name)
         self.examples[label] = ordered_example
 
@@ -813,6 +962,8 @@ def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
 def is_list_type(data_type):
     return isinstance(data_type, List)
+def is_nullable_type(data_type):
+    return isinstance(data_type, Nullable)
 def is_numeric_type(data_type):
     return is_integer_type(data_type) or is_float_type(data_type)
 def is_primitive_type(data_type):

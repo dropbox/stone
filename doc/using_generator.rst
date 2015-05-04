@@ -201,6 +201,49 @@ values, use the ``get_[tag]()`` method to access the value::
     ...     v = s.get_inactive()
     ...     # handle inactive status
 
+Struct With Enumerated Subtypes
+-------------------------------
+
+As with regular structs, structs that enumerate subtypes have corresponding
+Python classes that behave identically to regular structs.
+
+The difference is apparent when a field has a data type that is a struct with
+enumerated subtypes. Expanding on our example from the language reference,
+assume the following spec::
+
+    struct Resource
+        union*
+            file File
+            folder Folder
+
+        path String
+
+    struct File extends Resource:
+        size UInt64
+
+    struct Folder extends Resource:
+        "No new fields."
+
+    struct Response
+        rsrc Resource
+
+If we instantiate ``Response``, the ``rsrc`` field can only be assigned a
+``File`` or ``Folder`` object. It should not be assigned a ``Resource`` object.
+
+An exception to this is on deserialization. Because ``Resource`` is specified
+as a catch-all, it's possible when deserializing a ``Response`` to get a
+``Resource`` object in the ``rsrc`` field. This indicates that the returned
+subtype was unknown because the recipient has an older spec than the sender.
+To handle catch-alls, you should use an else clause::
+
+    >>> print resp.rsrc.path  # Guaranteed to work regardless of subtype
+    >>> if isinstance(resp, File):
+    ...     # handle File
+    ... elif isinstance(resp, Folder):
+    ...     # handle Folder
+    ... else:
+    ...     # unknown subtype of Resource
+
 Route
 -----
 

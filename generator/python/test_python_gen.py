@@ -14,6 +14,8 @@ import unittest
 import babel_validators as bv
 
 from babel_serializers import (
+    json_compat_obj_encode,
+    json_compat_obj_decode,
     json_encode,
     json_decode,
 )
@@ -157,7 +159,8 @@ class TestDropInModules(unittest.TestCase):
 
     def test_struct_validator(self):
         class C(object):
-            _fields_ = [('f', bv.String())]
+            _all_field_names_ = {'f'}
+            _all_fields_ = [('f', bv.String())]
             f = None
         s = bv.Struct(C)
         self.assertRaises(bv.ValidationError, lambda: s.validate(object()))
@@ -183,8 +186,8 @@ class TestDropInModules(unittest.TestCase):
 
     def test_json_encoder_union(self):
         class S(object):
-            _field_names_ = {'f'}
-            _fields_ = [('f', bv.String())]
+            _all_field_names_ = {'f'}
+            _all_fields_ = [('f', bv.String())]
         class U(object):
             _tagmap = {'a': bv.Int64(),
                        'b': bv.Void(),
@@ -252,14 +255,14 @@ class TestDropInModules(unittest.TestCase):
 
     def test_json_encoder_error_messages(self):
         class S3(object):
-            _field_names_ = {'j'}
-            _fields_ = [('j', bv.UInt64(max_value=10))]
+            _all_field_names_ = {'j'}
+            _all_fields_ = [('j', bv.UInt64(max_value=10))]
         class S2(object):
-            _field_names_ = {'i'}
-            _fields_ = [('i', bv.Struct(S3))]
+            _all_field_names_ = {'i'}
+            _all_fields_ = [('i', bv.Struct(S3))]
         class S(object):
-            _field_names_ = {'f'}
-            _fields_ = [('f', bv.Struct(S2))]
+            _all_field_names_ = {'f'}
+            _all_fields_ = [('f', bv.Struct(S2))]
         class U(object):
             _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
@@ -333,9 +336,9 @@ class TestDropInModules(unittest.TestCase):
 
     def test_json_decoder_struct(self):
         class S(object):
-            _field_names_ = {'f', 'g'}
-            _fields_ = [('f', bv.String()),
-                        ('g', bv.Nullable(bv.String()))]
+            _all_field_names_ = {'f', 'g'}
+            _all_fields_ = [('f', bv.String()),
+                            ('g', bv.Nullable(bv.String()))]
             _g = None
             @property
             def f(self):
@@ -368,8 +371,8 @@ class TestDropInModules(unittest.TestCase):
 
     def test_json_decoder_union(self):
         class S(object):
-            _field_names_ = {'f'}
-            _fields_ = [('f', bv.String())]
+            _all_field_names_ = {'f'}
+            _all_fields_ = [('f', bv.String())]
         class U(object):
             _tagmap = {'a': bv.Int64(),
                        'b': bv.Void(),
@@ -453,14 +456,14 @@ class TestDropInModules(unittest.TestCase):
 
     def test_json_decoder_error_messages(self):
         class S3(object):
-            _field_names_ = {'j'}
-            _fields_ = [('j', bv.UInt64(max_value=10))]
+            _all_field_names_ = {'j'}
+            _all_fields_ = [('j', bv.UInt64(max_value=10))]
         class S2(object):
-            _field_names_ = {'i'}
-            _fields_ = [('i', bv.Struct(S3))]
+            _all_field_names_ = {'i'}
+            _all_fields_ = [('i', bv.Struct(S3))]
         class S(object):
-            _field_names_ = {'f'}
-            _fields_ = [('f', bv.Struct(S2))]
+            _all_field_names_ = {'f'}
+            _all_fields_ = [('f', bv.Struct(S2))]
         class U(object):
             _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
@@ -506,6 +509,27 @@ struct C extends B
 union U
     t0
     t1 String
+
+struct Resource
+    union*
+        file File
+        folder BaseFolder
+
+    name String
+
+struct File extends Resource
+    size UInt64
+
+struct BaseFolder extends Resource
+    union
+        plain Folder
+        shared SharedFolder
+
+struct Folder extends BaseFolder
+    "Regular folder"
+
+struct SharedFolder extends BaseFolder
+    owner String
 """
 
 class TestGeneratedPython(unittest.TestCase):
@@ -549,6 +573,160 @@ class TestGeneratedPython(unittest.TestCase):
         # Test that non-void union member is callable (should be a method)
         self.assertTrue(callable(self.ns.U.t1))
 
+    def test_struct_enumerated_subtypes_json_encode(self):
+        # Test serializing a leaf struct from  the root struct
+        fi = self.ns.File(name='test.doc', size=100)
+        self.assertEqual(
+            json_compat_obj_encode(bv.StructTree(self.ns.Resource), fi),
+            {'name': 'test.doc', 'file': {'size': 100}})
+
+        # Test serializing a leaf struct as the base and target
+        self.assertEqual(
+            json_compat_obj_encode(bv.Struct(self.ns.File), fi),
+            {'name': 'test.doc', 'size': 100})
+
+        fo = self.ns.Folder(name='test')
+
+        # Test serializing a non-leaf struct using a root base struct
+        self.assertEqual(
+            json_compat_obj_encode(bv.StructTree(self.ns.Resource), fo),
+            {'name': 'test', 'folder': {'plain': {}}})
+
+        # Test serializing a mid-level struct using a non-root/leaf base struct
+        self.assertEqual(
+            json_compat_obj_encode(bv.StructTree(self.ns.Folder), fo),
+            {'name': 'test', 'plain': {}})
+
+        sf = self.ns.SharedFolder(name='stest', owner='id:xyz')
+
+        # Test serializing a leaf struct using a root base struct
+        self.assertEqual(
+            json_compat_obj_encode(bv.StructTree(self.ns.Resource), sf),
+            {'name': 'stest', 'folder': {'shared': {'owner': 'id:xyz'}}})
+
+        # Test serializing a leaf struct using a non-root/leaf base struct
+        self.assertEqual(
+            json_compat_obj_encode(bv.StructTree(self.ns.BaseFolder), sf),
+            {'name': 'stest', 'shared': {'owner': 'id:xyz'}})
+
+    def test_struct_enumerated_subtypes_json_decode(self):
+        # Test deserializing a leaf struct from  the root struct
+        fi = self.ns.File(name='test.doc', size=100)
+        fi = json_compat_obj_decode(
+            bv.StructTree(self.ns.Resource),
+            {'name': 'test.doc', 'file': {'size': 100}})
+        self.assertIsInstance(fi, self.ns.File)
+        self.assertEqual(fi.name, 'test.doc')
+        self.assertEqual(fi.size, 100)
+
+        # Test deserializing leaf struct with bad type tag
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test.doc', 'file': 'bad-value'})
+        self.assertIn("expected object, got string", str(cm.exception))
+
+        # Test deserializing non-leaf struct with bad type tag
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test.doc', 'folder': 1234})
+        self.assertIn("expected object, got integer", str(cm.exception))
+
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test.doc', 'file': 'bad-value'}))
+
+        # Test deserializing with two type tags set
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test.doc', 'file': {'size': 100}, 'folder': {}}))
+
+        # Test deserializing a leaf struct directly
+        fi = self.ns.File(name='test.doc', size=100)
+        fi = json_compat_obj_decode(
+            bv.Struct(self.ns.File),
+            {'name': 'test.doc', 'size': 100})
+        self.assertIsInstance(fi, self.ns.File)
+        self.assertEqual(fi.name, 'test.doc')
+        self.assertEqual(fi.size, 100)
+
+        # Test deserializing a leaf struct from  the root struct with required
+        # field missing.
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test.doc', 'file': {}}))
+
+        # Test deserializing a leaf struct from  the root struct with required
+        # field double-specified.
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test.doc', 'file': {'size': 100, 'name': 'bad'}}))
+
+        # Test deserializing a non-leaf struct
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test-folder', 'folder': {}}))
+
+        # Test deserializing an unknown leaf struct
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test-folder', 'folder': {'newsubtype': {}}}))
+
+        # Even if strict=False, the lack of catch-all can't be handled.
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'name': 'test-folder', 'folder': {'newsubtype': {}}},
+                strict=False))
+
+        # Test deserializing a leaf struct using a root base struct
+        sf = json_compat_obj_decode(
+            bv.StructTree(self.ns.Resource),
+            {'name': 'sfolder', 'folder': {'shared': {'owner': 'id:xyz'}}})
+        self.assertIsInstance(sf, self.ns.SharedFolder)
+        self.assertEqual(sf.name, 'sfolder')
+        self.assertEqual(sf.owner, 'id:xyz')
+
+        # Test deserializing a leaf struct using a non-root/leaf base struct
+        sf = json_compat_obj_decode(
+            bv.StructTree(self.ns.Folder),
+            {'name': 'sfolder', 'shared': {'owner': 'id:xyz'}})
+        self.assertIsInstance(sf, self.ns.SharedFolder)
+        self.assertEqual(sf.name, 'sfolder')
+        self.assertEqual(sf.owner, 'id:xyz')
+
+        # Test deserializing a subtype that isn't known.
+        r = json_compat_obj_decode(
+            bv.StructTree(self.ns.Resource),
+            {'name': 'newlink', 'symlink': {}},
+            strict=False)
+        self.assertIsInstance(r, self.ns.Resource)
+        self.assertEqual(r.name, 'newlink')
+
+        # Test deserializing a subtype that isn't known, but with a missing
+        # field in the base struct (that is known).
+        self.assertRaises(
+            bv.ValidationError,
+            lambda: json_compat_obj_decode(
+                bv.StructTree(self.ns.Resource),
+                {'symlink': {}},
+                strict=False))
+
     def tearDown(self):
+        # Clear input and output of babelapi tool after all tests.
         shutil.rmtree('output')
         os.remove('ns.babel')

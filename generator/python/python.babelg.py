@@ -14,6 +14,7 @@ from babelapi.data_type import (
     is_float_type,
     is_integer_type,
     is_list_type,
+    is_nullable_type,
     is_numeric_type,
     is_string_type,
     is_struct_type,
@@ -74,6 +75,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self._generate_union_class(data_type)
             else:
                 raise TypeError('Cannot handle type %r' % type(data_type))
+        # Generate the struct->subtype tag mapping at the end so that
+        # references to later-defined subtypes don't cause errors.
+        for data_type in namespace.linearize_data_types():
+            if is_struct_type(data_type) and data_type.has_enumerated_subtypes():
+                self._generate_enumerated_subtypes_tag_mapping(data_type)
 
     def _docf(self, tag, val):
         """
@@ -211,51 +217,61 @@ class PythonGenerator(CodeGeneratorMonolingual):
         Given a Babel data type, returns a string that can be used to construct
         the appropriate validation object in Python.
         """
-        if is_list_type(data_type):
+        if is_nullable_type(data_type):
+            dt = data_type.data_type
+            nullable_dt = True
+        else:
+            dt = data_type
+            nullable_dt = False
+        if is_list_type(dt):
             v = self._generate_func_call(
                 'bv.List',
                 args=[
-                    self._generate_validator_constructor(data_type.data_type)],
+                    self._generate_validator_constructor(dt.data_type)],
                 kwargs=[
-                    ('min_items', data_type.min_items),
-                    ('max_items', data_type.max_items)],
+                    ('min_items', dt.min_items),
+                    ('max_items', dt.max_items)],
             )
-        elif is_numeric_type(data_type):
+        elif is_numeric_type(dt):
             v = self._generate_func_call(
-                'bv.{}'.format(data_type.name),
+                'bv.{}'.format(dt.name),
                 kwargs=[
-                    ('min_value', data_type.min_value),
-                    ('max_value', data_type.max_value)],
+                    ('min_value', dt.min_value),
+                    ('max_value', dt.max_value)],
             )
-        elif is_string_type(data_type):
+        elif is_string_type(dt):
             pattern = None
-            if data_type.pattern is not None:
-                pattern = repr(data_type.pattern)
+            if dt.pattern is not None:
+                pattern = repr(dt.pattern)
             v = self._generate_func_call(
                 'bv.String',
                 kwargs=[
-                    ('min_length', data_type.min_length),
-                    ('max_length', data_type.max_length),
+                    ('min_length', dt.min_length),
+                    ('max_length', dt.max_length),
                     ('pattern', pattern)],
             )
-        elif is_timestamp_type(data_type):
+        elif is_timestamp_type(dt):
             v = self._generate_func_call(
                 'bv.Timestamp',
-                args=[repr(data_type.format)],
+                args=[repr(dt.format)],
             )
-        elif is_struct_type(data_type):
+        elif is_struct_type(dt):
+            if dt.has_enumerated_subtypes():
+                validator_name = 'bv.StructTree'
+            else:
+                validator_name = 'bv.Struct'
             v = self._generate_func_call(
-                'bv.Struct',
-                args=[self.lang.format_class(data_type.name)],
+                validator_name,
+                args=[self.lang.format_class(dt.name)],
             )
-        elif is_union_type(data_type):
+        elif is_union_type(dt):
             v = self._generate_func_call(
                 'bv.Union',
-                args=[self.lang.format_class(data_type.name)],
+                args=[self.lang.format_class(dt.name)],
             )
         else:
-            v = self._generate_func_call('bv.{}'.format(data_type.name))
-        if data_type.nullable:
+            v = self._generate_func_call('bv.{}'.format(dt.name))
+        if nullable_dt:
             return self._generate_func_call('bv.Nullable', args=[v])
         else:
             return v
@@ -285,41 +301,85 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
     def _generate_struct_class_fields_for_reflection(self, data_type):
         """
-        Declares a _field_names_ class attribute, which is a set of all field
-        names. Also, declares a _fields_ class attribute which is a list of
-        tuples, where each tuple is (field name, validator).
+        Generates two class attributes:
+          * _all_field_names_: Set of all field names including inherited fields.
+          * _all_fields_: List of tuples, where each tuple is (name, validator).
+
+        If a struct has enumerated subtypes, then two additional attributes are
+        generated:
+          * _field_names_: Set of all field names excluding inherited fields.
+          * _fields: List of tuples, where each tuple is (name, validator), and
+            excludes inherited fields.
+
+        These are needed because serializing a struct with enumerated subtypes
+        requires knowing the fields defined in each level of the hierarchy.
         """
+
         if data_type.supertype:
             supertype_class_name = self._class_name_for_data_type(data_type.supertype)
         else:
             supertype_class_name = None
 
-        if supertype_class_name:
-            self.emit('_field_names_ = %s._field_names_.union(set((' %
-                           supertype_class_name)
+        if data_type.is_member_of_enumerated_subtypes_tree():
+            self.generate_multiline_list(
+                ["'%s'" % field.name for field in data_type.fields],
+                before='_field_names_ = set(',
+                after=')',
+                delim=('[', ']'),
+                compact=False)
+            if supertype_class_name:
+                self.emit(
+                    '_all_field_names_ = {}._all_field_names_.union(_field_names_)'
+                    .format(supertype_class_name))
+            else:
+                self.emit('_all_field_names_ = _field_names_')
         else:
-            self.emit('_field_names_ = set((')
-        with self.indent():
-            for field in data_type.fields:
-                self.emit("'{}',".format(self.lang.format_variable(field.name)))
+            if supertype_class_name:
+                before = '_all_field_names_ = {}._all_field_names_.union(set('.format(
+                    supertype_class_name)
+                after = '))'
+            else:
+                before = '_all_field_names_ = set('
+                after = ')'
+            self.generate_multiline_list(
+                ["'%s'" % field.name for field in data_type.fields],
+                before=before,
+                after=after,
+                delim=('[', ']'),
+                compact=False)
 
-        if supertype_class_name:
-            self.emit(')))')
-        else:
-            self.emit('))')
         self.emit()
 
-        if supertype_class_name:
-            self.emit('_fields_ = {}._fields_ + ['.format(supertype_class_name))
-        else:
-            self.emit('_fields_ = [')
-
-        with self.indent():
+        if data_type.is_member_of_enumerated_subtypes_tree():
+            items = []
             for field in data_type.fields:
                 var_name = self.lang.format_variable(field.name)
                 validator_name = '_{0}_validator'.format(var_name)
-                self.emit("('{}', {}),".format(var_name, validator_name))
-        self.emit(']')
+                items.append("('{}', {})".format(var_name, validator_name))
+            self.generate_multiline_list(
+                items,
+                before='_fields_ = ',
+                delim=('[', ']'),
+                compact=False,
+            )
+            if supertype_class_name:
+                self.emit('_all_fields_ = {}._all_fields_ + _fields_'.format(
+                    supertype_class_name))
+            else:
+                self.emit('_all_fields_ = _fields_')
+        else:
+            if supertype_class_name:
+                before = '_all_fields_ = {}._all_fields_ + '.format(supertype_class_name)
+            else:
+                before = '_all_fields_ = '
+            items = []
+            for field in data_type.fields:
+                var_name = self.lang.format_variable(field.name)
+                validator_name = '_{0}_validator'.format(var_name)
+                items.append("('{}', {})".format(var_name, validator_name))
+            self.generate_multiline_list(
+                items, before=before, delim=('[', ']'), compact=False)
+
         self.emit()
 
     def _generate_struct_class_init(self, data_type):
@@ -328,6 +388,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         optional arguments. Any argument that is set on construction sets the
         corresponding field for the instance.
         """
+
         args = ['self']
         for field in data_type.all_fields:
             field_name_reserved_check = self.lang.format_variable(field.name, True)
@@ -378,6 +439,12 @@ class PythonGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             field_name = self.lang.format_method(field.name)
             field_name_reserved_check = self.lang.format_method(field.name, True)
+            if is_nullable_type(field.data_type):
+                field_dt = field.data_type.data_type
+                dt_nullable = True
+            else:
+                field_dt = field.data_type
+                dt_nullable = False
 
             # generate getter for field
             self.emit('@property')
@@ -391,7 +458,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     # rtype declaration.
                     self.emit()
                 self.emit(':rtype: {}'.format(
-                    self._python_type_mapping(field.data_type)))
+                    self._python_type_mapping(field_dt)))
                 self.emit('"""')
                 self.emit('if self._{}_present:'.format(field_name))
                 with self.indent():
@@ -399,7 +466,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
                 self.emit('else:')
                 with self.indent():
-                    if field.data_type.nullable:
+                    if dt_nullable:
                         self.emit('return None')
                     elif field.has_default:
                         self.emit('return {}'.format(
@@ -415,14 +482,14 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit('@{}.setter'.format(field_name_reserved_check))
             self.emit('def {}(self, val):'.format(field_name_reserved_check))
             with self.indent():
-                if field.data_type.nullable:
+                if dt_nullable:
                     self.emit('if val is None:')
                     with self.indent():
                         self.emit('del self.{}'.format(field_name_reserved_check))
                         self.emit('return')
-                if is_composite_type(field.data_type):
-                    self.emit('self._%s_validator.validate_type_only(val)'
-                                   % field_name)
+                if is_composite_type(field_dt):
+                    self.emit('self._%s_validator.validate_type_only(val)' %
+                              field_name)
                 else:
                     self.emit('val = self._{}_validator.validate(val)'.format(field_name))
                 self.emit('self._{}_value = val'.format(field_name))
@@ -466,6 +533,51 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit("return '%s()'"
                                % self._class_name_for_data_type(data_type))
         self.emit()
+
+    def _generate_enumerated_subtypes_tag_mapping(self, data_type):
+        """
+        Generates attributes needed for serializing and deserializing structs
+        with enumerated subtypes. These assignments are made after all the
+        Python class definitions to ensure that all references exist.
+
+         assignment to the `_tag_to_subtype_` attribute of the
+        class.
+        """
+        assert data_type.has_enumerated_subtypes()
+
+        # Generate _tag_to_subtype_ attribute: Map from string type tag to
+        # the validator of the referenced subtype. Used on deserialization
+        # to look up the subtype for a given tag.
+        tag_to_subtype_items = []
+        for subtype_field in data_type.get_enumerated_subtypes():
+            tag_to_subtype_items.append("'{}': {}".format(
+                subtype_field.name,
+                self._generate_validator_constructor(subtype_field.data_type)))
+        self.generate_multiline_list(
+            tag_to_subtype_items,
+            before='{}._tag_to_subtype_ = '.format(data_type.name),
+            delim=('{', '}'),
+            compact=False)
+
+        # Generate _pytype_to_tag_and_subtype_: Map from Python class to a
+        # tuple of (type tag, subtype). Used on serialization to lookup which
+        # how a class should be encoded based on the root struct that
+        # that enumerates subtypes.
+        items = []
+        for tag, subtype in data_type.get_all_subtypes_with_tags():
+            items.append("{0}: ('{1}', {2}._tag_to_subtype_['{1}'])".format(
+                self.lang.format_class(subtype.name),
+                tag,
+                data_type.name))
+        self.generate_multiline_list(
+            items,
+            before='{}._pytype_to_tag_and_subtype_ = '.format(data_type.name),
+            delim=('{', '}'),
+            compact=False)
+
+        # Generate _is_catch_all_ attribute:
+        self.emit('{}._is_catch_all_ = {!r}'.format(
+            data_type.name, data_type.is_catch_all()))
 
     #
     # Tagged Union Types
@@ -540,7 +652,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             field_name = self.lang.format_variable(field.name)
             validator_name = self._generate_validator_constructor(field.data_type)
             self.emit('_{}_validator = {}'.format(field_name,
-                                                        validator_name))
+                                                  validator_name))
         if data_type.catch_all_field:
             self.emit("_catch_all = '%s'" % data_type.catch_all_field.name)
         elif not data_type.subtype:

@@ -395,6 +395,78 @@ supertype. Specifically, a ``GetAccountError`` can be used in place of
 ``DeleteAccountError`` because a handler will be prepared for all possibilities
 of ``GetAccountError`` since they are a subset of ``DeleteAccountError``.
 
+
+Struct With Enumerated Subtypes
+===============================
+
+If a struct enumerates its subtypes, an instance of any subtype will satisfy
+the type constraint. This is useful when wanting to discriminate amongst types
+that are part of the same hierarchy while simultaneously being able to avoid
+discriminating when accessing common fields.
+
+To declare the enumeration, define a union following the documentation string
+of the struct if one exists. Unlike a regular union, it is unnamed. Each member
+of the union specifies a tag followed by the name of a subtype. The tag (known
+as the "type tag") is present in the serialized format to distinguish between
+subtypes. For example::
+
+    struct Resource
+        "Sample doc."
+
+        union
+            file File
+            folder Folder
+
+        path String
+
+    struct File extends Resource:
+        ...
+
+    struct Folder extends Resource:
+        ...
+
+Anywhere ``Resource`` is referenced, an instance of ``File`` or ``Folder``
+satisfies the type constraint.
+
+As you can infer, all leaf structs in the hierarchy will have no subtypes to
+enumerate, and thus will omit the ``union`` section. If a leaf struct is
+referenced as a type, it is indistinguishable from an ordinary struct
+definition.
+
+Enumerated subtypes have several additional constraints:
+
+    * If a struct enumerates subtypes, its parent must also enumerate its own
+      subtypes.
+    * If a struct's parent enumerates subtypes, it must enumerate its own
+      subtypes if it has any.
+    * Type tags cannot match the names of any of the struct fields.
+
+Catch-all
+---------
+
+Similar to a union, a struct with enumerated types can be labeled as a
+catch-all. This is done by appending an asterix, ``*``, to the ``union``::
+
+    struct Resource
+        "Sample doc."
+
+        union*
+            file File
+            folder Folder
+
+        path String
+
+    struct File extends Resource:
+        ...
+
+    struct Folder extends Resource:
+        ...
+
+If recipient receives a tag for a subtype that it is unaware of, it will
+substitute the base struct in its place if it's a catch-all. In the example
+above, if the subtype is a ``Symlink`` (not shown), then the recipient will
+return a ``Resource`` in its place.
+
 Nullable Type
 =============
 
@@ -554,8 +626,10 @@ Specification::
 
 Struct::
 
-    Struct ::= 'struct' Identifier Inheritance? NL INDENT Doc? Field* Example* DEDENT
+    Struct ::= 'struct' Identifier Inheritance? NL INDENT Doc? Subtypes? Field* Example* DEDENT
     Inheritance ::= 'extends' Identifier
+    SubtypeField ::= Identifier TypeRef NL
+    Subtypes ::= 'union' NL INDENT SubtypeField+ DEDENT
     Default ::= '=' Literal
     Field ::= Identifier TypeRef Default? (NL INDENT Doc DEDENT)?
 

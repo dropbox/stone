@@ -386,8 +386,14 @@ class Struct(Composite):
                     field_name: Name of the field (str).
                     validator: Validator object.
         """
-        assert hasattr(definition, '_fields_'), 'needs _fields_ attribute'
-        assert isinstance(definition._fields_, list), '_fields_ must be a list'
+        assert hasattr(definition, '_all_fields_'), \
+            'needs _all_fields_ attribute'
+        assert isinstance(definition._all_fields_, list), \
+            '_all_fields_ must be a list'
+        assert hasattr(definition, '_all_field_names_'), \
+            'needs _all_field_names_ attribute'
+        assert isinstance(definition._all_field_names_, set), \
+            '_all_field_names_ must be a set'
         self.definition = definition
 
     def validate(self, val):
@@ -409,7 +415,7 @@ class Struct(Composite):
         FIXME(kelkabany): Since the definition object does not maintain a list
         of which fields are required, all fields are scanned.
         """
-        for field_name, _ in self.definition._fields_:
+        for field_name, _ in self.definition._all_fields_:
             if not hasattr(val, field_name):
                 raise ValidationError("missing required field '%s'" %
                                       field_name)
@@ -426,6 +432,24 @@ class Struct(Composite):
         if not isinstance(val, self.definition):
             raise ValidationError('expected type %s, got %s' %
                 (self.definition.__name__, generic_type_name(val)))
+
+class StructTree(Struct):
+    """Validator for structs with enumerated subtypes.
+
+    NOTE: validate_fields_only() validates the fields known to this base
+    struct, but does not do any validation specific to the subtype.
+    """
+
+    def __init__(self, definition):
+        super(StructTree, self).__init__(definition)
+        assert hasattr(definition, '_fields_'), \
+            'needs _added_fields_ attribute'
+        assert isinstance(definition._fields_, list), \
+            '_fields_ must be a list'
+        assert hasattr(definition, '_field_names_'), \
+            'needs _field_names_ attribute'
+        assert isinstance(definition._field_names_, set), \
+            '_field_names_ must be a set'
 
 class Union(Composite):
 
