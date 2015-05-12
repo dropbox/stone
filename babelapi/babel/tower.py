@@ -752,7 +752,8 @@ class TowerOfBabel(object):
                     self._validate_doc_refs_helper(
                         env,
                         data_type.doc,
-                        (data_type._token.lineno + 1, data_type._token.path))
+                        (data_type._token.lineno + 1, data_type._token.path),
+                        data_type)
                 for field in data_type.fields:
                     if field.doc:
                         self._validate_doc_refs_helper(

@@ -1023,3 +1023,28 @@ struct T extends ns1.S
         self.assertIn(
             'Unresolvable circular reference',
             cm.exception.msg)
+
+    def test_doc_refs(self):
+        # Test union doc referencing field
+        text = """\
+namespace test
+
+union U
+    ":field:`a`"
+    a
+    b
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test union field doc referencing other field
+        text = """\
+namespace test
+
+union U
+    a
+        ":field:`b`"
+    b
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
