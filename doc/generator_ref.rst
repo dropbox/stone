@@ -150,16 +150,6 @@ supertype
     If it exists, it points to a DataType object (another struct) that this
     struct inherits from.
 
-is_member_of_enumerated_subtypes_tree()
-    Whether this struct enumerates subtypes or is a struct that is enumerated
-    by its parent type. Because such structs are serialized and deserialized
-    differently, use this method to detect these.
-
-enumerated_subtypes
-    A list of subtype fields. Each field has a ``name`` attribute which is the
-    tag for the subtype. Each field also has a ``data_type`` attribute that is
-    a ``Struct`` object representing the subtype.
-
 get_all_subtypes_with_tags()
     Unlike other enumerated-subtypes-related functionality, this method returns
     not just direct subtypes, but all subtypes of this struct. The tag of each
@@ -173,13 +163,28 @@ get_all_subtypes_with_tags()
     maps a generated class representing a subtype to the tag it needs in the
     serialized format.
 
-    Use this attribute only if the struct has enumerated subtypes.
+    Raises an error if the struct doesn't enumerate subtypes.
+
+get_enumerated_subtypes()
+    Returns a list of subtype fields. Each field has a ``name`` attribute which
+    is the tag for the subtype. Each field also has a ``data_type`` attribute
+    that is a ``Struct`` object representing the subtype.
+
+    Raises an error if the struct doesn't enumerate subtypes.
+
+has_enumerated_subtypes()
+    Returns whether this struct enumerates its subtypes.
 
 is_catch_all()
     Indicates whether this struct should be used in the event that none of its
     known enumerated subtypes match a received type tag.
 
-    Use this attribute only if the struct has enumerated subtypes.
+    Raises an error if the struct doesn't enumerate subtypes.
+
+is_member_of_enumerated_subtypes_tree()
+    Returns true if this struct enumerates subtypes or if its parent does.
+    Structs that are members of trees must be able to be serialized without
+    their inherited fields.
 
 StructField
 -----------

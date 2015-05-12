@@ -597,7 +597,7 @@ class Struct(CompositeType):
 
     def has_enumerated_subtypes(self):
         """
-        Whether this struct enumerates it subtypes.
+        Whether this struct enumerates its subtypes.
         """
         return bool(self._enumerated_subtypes)
 
@@ -624,7 +624,7 @@ class Struct(CompositeType):
         Indicates whether this struct should be used in the event that none of
         its known enumerated subtypes match a received type tag.
 
-        Use this attribute only if the struct has enumerated subtypes.
+        Use this method only if the struct has enumerated subtypes.
 
         Returns: bool
         """
