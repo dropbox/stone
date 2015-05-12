@@ -27,11 +27,14 @@ class TestGenerator(unittest.TestCase):
 
     def test_api_namespace(self):
         ns = ApiNamespace('files')
-        a1 = Struct('A1', None, [StructField('f1', Boolean(), None, None)], None)
-        a2 = Struct('A2', None, [StructField('f2', Boolean(), None, None)], None)
+        a1 = Struct('A1', None)
+        a1.set_attributes(None, [StructField('f1', Boolean(), None, None)])
+        a2 = Struct('A2', None)
+        a2.set_attributes(None, [StructField('f2', Boolean(), None, None)])
         l = List(a1)
         s = String()
-        route = ApiRoute('test/route', None, l, a2, s, None, None)
+        route = ApiRoute('test/route', None)
+        route.set_attributes(None, l, a2, s, None)
         ns.add_route(route)
 
         # Test that only user-defined types are returned.

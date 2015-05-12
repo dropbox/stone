@@ -100,6 +100,11 @@ distinct_route_io_data_types()
     data type, then the contained data type is returned if it's a user-defined
     type.
 
+referenced_namespaces
+    A list of Namespace objects. Each namespace is referenced by this
+    namespace. A namespace is added to this list if it is imported and a data
+    type is referenced from it. Namespaces are in ASCII order by name.
+
 Route
 -----
 
@@ -142,11 +147,23 @@ name
 doc
     The documentation string for the struct.
 
+fields
+    A list of StructField objects defined by this struct. Does not include any
+    inherited fields.
+
 all_fields
-    A list of all StructField objects that make up the struct. Required fields
+    A list of StructField objects including inherited fields. Required fields
     come before optional fields.
 
-supertype
+all_required_fields
+    A list of StructField objects required fields. Includes inherited fields.
+
+all_optional_fields
+    A list of StructField objects for optional fields. Includes inherited
+    fields. Optional fields are those that have defaults, or have a data type
+    that is nullable.
+
+parent_type
     If it exists, it points to a DataType object (another struct) that this
     struct inherits from.
 
@@ -198,10 +215,68 @@ doc
 data_type
     The DataType of the field.
 
+has_default
+    Whether this field has a default if it is unset.
+
+default
+    The default for this field. Errors if no default is defined.
+
+    The Python type of the default depends on the data type of the field. The
+    following table shows the mapping:
+
+    ========================== ============ ============
+    Primitive                  Python 2.x   Python 3.x
+    ========================== ============ ============
+    Binary                     str          bytes
+    Boolean                    bool         bool
+    Float{32,64}               float        float
+    Int{32,64}, UInt{32,64}    long         int
+    List                       list         list
+    String                     unicode      str
+    Timestamp                  str          str
+    ========================== ============ ============
+
+    If the data type of a field is a union, its default can be a `TagRef
+    object <#union-tag-reference>`_. No defaults are supported for structs.
+
 Union
 -----
 
-[TODO]: Need to rename fields to tags first.
+name
+    The name of the union.
+
+doc
+    The documentation string for the union.
+
+fields
+    A list of UnionField objects defined by this union. Does not include any
+    inherited fields.
+
+all_fields
+    A list of all UnionField objects that make up the union. Required fields
+    come before optional fields.
+
+parent_type
+    If it exists, it points to a DataType object (another union) that this
+    union inherits from.
+
+catch_all_field
+    A UnionField object representing the catch-all field.
+
+UnionField
+----------
+
+name
+    The name of the field.
+
+doc
+    The documentation string for the field.
+
+data_type
+    The DataType of the field.
+
+catch_all
+    A boolean indicating whether this field is the catch-all for the union.
 
 .. _emit_methods:
 
@@ -345,10 +420,47 @@ available::
     is_primitive_type(data_type)
     is_string_type(data_type)
     is_struct_type(data_type)
-    is_tag_ref(val)
     is_timestamp_type(data_type)
     is_union_type(data_type)
     is_void_type(data_type)
+
+Foreign Data Type Reference
+===========================
+
+In places where you expect a data type, you may encounter a ``ForeignRef``
+object. This object indicates that the referenced alias or definition is
+defined in another namespace. The following are its attributes:
+
+ForeignRef
+----------
+
+namespace_name
+    The name of the namespace the data type is defined in.
+
+deta_type
+    The DataType object.
+
+To check for a ``ForeignRef``, use ``is_foreign_ref(data_type)`` which can be
+imported from ``babelapi.data_type``.
+
+Union Tag Reference
+===================
+
+The default of a struct field with a union data type can be a member of that
+union with void type. If this is the case, the value of the default will be a
+``TagRef`` object with the following attributes:
+
+TagRef
+------
+
+union_data_type
+    The Union object that is the data type of the field.
+
+tag_name
+    The name of the union member with void type that is the field default.
+
+To check for a default value that is a ``TagRef``, use ``is_tag_ref(val)``
+which can be imported from ``babelapi.data_type``.
 
 Examples
 ========

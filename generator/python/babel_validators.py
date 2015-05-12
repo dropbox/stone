@@ -386,14 +386,6 @@ class Struct(Composite):
                     field_name: Name of the field (str).
                     validator: Validator object.
         """
-        assert hasattr(definition, '_all_fields_'), \
-            'needs _all_fields_ attribute'
-        assert isinstance(definition._all_fields_, list), \
-            '_all_fields_ must be a list'
-        assert hasattr(definition, '_all_field_names_'), \
-            'needs _all_field_names_ attribute'
-        assert isinstance(definition._all_field_names_, set), \
-            '_all_field_names_ must be a set'
         self.definition = definition
 
     def validate(self, val):
@@ -442,14 +434,6 @@ class StructTree(Struct):
 
     def __init__(self, definition):
         super(StructTree, self).__init__(definition)
-        assert hasattr(definition, '_fields_'), \
-            'needs _added_fields_ attribute'
-        assert isinstance(definition._fields_, list), \
-            '_fields_ must be a list'
-        assert hasattr(definition, '_field_names_'), \
-            'needs _field_names_ attribute'
-        assert isinstance(definition._field_names_, set), \
-            '_field_names_ must be a set'
 
 class Union(Composite):
 
@@ -466,8 +450,6 @@ class Union(Composite):
                     field_name (str): Tag name.
                     validator (Validator): Tag value validator.
         """
-        assert hasattr(definition, '_tagmap'), 'needs _tagmap attribute'
-        assert isinstance(definition._tagmap, dict), '_tagmap must be a dict'
         self.definition = definition
 
     def validate(self, val):

@@ -1,13 +1,9 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from collections import defaultdict
 import copy
 import inspect
 import logging
-import os
 import re
-import six
-import sys
 
 from ..api import (
     Api,
@@ -16,11 +12,11 @@ from ..api import (
 from ..data_type import (
     Binary,
     Boolean,
+    CompositeType,
     DataType,
-    StructField,
-    UnionField,
     Float32,
     Float64,
+    ForeignRef,
     Int32,
     Int64,
     List,
@@ -28,18 +24,20 @@ from ..data_type import (
     ParameterError,
     String,
     Struct,
+    StructField,
     TagRef,
     Timestamp,
     UInt32,
     UInt64,
     Union,
+    UnionField,
     Void,
 )
 
 from .exception import InvalidSpec
 from .parser import (
     BabelAlias,
-    BabelInclude,
+    BabelImport,
     BabelNamespace,
     BabelParser,
     BabelRouteDef,
@@ -61,6 +59,12 @@ doc_ref_re = re.compile(r':(?P<tag>[A-z]+):`(?P<val>.*?)`')
 doc_ref_val_re = re.compile(
     r'^(null|true|false|-?\d+(\.\d*)?(e-?\d+)?|"[^\\"]*")$')
 
+class Environment(dict):
+    # The default environment won't have a name set since it applies to all
+    # namespaces. But, every time it's copied to represent the environment
+    # of a specific namespace, a name should be set.
+    namespace_name = None
+
 class TowerOfBabel(object):
 
     data_types = [
@@ -72,15 +76,14 @@ class TowerOfBabel(object):
         Int64,
         List,
         String,
-        Struct,
         Timestamp,
         UInt32,
         UInt64,
-        Union,
         Void,
     ]
 
-    default_env = {data_type.__name__: data_type for data_type in data_types}
+    default_env = Environment(
+        **{data_type.__name__: data_type for data_type in data_types})
 
     # FIXME: Version should not have a default.
     def __init__(self, specs, version='0.1b1', debug=False):
@@ -100,75 +103,158 @@ class TowerOfBabel(object):
 
         self.parser = BabelParser(debug=debug)
         # Map of namespace name (str) -> environment (dict)
-        self.env_by_namespace = {}
-        # Map of namespace name (str) ->  set of paths to parsed headers
-        self.includes_by_namespace = defaultdict(set)
+        self._env_by_namespace = {}
+        # Used to check for circular references.
+        self._resolution_in_progress = set()  # Set[DataType]
 
     def parse(self):
         """Parses the text of each spec and returns an API description. Returns
         None if an error was encountered during parsing."""
+        raw_api = []
         for path, text in self._specs:
-            try:
-                self._logger.info('Parsing spec %s', path)
-                res = self.parse_spec(text)
-                if self.parser.got_errors_parsing():
-                    # TODO(kelkabany): We only support showing a single error
-                    # at a time.
-                    msg, lineno = self.parser.get_errors()[0]
-                    raise InvalidSpec(msg, lineno)
-                elif res:
-                    self.add_to_api(path, res)
-                else:
-                    self._logger.warn('No output generated from file')
-            except InvalidSpec as e:
-                new_e = InvalidSpec(e.msg, e.lineno, path)
-                six.reraise(type(new_e), new_e, sys.exc_info()[2])
+            self._logger.info('Parsing spec %s', path)
+            res = self.parse_spec(text, path)
+            if self.parser.got_errors_parsing():
+                # TODO(kelkabany): Show more than one error at a time.
+                msg, lineno, path = self.parser.get_errors()[0]
+                raise InvalidSpec(msg, lineno, path)
+            elif res:
+                namespace_token = self._extract_namespace_token(res)
+                namespace = self.api.ensure_namespace(namespace_token.name)
+                raw_api.append((namespace, res))
+                self._add_data_types_and_routes_to_api(namespace, res)
+            else:
+                self._logger.warn('No output generated from file')
+
+        self._add_imports_to_env(raw_api)
+        self._add_aliases_to_api(raw_api)
+        self._populate_type_attributes()
+        self._populate_enumerated_subtypes()
+        self._validate_doc_refs()
+
         return self.api
 
-    def parse_spec(self, spec):
+    def parse_spec(self, spec, path=None):
         """Parses a single Babel file."""
         if self._debug:
             self.parser.test_lexing(spec)
 
-        return self.parser.parse(spec)
+        return self.parser.parse(spec, path)
+
+    def _extract_namespace_token(self, desc):
+        """
+        Checks that the namespace is declared first in the spec, and that only
+        one namespace is declared.
+
+        Args:
+            desc (List[babelapi.babel.parser._Element]): All tokens in a spec
+                file in the order they were defined.
+
+        Return:
+            babelapi.babel.parser.BabelNamespace: The namespace token.
+        """
+        if len(desc) == 0 or not isinstance(desc[0], BabelNamespace):
+            if self._debug:
+                self._logger.info('Description: %r' % desc)
+            raise InvalidSpec('First declaration in a babel must be '
+                              'a namespace. Possibly caused by preceding '
+                              'errors.', desc[0].lineno, desc[0].path)
+        for item in desc[1:]:
+            if isinstance(item, BabelNamespace):
+                raise InvalidSpec('Only one namespace declaration per file.',
+                                  item[0].lineno, item[0].path)
+        return desc.pop(0)
+
+    def _add_data_types_and_routes_to_api(self, namespace, desc):
+        """
+        From the raw output of the parser, create forward references for each
+        user-defined type (struct, union, route).
+
+        Args:
+            namespace (babelapi.api.Namespace): Namespace for definitions.
+            desc (List[babelapi.babel.parser._Element]): All tokens in a spec
+                file in the order they were defined. Should not include a
+                namespace declaration.
+        """
+
+        # Keep lists of all the types and routes added just from this spec.
+        data_types = []
+        routes = []
+        env = self._get_or_create_env(namespace.name)
+
+        for item in desc:
+            if isinstance(item, BabelTypeDef):
+                api_type = self._create_type(env, item)
+                data_types.append(api_type)
+                namespace.add_data_type(api_type)
+            elif isinstance(item, BabelRouteDef):
+                route = self._create_route(env, item)
+                routes.append(route)
+                namespace.add_route(route)
+            elif isinstance(item, BabelImport):
+                # Handle imports later.
+                pass
+            elif isinstance(item, BabelAlias):
+                # Handle aliases later.
+                pass
+            else:
+                raise AssertionError('Unknown Babel Declaration Type %r' %
+                                     item.__class__.__name__)
+
+    def _add_imports_to_env(self, raw_api):
+        """
+        Scans raw parser output for import declarations. Checks if the imports
+        are valid, and then creates a reference to the namespace in the
+        environment.
+
+        Args:
+            raw_api (Tuple[Namespace, List[babelapi.babel.parser._Element]]):
+                Namespace paired with raw parser output.
+        """
+        for namespace, desc in raw_api:
+            for item in desc:
+                if isinstance(item, BabelImport):
+                    if namespace.name == item.target:
+                        raise InvalidSpec('Cannot import current namespace.',
+                                          item.lineno, item.path)
+                    if item.target not in self.api.namespaces:
+                        raise InvalidSpec(
+                            'Namespace %s is not defined in any spec.' %
+                            quote(item.target),
+                            item.lineno, item.path)
+                    env = self._get_or_create_env(namespace.name)
+                    imported_env = self._get_or_create_env(item.target)
+                    env[item.target] = imported_env
+
+    def _add_aliases_to_api(self, raw_api):
+        """
+        Scans raw parser output for alias declarations. Call this only when all
+        user-defined types have had forward references created.
+
+        Args:
+            raw_api (Tuple[Namespace, List[babelapi.babel.parser._Element]]):
+                Namespace paired with raw parser output.
+        """
+        for namespace, desc in raw_api:
+            env = self._get_or_create_env(namespace.name)
+            for item in desc:
+                if isinstance(item, BabelAlias):
+                    self._create_alias(env, item)
 
     def _create_alias(self, env, item):
+        # TODO(kelkabany): Currently, aliases cannot point to other aliases. A
+        # less-than-clear "Symbol is undefined" error is displayed.
         if item.name in env:
             raise InvalidSpec(
                 'Symbol %s already defined on line %d.' %
                 (quote(item.name), env[item.name]._token.lineno),
-                item.lineno)
+                item.lineno, item.path)
 
-        elif item.type_ref.name not in env:
-            raise InvalidSpec(
-                'Symbol %s is undefined.' % (quote(item.type_ref.name)),
-                item.lineno)
-
-        obj = env[item.type_ref.name]
-        if inspect.isclass(obj):
-            dt = self._instantiate_data_type(
-                obj, item.type_ref.args, item.lineno)
-        elif isinstance(obj, ApiRoute):
-            raise InvalidSpec('Cannot alias a route.', item.lineno)
-        elif item.type_ref.args[0] or item.type_ref.args[1]:
-            # An instance of a type cannot have any additional
-            # attributes specified.
-            raise InvalidSpec(
-                'Attributes cannot be specified for instantiated type %s.' %
-                (quote(item.type_ref.name)),
-                item.lineno)
-        else:
-            dt = env[item.type_ref.name]
-
-        if item.type_ref.nullable:
-            if isinstance(dt, Nullable):
-                raise InvalidSpec(
-                    'Cannot mark reference to nullable type as nullable.',
-                    item.lineno)
-            dt = Nullable(dt)
-        env[item.name] = dt
+        env[item.name] = self._resolve_type(env, item.type_ref)
 
     def _create_type(self, env, item):
+        """Create a forward reference for a union or struct."""
+
         if item.name in env:
             # TODO(kelkabany): This reports the wrong line number for the
             # original definition if an alias was the source of the name
@@ -178,78 +264,148 @@ class TowerOfBabel(object):
             raise InvalidSpec(
                 'Symbol %s already defined on line %d.' %
                 (quote(item.name), env[item.name]._token.lineno),
-                item.lineno)
+                item.lineno, item.path)
         if isinstance(item, BabelStructDef):
-            supertype = None
-            if item.extends:
-                if item.extends not in env:
-                    raise InvalidSpec(
-                        'Data type %s is undefined.' % quote(item.extends),
-                        item.lineno)
-                supertype = env[item.extends]
-                if not isinstance(supertype, Struct):
-                    raise InvalidSpec(
-                        'A struct can only extend another struct: '
-                        '%s is not a struct.' % quote(item.extends),
-                        item.lineno)
-            api_type_fields = []
-            for babel_field in item.fields:
-                api_type_field = self._create_struct_field(env, babel_field)
-                api_type_fields.append(api_type_field)
             try:
-                api_type = Struct(
-                    name=item.name, doc=item.doc, fields=api_type_fields,
-                    token=item, supertype=supertype)
+                api_type = Struct(name=item.name, token=item)
             except ParameterError as e:
                 raise InvalidSpec(
                     'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
-                    item.lineno)
+                    item.lineno, item.path)
         elif isinstance(item, BabelUnionDef):
-            subtype = None
-            if item.extends:
-                if item.extends not in env:
-                    raise InvalidSpec(
-                        'Data type %s is undefined.' % quote(item.extends),
-                        item.lineno)
-                subtype = env[item.extends]
-                if not isinstance(subtype, Union):
-                    raise InvalidSpec(
-                        'A union can only extend another union: '
-                        '%s is not a union.' % quote(item.extends),
-                        item.lineno)
-            api_type_fields = []
-            catch_all_field = None
-            for babel_field in item.fields:
-                api_type_field = self._create_union_field(env, babel_field)
-                if (isinstance(babel_field, BabelVoidField)
-                        and babel_field.catch_all):
-                    if catch_all_field is not None:
-                        raise InvalidSpec('Only one catch-all tag per Union.',
-                                          babel_field.lineno)
-
-                    # Verify that no subtype already has a catch-all tag.
-                    # Do this here so that we still have access to line nums.
-                    cur_subtype = subtype
-                    while cur_subtype:
-                        if cur_subtype.catch_all_field:
-                            raise InvalidSpec(
-                                'Subtype %s already declared a catch-all tag.' %
-                                quote(cur_subtype.name),
-                                babel_field.lineno)
-                        cur_subtype = cur_subtype.subtype
-
-                    catch_all_field = api_type_field
-                api_type_fields.append(api_type_field)
-            api_type = Union(
-                name=item.name, doc=item.doc, fields=api_type_fields,
-                token=item, subtype=subtype, catch_all_field=catch_all_field)
+            api_type = Union(name=item.name, token=item)
         else:
             raise AssertionError('Unknown type definition %r' % type(item))
 
-        for example_label, (example_text, example) in item.examples.items():
-            api_type.add_example(example_label, example_text, dict(example))
         env[item.name] = api_type
         return api_type
+
+    def _populate_type_attributes(self):
+        """
+        Converts each struct, union, and route from a forward reference to a
+        full definition.
+        """
+        for namespace in self.api.namespaces.values():
+            env = self._get_or_create_env(namespace.name)
+            for data_type in namespace.data_types:
+                if not data_type._is_forward_ref:
+                    continue
+
+                self._resolution_in_progress.add(data_type)
+                if isinstance(data_type, Struct):
+                    self._populate_struct_type_attributes(env, data_type)
+                elif isinstance(data_type, Union):
+                    self._populate_union_type_attributes(env, data_type)
+                else:
+                    raise AssertionError('Unhandled type: %r' %
+                                         type(data_type))
+                self._resolution_in_progress.remove(data_type)
+
+                for ex_label, (ex_text, example) in data_type._token.examples.items():
+                    data_type.add_example(ex_label, ex_text, dict(example))
+
+        # Since nothing depends on routes, do them last.
+        for namespace in self.api.namespaces.values():
+            env = self._get_or_create_env(namespace.name)
+            for route in namespace.routes:
+                self._populate_route_attributes(env, route)
+
+        assert len(self._resolution_in_progress) == 0
+
+    def _populate_struct_type_attributes(self, env, data_type):
+        """
+        Converts a forward reference of a struct into a complete definition.
+        """
+        parent_type = None
+        extends = data_type._token.extends
+        if extends:
+            # A parent type must be fully defined and not just a forward
+            # reference.
+            parent_type = self._resolve_type(env, extends, True)
+            if isinstance(parent_type, ForeignRef):
+                parent_type_deref = parent_type.data_type
+            else:
+                parent_type_deref = parent_type
+            if isinstance(parent_type_deref, Nullable):
+                raise InvalidSpec(
+                    'A struct cannot extend a nullable type.',
+                    data_type._token.lineno, data_type._token.path)
+            if not isinstance(parent_type_deref, Struct):
+                raise InvalidSpec(
+                    'A struct can only extend another struct: '
+                    '%s is not a struct.' % quote(parent_type_deref.name),
+                    data_type._token.lineno, data_type._token.path)
+        api_type_fields = []
+        for babel_field in data_type._token.fields:
+            api_type_field = self._create_struct_field(env, babel_field)
+            api_type_fields.append(api_type_field)
+        data_type.set_attributes(
+            data_type._token.doc, api_type_fields, parent_type)
+
+    def _populate_union_type_attributes(self, env, data_type):
+        """
+        Converts a forward reference of a union into a complete definition.
+        """
+        parent_type = None
+        parent_type_deref = None
+        extends = data_type._token.extends
+        if extends:
+            # A parent type must be fully defined and not just a forward
+            # reference.
+            parent_type = self._resolve_type(env, extends, True)
+            if isinstance(parent_type, Nullable):
+                raise InvalidSpec(
+                    'A union cannot extend a nullable type.',
+                    data_type._token.lineno, data_type._token.path)
+            if isinstance(parent_type, ForeignRef):
+                parent_type_deref = parent_type.data_type
+            else:
+                parent_type_deref = parent_type
+            if not isinstance(parent_type_deref, Union):
+                raise InvalidSpec(
+                    'A union can only extend another union: '
+                    '%s is not a union.' % quote(parent_type_deref.name),
+                    data_type._token.lineno, data_type._token.path)
+        api_type_fields = []
+        catch_all_field = None
+        for babel_field in data_type._token.fields:
+            api_type_field = self._create_union_field(env, babel_field)
+            if (isinstance(babel_field, BabelVoidField) and
+                    babel_field.catch_all):
+                if catch_all_field is not None:
+                    raise InvalidSpec('Only one catch-all tag per Union.',
+                                      babel_field.lineno)
+
+                # Verify that no subtype already has a catch-all tag.
+                # Do this here so that we still have access to line nums.
+                cur_subtype = parent_type_deref
+                while cur_subtype:
+                    if cur_subtype.catch_all_field:
+                        raise InvalidSpec(
+                            'Subtype %s already declared a catch-all tag.' %
+                            quote(cur_subtype.name),
+                            babel_field.lineno, babel_field.path)
+                    cur_subtype = cur_subtype.parent_type
+
+                catch_all_field = api_type_field
+            api_type_fields.append(api_type_field)
+        data_type.set_attributes(
+            data_type._token.doc, api_type_fields, parent_type, catch_all_field)
+
+    def _populate_route_attributes(self, env, route):
+        """
+        Converts a forward reference of a route into a complete definition.
+        """
+        request_dt = self._resolve_type(env, route._token.request_type_ref)
+        response_dt = self._resolve_type(env, route._token.response_type_ref)
+        error_dt = self._resolve_type(env, route._token.error_type_ref)
+
+        route.set_attributes(
+            doc=route._token.doc,
+            request_data_type=request_dt,
+            response_data_type=response_dt,
+            error_data_type=error_dt,
+            attrs=route._token.attrs)
 
     def _create_struct_field(self, env, babel_field):
         """
@@ -263,51 +419,46 @@ class TowerOfBabel(object):
         Returns:
             babelapi.data_type.StructField: A field of a struct.
         """
-        if babel_field.type_ref.name not in env:
+        data_type = self._resolve_type(env, babel_field.type_ref)
+        if isinstance(data_type, Void):
             raise InvalidSpec(
-                'Symbol %s is undefined.' % quote(babel_field.type_ref.name),
-                babel_field.lineno)
-        else:
-            data_type = self._resolve_type(env, babel_field.type_ref)
-            if isinstance(data_type, Void):
-                raise InvalidSpec(
-                    'Struct field %s cannot have a Void type.' %
-                    quote(babel_field.name),
-                    babel_field.lineno)
-            elif isinstance(data_type, Nullable) and babel_field.has_default:
-                raise InvalidSpec('Field %s cannot be a nullable '
-                                  'type and have a default specified.' %
-                                  quote(babel_field.name),
-                                  babel_field.lineno)
-            api_type_field = StructField(
-                name=babel_field.name,
-                data_type=data_type,
-                doc=babel_field.doc,
-                token=babel_field,
-                deprecated=babel_field.deprecated,
-            )
-            if babel_field.has_default:
-                if isinstance(babel_field.default, BabelTagRef):
-                    if babel_field.default.union_name is not None:
-                        raise InvalidSpec(
-                            'Field %s has a qualified default which is '
-                            'unnecessary since the type %s is known' %
-                            (quote(babel_field.name),
-                             quote(babel_field.default.union_name)),
-                            babel_field.lineno)
-                    default_value = TagRef(data_type, babel_field.default.tag)
-                else:
-                    default_value = babel_field.default
-                if not (babel_field.type_ref.nullable and default_value is None):
-                    # Verify that the type of the default value is correct for this field
-                    try:
-                        data_type.check(default_value)
-                    except ValueError as e:
-                        raise InvalidSpec(
-                            'Field %s has an invalid default: %s' %
-                            (quote(babel_field.name), e),
-                            babel_field.lineno)
-                api_type_field.set_default(default_value)
+                'Struct field %s cannot have a Void type.' %
+                quote(babel_field.name),
+                babel_field.lineno, babel_field.path)
+        elif isinstance(data_type, Nullable) and babel_field.has_default:
+            raise InvalidSpec('Field %s cannot be a nullable '
+                              'type and have a default specified.' %
+                              quote(babel_field.name),
+                              babel_field.lineno, babel_field.path)
+        api_type_field = StructField(
+            name=babel_field.name,
+            data_type=data_type,
+            doc=babel_field.doc,
+            token=babel_field,
+            deprecated=babel_field.deprecated,
+        )
+        if babel_field.has_default:
+            if isinstance(babel_field.default, BabelTagRef):
+                if babel_field.default.union_name is not None:
+                    raise InvalidSpec(
+                        'Field %s has a qualified default which is '
+                        'unnecessary since the type %s is known' %
+                        (quote(babel_field.name),
+                         quote(babel_field.default.union_name)),
+                        babel_field.lineno, babel_field.path)
+                default_value = TagRef(data_type, babel_field.default.tag)
+            else:
+                default_value = babel_field.default
+            if not (babel_field.type_ref.nullable and default_value is None):
+                # Verify that the type of the default value is correct for this field
+                try:
+                    data_type.check(default_value)
+                except ValueError as e:
+                    raise InvalidSpec(
+                        'Field %s has an invalid default: %s' %
+                        (quote(babel_field.name), e),
+                        babel_field.lineno, babel_field.path)
+            api_type_field.set_default(default_value)
         return api_type_field
 
     def _create_union_field(self, env, babel_field):
@@ -326,26 +477,19 @@ class TowerOfBabel(object):
             api_type_field = UnionField(
                 name=babel_field.name, data_type=Void(), doc=babel_field.doc,
                 token=babel_field)
-        elif babel_field.type_ref.name not in env:
-            raise InvalidSpec('Symbol %s is undefined.' %
-                quote(babel_field.type_ref.name),
-                babel_field.lineno)
         else:
-            data_type = self._resolve_type(
-                env,
-                babel_field.type_ref,
-            )
+            data_type = self._resolve_type(env, babel_field.type_ref)
             if isinstance(data_type, Void):
                 raise InvalidSpec('Union member %s cannot have Void '
                                   'type explicit, omit Void instead.' %
                                   quote(babel_field.name),
-                                  babel_field.lineno)
+                                  babel_field.lineno, babel_field.path)
             api_type_field = UnionField(
                 name=babel_field.name, data_type=data_type,
                 doc=babel_field.doc, token=babel_field)
         return api_type_field
 
-    def _instantiate_data_type(self, data_type_class, data_type_args, lineno):
+    def _instantiate_data_type(self, data_type_class, data_type_args, loc):
         """
         Responsible for instantiating a data type with additional attributes.
         This method ensures that the specified attributes are valid.
@@ -376,13 +520,13 @@ class TowerOfBabel(object):
                 'Missing positional argument %s for %s type' %
                 (quote(argspec.args[len(pos_args)]),
                  quote(data_type_class.__name__)),
-                lineno)
+                *loc)
         elif (num_args - num_defaults) < len(pos_args):
             # Report if there are too many positional arguments
             raise InvalidSpec(
                 'Too many positional arguments for %s type' %
                 quote(data_type_class.__name__),
-                lineno)
+                *loc)
 
         # Map from arg name to bool indicating whether the arg has a default
         args = {}
@@ -394,13 +538,13 @@ class TowerOfBabel(object):
             if key not in args:
                 raise InvalidSpec('Unknown argument %s to %s type.' %
                     (quote(key), quote(data_type_class.__name__)),
-                    lineno)
+                    *loc)
             # Report any positional args that are defined as keywords args.
             if not args[key]:
                 raise InvalidSpec(
                     'Positional argument %s cannot be specified as a '
                     'keyword argument.' % quote(key),
-                    lineno)
+                    *loc)
             del args[key]
 
         try:
@@ -410,40 +554,81 @@ class TowerOfBabel(object):
             # ParameterError if the type or value is bad.
             raise InvalidSpec('Bad argument to %s type: %s' %
                 (quote(data_type_class.__name__), e.args[0]),
-                lineno)
+                *loc)
 
-    def _resolve_type(self, env, type_ref):
-        """Resolves the data type referenced by type_ref."""
+    def _resolve_type(self, env, type_ref, enforce_fully_defined=False):
+        """
+        Resolves the data type referenced by type_ref.
+
+        If `enforce_fully_defined` is True, then the referenced type must be
+        fully populated (fields, parent_type, ...), and not simply a forward
+        reference.
+        """
+        loc = type_ref.lineno, type_ref.path
+        if type_ref.ns:
+            # TODO(kelkabany): If a spec file imports a namespace, it is
+            # available to all spec files that are part of the same namespace.
+            # Might want to introduce the concept of an environment specific
+            # to a file.
+            if type_ref.ns not in env:
+                raise InvalidSpec(
+                    'Namespace %s is not imported' % quote(type_ref.ns),
+                    *loc)
+            orig_namespace_name = env.namespace_name
+            env = env[type_ref.ns]
+            if not isinstance(env, Environment):
+                raise InvalidSpec(
+                    '%s is not a namespace.' % quote(type_ref.ns),
+                    *loc)
+            namespace = self.api.ensure_namespace(orig_namespace_name)
+            namespace.add_referenced_namespace(
+                self.api.ensure_namespace(type_ref.ns))
         if type_ref.name not in env:
             raise InvalidSpec(
                 'Symbol %s is undefined.' % quote(type_ref.name),
-                type_ref.lineno)
+                *loc)
         obj = env[type_ref.name]
         if obj is Void and type_ref.nullable:
             raise InvalidSpec('Void cannot be marked nullable.',
-                              type_ref.lineno)
+                              *loc)
         elif inspect.isclass(obj):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
-                obj, resolved_data_type_args, type_ref.lineno)
+                obj, resolved_data_type_args, (type_ref.lineno, type_ref.path))
         elif isinstance(obj, ApiRoute):
-            raise InvalidSpec('A route is not a valid field type.',
-                              type_ref.lineno)
+            raise InvalidSpec('A route cannot be referenced here.',
+                              *loc)
         elif type_ref.args[0] or type_ref.args[1]:
             # An instance of a type cannot have any additional
             # attributes specified.
             raise InvalidSpec('Attributes cannot be specified for '
                               'instantiated type %s.' %
                               quote(type_ref.name),
-                              type_ref.lineno)
+                              *loc)
         else:
             data_type = env[type_ref.name]
+
+        if (enforce_fully_defined and isinstance(data_type, CompositeType) and
+                data_type._is_forward_ref):
+            if data_type in self._resolution_in_progress:
+                raise InvalidSpec(
+                    'Unresolvable circular reference for type %s.' %
+                    quote(type_ref.name), *loc)
+            self._resolution_in_progress.add(data_type)
+            if isinstance(data_type, Struct):
+                self._populate_struct_type_attributes(env, data_type)
+            elif isinstance(data_type, Union):
+                self._populate_union_type_attributes(env, data_type)
+            self._resolution_in_progress.remove(data_type)
+
+        if type_ref.ns:
+            data_type = ForeignRef(type_ref.ns, data_type)
 
         if type_ref.nullable:
             if isinstance(data_type, Nullable):
                 raise InvalidSpec(
                     'Cannot mark reference to nullable type as nullable.',
-                    type_ref.lineno)
+                    *loc)
             data_type = Nullable(data_type)
 
         return data_type
@@ -460,7 +645,7 @@ class TowerOfBabel(object):
                 if v.name not in env:
                     raise InvalidSpec(
                         'Symbol %s is undefined.' % quote(v.name),
-                        v.lineno)
+                        v.lineno, v.path)
                 else:
                     return self._resolve_type(env, v)
             else:
@@ -486,156 +671,103 @@ class TowerOfBabel(object):
             raise InvalidSpec(
                 'Symbol %s already defined on line %d.' %
                 (quote(item.name), env[item.name]._token.lineno),
-                item.lineno)
-        request_data_type = self._resolve_type(env, item.request_type_ref)
-        response_data_type = self._resolve_type(env, item.response_type_ref)
-        error_data_type = self._resolve_type(env, item.error_type_ref)
+                item.lineno, item.path)
         route = ApiRoute(
             name=item.name,
-            doc=item.doc,
-            request_data_type=request_data_type,
-            response_data_type=response_data_type,
-            error_data_type=error_data_type,
-            attrs=item.attrs,
             token=item,
         )
         env[route.name] = route
         return route
 
-    def add_to_api(self, path, desc):
-
-        if isinstance(desc[0], BabelNamespace):
-            namespace_decl = desc.pop(0)
-        else:
-            if self._debug:
-                self._logger.info('Description: %r' % desc)
-            raise InvalidSpec('First declaration in a babel must be '
-                              'a namespace. Possibly caused by preceding '
-                              'errors.', desc[0].lineno)
-
-        namespace = self.api.ensure_namespace(namespace_decl.name)
-        # Keep lists of all the types and routes added just from this spec.
-        data_types = []
-        routes = []
+    def _get_or_create_env(self, namespace_name):
         # Because there might have already been a spec that was part of this
         # same namespace, the environment might already exist.
-        if namespace.name in self.env_by_namespace:
-            env = self.env_by_namespace[namespace.name]
+        if namespace_name in self._env_by_namespace:
+            env = self._env_by_namespace[namespace_name]
         else:
             env = copy.copy(self.default_env)
-            self.env_by_namespace[namespace.name] = env
+            env.namespace_name = namespace_name
+            self._env_by_namespace[namespace_name] = env
+        return env
 
-        for item in desc:
-            if isinstance(item, BabelInclude):
-                # Only re-parse and include the header for this namespace if
-                # we haven't already done so.
-                full_path = os.path.join(os.path.dirname(path), item.target)
-                if full_path not in self.includes_by_namespace[namespace.name]:
-                    self._include_babelh(namespace, env, os.path.dirname(path),
-                                         item)
-                    self.includes_by_namespace[namespace.name] = full_path
-                    self._logger.info(
-                        'Done parsing header spec, resuming parsing %s',
-                        os.path.basename(path))
-            elif isinstance(item, BabelAlias):
-                self._create_alias(env, item)
-            elif isinstance(item, BabelTypeDef):
-                api_type = self._create_type(env, item)
-                data_types.append(api_type)
-                namespace.add_data_type(api_type)
-            elif isinstance(item, BabelRouteDef):
-                route = self._create_route(env, item)
-                routes.append(route)
-                namespace.add_route(route)
-            else:
-                raise AssertionError('Unknown Babel Declaration Type %r' %
-                                     item.__class__.__name__)
-
+    def _populate_enumerated_subtypes(self):
         # Since enumerated subtypes require forward references, resolve them
-        # now that all types are present in the environment.
-        for data_type in data_types:
-            if not (isinstance(data_type, Struct) and
-                    data_type._token.subtypes):
-                continue
+        # now that all types are populated in the environment.
+        for namespace in self.api.namespaces.values():
+            env = self._get_or_create_env(namespace.name)
+            for data_type in namespace.data_types:
+                if not (isinstance(data_type, Struct) and
+                        data_type._token.subtypes):
+                    continue
 
-            subtype_fields = []
-            for subtype_field in data_type._token.subtypes[0]:
-                subtype_name = subtype_field.type_ref.name
-                lineno = subtype_field.type_ref.lineno
-                if subtype_field.type_ref.name not in env:
-                    raise InvalidSpec(
-                        'Undefined type %s.' % quote(subtype_name), lineno)
-                subtype = env[subtype_field.type_ref.name]
-                if not isinstance(subtype, Struct):
-                    raise InvalidSpec('Enumerated subtype %s must be a struct.'
-                                      % quote(subtype_name), lineno)
-                f = UnionField(
-                    subtype_field.name, subtype, None, subtype_field)
-                subtype_fields.append(f)
-            data_type.set_enumerated_subtypes(subtype_fields,
-                                              data_type._token.subtypes[1])
+                subtype_fields = []
+                for subtype_field in data_type._token.subtypes[0]:
+                    subtype_name = subtype_field.type_ref.name
+                    lineno = subtype_field.type_ref.lineno
+                    path = subtype_field.type_ref.path
+                    if subtype_field.type_ref.name not in env:
+                        raise InvalidSpec(
+                            'Undefined type %s.' % quote(subtype_name),
+                            lineno, path)
+                    subtype = self._resolve_type(
+                        env, subtype_field.type_ref, True)
+                    if not isinstance(subtype, Struct):
+                        raise InvalidSpec(
+                            'Enumerated subtype %s must be a struct.' %
+                            quote(subtype_name), lineno, path)
+                    f = UnionField(
+                        subtype_field.name, subtype, None, subtype_field)
+                    subtype_fields.append(f)
+                data_type.set_enumerated_subtypes(subtype_fields,
+                                                  data_type._token.subtypes[1])
 
-        # In an enumerated subtypes tree, regular structs may only exist at the
-        # leaves. In other word, no regular struct may inherit from a regular
-        # struct.
-        for data_type in data_types:
-            if (not isinstance(data_type, Struct) or
-                    not data_type.has_enumerated_subtypes()):
-                continue
+            # In an enumerated subtypes tree, regular structs may only exist at
+            # the leaves. In other words, no regular struct may inherit from a
+            # regular struct.
+            for data_type in namespace.data_types:
+                if (not isinstance(data_type, Struct) or
+                        not data_type.has_enumerated_subtypes()):
+                    continue
 
-            for subtype_field in data_type.get_enumerated_subtypes():
-                if (not subtype_field.data_type.has_enumerated_subtypes() and
-                        len(subtype_field.data_type.subtypes) > 0):
-                    raise InvalidSpec(
-                        "Subtype '%s' cannot be extended." %
-                        subtype_field.data_type.name,
-                        lineno)
+                for subtype_field in data_type.get_enumerated_subtypes():
+                    if (not subtype_field.data_type.has_enumerated_subtypes() and
+                            len(subtype_field.data_type.subtypes) > 0):
+                        raise InvalidSpec(
+                            "Subtype '%s' cannot be extended." %
+                            subtype_field.data_type.name,
+                            subtype_field.data_type._token.lineno,
+                            subtype_field.data_type._token.path)
 
-        # Validate the doc refs of each api entity that has a doc
-        for data_type in data_types:
-            if data_type.doc:
-                self._validate_doc_refs(
-                    env, data_type.doc, data_type._token.lineno + 1)
-            for field in data_type.fields:
-                if field.doc:
-                    self._validate_doc_refs(
-                        env, field.doc, field._token.lineno + 1, data_type)
-        for route in routes:
-            if route.doc:
-                self._validate_doc_refs(
-                    env, route.doc, route._token.lineno + 1)
+    def _validate_doc_refs(self):
+        """
+        Validates that all the documentation references across every docstring
+        in every spec are formatted properly, have valid values, and make
+        references to valid symbols.
+        """
+        for namespace in self.api.namespaces.values():
+            env = self._get_or_create_env(namespace.name)
+            # Validate the doc refs of each api entity that has a doc
+            for data_type in namespace.data_types:
+                if data_type.doc:
+                    self._validate_doc_refs_helper(
+                        env,
+                        data_type.doc,
+                        (data_type._token.lineno + 1, data_type._token.path))
+                for field in data_type.fields:
+                    if field.doc:
+                        self._validate_doc_refs_helper(
+                            env,
+                            field.doc,
+                            (field._token.lineno + 1, field._token.path),
+                            data_type)
+            for route in namespace.routes:
+                if route.doc:
+                    self._validate_doc_refs_helper(
+                        env,
+                        route.doc,
+                        (route._token.lineno + 1, route._token.path))
 
-    def _include_babelh(self, namespace, env, path, item):
-        babelh_path = os.path.join(path, item.target) + '.babelh'
-        if not os.path.exists(babelh_path):
-            raise InvalidSpec(
-                'Babel header %s does not exist.' % quote(babelh_path),
-                item.lineno)
-
-        self._logger.info("Parsing included header spec '%s'" % item.target)
-
-        with open(babelh_path) as f:
-            scripture = f.read()
-
-        desc = self.parser.parse(scripture)
-
-        for item in desc[:]:
-            if isinstance(item, BabelAlias):
-                self._create_alias(env, item)
-            elif isinstance(item, BabelTypeDef):
-                api_type = self._create_type(env, item)
-                namespace.add_data_type(api_type)
-            elif isinstance(item, BabelInclude):
-                raise InvalidSpec(
-                    "Cannot use 'include' in header spec.", item.lineno)
-            elif isinstance(item, BabelRouteDef):
-                raise InvalidSpec(
-                    'Cannot define route in header spec.', item.lineno)
-            else:
-                raise AssertionError('Unknown Babel Declaration Type %r' %
-                                     item.__class__.__name__)
-
-    def _validate_doc_refs(self, env, doc, lineno, type_context=None):
+    def _validate_doc_refs_helper(self, env, doc, loc, type_context=None):
         """
         Validates that all the documentation references in a docstring are
         formatted properly, have valid values, and make references to valid
@@ -660,17 +792,17 @@ class TowerOfBabel(object):
                         raise InvalidSpec(
                             'Bad doc reference to field %s of '
                             'unknown type %s.' % (field_name, quote(type_name)),
-                            lineno)
+                            *loc)
                     elif isinstance(env[type_name], ApiRoute):
                         raise InvalidSpec(
                             'Bad doc reference to field %s of route %s.' %
                             (quote(field_name), quote(type_name)),
-                            lineno)
+                            *loc)
                     elif not any(field.name == field_name
                                  for field in env[type_name].all_fields):
                         raise InvalidSpec(
                             'Bad doc reference to unknown field %s.' % quote(val),
-                            lineno)
+                            *loc)
                 else:
                     # Referring to a field that's a member of this type
                     assert type_context is not None
@@ -679,7 +811,7 @@ class TowerOfBabel(object):
                         raise InvalidSpec(
                             'Bad doc reference to unknown field %s.' %
                             quote(val),
-                            lineno)
+                            *loc)
             elif tag == 'link':
                 if not (1 < val.rfind(' ') < len(val) - 1):
                     # There must be a space somewhere in the middle of the
@@ -687,29 +819,51 @@ class TowerOfBabel(object):
                     raise InvalidSpec(
                         'Bad doc reference to link (need a title and '
                         'uri separated by a space): %s.' % quote(val),
-                        lineno)
+                        *loc)
             elif tag == 'route':
-                if val not in env:
+                if '.' in val:
+                    # Handle reference to route in imported namespace.
+                    namespace_name, val = val.split('.', 1)
+                    if namespace_name not in env:
+                        raise InvalidSpec(
+                            "Unknown doc reference to namespace '%s'." %
+                            namespace_name, *loc)
+                    env_to_check = env[namespace_name]
+                else:
+                    env_to_check = env
+                if val not in env_to_check:
                     raise InvalidSpec(
                         'Unknown doc reference to route %s.' % quote(val),
-                        lineno)
-                elif not isinstance(env[val], ApiRoute):
+                        *loc)
+                elif not isinstance(env_to_check[val], ApiRoute):
                     raise InvalidSpec(
-                        'Doc reference to type %s is not a struct or union.' %
-                        quote(val), lineno)
+                        'Doc reference to type %s is not a route.' %
+                        quote(val), *loc)
             elif tag == 'type':
-                if val not in env:
+                if '.' in val:
+                    # Handle reference to type in imported namespace.
+                    namespace_name, val = val.split('.', 1)
+                    if namespace_name not in env:
+                        raise InvalidSpec(
+                            "Unknown doc reference to namespace '%s'." %
+                            namespace_name, *loc)
+                    env_to_check = env[namespace_name]
+                else:
+                    env_to_check = env
+                if val not in env_to_check:
                     raise InvalidSpec(
-                        'Unknown doc reference to type %s.' % quote(val),
-                        lineno)
-                elif not isinstance(env[val], (Struct, Union)):
+                        "Unknown doc reference to type '%s'." % val,
+                        *loc)
+                elif not isinstance(env_to_check[val], (Struct, Union)):
                     raise InvalidSpec(
                         'Doc reference to type %s is not a struct or union.' %
-                        quote(val), lineno)
+                        quote(val), *loc)
             elif tag == 'val':
                 if not doc_ref_val_re.match(val):
                     raise InvalidSpec(
-                        'Bad doc reference value %s.' % quote(val), lineno)
+                        'Bad doc reference value %s.' % quote(val),
+                        *loc)
             else:
                 raise InvalidSpec(
-                    'Unknown doc reference tag %s.' % quote(tag), lineno)
+                    'Unknown doc reference tag %s.' % quote(tag),
+                    *loc)

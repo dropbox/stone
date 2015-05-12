@@ -10,7 +10,7 @@ from babelapi.babel.lexer import BabelLexer, BabelNull
 
 class _Element(object):
 
-    def __init__(self, lineno, lexpos):
+    def __init__(self, path, lineno, lexpos):
         """
         Args:
             lineno (int): The line number where the start of this element
@@ -18,17 +18,18 @@ class _Element(object):
             lexpos (int): The character offset into the file where this element
                 occurs.
         """
+        self.path = path
         self.lineno = lineno
         self.lexpos = lexpos
 
 class BabelNamespace(_Element):
 
-    def __init__(self, lineno, lexpos, name):
+    def __init__(self, path, lineno, lexpos, name):
         """
         Args:
             name (str): The namespace of the spec.
         """
-        super(BabelNamespace, self).__init__(lineno, lexpos)
+        super(BabelNamespace, self).__init__(path, lineno, lexpos)
         self.name = name
 
     def __str__(self):
@@ -37,31 +38,31 @@ class BabelNamespace(_Element):
     def __repr__(self):
         return 'BabelNamespace({!r})'.format(self.name)
 
-class BabelInclude(_Element):
+class BabelImport(_Element):
 
-    def __init__(self, lineno, lexpos, target):
+    def __init__(self, path, lineno, lexpos, target):
         """
         Args:
-            target (str): The filename of the header file.
+            target (str): The name of the namespace to import.
         """
-        super(BabelInclude, self).__init__(lineno, lexpos)
+        super(BabelImport, self).__init__(path, lineno, lexpos)
         self.target = target
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return 'BabelInclude({!r})'.format(self.target)
+        return 'BabelImport({!r})'.format(self.target)
 
 class BabelAlias(_Element):
 
-    def __init__(self, lineno, lexpos, name, type_ref):
+    def __init__(self, path, lineno, lexpos, name, type_ref):
         """
         Args:
             name (str): The name of the alias.
             type_ref (BabelTypeRef): The data type of the field.
         """
-        super(BabelAlias, self).__init__(lineno, lexpos)
+        super(BabelAlias, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
 
@@ -70,7 +71,7 @@ class BabelAlias(_Element):
 
 class BabelTypeDef(_Element):
 
-    def __init__(self, lineno, lexpos, name, extends, doc, fields):
+    def __init__(self, path, lineno, lexpos, name, extends, doc, fields):
         """
         Args:
             name (str): Name assigned to the type.
@@ -80,11 +81,11 @@ class BabelTypeDef(_Element):
                 inherited ones.
         """
 
-        super(BabelTypeDef, self).__init__(lineno, lexpos)
+        super(BabelTypeDef, self).__init__(path, lineno, lexpos)
 
         assert isinstance(name, six.text_type), type(name)
         self.name = name
-        assert isinstance(extends, (six.text_type, type(None))), type(extends)
+        assert isinstance(extends, (BabelTypeRef, type(None))), type(extends)
         self.extends = extends
         assert isinstance(doc, (six.text_type, type(None)))
         self.doc = doc
@@ -107,7 +108,7 @@ class BabelTypeDef(_Element):
 
 class BabelStructDef(BabelTypeDef):
 
-    def __init__(self, lineno, lexpos, name, extends, doc, fields,
+    def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
                  subtypes=None):
         """
         Args:
@@ -119,7 +120,7 @@ class BabelStructDef(BabelTypeDef):
         """
 
         super(BabelStructDef, self).__init__(
-            lineno, lexpos, name, extends, doc, fields)
+            path, lineno, lexpos, name, extends, doc, fields)
         assert isinstance(subtypes, (tuple, type(None))), type(subtypes)
         self.subtypes = subtypes
 
@@ -141,34 +142,38 @@ class BabelUnionDef(BabelTypeDef):
 
 class BabelTypeRef(_Element):
 
-    def __init__(self, lineno, lexpos, name, args, nullable):
+    def __init__(self, path, lineno, lexpos, name, args, nullable, ns):
         """
         Args:
             name (str): Name of the referenced type.
             args (tuple[list, dict]): Arguments to type.
             nullable (bool): Whether the type is nullable (can be null)
+            ns (Optional[str]): Namespace that referred type is a member of.
+                If none, then refers to the current namespace.
         """
-        super(BabelTypeRef, self).__init__(lineno, lexpos)
+        super(BabelTypeRef, self).__init__(path, lineno, lexpos)
         self.name = name
         self.args = args
         self.nullable = nullable
+        self.ns = ns
 
     def __repr__(self):
-        return 'BabelTypeRef({!r}, {!r})'.format(
+        return 'BabelTypeRef({!r}, {!r}, {!r}, {!r})'.format(
             self.name,
             self.args,
             self.nullable,
+            self.ns,
         )
 
 class BabelTagRef(_Element):
 
-    def __init__(self, lineno, lexpos, tag, union_name=None):
+    def __init__(self, path, lineno, lexpos, tag, union_name=None):
         """
         Args:
             tag (str): Name of the referenced type.
             union_name (str): The name of the union the tag belongs to.
         """
-        super(BabelTagRef, self).__init__(lineno, lexpos)
+        super(BabelTagRef, self).__init__(path, lineno, lexpos)
         self.tag = tag
         self.union_name = union_name
 
@@ -184,14 +189,14 @@ class BabelField(_Element):
     TODO(kelkabany): Split this into two different classes.
     """
 
-    def __init__(self, lineno, lexpos, name, type_ref, deprecated):
+    def __init__(self, path, lineno, lexpos, name, type_ref, deprecated):
         """
         Args:
             name (str): The name of the field.
             type_ref (BabelTypeRef): The data type of the field.
             deprecated (bool): Whether the field is deprecated.
         """
-        super(BabelField, self).__init__(lineno, lexpos)
+        super(BabelField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
         self.doc = None
@@ -214,8 +219,8 @@ class BabelField(_Element):
 
 class BabelVoidField(_Element):
 
-    def __init__(self, lineno, lexpos, name, catch_all):
-        super(BabelVoidField, self).__init__(lineno, lexpos)
+    def __init__(self, path, lineno, lexpos, name, catch_all):
+        super(BabelVoidField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.catch_all = catch_all
         self.doc = None
@@ -231,8 +236,8 @@ class BabelVoidField(_Element):
 
 class BabelSubtypeField(_Element):
 
-    def __init__(self, lineno, lexpos, name, type_ref):
-        super(BabelSubtypeField, self).__init__(lineno, lexpos)
+    def __init__(self, path, lineno, lexpos, name, type_ref):
+        super(BabelSubtypeField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
 
@@ -244,9 +249,9 @@ class BabelSubtypeField(_Element):
 
 class BabelRouteDef(_Element):
 
-    def __init__(self, lineno, lexpos, name, request_type_ref,
+    def __init__(self, path, lineno, lexpos, name, request_type_ref,
                  response_type_ref, error_type_ref=None):
-        super(BabelRouteDef, self).__init__(lineno, lexpos)
+        super(BabelRouteDef, self).__init__(path, lineno, lexpos)
         self.name = name
         self.request_type_ref = request_type_ref
         self.response_type_ref = response_type_ref
@@ -281,38 +286,44 @@ class BabelParser(object):
         self._logger = logging.getLogger('babelapi.babel.parser')
         # [(token type, token value, line number), ...]
         self.errors = []
+        # Path to file being parsed. This is added to each token for its
+        # utility in error reporting. But the path is never accessed, so this
+        # is optional.
+        self.path = None
 
-    def parse(self, data):
-        return self.yacc.parse(data, lexer=self.lexer, debug=self.debug)
+    def parse(self, data, path=None):
+        """
+        Args:
+            data (str): Raw specification text.
+            path (Optional[str]): Path to specification on filesystem. Only
+                used to tag tokens with the file they originated from.
+        """
+        self.path = path
+        parsed_data = self.yacc.parse(data, lexer=self.lexer, debug=self.debug)
+        for char, lineno in self.lexer.errors:
+            self.errors.append(
+                ("Illegal character '%s'" % char, lineno, self.path))
+        self.path = None
+        return parsed_data
 
     def test_lexing(self, data):
         self.lexer.test(data)
 
     def got_errors_parsing(self):
         """Whether the lexer or parser had errors."""
-        return self.errors or self.lexer.errors
+        return self.errors
 
     def get_errors(self):
         """
         If got_errors_parsing() returns True, call this to get the errors.
 
         Returns:
-            list[tuple[msg: str, lineno: int]]
+            list[tuple[msg: str, lineno: int, path: str]]
         """
-        errors = []
-        errors.extend(self.lexer.errors)
-        for token_type, token_value, lineno, msg in self.errors:
-            if msg is None:
-                errors.append(
-                    ("Unexpected %s with value %s" %
-                     (token_type, repr(token_value).lstrip('u')),
-                     lineno))
-            else:
-                errors.append((msg, lineno))
-        return errors
+        return self.errors[:]
 
     # --------------------------------------------------------------
-    # Spec := Namespace Include* Definition*
+    # Spec := Namespace Import* Definition*
 
     def p_spec_init(self, p):
         """spec : NEWLINE
@@ -321,13 +332,13 @@ class BabelParser(object):
 
     def p_spec_init_decl(self, p):
         """spec : namespace
-                | include
+                | import
                 | definition"""
         p[0] = [p[1]]
 
     def p_spec_iter(self, p):
         """spec : spec namespace
-                | spec include
+                | spec import
                 | spec definition"""
         p[0] = p[1]
         p[0].append(p[2])
@@ -348,18 +359,18 @@ class BabelParser(object):
     def p_namespace(self, p):
         'namespace : KEYWORD ID NEWLINE'
         if p[1] == 'namespace':
-            p[0] = BabelNamespace(p.lineno(1), p.lexpos(1), p[2])
+            p[0] = BabelNamespace(self.path, p.lineno(1), p.lexpos(1), p[2])
         else:
             raise ValueError('Expected namespace keyword')
 
-    def p_include(self, p):
-        'include : INCLUDE ID NEWLINE'
-        p[0] = BabelInclude(p.lineno(1), p.lexpos(1), p[2])
+    def p_import(self, p):
+        'import : IMPORT ID NEWLINE'
+        p[0] = BabelImport(self.path, p.lineno(1), p.lexpos(1), p[2])
 
     def p_alias(self, p):
         'alias : KEYWORD ID EQ type_ref NEWLINE'
         if p[1] == 'alias':
-            p[0] = BabelAlias(p.lineno(1), p.lexpos(1), p[2], p[4])
+            p[0] = BabelAlias(self.path, p.lineno(1), p.lexpos(1), p[2], p[4])
         else:
             raise ValueError('Expected alias keyword')
 
@@ -422,7 +433,7 @@ class BabelParser(object):
         for key in p[3]:
             if key in p[1]:
                 msg = "Keyword argument '%s' defined more than once." % key
-                self.errors.append(('kw_arg', key, p.lineno(2), msg))
+                self.errors.append((msg, p.lineno(2), self.path))
         p[0].update(p[3])
 
     def p_args(self, p):
@@ -448,15 +459,36 @@ class BabelParser(object):
 
     def p_type_ref(self, p):
         'type_ref : ID args nullable'
-        p[0] = BabelTypeRef(p.lineno(1), p.lexpos(1), p[1], p[2], p[3])
+        p[0] = BabelTypeRef(
+            path=self.path,
+            lineno=p.lineno(1),
+            lexpos=p.lexpos(1),
+            name=p[1],
+            args=p[2],
+            nullable=p[3],
+            ns=None,
+        )
+
+    # A reference to a type in another namespace.
+    def p_foreign_type_ref(self, p):
+        'type_ref : ID DOT ID args nullable'
+        p[0] = BabelTypeRef(
+            path=self.path,
+            lineno=p.lineno(1),
+            lexpos=p.lexpos(1),
+            name=p[3],
+            args=p[4],
+            nullable=p[5],
+            ns=p[1],
+        )
 
     def p_tag_ref(self, p):
         """tag_ref : ID DOT ID
                    | ID"""
         if len(p) > 2:
-            p[0] = BabelTagRef(p.lineno(1), p.lexpos(1), p[3], p[1])
+            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[3], p[1])
         else:
-            p[0] = BabelTagRef(p.lineno(1), p.lexpos(1), p[1])
+            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     # --------------------------------------------------------------
     # Structs
@@ -494,6 +526,7 @@ class BabelParser(object):
         """struct : STRUCT ID inheritance NEWLINE \
                      INDENT docsection enumerated_subtypes field_list example_list DEDENT"""
         p[0] = BabelStructDef(
+            path=self.path,
             lineno=p.lineno(2),
             lexpos=p.lexpos(2),
             name=p[2],
@@ -506,10 +539,14 @@ class BabelParser(object):
                 p[0].add_example(label, text, example)
 
     def p_inheritance(self, p):
-        """inheritance : EXTENDS ID
+        """inheritance : EXTENDS type_ref
                        | empty"""
         if p[1]:
-            p[0] = p[2]
+            if p[2].nullable:
+                msg = 'Reference cannot be nullable.'
+                self.errors.append((msg, p.lineno(1), self.path))
+            else:
+                p[0] = p[2]
 
     def p_enumerated_subtypes_list_create(self, p):
         """subtypes_list : subtype_field
@@ -524,7 +561,8 @@ class BabelParser(object):
 
     def p_enumerated_subtype_field(self, p):
         'subtype_field : ID type_ref NEWLINE'
-        p[0] = BabelSubtypeField(p.lineno(1), p.lexpos(1), p[1], p[2])
+        p[0] = BabelSubtypeField(
+            self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
 
     # --------------------------------------------------------------
     # Fields
@@ -567,7 +605,8 @@ class BabelParser(object):
         """field : ID type_ref default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT
                  | ID type_ref default_option deprecation NEWLINE"""
         has_docstring = len(p) > 6
-        p[0] = BabelField(p.lineno(1), p.lexpos(1), p[1], p[2], p[4])
+        p[0] = BabelField(
+            self.path, p.lineno(1), p.lexpos(1), p[1], p[2], p[4])
         if p[3] is not None:
             if p[3] is BabelNull:
                 p[0].set_default(None)
@@ -593,6 +632,7 @@ class BabelParser(object):
     def p_union(self, p):
         'union : UNION ID inheritance NEWLINE INDENT docsection field_list example_list DEDENT'
         p[0] = BabelUnionDef(
+            path=self.path,
             lineno=p.lineno(1),
             lexpos=p.lexpos(1),
             name=p[2],
@@ -611,7 +651,7 @@ class BabelParser(object):
     def p_field_void(self, p):
         """field : ID asterix_option NEWLINE
                  | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
-        p[0] = BabelVoidField(p.lineno(1), p.lexpos(1), p[1], p[2])
+        p[0] = BabelVoidField(self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
         if len(p) > 4:
             p[0].set_doc(p[5])
 
@@ -646,7 +686,7 @@ class BabelParser(object):
                  | ROUTE ID route_path route_io NEWLINE"""
         if p[3]:
             p[2] += p[3]
-        p[0] = BabelRouteDef(p.lineno(1), p.lexpos(1), p[2], *p[4])
+        p[0] = BabelRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], *p[4])
         if len(p) > 6:
             p[0].set_doc(p[7])
             if p[8]:
@@ -748,4 +788,7 @@ class BabelParser(object):
                            token.type,
                            token.value,
                            token.lineno)
-        self.errors.append((token.type, token.value, token.lineno, None))
+        self.errors.append(
+            ("Unexpected %s with value %s." %
+             (token.type, repr(token.value).lstrip('u')),
+             token.lineno, self.path))

@@ -195,11 +195,13 @@ class TestBabelInternal(unittest.TestCase):
 
         quota_info = Struct(
             'QuotaInfo',
+            None,
+        )
+        quota_info.set_attributes(
             "Information about a user's space quota.",
             [
                 StructField('quota', UInt64(), 'Total amount of space.', None),
             ],
-            None,
         )
 
         # add a example that doesn't fit the definition of a struct
@@ -221,12 +223,14 @@ class TestBabelInternal(unittest.TestCase):
         # test for structs within structs
         account_info = Struct(
             'AccountInfo',
+            None,
+        )
+        account_info.set_attributes(
             "Information about an account.",
             [
                 StructField('account_id', String(), 'Unique identifier for account.', None),
                 StructField('quota_info', quota_info, 'Quota', None)
             ],
-            None,
         )
 
         account_info.add_example('default', None, {'account_id': 'xyz123'})
@@ -238,27 +242,34 @@ class TestBabelInternal(unittest.TestCase):
 
         update_parent_rev = Struct(
             'UpdateParentRev',
+            None,
+        )
+        update_parent_rev.set_attributes(
             "Overwrite existing file if the parent rev matches.",
             [
                 StructField('parent_rev', String(), 'The revision to be updated.', None)
             ],
-            None,
         )
         update_parent_rev.add_example('default', None, {'parent_rev': 'xyz123'})
 
         # test variants with only tags, as well as those with structs.
         conflict = Union(
             'WriteConflictPolicy',
+            None,
+        )
+        conflict.set_attributes(
             'Policy for managing write conflicts.',
             [
-                UnionField('reject', Void(), 'On a write conflict, reject the new file.', None),
-                UnionField('overwrite', Void(),
-                           'On a write conflict, overwrite the existing file.', None),
-                UnionField('update_if_matching_parent_rev',
-                      update_parent_rev,
-                      'On a write conflict, overwrite the existing file.', None),
+                UnionField(
+                    'reject', Void(),
+                    'On a write conflict, reject the new file.', None),
+                UnionField(
+                    'overwrite', Void(),
+                    'On a write conflict, overwrite the existing file.', None),
+                UnionField(
+                    'update_if_matching_parent_rev', update_parent_rev,
+                    'On a write conflict, overwrite the existing file.', None),
             ],
-            None,
         )
 
         # test that only a symbol is returned for an example of a SymbolField

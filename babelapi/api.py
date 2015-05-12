@@ -4,6 +4,8 @@ from collections import OrderedDict
 from distutils.version import StrictVersion
 
 from babelapi.data_type import (
+    CompositeType,
+    ForeignRef,
     doc_unwrap,
     is_composite_type,
     is_list_type,
@@ -40,6 +42,7 @@ class ApiNamespace(object):
         self.route_by_name = {}
         self.data_types = []
         self.data_type_by_name = {}
+        self.referenced_namespaces = []
 
     def add_route(self, route):
         self.routes.append(route)
@@ -48,6 +51,19 @@ class ApiNamespace(object):
     def add_data_type(self, data_type):
         self.data_types.append(data_type)
         self.data_type_by_name[data_type.name] = data_type
+
+    def add_referenced_namespace(self, namespace):
+        """
+        For a namespace to be considered "referenced," it must be imported by
+        this namespace. Also, at least one data type from the namespace must be
+        referenced by this one. The caller of this method is responsible for
+        verifying these requirements.
+        """
+        assert self.name != namespace.name, \
+            'Namespace cannot reference itself.'
+        if namespace.name not in self.referenced_namespaces:
+            self.referenced_namespaces.append(namespace)
+            self.referenced_namespaces.sort(key=lambda n: n.name)
 
     def linearize_data_types(self):
         """
@@ -63,10 +79,11 @@ class ApiNamespace(object):
         def add_data_type(data_type):
             if data_type in seen_data_types:
                 return
-            if hasattr(data_type, 'supertype') and data_type.supertype:
-                add_data_type(data_type.supertype)
-            elif hasattr(data_type, 'subtype') and data_type.subtype:
-                add_data_type(data_type.subtype)
+            elif isinstance(data_type, ForeignRef):
+                # We're only concerned with types defined in this namespace.
+                return
+            if isinstance(data_type, CompositeType) and data_type.parent_type:
+                add_data_type(data_type.parent_type)
             linearized_data_types.append(data_type)
             seen_data_types.add(data_type)
 
@@ -102,14 +119,21 @@ class ApiRoute(object):
 
     def __init__(self,
                  name,
-                 doc,
-                 request_data_type,
-                 response_data_type,
-                 error_data_type,
-                 attrs,
                  token):
         """
         :param str name: Designated name of the endpoint.
+        :param token: Raw route definition from the parser.
+        :type token: babelapi.babel.parser.BabelRouteDef
+        """
+        self.name = name
+        self._token = token
+
+    def set_attributes(self, doc, request_data_type, response_data_type,
+                       error_data_type, attrs):
+        """
+        Converts a forward reference definition of a route into a full
+        definition.
+
         :param str doc: Description of the endpoint.
         :type request_data_type: :class:`babelapi.data_type.DataType`
         :type response_data_type: :class:`babelapi.data_type.DataType`
@@ -117,15 +141,10 @@ class ApiRoute(object):
         :param dict attrs: Map of string keys to values that are either int,
             float, bool, str, or None. These are the route attributes assigned
             in the spec.
-        :param token: Raw route definition from the parser.
-        :type token: babelapi.babel.parser.BabelRouteDef
         """
-
-        self.name = name
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self.request_data_type = request_data_type
         self.response_data_type = response_data_type
         self.error_data_type = error_data_type
         self.attrs = attrs
-        self._token = token

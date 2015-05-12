@@ -416,17 +416,20 @@ class StructField(Field):
             return self._default
 
     def check(self, val):
-
+        if is_foreign_ref(self.data_type):
+            dt = self.data_type.data_type
+        else:
+            dt = self.data_type
         if val is None:
-            if is_nullable_type(self.data_type):
+            if is_nullable_type(dt):
                 return None
             else:
                 raise ValueError('val is None but type is not nullable')
         else:
-            if is_nullable_type(self.data_type):
-                return self.data_type.data_type.check(val)
+            if is_nullable_type(dt):
+                return dt.data_type.check(val)
             else:
-                return self.data_type.check(val)
+                return dt.check(val)
 
     def __repr__(self):
         return 'StructField(%r, %r)' % (self.name,
@@ -450,24 +453,39 @@ class CompositeType(DataType):
 
     DEFAULT_EXAMPLE_LABEL = 'default'
 
-    def __init__(self, name, doc, fields, token):
+    def __init__(self, name, token):
         """
-        Creates a CompositeType.
+        When this is instantiated, the type is treated as a forward reference.
+        Only when :meth:`set_attributes` is called is the type considered to
+        be fully defined.
 
-        Fields are specified as a list so that order is preserved for display
-        purposes only. (Might be used for certain serialization formats...)
-
-        :param str name: Name of type.
-        :param str doc: Description of type.
-        :param list(Field) fields: Ordered list of fields for type.
+        :param str name: Name of type
         :param token: Raw type definition from the parser.
         :type token: babelapi.babel.parser.BabelTypeDef
         """
         self._name = name
+        self._token = token
+        self._is_forward_ref = True
+
+        self.raw_doc = None
+        self.doc = None
+        self.fields = None
+        self.examples = None
+        self._fields_by_name = None
+
+    def set_attributes(self, doc, fields, parent_type=None):
+        """
+        Fields are specified as a list so that order is preserved for display
+        purposes only. (Might be used for certain serialization formats...)
+
+        :param str doc: Description of type.
+        :param list(Field) fields: Ordered list of fields for type.
+        :param Optional[CompositeType] parent_type: The type this type inherits
+            from.
+        """
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self.fields = fields
-        self._token = token
         self.examples = {}
         self._fields_by_name = {}  # Dict[str, Field]
 
@@ -479,6 +497,31 @@ class CompositeType(DataType):
                                   (field.name, orig_lineno),
                                   field._token.lineno)
             self._fields_by_name[field.name] = field
+
+        self.parent_type = parent_type
+        if self.parent_type:
+            if isinstance(parent_type, ForeignRef):
+                self.parent_type_deref = self.parent_type.data_type
+            else:
+                self.parent_type_deref = self.parent_type
+        else:
+            self.parent_type_deref = None
+
+        # Check that the fields for this type do not match any of the fields of
+        # its parents.
+        cur_type = self.parent_type_deref
+        while cur_type:
+            for field in self.fields:
+                if field.name in cur_type._fields_by_name:
+                    lineno = cur_type._fields_by_name[field.name]._token.lineno
+                    raise InvalidSpec(
+                        "Field '%s' already defined in parent '%s' on line %d."
+                        % (field.name, cur_type.name, lineno),
+                        field._token.lineno)
+            cur_type = cur_type.parent_type_deref
+
+        # Indicate that the attributes of the type have been populated.
+        self._is_forward_ref = False
 
     @property
     def name(self):
@@ -511,36 +554,26 @@ class Struct(CompositeType):
 
     composite_type = 'struct'
 
-    def __init__(self, name, doc, fields, token, supertype=None):
+    def set_attributes(self, doc, fields, parent_type=None):
         """
-        :param Struct supertype: If this should subtype another.
+        See :meth:`CompositeType.set_attributes` for parameter definitions.
+        """
 
-        See CompositeType for other parameter definitions.
-        """
-        super(Struct, self).__init__(name, doc, fields, token)
-        if supertype:
-            assert isinstance(supertype, Struct)
-        self.supertype = supertype
-        if self.supertype:
-            self.supertype.subtypes.append(self)
+        if parent_type:
+            assert (isinstance(parent_type, Struct) or
+                    (isinstance(parent_type, ForeignRef) and
+                     isinstance(parent_type.data_type, Struct)))
+
         self.subtypes = []
 
         # These are only set if this struct enumerates subtypes.
         self._enumerated_subtypes = None  # Optional[List[Tuple[str, DataType]]]
         self._is_catch_all = None  # Optional[Bool]
 
-        # Check that the fields for this type do not match any of the fields of
-        # its parents.
-        cur_type = self.supertype
-        while cur_type:
-            for field in self.fields:
-                if field.name in cur_type._fields_by_name:
-                    lineno = cur_type._fields_by_name[field.name]._token.lineno
-                    raise InvalidSpec(
-                        "Field '%s' already defined in parent '%s' on line %d."
-                        % (field.name, cur_type.name, lineno),
-                        field._token.lineno)
-            cur_type = cur_type.supertype
+        super(Struct, self).set_attributes(doc, fields, parent_type)
+
+        if self.parent_type_deref:
+            self.parent_type_deref.subtypes.append(self)
 
     def check(self, val):
         # Enforce the existence of all fields
@@ -570,8 +603,12 @@ class Struct(CompositeType):
             omitted.
         """
         fields = []
-        if self.supertype:
-            fields.extend(self.supertype._filter_fields(filter_function))
+        if self.parent_type:
+            if isinstance(self.parent_type, ForeignRef):
+                parent_type = self.parent_type.data_type
+            else:
+                parent_type = self.parent_type
+            fields.extend(parent_type._filter_fields(filter_function))
         fields.extend(filter(filter_function, self.fields))
         return fields
 
@@ -617,7 +654,8 @@ class Struct(CompositeType):
         and deserialized differently, use this method to detect these.
         """
         return (self.has_enumerated_subtypes() or
-                (self.supertype and self.supertype.has_enumerated_subtypes()))
+                (self.parent_type_deref and
+                 self.parent_type_deref.has_enumerated_subtypes()))
 
     def is_catch_all(self):
         """
@@ -655,10 +693,10 @@ class Struct(CompositeType):
 
         # Require that if this struct enumerates subtypes, its parent (and thus
         # the entire hierarchy above this struct) does as well.
-        if self.supertype and not self.supertype.has_enumerated_subtypes():
+        if self.parent_type and not self.parent_type.has_enumerated_subtypes():
             raise InvalidSpec(
                 "'%s' cannot enumerate subtypes if parent '%s' does not." %
-                (self.name, self.supertype.name), self._token.lineno)
+                (self.name, self.parent_type.name), self._token.lineno)
 
         enumerated_subtype_names = set()  # Set[str]
         for subtype_field in subtype_fields:
@@ -671,7 +709,7 @@ class Struct(CompositeType):
                     subtype_field.data_type.name, lineno)
 
             # Require that a subtype has this struct as its parent.
-            if subtype_field.data_type.supertype != self:
+            if subtype_field.data_type.parent_type != self:
                 raise InvalidSpec(
                     "'%s' is not a subtype of '%s'." %
                     (subtype_field.data_type.name, self.name), lineno)
@@ -688,7 +726,7 @@ class Struct(CompositeType):
 
             # Walk up parent tree hierarchy to ensure no field conflicts.
             # Checks for conflicts with subtype tags and regular fields.
-            cur_type = self.supertype
+            cur_type = self.parent_type
             while cur_type:
                 if subtype_field.name in cur_type._fields_by_name:
                     orig_field = cur_type._fields_by_name[subtype_field.name]
@@ -697,7 +735,7 @@ class Struct(CompositeType):
                         % (subtype_field.name, cur_type.name,
                            orig_field._token.lineno),
                         lineno)
-                cur_type = cur_type.supertype
+                cur_type = cur_type.parent_type
 
             # Note the discrepancy between `fields` which contains only the
             # struct fields, and `_fields_by_name` which contains the struct
@@ -765,7 +803,11 @@ class Struct(CompositeType):
                            % (self.name, extra_fields))
 
         for field in self.all_fields:
-            if is_nullable_type(field.data_type):
+            if is_foreign_ref(field.data_type):
+                dt = field.data_type.data_type
+            else:
+                dt = field.data_type
+            if is_nullable_type(dt):
                 dt = field.data_type.data_type
                 nullable_dt = True
             else:
@@ -834,31 +876,22 @@ class Union(CompositeType):
 
     composite_type = 'union'
 
-    def __init__(self, name, doc, fields, token, subtype=None,
-                 catch_all_field=None):
+    def set_attributes(self, doc, fields, parent_type=None, catch_all_field=None):
         """
-        :param Union subtype: If this should supertype another.
         :param UnionField catch_all_field: The field designated as the
             catch-all. This field should be a member of the list of fields.
 
-        See CompositeType for other parameter definitions.
+        See :meth:`CompositeType.set_attributes` for parameter definitions.
         """
-        super(Union, self).__init__(name, doc, fields, token)
-        self.catch_all_field = catch_all_field
-        self.subtype = subtype
+        if parent_type:
+            assert (isinstance(parent_type, Union) or
+                    (isinstance(parent_type, ForeignRef) and
+                     isinstance(parent_type.data_type, Union)))
 
-        # TODO(kelkabany): When supertype/subtype are renamed to parent_type,
-        # this logic can be moved to the CompositeType super class.
-        cur_type = self.subtype
-        while cur_type:
-            for field in self.fields:
-                if field.name in cur_type._fields_by_name:
-                    lineno = cur_type._fields_by_name[field.name]._token.lineno
-                    raise InvalidSpec(
-                        "Field '%s' already defined in parent '%s' on line %d."
-                        % (field.name, cur_type.name, lineno),
-                        field._token.lineno)
-            cur_type = cur_type.subtype
+        super(Union, self).set_attributes(doc, fields, parent_type)
+
+        self.catch_all_field = catch_all_field
+        self.parent_type = parent_type
 
     def check(self, val):
         if not isinstance(val, TagRef):
@@ -879,8 +912,8 @@ class Union(CompositeType):
         fields.
         """
         fields = []
-        if self.subtype:
-            fields.extend(self.subtype.all_fields)
+        if self.parent_type:
+            fields.extend(self.parent_type.all_fields)
         fields.extend([f for f in self.fields])
         return fields
 
@@ -937,6 +970,25 @@ class Union(CompositeType):
     def __repr__(self):
         return 'Union(%r, %r)' % (self.name, self.fields)
 
+class ForeignRef(object):
+    """
+    Used when a reference is made to a type in a different namespace.
+    """
+
+    def __init__(self, namespace_name, data_type):
+        """
+        Args:
+            namespace_name (str): The name of the namespace this data type
+                belongs to.
+            data_type (DataType): The referenced data type.
+        """
+        assert isinstance(data_type, DataType), type(data_type)
+        self.namespace_name = namespace_name
+        self.data_type = data_type
+
+    def __repr__(self):
+        return 'ForeignRef(%r, %r)' % (self.namespace_name, self.data_type)
+
 class TagRef(object):
     """
     Used when an ID in Babel refers to a tag of a union.
@@ -960,6 +1012,8 @@ def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
 def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
+def is_foreign_ref(data_type):
+    return isinstance(data_type, ForeignRef)
 def is_list_type(data_type):
     return isinstance(data_type, List)
 def is_nullable_type(data_type):

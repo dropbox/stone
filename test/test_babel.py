@@ -60,20 +60,6 @@ struct S2 # struct def following comment
         self.assertEqual(out[2].name, 'S')
         self.assertEqual(out[3].name, 'S2')
 
-    def test_alias_decl(self):
-
-        # test first line a newline
-        text = """
-namespace files
-
-# simple comment
-alias Rev = String
-"""
-        out = self.parser.parse(text)
-        self.assertIsInstance(out[1], BabelAlias)
-        self.assertEqual(out[1].name, 'Rev')
-        self.assertEqual(out[1].type_ref.name, 'String')
-
     def test_type_args(self):
         text = """
 namespace test
@@ -204,7 +190,7 @@ struct S2 extends S1
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'S1')
         self.assertEqual(out[2].name, 'S2')
-        self.assertEqual(out[2].extends, 'S1')
+        self.assertEqual(out[2].extends.name, 'S1')
 
         # test with defaults
         text = """
@@ -281,7 +267,7 @@ union U2 extends U1
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'U1')
         self.assertEqual(out[2].name, 'U2')
-        self.assertEqual(out[2].extends, 'U1')
+        self.assertEqual(out[2].extends.name, 'U1')
 
     def test_composition(self):
         text = """
@@ -386,9 +372,8 @@ strct AccountInfo
     email String
 """
         self.parser.parse(text)
-        ttype, tvalue, lineno, msg = self.parser.errors[0]
-        self.assertEqual(ttype, 'ID')
-        self.assertEqual(tvalue, 'strct')
+        msg, lineno, path = self.parser.errors[0]
+        self.assertEqual(msg, "Unexpected ID with value 'strct'.")
         self.assertEqual(lineno, 4)
 
         text = """\
@@ -396,13 +381,78 @@ namespace users
 
 route test_route(Blah, Blah, Blah)
 """
-        res = self.parser.parse(text)
-
-        t = TowerOfBabel([])
-
+        t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.add_to_api('test.babel', res)
+            t.parse()
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
+
+    def test_alias(self):
+        # Test aliasing to primitive
+        text = """
+namespace test
+
+alias R = String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test aliasing to primitive with additional attributes and nullable
+        text = """
+namespace test
+
+alias R = String(min_length=1)?
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test aliasing to alias
+        text = """
+namespace test
+
+alias T = String
+alias R = T
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test aliasing to alias with attributes already set.
+        text = """
+namespace test
+
+alias T = String(min_length=1)
+alias R = T(min_length=1)
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('Attributes cannot be specified for instantiated type',
+                      cm.exception.msg)
+
+        # Test aliasing to composite
+        text = """
+namespace test
+
+struct S
+    f String
+alias R = S
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test aliasing to composite with attributes
+        text = """
+namespace test
+
+struct S
+    f String
+
+alias R = S(min_length=1)
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('Attributes cannot be specified for instantiated type',
+                      cm.exception.msg)
 
     def test_struct_semantics(self):
         # Test duplicate fields
@@ -743,7 +793,7 @@ alias B = A?
             'Cannot mark reference to nullable type as nullable.',
             cm.exception.msg)
 
-# Test stacking nullable
+        # Test stacking nullable
         text = """\
 namespace test
 
@@ -757,4 +807,219 @@ struct S
             t.parse()
         self.assertEqual(
             'Cannot mark reference to nullable type as nullable.',
+            cm.exception.msg)
+
+        # Test extending nullable
+        text = """\
+namespace test
+
+struct S
+    f String
+
+struct T extends S?
+    g String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'Reference cannot be nullable.',
+            cm.exception.msg)
+
+    def test_forward_reference(self):
+        # Test route def before struct def
+        text = """\
+namespace test
+
+route test_route(Void, S, Void)
+
+struct S
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test extending after...
+        text = """\
+namespace test
+
+struct T extends S
+    g String
+
+struct S
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test field ref to later-defined struct
+        text = """\
+namespace test
+
+route test_route(Void, T, Void)
+
+struct T
+    s S
+
+struct S
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Test self-reference
+        text = """\
+namespace test
+
+struct S
+    s S?
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+    def test_import(self):
+        # Test field reference to another namespace
+        ns1_text = """\
+namespace ns1
+
+import ns2
+
+struct S
+    f ns2.S
+"""
+        ns2_text = """\
+namespace ns2
+
+struct S
+    f String
+"""
+        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t.parse()
+
+        # Test incorrectly importing the current namespace
+        text = """\
+namespace test
+import test
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'Cannot import current namespace.',
+            cm.exception.msg)
+
+        # Test importing a non-existent namespace
+        text = """\
+namespace test
+import missingns
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Namespace 'missingns' is not defined in any spec.",
+            cm.exception.msg)
+
+        # Test extending struct from another namespace
+        ns1_text = """\
+namespace ns1
+
+import ns2
+
+struct S extends ns2.T
+    f String
+"""
+        ns2_text = """\
+namespace ns2
+
+struct T
+    g String
+"""
+        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t.parse()
+
+        # Test extending struct from another namespace that is marked nullable
+        ns1_text = """\
+namespace ns1
+
+import ns2
+
+struct S extends ns2.X
+    f String
+"""
+        ns2_text = """\
+namespace ns2
+
+alias X = T?
+
+struct T
+    g String
+"""
+        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'A struct cannot extend a nullable type.',
+            cm.exception.msg)
+
+        # Test extending union from another namespace
+        ns1_text = """\
+namespace ns1
+
+import ns2
+
+union V extends ns2.U
+    b String
+"""
+        ns2_text = """\
+namespace ns2
+
+union U
+    a
+"""
+        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t.parse()
+
+        # Test structs that reference one another
+        ns1_text = """\
+namespace ns1
+
+import ns2
+
+struct S
+    t ns2.T
+"""
+        ns2_text = """\
+namespace ns2
+
+import ns1
+
+struct T
+    s ns1.S
+"""
+        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t.parse()
+
+        # Test mutual inheritance, which can't possibly work.
+        ns1_text = """\
+namespace ns1
+
+import ns2
+
+struct S extends ns2.T
+    a String
+"""
+        ns2_text = """\
+namespace ns2
+
+import ns1
+
+struct T extends ns1.S
+    b String
+"""
+        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn(
+            'Unresolvable circular reference',
             cm.exception.msg)

@@ -266,8 +266,20 @@ the field is queried. The receiver should, however, track the fact that the
 field was unspecified, so that if the message is re-serialized the default is
 not present in the message.
 
-Note also that a default cannot be set for a nullable type. Nullable types
-implicitly have a default of ``null``.
+A default cannot be set for a nullable type. Nullable types implicitly have a
+default of ``null``.
+
+A default can be set for a field with a union data type, but only to a union
+member with a void type. Using the example of ``Account``, the ``status`` can
+be set to ``active`` by default::
+
+    struct Account extends BasicAccount
+        "Information about a user's account."
+
+        name String(min_length=1)?
+            "The user's full name. :val:`null` if no name was provided."
+        status Status = active
+            "The status of the account."
 
 In practice, defaults are useful when `evolving a spec <evolve_spec.rst>`_.
 
@@ -521,15 +533,16 @@ followed by an arbitrary set of ``key=value`` pairs::
 
 Code generators will populate a route object with these attributes.
 
-Include
-=======
+Import
+======
 
-You can move type and alias definitions from your spec (``.babel``) to a header
-file (``.babelh``). Unlike regular specs, headers cannot contain a namespace
-directive nor route definitions.
+You can refer to types and aliases in other namespaces by using the ``import``
+directive.
 
 For example, we can move the definition of ``AccountId`` and ``BasicAccount``
-into a file called ``common.babelh``::
+into a file called ``common.babel``::
+
+    namespace common
 
     # We define an AccountId as being a 10-character string
     # once here to avoid declaring it each time.
@@ -543,20 +556,15 @@ into a file called ``common.babelh``::
         email String(pattern="^[^@]+@[^@]+\.[^@]+$")
             "The e-mail address of the user."
 
-Now in ``users.babel``, we can add an ``include`` statement under the namespace
+Now in ``users.babel``, we add an ``import`` statement under the namespace
 directive as follows::
 
     namespace users
 
-    include common
+    import common
 
-During compilation, the data types in ``common.babelh`` will be added to the
-global environment of the spec file and will not require any reference to
-``common``.
-
-All header files must live in the same folder as the specs that rely on them.
-Also, all ``include`` directives must come immediately after ``namespace``
-directive or another ``include``.
+When referencing data types in ``common``, use the prefix ``common.``. For
+example, ``common.AccountId`` and ``common.BasicAccount``.
 
 .. _doc:
 
@@ -618,9 +626,9 @@ Formal Grammar
 
 Specification::
 
-    Spec ::= Namespace Include* Definition*
+    Spec ::= Namespace Import* Definition*
     Namespace ::= 'namespace' Identifier
-    Include ::= 'include' Identifier
+    Import ::= 'import' Identifier
     Definition ::= Alias | Route | Struct | Union
     Alias ::= 'alias' Identifier '=' TypeRef
 
