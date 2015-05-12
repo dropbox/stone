@@ -300,12 +300,12 @@ class BabelParser(object):
             list[tuple[msg: str, lineno: int]]
         """
         errors = []
-        for char, lineno in self.lexer.errors:
-            errors.append(("Illegal character '%s'" % char, lineno))
+        errors.extend(self.lexer.errors)
         for token_type, token_value, lineno, msg in self.errors:
             if msg is None:
                 errors.append(
-                    ('Unexpected %s with value %r' % (token_type, token_value),
+                    ("Unexpected %s with value %s" %
+                     (token_type, repr(token_value).lstrip('u')),
                      lineno))
             else:
                 errors.append((msg, lineno))

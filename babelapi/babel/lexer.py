@@ -293,7 +293,9 @@ class BabelLexer(object):
         indent = len(line) - len(line.lstrip())
         indent_spaces = indent - self.cur_indent
         if indent_spaces % 4 > 0:
-            raise Exception('Indent was not divisible by 4.')
+            self.errors.append(
+                ('Indent is not divisible by 4.', newline_token.lexer.lineno))
+            return None
 
         indent_delta = indent_spaces // 4
         if indent_delta == 0:
@@ -313,5 +315,7 @@ class BabelLexer(object):
     def t_error(self, token):
         self._logger.debug('Illegal character %r at line %d',
                            token.value[0], token.lexer.lineno)
-        self.errors.append((token.value[0], token.lexer.lineno))
+        self.errors.append(
+            ('Illegal character %s.' % repr(token.value[0]).lstrip('u'),
+             token.lexer.lineno))
         token.lexer.skip(1)

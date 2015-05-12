@@ -357,14 +357,26 @@ struct AccountInfo
     email String
 """
         out = self.parser.parse(text)
-        char, lineno = self.parser.lexer.errors[0]
-        self.assertEqual(char, '%')
+        msg, lineno = self.parser.lexer.errors[0]
+        self.assertEqual(msg, "Illegal character '%'.")
         self.assertEqual(lineno, 4)
-        char, lineno = self.parser.lexer.errors[1]
-        self.assertEqual(char, '%')
+        msg, lineno = self.parser.lexer.errors[1]
+        self.assertEqual(msg, "Illegal character '%'.")
         self.assertEqual(lineno, 8)
         # Check that despite lexing errors, parser marched on successfully.
         self.assertEqual(out[1].name, 'AccountInfo')
+
+        text = """\
+namespace test
+
+struct S
+    # Indent below is only 3 spaces
+   f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Indent is not divisible by 4.", cm.exception.msg)
 
     def test_parsing_errors(self):
         text = """
