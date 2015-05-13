@@ -533,6 +533,21 @@ union C extends B
             t.parse()
         self.assertIn('already defined in parent', cm.exception.msg)
 
+        # Test catch-all in generator
+        text = """\
+namespace test
+
+union A
+    a*
+    b
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        A_dt = t.api.namespaces['test'].data_type_by_name['A']
+        # Test both ways catch-all is exposed
+        self.assertEqual(A_dt.catch_all_field, A_dt.fields[0])
+        self.assertTrue(A_dt.fields[0].catch_all)
+
         # Test two catch-alls
         text = """\
 namespace test

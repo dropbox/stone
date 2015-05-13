@@ -478,7 +478,7 @@ class TowerOfBabel(object):
         if isinstance(babel_field, BabelVoidField):
             api_type_field = UnionField(
                 name=babel_field.name, data_type=Void(), doc=babel_field.doc,
-                token=babel_field)
+                token=babel_field, catch_all=babel_field.catch_all)
         else:
             data_type = self._resolve_type(env, babel_field.type_ref)
             if isinstance(data_type, Void):
