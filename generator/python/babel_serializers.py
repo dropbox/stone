@@ -336,9 +336,6 @@ def _decode_struct_fields(ins, fields, obj, strict):
     """
     for name, field_data_type in fields:
         if name in obj:
-            # TODO(kelkabany): Remove this once decoding is more lenient.
-            if obj[name] is None:
-                raise bv.ValidationError("field '%s' has null value" % name)
             try:
                 v = _json_compat_obj_decode_helper(
                     field_data_type, obj[name], strict)
@@ -375,15 +372,17 @@ def _decode_union(data_type, obj, strict):
         if tag in data_type.definition._tagmap:
             val_data_type = data_type.definition._tagmap[tag]
             if isinstance(val_data_type, bv.Nullable) and raw_val is None:
-                raise bv.ValidationError(
-                    "expected string '%s', got object with null value" % tag)
+                val = None
             elif isinstance(val_data_type, bv.Void):
-                if strict:
-                    raise bv.ValidationError("expected tag '%s', got object" %
-                                             tag)
-                else:
-                    # Ignore the raw value.
+                if raw_val is None or not strict:
+                    # If raw_val is None, then this is the more verbose
+                    # representation of a void union member. If raw_val isn't
+                    # None, then maybe the spec has changed, so check if we're
+                    # in strict mode.
                     val = None
+                else:
+                    raise bv.ValidationError('expected null, got %s' %
+                                             bv.generic_type_name(raw_val))
             else:
                 try:
                     val = _json_compat_obj_decode_helper(

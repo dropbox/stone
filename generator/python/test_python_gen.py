@@ -358,10 +358,9 @@ class TestDropInModules(unittest.TestCase):
                           lambda: json_decode(bv.Struct(S), json.dumps({})))
         json_decode(bv.Struct(S), json.dumps({'f': 't'}))
 
-        # Struct fields cannot have null value
+        # Struct fields can have null values for nullable fields
         msg = json.dumps({'f': 't', 'g': None})
-        self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Struct(S), msg))
+        json_decode(bv.Struct(S), msg)
 
         # Unknown struct fields raise error if strict
         msg = json.dumps({'f': 't', 'z': 123})
@@ -431,18 +430,13 @@ class TestDropInModules(unittest.TestCase):
         u = json_decode(bv.Nullable(bv.Union(U)), json.dumps(None), strict=False)
         self.assertEqual(u, None)
 
-        # Test nullable primitive variant
-        self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Union(U), json.dumps({'e': None})))
+        # Test nullable union member
         u = json_decode(bv.Union(U), json.dumps('e'))
         self.assertEqual(u._tag, 'e')
         self.assertEqual(u._value, None)
         u = json_decode(bv.Union(U), json.dumps({'e': 64}), strict=False)
         self.assertEqual(u._tag, 'e')
         self.assertEqual(u._value, 64)
-        # Reject objects with one null value (should be a string of the tag)
-        self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Union(U), json.dumps({'e': None})))
 
         # Test nullable composite variant
         u = json_decode(bv.Union(U), json.dumps('f'))
@@ -450,9 +444,6 @@ class TestDropInModules(unittest.TestCase):
         u = json_decode(bv.Union(U), json.dumps({'f': {'f': 'hello'}}), strict=False)
         self.assertEqual(type(u._value), S)
         self.assertEqual(u._value.f, 'hello')
-        # Reject objects with one null value (should be a string of the tag)
-        self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Union(U), json.dumps({'f': None})))
 
     def test_json_decoder_error_messages(self):
         class S3(object):
@@ -506,9 +497,18 @@ struct B extends A
 struct C extends B
     d Float64
 
+struct D
+    a String
+    b UInt64 = 10
+    c String?
+
 union U
     t0
     t1 String
+
+union V
+    t0
+    t1 String?
 
 struct Resource
     union*
@@ -557,6 +557,62 @@ class TestGeneratedPython(unittest.TestCase):
                                  p.stderr.read().decode('ascii'))
 
         self.ns = imp.load_source('ns', 'output/ns.py')
+
+    def test_struct_decoding(self):
+        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'b': 1, 'c': 'C'}))
+        self.assertIsInstance(d, self.ns.D)
+        self.assertEqual(d.a, 'A')
+        self.assertEqual(d.b, 1)
+        self.assertEqual(d.c, 'C')
+
+        # Test with missing value for nullable field
+        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'b': 1}))
+        self.assertEqual(d.a, 'A')
+        self.assertEqual(d.b, 1)
+        self.assertEqual(d.c, None)
+
+        # Test with missing value for field with default
+        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'c': 'C'}))
+        self.assertEqual(d.a, 'A')
+        self.assertEqual(d.b, 10)
+        self.assertEqual(d.c, 'C')
+
+        # Test with explicitly null value for nullable field
+        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'c': None}))
+        self.assertEqual(d.a, 'A')
+        self.assertEqual(d.c, None)
+
+        # Test with explicitly null value for field with default
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_decode(bv.Struct(self.ns.D),
+                        json.dumps({'a': 'A', 'b': None}))
+        self.assertEqual("b: expected integer, got null", str(cm.exception))
+
+    def test_union_decoding(self):
+        v = json_decode(bv.Union(self.ns.V), json.dumps('t0'))
+        self.assertIsInstance(v, self.ns.V)
+
+        # Test verbose representation of a void union member
+        v = json_decode(bv.Union(self.ns.V), json.dumps({'t0': None}))
+        self.assertIsInstance(v, self.ns.V)
+
+        # Test bad value for void union member
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_decode(bv.Union(self.ns.V), json.dumps({'t0': 10}))
+        self.assertEqual("expected null, got integer", str(cm.exception))
+
+        # Test compact representation of a nullable union member with missing value
+        v = json_decode(bv.Union(self.ns.V), json.dumps('t1'))
+        self.assertIsInstance(v, self.ns.V)
+
+        # Test verbose representation of a nullable union member with missing value
+        v = json_decode(bv.Union(self.ns.V), json.dumps({'t1': None}))
+        self.assertIsInstance(v, self.ns.V)
+
+        # Test verbose representation of a nullable union member with bad value
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_decode(bv.Union(self.ns.V), json.dumps({'t1': 123}))
+        self.assertEqual("'123' expected to be a string, got integer", str(cm.exception))
 
     def test_objs(self):
 
