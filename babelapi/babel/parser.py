@@ -24,13 +24,15 @@ class _Element(object):
 
 class BabelNamespace(_Element):
 
-    def __init__(self, path, lineno, lexpos, name):
+    def __init__(self, path, lineno, lexpos, name, doc):
         """
         Args:
             name (str): The namespace of the spec.
+            doc (Optional[str]): The docstring for this namespace.
         """
         super(BabelNamespace, self).__init__(path, lineno, lexpos)
         self.name = name
+        self.doc = doc
 
     def __str__(self):
         return self.__repr__()
@@ -357,9 +359,14 @@ class BabelParser(object):
         p[0] = p[1]
 
     def p_namespace(self, p):
-        'namespace : KEYWORD ID NEWLINE'
+        """namespace : KEYWORD ID NEWLINE
+                     | KEYWORD ID NEWLINE INDENT docsection DEDENT"""
         if p[1] == 'namespace':
-            p[0] = BabelNamespace(self.path, p.lineno(1), p.lexpos(1), p[2])
+            doc = None
+            if len(p) > 4:
+                doc = p[5]
+            p[0] = BabelNamespace(
+                self.path, p.lineno(1), p.lexpos(1), p[2], doc)
         else:
             raise ValueError('Expected namespace keyword')
 

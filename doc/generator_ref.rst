@@ -81,6 +81,14 @@ Namespace
 name
     The name of the namespace.
 
+doc
+    The documentation string for the namespace. This is a concatenation of the
+    docstrings for this namespace across all spec files in the order that they
+    were specified to `babelapi` on the command line. The string has no leading
+    or trailing whitespace except for a newline at the end.
+
+    If no documentation string exists, this is ``None``.
+
 routes
     A list of Route objects in the order that they were defined.
 

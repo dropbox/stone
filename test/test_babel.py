@@ -1048,3 +1048,29 @@ union U
 """
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
+
+    def test_namespace(self):
+        # Test that namespace docstrings are combined
+        ns1_text = """\
+namespace ns1
+    "
+    This is a docstring for ns1.
+    "
+
+struct S
+    f String
+"""
+        ns2_text = """\
+namespace ns1
+    "
+    This is another docstring for ns1.
+    "
+
+struct S2
+    f String
+"""
+        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t.parse()
+        self.assertEqual(
+            t.api.namespaces['ns1'].doc,
+            'This is a docstring for ns1.\n\nThis is another docstring for ns1.\n')

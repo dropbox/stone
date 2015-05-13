@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import OrderedDict
 from distutils.version import StrictVersion
+import six
 
 from babelapi.data_type import (
     CompositeType,
@@ -38,11 +39,28 @@ class ApiNamespace(object):
 
     def __init__(self, name):
         self.name = name
+        self.doc = None
         self.routes = []
         self.route_by_name = {}
         self.data_types = []
         self.data_type_by_name = {}
         self.referenced_namespaces = []
+
+    def add_doc(self, docstring):
+        """Adds a docstring for this namespace.
+
+        The input docstring is normalized to have no leading whitespace and
+        no trailing whitespace except for a newline at the end.
+
+        If a docstring already exists, the new normalized docstring is appended
+        to the end of the existing one with two newlines separating them.
+        """
+        assert isinstance(docstring, six.text_type), type(docstring)
+        normalized_docstring = docstring.strip() + '\n'
+        if self.doc is None:
+            self.doc = normalized_docstring
+        else:
+            self.doc = '%s\n%s' % (self.doc, normalized_docstring)
 
     def add_route(self, route):
         self.routes.append(route)

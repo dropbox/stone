@@ -121,6 +121,8 @@ class TowerOfBabel(object):
             elif res:
                 namespace_token = self._extract_namespace_token(res)
                 namespace = self.api.ensure_namespace(namespace_token.name)
+                if namespace_token.doc is not None:
+                    namespace.add_doc(namespace_token.doc)
                 raw_api.append((namespace, res))
                 self._add_data_types_and_routes_to_api(namespace, res)
             else:
