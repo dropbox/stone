@@ -83,14 +83,14 @@ class PythonGenerator(CodeGeneratorMonolingual):
             with self.indent():
                 self.emit('from . import (')
                 with self.indent():
-                    for namespace in namespace.referenced_namespaces:
-                        self.emit(namespace.name + ',')
+                    for ns in namespace.referenced_namespaces:
+                        self.emit(ns.name + ',')
                 self.emit(')')
             self.emit('except ValueError:')
             # Fallback if imported from outside a package.
             with self.indent():
-                for namespace in namespace.referenced_namespaces:
-                    self.emit('import %s' % namespace.name)
+                for ns in namespace.referenced_namespaces:
+                    self.emit('import %s' % ns.name)
             self.emit()
 
         for data_type in namespace.linearize_data_types():
@@ -315,7 +315,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 args=[name],
             )
         elif is_foreign_ref(dt):
-            return self._generate_validator_constructor(
+            v = self._generate_validator_constructor(
                 dt.data_type, dt.namespace_name)
         else:
             v = self._generate_func_call('bv.{}'.format(dt.name))
