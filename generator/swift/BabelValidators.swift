@@ -1,102 +1,69 @@
-protocol Validator {
-    typealias ValueType
-    func validate(value: ValueType)
+import Foundation
+
+var _assertFunc: (Bool,String) -> Void = { cond, message in assert(cond, message) }
+
+public func setAssertFunc( assertFunc: (Bool, String) -> Void) {
+    _assertFunc = assertFunc
 }
 
-class ArrayValidator<T: Validator>: Validator {
-    let itemValidator: T
-    let minItems : Int?
-    let maxItems : Int?
 
-    init(itemValidator: T, minItems : Int? = nil, maxItems : Int? = nil) {
-        self.itemValidator = itemValidator
-        self.minItems = minItems
-        self.maxItems = maxItems
+public func arrayValidator<T>(#minItems : Int?, #maxItems : Int?, #itemValidator: T -> Void)(value : Array<T>) -> Void {
+    if let min = minItems {
+        _assertFunc(value.count >= min, "\(value) must have at least \(min) items")
     }
-
-    func validate(value : Array<T.ValueType>) {
-
-        if let min = self.minItems {
-            assert (value.count >= min, "\(value) must have at least \(min) items")
-        }
-
-        if let max = self.maxItems {
-            assert (value.count <= max, "\(value) must have at most \(max) items")
-        }
-
-        for el in value {
-            self.itemValidator.validate(el)
-        }
+    
+    if let max = maxItems {
+        _assertFunc(value.count <= max, "\(value) must have at most \(max) items")
     }
+    
+    for el in value {
+        itemValidator(el)
+    }
+    
 }
 
-class StringValidator : Validator {
+public func arrayValidator<T>(#itemValidator: T -> Void)(value : Array<T>) -> Void {
+    arrayValidator(minItems: nil, maxItems: nil, itemValidator: itemValidator)(value: value)
+}
 
-    let minLength : Int?
-    let maxLength : Int?
-    let regex : NSRegularExpression?
-
-    init(minLength : Int? = nil, maxLength : Int? = nil, pattern: String? = nil) {
-        self.minLength = minLength
-        self.maxLength = maxLength
-
-        if let pat = pattern {
-            self.regex = NSRegularExpression(pattern: pat,
-                                             options: nil,
-                                             error: nil)
-        }
+public func stringValidator(minLength : Int? = nil, maxLength : Int? = nil, pattern: String? = nil)(value: String) -> Void {
+    let length = count(value)
+    if let min = minLength {
+        _assertFunc(length >= min, "\"\(value)\" must be at least \(min) characters")
     }
-
-    func validate(value : String) {
-        let length = countElements(value)
-        if let min = self.minLength {
-            assert(length >= min, "\"\(value)\" must be at least \(min) characters")
-        }
-
-        if let max = self.maxLength {
-            assert (length <= max, "\"\(value)\" must be at most \(max) characters")
-        }
-
-        if let re = self.regex {
-            let matches = re.matchesInString(value, options: nil, range: NSMakeRange(0, length))
-            assert(matches.count > 0, "\"\(value) must match pattern \"\(re.pattern)\"")
-        }
+    if let max = maxLength {
+        _assertFunc(length <= max, "\"\(value)\" must be at most \(max) characters")
+    }
+    
+    if let pat = pattern {
+        let re = NSRegularExpression(pattern: pat, options: nil, error: nil)!
+        let matches = re.matchesInString(value, options: nil, range: NSMakeRange(0, length))
+        _assertFunc(matches.count > 0, "\"\(value) must match pattern \"\(re.pattern)\"")
     }
 }
 
-class ComparableTypeValidator<T : Comparable> : Validator {
-    let minValue : T?
-    let maxValue : T?
-
-    init(minValue : T? = nil, maxValue : T? = nil) {
-        self.minValue = minValue
-        self.maxValue = maxValue
+public func comparableValidator<T: Comparable>(minValue : T? = nil, maxValue : T? = nil)(value: T) -> Void {
+    if let min = minValue {
+        _assertFunc(min <= value, "\(value) must be at least \(min)")
     }
-
-    func validate(value : T) {
-        if let min = self.minValue {
-            assert (min <= value, "\(value) must be at least \(min)")
-        }
-        if let max = self.maxValue {
-            assert (max >= value, "\(value) must be at most \(max)")
-        }
+    
+    if let max = maxValue {
+        _assertFunc(max >= value, "\(value) must be at most \(max)")
     }
 }
 
-class NullableValidator<T : Validator> : Validator {
-    let internalValidator : T
-
-    init(_ internalValidator : T) {
-        self.internalValidator = internalValidator
-    }
-
-    func validate(value : Optional<T.ValueType>) {
-        if let v = value {
-            self.internalValidator.validate(v)
-        }
+public func nullableValidator<T>(internalValidator : (T) -> Void)(value : T?) -> Void {
+    if let v = value {
+        internalValidator(v)
     }
 }
 
-class EmptyValidator<T> : Validator {
-    func validate(value : T) { }
+public func binaryValidator(#minLength : Int?, #maxLength: Int?)(value: NSData) -> Void {
+    let length = value.length
+    if let min = minLength {
+        _assertFunc(length >= min, "\"\(value)\" must be at least \(min) bytes")
+    }
+    if let max = maxLength {
+        _assertFunc(length <= max, "\"\(value)\" must be at most \(max) bytes")
+    }
 }

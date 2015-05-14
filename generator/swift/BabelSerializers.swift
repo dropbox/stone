@@ -1,48 +1,151 @@
-import SwiftyJSON
+import Foundation
+
+public enum JSON {
+    case Array([JSON])
+    case Dictionary([String: JSON])
+    case Str(String)
+    case Number(NSNumber)
+    case Null
+}
+
+
+
+func objectToJSON(json : AnyObject) -> JSON {
+    
+    switch json {
+    case let null as NSNull:
+        return .Null
+    case let num as NSNumber:
+        return .Number(num)
+    case let str as String:
+        return .Str(str)
+    case let dict as [String : AnyObject]:
+        var ret = [String : JSON]()
+        for (k, v) in dict {
+            ret[k] = objectToJSON(v)
+        }
+        return .Dictionary(ret)
+    case let array as [AnyObject]:
+        return .Array(array.map(objectToJSON))
+    default:
+        assert(false, "Unknown type trying to parse JSON.")
+    }
+}
+
+func prepareJSONForSerialization(json: JSON) -> AnyObject {
+    switch json {
+    case .Array(let array):
+        return array.map(prepareJSONForSerialization)
+    case .Dictionary(let dict):
+        var ret = [String : AnyObject]()
+        for (k, v) in dict {
+            // kind of a hack...
+            switch v {
+            case .Null:
+                continue
+            default:
+                ret[k] = prepareJSONForSerialization(v)
+            }
+        }
+        return ret
+    case .Number(let n):
+        return n
+    case .Str(let s):
+        return s
+    case .Null:
+        return NSNull()
+    }
+}
+
+func dumpJSON(json: JSON) -> NSData? {
+    switch json {
+    case .Null:
+        return "null".dataUsingEncoding(NSUTF8StringEncoding, allowLossyConversion: false)
+    default:
+        let obj : AnyObject = prepareJSONForSerialization(json)
+        if NSJSONSerialization.isValidJSONObject(obj) {
+            return NSJSONSerialization.dataWithJSONObject(obj, options: nil, error: nil)
+        } else {
+            assert(false, "Invalid JSON toplevel type")
+        }
+    }
+}
+
+func parseJSON(data: NSData) -> JSON {
+    var error: NSError?
+    
+    let obj: AnyObject = NSJSONSerialization.JSONObjectWithData(data,
+        options: NSJSONReadingOptions.AllowFragments,
+        error: &error)!
+    return objectToJSON(obj)
+    
+}
+
 
 public protocol JSONSerializer {
-	typealias ValueType
-	func serialize(ValueType) -> String?
+    typealias ValueType
+    func serialize(ValueType) -> JSON
     func deserialize(JSON) -> ValueType
 }
 
-class ArraySerializer<T : JSONSerializer> : JSONSerializer {
-
-	var elementSerializer : T
-
-	init(_ elementSerializer: T) {
-		self.elementSerializer = elementSerializer
-	}
-
-	func serialize(arr : Array<T.ValueType>) -> String? {
-		let s = ", ".join(arr.map { self.elementSerializer.serialize($0) ?? "null" })
-		return "[\(s)]"
-	}
-
-    func deserialize(json : JSON) -> Array<T.ValueType> {
-        var out : Array<T.ValueType> = []
-
-        for (index : String, subjson : JSON) in json {
-            out.append(self.elementSerializer.deserialize(subjson))
+public class VoidSerializer : JSONSerializer {
+    public func serialize(value: Void) -> JSON {
+        return .Null
+    }
+    
+    public func deserialize(json: JSON) -> Void {
+        switch json {
+        case .Null:
+            return
+        default:
+            assert(false, "Type error deserializing")
         }
-        return out
+        
     }
 }
 
-class StringSerializer : JSONSerializer {
-    func serialize(value : String) -> String? {
-        return "\"\(value)\""
-    }
 
-    func deserialize(json: JSON) -> String {
-        return json.stringValue
+public class ArraySerializer<T : JSONSerializer> : JSONSerializer {
+    
+    var elementSerializer : T
+    
+    init(_ elementSerializer: T) {
+        self.elementSerializer = elementSerializer
+    }
+    
+    public func serialize(arr : Array<T.ValueType>) -> JSON {
+        return .Array(arr.map { self.elementSerializer.serialize($0) } )
+    }
+    
+    public func deserialize(json : JSON) -> Array<T.ValueType> {
+        switch json {
+        case .Array(let arr):
+            return arr.map { self.elementSerializer.deserialize($0) }
+        default:
+            assert(false, "Type error deserializing")
+        }
     }
 }
 
-class NSDateSerializer : JSONSerializer {
+public class StringSerializer : JSONSerializer {
+    public func serialize(value : String) -> JSON {
+        return .Str(value)
+    }
+    
+    public func deserialize(json: JSON) -> String {
+        switch (json) {
+        case .Str(let s):
+            return s
+        default:
+            assert(false, "Type error deserializing")
+        }
+    }
+}
 
-	var dateFormatter : NSDateFormatter
-
+public class NSDateSerializer : JSONSerializer {
+    
+    var dateFormatter : NSDateFormatter
+    
     private func convertFormat(format: String) -> String? {
         func symbolForToken(token: String) -> String {
             switch token {
@@ -131,80 +234,169 @@ class NSDateSerializer : JSONSerializer {
         }
         return newFormat
     }
-
-
-	init(_ dateFormat: String) {
-		self.dateFormatter = NSDateFormatter()
-		dateFormatter.dateFormat = self.convertFormat(dateFormat)
-	}
-    func serialize(value: NSDate) -> String? {
-		return "\"\(self.dateFormatter.stringFromDate(value))\""
+    
+    
+    init(_ dateFormat: String) {
+        self.dateFormatter = NSDateFormatter()
+        dateFormatter.dateFormat = self.convertFormat(dateFormat)
     }
-
-    func deserialize(json: JSON) -> NSDate {
-        return self.dateFormatter.dateFromString(json.stringValue)!
+    public func serialize(value: NSDate) -> JSON {
+        return .Str(self.dateFormatter.stringFromDate(value))
     }
-}
-
-class BoolSerializer : JSONSerializer {
-    func serialize(value : Bool) -> String? {
-        return value ? "true" : "false"
-    }
-    func deserialize(json : JSON) -> Bool {
-        return json.boolValue
+    
+    public func deserialize(json: JSON) -> NSDate {
+        switch json {
+        case .Str(let s):
+            return self.dateFormatter.dateFromString(s)!
+        default:
+            assert(false, "Type error deserializing")
+        }
     }
 }
 
-class UInt64Serializer : JSONSerializer {
-    func serialize(value : UInt64) -> String? {
-        return String(value)
+public class BoolSerializer : JSONSerializer {
+    public func serialize(value : Bool) -> JSON {
+        return .Number(NSNumber(bool: value))
     }
-
-    func deserialize(json : JSON) -> UInt64 {
-        return json.numberValue.unsignedLongLongValue
+    public func deserialize(json : JSON) -> Bool {
+        switch json {
+        case .Number(let b):
+            return b.boolValue
+        default:
+            assert(false, "Type error deserializing")
+        }
     }
 }
 
-class NullableSerializer<T : JSONSerializer> : JSONSerializer {
+public class UInt64Serializer : JSONSerializer {
+    public func serialize(value : UInt64) -> JSON {
+        return .Number(NSNumber(unsignedLongLong: value))
+    }
+    
+    public func deserialize(json : JSON) -> UInt64 {
+        switch json {
+        case .Number(let n):
+            return n.unsignedLongLongValue
+        default:
+            assert(false, "Type error deserializing")
+        }
+    }
+}
 
-	var internalSerializer : T
+public class Int64Serializer : JSONSerializer {
+    public func serialize(value : Int64) -> JSON {
+        return .Number(NSNumber(longLong: value))
+    }
+    
+    public func deserialize(json : JSON) -> Int64 {
+        switch json {
+        case .Number(let n):
+            return n.longLongValue
+        default:
+            assert(false, "Type error deserializing")
+        }
+    }
+}
 
-	init(_ serializer : T) {
-		self.internalSerializer = serializer
-	}
+public class Int32Serializer : JSONSerializer {
+    public func serialize(value : Int32) -> JSON {
+        return .Number(NSNumber(int: value))
+    }
+    
+    public func deserialize(json : JSON) -> Int32 {
+        switch json {
+        case .Number(let n):
+            return n.intValue
+        default:
+            assert(false, "Type error deserializing")
+        }
+    }
+}
+public class UInt32Serializer : JSONSerializer {
+    public func serialize(value : UInt32) -> JSON {
+        return .Number(NSNumber(unsignedInt: value))
+    }
+    
+    public func deserialize(json : JSON) -> UInt32 {
+        switch json {
+        case .Number(let n):
+            return n.unsignedIntValue
+        default:
+            assert(false, "Type error deserializing")
+        }
+    }
+}
 
-	func serialize(value : Optional<T.ValueType>) -> String? {
-		if let v = value {
-			return internalSerializer.serialize(v)
-		} else {
-			return nil
-		}
-	}
+public class NSDataSerializer : JSONSerializer {
+    public func serialize(value : NSData) -> JSON {
+        return .Str(value.base64EncodedStringWithOptions(nil))
+    }
+    
+    public func deserialize(json: JSON) -> NSData {
+        switch(json) {
+        case .Str(let s):
+            return NSData(base64EncodedString: s, options: nil)!
+        default:
+            assert(false, "Type error deserializing")
+        }
+    }
+}
 
-    func deserialize(json: JSON) -> Optional<T.ValueType> {
-        if let val = json.null {
-            return nil
+public class DoubleSerializer : JSONSerializer {
+    public func serialize(value: Double) -> JSON {
+        return .Number(NSNumber(double: value))
+    }
+    
+    public func deserialize(json: JSON) -> Double {
+        switch json {
+        case .Number(let n):
+            return n.doubleValue
+        default:
+            assert(false, "Type error deserializing")
+        }
+    }
+}
+
+
+public class NullableSerializer<T : JSONSerializer> : JSONSerializer {
+    
+    var internalSerializer : T
+    
+    init(_ serializer : T) {
+        self.internalSerializer = serializer
+    }
+    
+    public func serialize(value : Optional<T.ValueType>) -> JSON {
+        if let v = value {
+            return internalSerializer.serialize(v)
         } else {
+            return .Null
+        }
+    }
+    
+    public func deserialize(json: JSON) -> Optional<T.ValueType> {
+        switch json {
+        case .Null:
+            return nil
+        default:
             return internalSerializer.deserialize(json)
         }
     }
 }
 
 struct Serialization {
-	static var _StringSerializer = StringSerializer()
-	static var _BoolSerializer = BoolSerializer()
-	static var _UInt64Serializer = UInt64Serializer()
+    static var _StringSerializer = StringSerializer()
+    static var _BoolSerializer = BoolSerializer()
+    static var _UInt64Serializer = UInt64Serializer()
+    static var _UInt32Serializer = UInt32Serializer()
+    static var _Int64Serializer = Int64Serializer()
+    static var _Int32Serializer = Int32Serializer()
 
-	static func addOutput<T : JSONSerializer>(#field: String, value : T.ValueType, serializer : T, inout output : [String]) {
-		if let v = serializer.serialize(value) {
-			output.append("\"\(field)\": \(v)")
-		}
-	}
-
-	static func output<T : JSONSerializer>(#field: String, value : T.ValueType, serializer : T) -> String? {
-		let v = serializer.serialize(value) ?? "null"
-		return "\"\(field)\": \(v)"
-	}
+    static var _VoidSerializer = VoidSerializer()
+    static var _NSDataSerializer = NSDataSerializer()
+    static var _DoubleSerializer = DoubleSerializer()
 }
+
+
 
 

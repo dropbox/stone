@@ -11,6 +11,10 @@ class SwiftTargetLanguage(TargetLanguage):
 
     _language_short_name = 'swift'
 
+    _reserved_words = {
+        'description'
+    }
+
     def get_supported_extensions(self):
         return ('.swift', )
 
@@ -28,7 +32,10 @@ class SwiftTargetLanguage(TargetLanguage):
         words = [word.capitalize() for word in self.split_words(name)]
         if lower_first:
             words[0] = words[0].lower()
-        return ''.join(words)
+        ret = ''.join(words)
+        if ret in self._reserved_words:
+            ret += '_'
+        return ret
 
     def format_variable(self, name):
         return self._format_camelcase(name)
