@@ -196,17 +196,20 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """Defines a Python class that represents a struct in Babel."""
         self.emit(self._class_declaration_for_struct(data_type))
         with self.indent():
-            if data_type.doc:
+            if data_type.has_documented_type_or_fields():
                 self.emit('"""')
-                self.emit_wrapped_text(
-                    self.process_doc(data_type.doc, self._docf))
-                self.emit()
+                if data_type.doc:
+                    self.emit_wrapped_text(
+                        self.process_doc(data_type.doc, self._docf))
+                    if data_type.has_documented_fields():
+                        self.emit()
                 for field in data_type.fields:
-                    if field.doc:
-                        self.emit_wrapped_text(':ivar {}: {}'.format(
-                            self.lang.format_variable(field.name),
-                            self.process_doc(field.doc, self._docf)),
-                            subsequent_prefix='    ')
+                    if not field.doc:
+                        continue
+                    self.emit_wrapped_text(':ivar {}: {}'.format(
+                        self.lang.format_variable(field.name),
+                        self.process_doc(field.doc, self._docf)),
+                        subsequent_prefix='    ')
                 self.emit('"""')
             self.emit()
 
@@ -663,12 +666,16 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """Defines a Python class that represents a union in Babel."""
         self.emit(self._class_declaration_for_union(data_type))
         with self.indent():
-            if data_type.doc:
+            if data_type.has_documented_type_or_fields():
                 self.emit('"""')
-                self.emit_wrapped_text(
-                    self.process_doc(data_type.doc, self._docf))
-                self.emit()
+                if data_type.doc:
+                    self.emit_wrapped_text(
+                        self.process_doc(data_type.doc, self._docf))
+                    if data_type.has_documented_fields():
+                        self.emit()
                 for field in data_type.fields:
+                    if not field.doc:
+                        continue
                     if is_void_type(field.data_type):
                         ivar_doc = ':ivar {}: {}'.format(
                             self.lang.format_variable(field.name),

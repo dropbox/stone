@@ -175,6 +175,15 @@ parent_type
     If it exists, it points to a DataType object (another struct) that this
     struct inherits from.
 
+has_documented_type_or_fields(include_inherited_fields=False)
+    Returns whether this type, or any of its fields, are documented.
+
+    Use this when deciding whether to create a block of documentation for
+    this type.
+
+has_documented_fields(include_inherited_fields=False)
+    Returns whether at least one field is documented.
+
 get_all_subtypes_with_tags()
     Unlike other enumerated-subtypes-related functionality, this method returns
     not just direct subtypes, but all subtypes of this struct. The tag of each
@@ -270,6 +279,15 @@ parent_type
 
 catch_all_field
     A UnionField object representing the catch-all field.
+
+has_documented_type_or_fields(include_inherited_fields=False)
+    Returns whether this type, or any of its fields, are documented.
+
+    Use this when deciding whether to create a block of documentation for
+    this type.
+
+has_documented_fields(include_inherited_fields=False)
+    Returns whether at least one field is documented.
 
 UnionField
 ----------

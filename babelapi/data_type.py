@@ -524,6 +524,29 @@ class CompositeType(DataType):
         self._is_forward_ref = False
 
     @property
+    def all_fields(self):
+        raise NotImplementedError
+
+    def has_documented_type_or_fields(self, include_inherited_fields=False):
+        """Returns whether this type, or any of its fields, are documented.
+
+        Use this when deciding whether to create a block of documentation for
+        this type.
+        """
+        if self.doc:
+            return True
+        else:
+            return self.has_documented_fields(include_inherited_fields)
+
+    def has_documented_fields(self, include_inherited_fields=False):
+        """Returns whether at least one field is documented."""
+        fields = self.all_fields if include_inherited_fields else self.fields
+        for field in fields:
+            if field.doc:
+                return True
+        return False
+
+    @property
     def name(self):
         return self._name
 

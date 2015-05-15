@@ -186,6 +186,8 @@ class Generator(six.with_metaclass(ABCMeta)):
                 for you. The returned string will be substituted in the
                 docstring in place of the reference.
         """
+        assert isinstance(doc, six.text_type), \
+            'Expected string, got %r.' % type(doc)
         cur_index = 0
         parts = []
         for match in doc_ref_re.finditer(doc):

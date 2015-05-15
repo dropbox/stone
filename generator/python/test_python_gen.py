@@ -488,7 +488,9 @@ test_spec = """\
 namespace ns
 
 struct A
+    "Sample struct doc."
     a String
+        "Sample field doc."
     b Int64
 
 struct B extends A
@@ -503,7 +505,9 @@ struct D
     c String?
 
 union U
+    "Sample union doc."
     t0
+        "Sample field doc."
     t1 String
 
 union V
@@ -557,6 +561,14 @@ class TestGeneratedPython(unittest.TestCase):
                                  p.stderr.read().decode('ascii'))
 
         self.ns = imp.load_source('ns', 'output/ns.py')
+
+    def test_docstring(self):
+        # Check that the docstrings from the spec have in some form made it
+        # into the Python docstrings for the generated objects.
+        self.assertIn('Sample struct doc.', self.ns.A.__doc__)
+        self.assertIn('Sample field doc.', self.ns.A.a.__doc__)
+        self.assertIn('Sample union doc.', self.ns.U.__doc__)
+        self.assertIn('Sample field doc.', self.ns.U.t0.__doc__)
 
     def test_struct_decoding(self):
         d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'b': 1, 'c': 'C'}))

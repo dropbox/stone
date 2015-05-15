@@ -386,6 +386,63 @@ route test_route(Blah, Blah, Blah)
             t.parse()
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
 
+    def test_docstrings(self):
+        text = """
+namespace test
+
+# No docstrings at all
+struct E
+    f String
+
+struct S
+    "Only type doc"
+    f String
+
+struct T
+    f String
+        "Only field doc"
+
+union U
+    "Only type doc"
+    f String
+
+union V
+    f String
+        "Only field doc"
+
+# Check for inherited doc
+struct W extends T
+    g String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        E_dt = t.api.namespaces['test'].data_type_by_name['E']
+        self.assertFalse(E_dt.has_documented_type_or_fields())
+        self.assertFalse(E_dt.has_documented_fields())
+
+        S_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertTrue(S_dt.has_documented_type_or_fields())
+        self.assertFalse(S_dt.has_documented_fields())
+
+        T_dt = t.api.namespaces['test'].data_type_by_name['T']
+        self.assertTrue(T_dt.has_documented_type_or_fields())
+        self.assertTrue(T_dt.has_documented_fields())
+
+        U_dt = t.api.namespaces['test'].data_type_by_name['U']
+        self.assertTrue(U_dt.has_documented_type_or_fields())
+        self.assertFalse(U_dt.has_documented_fields())
+
+        V_dt = t.api.namespaces['test'].data_type_by_name['V']
+        self.assertTrue(V_dt.has_documented_type_or_fields())
+        self.assertTrue(V_dt.has_documented_fields())
+
+        W_dt = t.api.namespaces['test'].data_type_by_name['W']
+        self.assertFalse(W_dt.has_documented_type_or_fields())
+        self.assertFalse(W_dt.has_documented_fields())
+        self.assertFalse(W_dt.has_documented_type_or_fields(), True)
+        self.assertFalse(W_dt.has_documented_fields(), True)
+
     def test_alias(self):
         # Test aliasing to primitive
         text = """
