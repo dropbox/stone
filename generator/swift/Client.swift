@@ -55,6 +55,12 @@ func utf8Decode(data: NSData) -> String? {
     }
 }
 
+
+/// Represents a Dropbox API request
+///
+/// These objects are constructed by the SDK; users of the SDK do not need to create them manually.
+///
+/// Pass in a closure to the `response` method to handle a response or error.
 public class DropboxRequest<RType : JSONSerializer, EType : JSONSerializer> {
     let errorSerializer : EType
     let responseSerializer : RType
@@ -104,9 +110,8 @@ public class DropboxRequest<RType : JSONSerializer, EType : JSONSerializer> {
     }
 }
 
-
+/// An "rpc-style" request
 public class DropboxRpcRequest<RType : JSONSerializer, EType : JSONSerializer> : DropboxRequest<RType, EType> {
-    
     init(client: DropboxClient, host: String, route: String, params: JSON, responseSerializer: RType, errorSerializer: EType) {
         super.init( client: client, host: host, route: route, responseSerializer: responseSerializer, errorSerializer: errorSerializer,
         requestEncoder: ({ convertible, _ in
@@ -117,7 +122,9 @@ public class DropboxRpcRequest<RType : JSONSerializer, EType : JSONSerializer> :
         }))
     }
     
-    
+    /// Called when a request completes.
+    ///
+    /// :param: completionHandler A closure which takes a (response, error) and handles the result of the call appropriately.
     public func response(completionHandler: (RType.ValueType?, CallError<EType.ValueType>?) -> Void) -> Self {
         self.request.validate().response {
             (request, response, dataObj, error) -> Void in
@@ -148,11 +155,21 @@ public class DropboxUploadRequest<RType : JSONSerializer, EType : JSONSerializer
         }))
     }
     
+    /// Called as the upload progresses. 
+    ///
+    /// :param: closure
+    ///         a callback taking three arguments (`bytesWritten`, `totalBytesWritten`, `totalBytesExpectedToWrite`)
+    /// :returns: The request, for chaining purposes
     public func progress(closure: ((Int64, Int64, Int64) -> Void)? = nil) -> Self {
         self.request.progress(closure: closure)
         return self
     }
     
+    /// Called when a request completes.
+    ///
+    /// :param: completionHandler 
+    ///         A callback taking two arguments (`response`, `error`) which handles the result of the call appropriately.
+    /// :returns: The request, for chaining purposes.
     public func response(completionHandler: (RType.ValueType?, CallError<EType.ValueType>?) -> Void) -> Self {
         self.request.validate().response {
             (request, response, dataObj, error) -> Void in
@@ -182,11 +199,21 @@ public class DropboxDownloadRequest<RType : JSONSerializer, EType : JSONSerializ
         }))
     }
     
+    /// Called as the download progresses
+    /// 
+    /// :param: closure
+    ///         a callback taking three arguments (`bytesRead`, `totalBytesRead`, `totalBytesExpectedToRead`)
+    /// :returns: The request, for chaining purposes.
     public func progress(closure: ((Int64, Int64, Int64) -> Void)? = nil) -> Self {
         self.request.progress(closure: closure)
         return self
     }
     
+    /// Called when a request completes.
+    ///
+    /// :param: completionHandler
+    ///         A callback taking two arguments (`response`, `error`) which handles the result of the call appropriately.
+    /// :returns: The request, for chaining purposes.
     public func response(completionHandler: ( (RType.ValueType, NSData)?, CallError<EType.ValueType>?) -> Void) -> Self {
         self.request.validate().response {
             (request, response, dataObj, error) -> Void in
@@ -205,6 +232,7 @@ public class DropboxDownloadRequest<RType : JSONSerializer, EType : JSONSerializ
     }
 }
 
+/// A dropbox API client
 public class DropboxClient {
     var accessToken: DropboxAccessToken
     var baseHosts : [String : String]
@@ -240,13 +268,53 @@ public class DropboxClient {
             baseNotifyUrl: "https://api-notify.dropbox.com")
     }
     
+    /// Invoke an RPC request. Users of the SDK should not need to call this manually.
+    ///
+    /// :param: host
+    ///         The host to call
+    /// :param: route
+    ///         The route to call
+    /// :param: params
+    ///         The already-serialized parameter object
+    /// :param: responseSerializer
+    ///         The response serializer
+    /// :param: errorSerializer
+    ///         The error serializer
+    /// :returns: A Dropbox RPC request
     func runRpcRequest<RType: JSONSerializer, EType: JSONSerializer>(#host: String, route: String, params: JSON,responseSerializer: RType, errorSerializer: EType) -> DropboxRpcRequest<RType, EType> {
         return DropboxRpcRequest(client: self, host: host, route: route, params: params, responseSerializer: responseSerializer, errorSerializer: errorSerializer)
     }
     
+    /// Invoke an Upload request. Users of the SDK should not need to call this manually.
+    ///
+    /// :param: host
+    ///         The host to call
+    /// :param: route
+    ///         The route to call
+    /// :param: params
+    ///         The already-serialized parameter object
+    /// :param: responseSerializer
+    ///         The response serializer
+    /// :param: errorSerializer
+    ///         The error serializer
+    /// :returns: A Dropbox upload request
     func runUploadRequest<RType: JSONSerializer, EType: JSONSerializer>(#host: String, route: String, params: JSON, body: NSData, responseSerializer: RType, errorSerializer: EType) -> DropboxUploadRequest<RType, EType> {
         return DropboxUploadRequest(client: self, host: host, route: route, params: params, body: body, responseSerializer: responseSerializer, errorSerializer: errorSerializer)
     }
+    
+    /// Invoke a Download request. Users of the SDK should not need to call this manually.
+    ///
+    /// :param: host
+    ///         The host to call
+    /// :param: route
+    ///         The route to call
+    /// :param: params
+    ///         The already-serialized parameter object
+    /// :param: responseSerializer
+    ///         The response serializer
+    /// :param: errorSerializer
+    ///         The error serializer
+    /// :returns: A Dropbox RPC request
     func runDownloadRequest<RType: JSONSerializer, EType: JSONSerializer>(#host: String, route: String, params: JSON,responseSerializer: RType, errorSerializer: EType) -> DropboxDownloadRequest<RType, EType> {
         return DropboxDownloadRequest(client: self, host: host, route: route, params: params, responseSerializer: responseSerializer, errorSerializer: errorSerializer)
     }

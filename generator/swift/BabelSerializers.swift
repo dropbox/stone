@@ -1,5 +1,7 @@
 import Foundation
 
+// The objects in this file are used by generated code and should not need to be invoked manually.
+
 public enum JSON {
     case Array([JSON])
     case Dictionary([String: JSON])

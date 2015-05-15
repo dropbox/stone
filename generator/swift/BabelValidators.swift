@@ -1,5 +1,7 @@
 import Foundation
 
+// The objects in this file are used by generated code and should not need to be invoked manually.
+
 var _assertFunc: (Bool,String) -> Void = { cond, message in assert(cond, message) }
 
 public func setAssertFunc( assertFunc: (Bool, String) -> Void) {
