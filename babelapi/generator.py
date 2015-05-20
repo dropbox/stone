@@ -67,11 +67,16 @@ class Generator(six.with_metaclass(ABCMeta)):
         Clears the output buffer on enter and exit.
         """
         full_path = os.path.join(self.target_folder_path, relative_path)
+        directory = os.path.dirname(full_path)
+        if not os.path.exists(directory):
+            self.logger.info('Creating %s', directory)
+            os.makedirs(directory)
+
         self.logger.info('Generating %s', full_path)
         self.output = []
         yield
         with open(full_path, 'w') as f:
-            f.write(''.join(self.output))
+            f.write(''.join(self.output).encode('utf-8'))
         self.output = []
 
     def output_buffer_to_string(self):
