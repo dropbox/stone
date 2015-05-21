@@ -75,7 +75,7 @@ class Generator(six.with_metaclass(ABCMeta)):
         self.logger.info('Generating %s', full_path)
         self.output = []
         yield
-        with open(full_path, 'w') as f:
+        with open(full_path, 'wb') as f:
             f.write(''.join(self.output).encode('utf-8'))
         self.output = []
 
