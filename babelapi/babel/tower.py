@@ -248,10 +248,11 @@ class TowerOfBabel(object):
         # TODO(kelkabany): Currently, aliases cannot point to other aliases. A
         # less-than-clear "Symbol is undefined" error is displayed.
         if item.name in env:
+            existing_dt = env[item.name]
             raise InvalidSpec(
-                'Symbol %s already defined on line %d.' %
-                (quote(item.name), env[item.name]._token.lineno),
-                item.lineno, item.path)
+                'Symbol %s already defined (%s:%d).' %
+                (quote(item.name), existing_dt._token.path,
+                existing_dt._token.lineno), item.lineno, item.path)
 
         env[item.name] = self._resolve_type(env, item.type_ref)
 
@@ -264,10 +265,11 @@ class TowerOfBabel(object):
             # conflict. It reports the line the aliased type was defined,
             # rather than the alias itself. Since aliases aren't tracked in
             # the environment, fixing this will require a refactor.
+            existing_dt = env[item.name]
             raise InvalidSpec(
-                'Symbol %s already defined on line %d.' %
-                (quote(item.name), env[item.name]._token.lineno),
-                item.lineno, item.path)
+                'Symbol %s already defined (%s:%d).' %
+                (quote(item.name), existing_dt._token.path,
+                 existing_dt._token.lineno), item.lineno, item.path)
         if isinstance(item, BabelStructDef):
             try:
                 api_type = Struct(name=item.name, token=item)
@@ -668,10 +670,11 @@ class TowerOfBabel(object):
             babelapi.api.ApiRoute: A fully-defined route.
         """
         if item.name in env:
+            existing_dt = env[item.name]
             raise InvalidSpec(
-                'Symbol %s already defined on line %d.' %
-                (quote(item.name), env[item.name]._token.lineno),
-                item.lineno, item.path)
+                'Symbol %s already defined (%s:%d).' %
+                (quote(item.name), existing_dt._token.path,
+                 existing_dt._token.lineno), item.lineno, item.path)
         route = ApiRoute(
             name=item.name,
             token=item,

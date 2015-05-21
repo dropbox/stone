@@ -2147,3 +2147,96 @@ struct T extends R
         self.assertEqual(
             "Reference to example for 'S' with label 'default' does not exist.",
             cm.exception.msg)
+
+    def test_name_conflicts(self):
+        # Test name conflict in same file
+        text = """\
+namespace test
+
+struct S
+    f String
+
+struct S
+    g String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Symbol 'S' already defined (test.babel:3).",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test name conflict by route
+        text = """\
+namespace test
+
+struct S
+    f String
+
+route S (Void, Void, Void)
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Symbol 'S' already defined (test.babel:3).",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test name conflict by union
+        text = """\
+namespace test
+
+struct S
+    f String
+
+union S
+    g String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Symbol 'S' already defined (test.babel:3).",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test name conflict by alias
+        text = """\
+namespace test
+
+struct S
+    f String
+
+alias S = UInt64
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Symbol 'S' already defined (test.babel:3).",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test name from two specs that are part of the same namespace
+        text1 = """\
+namespace test
+
+struct S
+    f String
+"""
+        text2 = """\
+namespace test
+
+
+struct S
+    f String
+"""
+        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Symbol 'S' already defined (test1.babel:3).",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 4)
