@@ -10,8 +10,8 @@ class InvalidSpec(Exception):
             lineno: The line number the error occurred on.
             path: Path to the spec file with the error.
         """
-        assert isinstance(msg, six.text_type)
-        assert isinstance(lineno, six.integer_types)
+        assert isinstance(msg, six.text_type), type(msg)
+        assert isinstance(lineno, (six.integer_types, type(None))), type(lineno)
         self.msg = msg
         self.lineno = lineno
         self.path = path

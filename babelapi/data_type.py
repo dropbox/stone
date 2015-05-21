@@ -17,10 +17,32 @@ import re
 import six
 
 from .babel.exception import InvalidSpec
+from .babel.parser import BabelExampleRef
 
 class ParameterError(Exception):
     """Raised when a data type is parameterized with a bad type or value."""
     pass
+
+def generic_type_name(v):
+    """
+    Return a descriptive type name that isn't Python specific. For example, an
+    int type will return 'integer' rather than 'int'.
+    """
+    if isinstance(v, BabelExampleRef):
+        return "reference"
+    elif isinstance(v, numbers.Integral):
+        # Must come before real numbers check since integrals are reals too
+        return 'integer'
+    elif isinstance(v, numbers.Real):
+        return 'float'
+    elif isinstance(v, (tuple, list)):
+        return 'list'
+    elif isinstance(v, six.string_types):
+        return 'string'
+    elif v is None:
+        return 'null'
+    else:
+        return type(v).__name__
 
 class DataType(object):
     """
@@ -62,26 +84,20 @@ class Nullable(DataType):
         self.data_type = data_type
 
     def check(self, val):
-        raise NotImplemented
+        if val is not None:
+            return self.data_type.check(val)
 
 class Void(PrimitiveType):
 
     def check(self, val):
-        raise NotImplemented
+        if val is not None:
+            raise ValueError('void type can only be null')
 
 class Binary(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, str):
             raise ValueError('%r is not valid binary (Python str)' % val)
-
-    @property
-    def has_example(self, label):
-        return False
-
-    @property
-    def get_example(self, label):
-        return None
 
 class _BoundedInteger(PrimitiveType):
     """
@@ -113,7 +129,8 @@ class _BoundedInteger(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, numbers.Integral):
-            raise ValueError('%r is not a valid integer type' % val)
+            raise ValueError('%s is not a valid integer type' %
+                             generic_type_name(val))
         if not (self.minimum <= val <= self.maximum):
             raise ValueError('%d is not within range [%r, %r]'
                              % (val, self.minimum, self.maximum))
@@ -188,7 +205,8 @@ class _BoundedFloat(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, numbers.Real):
-            raise ValueError('%r is not a valid real number' % val)
+            raise ValueError('%s is not a valid real number' %
+                             generic_type_name(val))
         if not isinstance(val, float):
             try:
                 val = float(val)
@@ -221,11 +239,13 @@ class Float64(_BoundedFloat):
     pass
 
 class Boolean(PrimitiveType):
+
     def check(self, val):
         if not isinstance(val, bool):
             raise ValueError('%r is not a valid boolean' % val)
 
 class String(PrimitiveType):
+
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
             if not isinstance(min_length, numbers.Integral):
@@ -258,7 +278,8 @@ class String(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, six.string_types):
-            raise ValueError('%r is not a valid string' % val)
+            raise ValueError('%s is not a valid string' %
+                             generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValueError('%r has more than %s characters'
                              % (val, self.max_length))
@@ -279,7 +300,7 @@ class Timestamp(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, six.string_types):
-            raise ValueError('Timestamp must be specified as a str')
+            raise ValueError('Timestamp must be specified as a string')
 
         # Raises a ValueError if val is the incorrect format
         datetime.datetime.strptime(val, self.format)
@@ -302,7 +323,7 @@ class List(DataType):
 
     def check(self, val):
         if not isinstance(val, list):
-            raise ValueError('%r is not a valid list' % val)
+            raise ValueError('%s is not a valid list' % generic_type_name(val))
         elif self.max_items is not None and len(val) > self.max_items:
             raise ValueError('%r has more than %s items'
                              % (val, self.max_items))
@@ -415,22 +436,6 @@ class StructField(Field):
         else:
             return self._default
 
-    def check(self, val):
-        if is_foreign_ref(self.data_type):
-            dt = self.data_type.data_type
-        else:
-            dt = self.data_type
-        if val is None:
-            if is_nullable_type(dt):
-                return None
-            else:
-                raise ValueError('val is None but type is not nullable')
-        else:
-            if is_nullable_type(dt):
-                return dt.data_type.check(val)
-            else:
-                return dt.check(val)
-
     def __repr__(self):
         return 'StructField(%r, %r)' % (self.name,
                                         self.data_type)
@@ -470,7 +475,8 @@ class CompositeType(DataType):
         self.raw_doc = None
         self.doc = None
         self.fields = None
-        self.examples = None
+        self._raw_examples = None
+        self._examples = None
         self._fields_by_name = None
 
     def set_attributes(self, doc, fields, parent_type=None):
@@ -486,7 +492,8 @@ class CompositeType(DataType):
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self.fields = fields
-        self.examples = {}
+        self._raw_examples = OrderedDict()
+        self._examples = OrderedDict()
         self._fields_by_name = {}  # Dict[str, Field]
 
         # Check that no two fields share the same name.
@@ -550,25 +557,32 @@ class CompositeType(DataType):
     def name(self):
         return self._name
 
-    @abstractmethod
-    def get_example(self, label, example):
-        pass
-
-    @abstractmethod
-    def add_example(self, label, text, example):
-        pass
-
     def copy(self):
         return copy.deepcopy(self)
 
     def prepend_field(self, field):
         self.fields.insert(0, field)
 
-class OrderedExample(OrderedDict):
+    def get_examples(self):
+        """Returns an OrderedDict mapping labels to Example objects."""
+        # Copy it just in case the caller wants to mutate the object.
+        return copy.deepcopy(self._examples)
 
-    def __init__(self, *args, **kwargs):
-        super(OrderedExample, self).__init__(*args, **kwargs)
-        self.text = None
+class Example(object):
+    """An example of a struct or union type."""
+
+    def __init__(self, label, text, value, token=None):
+        assert isinstance(label, six.text_type), type(label)
+        self.label = label
+        assert isinstance(text, (six.text_type, type(None))), type(text)
+        self.text = text
+        assert isinstance(value, (six.text_type, OrderedDict)), type(value)
+        self.value = value
+        self._token = token
+
+    def __repr__(self):
+        return 'Example({!r}, {!r}, {!r})'.format(
+            self.label, self.text, self.value)
 
 class Struct(CompositeType):
     """
@@ -804,92 +818,236 @@ class Struct(CompositeType):
                     (subtype_field.name, subtype))
         return subtypes_with_tags
 
-    def add_example(self, label, text, example):
+    def _add_example(self, example):
+        """Adds a "raw example" for this type.
+
+        This does basic sanity checking to ensure that the example is valid
+        (required fields specified, no unknown fields, correct types, ...).
+
+        The example is not available via :meth:`get_examples` until
+        :meth:`_compute_examples` is called.
+
+        Args:
+            example (babelapi.babel.parser.BabelExample): An example of this
+                type.
         """
-        Add a plausible example of the contents of this type. The example is
-        validated against the type definition.
+        if self.has_enumerated_subtypes():
+            self._add_example_enumerated_subtypes_helper(example)
+        else:
+            self._add_example_helper(example)
 
-        :param str label: A label for the example.
-        :param dict example: An example of the type represented as a dict of a
-            subset of Python primitives (str, unicode, list, int/long, float).
-        """
-        if label in example:
-            raise ValueError('Example label %s already specified' % label)
+    def _add_example_enumerated_subtypes_helper(self, example):
+        """Validates examples for structs with enumerated subtypes."""
 
-        ordered_example = OrderedExample()
-        ordered_example.text = text
+        if len(example.fields) != 1:
+            raise InvalidSpec(
+                'Example for struct with enumerated subtypes must only '
+                'specify one subtype tag.', example.lineno, example.path)
 
-        # Check for examples with keys that don't belong
-        extra_fields = set(example.keys()) - set([f.name for f in self.all_fields])
-        if extra_fields:
-            raise KeyError('Example for %r has invalid fields %r'
-                           % (self.name, extra_fields))
+        # Extract the only tag in the example.
+        example_field = list(example.fields.values())[0]
+        tag = example_field.name
+        val = example_field.value
+        if not isinstance(val, BabelExampleRef):
+            raise InvalidSpec(
+                "Example of struct with enumerated subtypes must be a "
+                "reference to a subtype's example.",
+                example_field.lineno, example_field.path)
+
+        for subtype_field in self.get_enumerated_subtypes():
+            if subtype_field.name == tag:
+                self._raw_examples[example.label] = Example(
+                    tag,
+                    example.text,
+                    OrderedDict([(tag, (val, subtype_field.data_type))]),
+                    example)
+                return
+        else:
+            raise InvalidSpec(
+                "Unknown subtype tag '%s' in example." % tag,
+                example_field.lineno, example_field.path)
+
+    def _add_example_helper(self, example):
+        """Validates examples for structs without enumerated subtypes."""
+
+        # Check for fields in the example that don't belong.
+        for label, example_field in example.fields.items():
+            if not any(label == f.name for f in self.all_fields):
+                raise InvalidSpec(
+                    "Example for '%s' has unknown field '%s'." %
+                    (self.name, label),
+                    example_field.lineno, example_field.path,
+                )
+
+        # This stores a modified version of the example from the spec.
+        ex_value = OrderedDict()
 
         for field in self.all_fields:
-            if is_foreign_ref(field.data_type):
-                dt = field.data_type.data_type
-            else:
-                dt = field.data_type
-            if is_nullable_type(dt):
-                dt = field.data_type.data_type
-                nullable_dt = True
-            else:
-                dt = field.data_type
-                nullable_dt = False
-            if field.name in example:
-                if isinstance(dt, CompositeType):
-                    # An example that specifies the key as null is okay if the
-                    # field permits it.
-                    if nullable_dt and example[field.name] is None:
-                        ordered_example[field.name] = None
+            dt, nullable_dt = get_underlying_type(field.data_type)
+            list_dt = False
+            while is_list_type(dt):
+                dt = dt.data_type
+                list_dt = True
+            if field.name in example.fields:
+                example_field = example.fields[field.name]
+                if nullable_dt and example_field.value is None:
+                    ex_value[field.name] = None
+                elif isinstance(dt, CompositeType):
+                    if isinstance(example_field.value, BabelExampleRef):
+                        # This is a value that refers to an example of the
+                        # field's data type.
+                        ex_value[field.name] = example_field.value
                     else:
-                        raise KeyError('Field %r should not be specified since '
-                                       'it is a composite type declaration.'
-                                       % field.name)
-                elif isinstance(dt, List):
-                    if isinstance(dt.data_type, CompositeType):
-                        raise KeyError('Field %r should not be specified '
-                                       'since it is a list of composite '
-                                       'types.' % field.name)
-                    else:
-                        field.check(example[field.name])
-                        ordered_example[field.name] = example[field.name]
+                        raise InvalidSpec(
+                            "Field '%s' must be set to an example label for "
+                            "type '%s'." % (field.name, dt.name),
+                            example_field.lineno, example_field.path)
+                elif list_dt:
+                    # TODO(kelkabany): We need examples for lists, which we
+                    # cannot even parse right now.
+                    raise InvalidSpec(
+                        "Example for field '%s' is unsupported because it's a "
+                        "list of primitives." % field.name,
+                        example_field.lineno, example_field.path)
                 else:
-                    field.check(example[field.name])
-                    ordered_example[field.name] = example[field.name]
-            elif not isinstance(dt, (CompositeType, List)) \
-                    and not nullable_dt:
-                raise KeyError('Missing field %r in example' % field.name)
-        self.examples[label] = ordered_example
-
-    def has_example(self, label):
-        return label in self.examples
-
-    def get_example(self, label):
-        example = self.examples.get(label)
-        if example is None:
-            return None
-        else:
-            example_copy = copy.copy(example)
-            for field in self.all_fields:
-                if field.name in example_copy:
-                    # Only valid when the field has been set to null in the
-                    # example.
-                    continue
-                elif isinstance(field.data_type, CompositeType):
-                    if field.data_type.has_example(label):
-                        example_copy[field.name] = field.data_type.get_example(label)
-                    elif field.data_type.has_example(self.DEFAULT_EXAMPLE_LABEL):
-                        example_copy[field.name] = field.data_type.get_example(
-                            self.DEFAULT_EXAMPLE_LABEL,
-                        )
+                    try:
+                        dt.check(example_field.value)
+                    except ValueError as e:
+                        raise InvalidSpec(
+                            "Bad example for field '%s': %s" %
+                            (field.name, e.args[0]),
+                            example_field.lineno, example_field.path)
                     else:
-                        raise Exception('No example with label %r for subtype '
-                                        '%r' % (label, field.data_type.name))
-                elif (isinstance(field.data_type, List) and
-                        isinstance(field.data_type.data_type, CompositeType)):
-                    example_copy[field.name] = [field.data_type.data_type.get_example(label)]
-            return example_copy
+                        ex_value[field.name] = example_field.value
+            elif field.has_default:
+                ex_value[field.name] = field.default
+            elif list_dt or nullable_dt:
+                # These don't need examples.
+                pass
+            else:
+                raise InvalidSpec(
+                    "Missing field '%s' in example." % field.name,
+                    example.lineno, example.path)
+
+        composite_example = Example(
+            example.label, example.text, ex_value, example)
+        self._raw_examples[example.label] = composite_example
+
+    def _has_example(self, label):
+        """Whether this data type has an example with the given ``label``."""
+        return label in self._raw_examples
+
+    def _compute_examples(self):
+        """
+        Populates the ``_examples`` instance attribute by computing full
+        examples for each label in ``_raw_examples``.
+
+        The logic in this method is separate from :meth:`_add_example` because
+        this method requires that every type have ``_raw_examples`` assigned
+        for resolving example references.
+        """
+        for label in self._raw_examples:
+            self._examples[label] = self._compute_example(label)
+
+    def _compute_example(self, label):
+        if self.has_enumerated_subtypes():
+            return self._compute_example_enumerated_subtypes(label)
+        else:
+            return self._compute_example_flat_helper(label)
+
+    def _compute_example_flat_helper(self, label):
+        """
+        From the "raw example," resolves references to examples of other data
+        types to compute the final example.
+
+        Returns an Example object. The `value` attribute contains a
+        JSON-serializable representation of the example.
+        """
+        assert label in self._raw_examples, label
+
+        example = self._raw_examples[label]
+
+        # Do a deep copy of the example because we're going to mutate it.
+        ex_val = OrderedDict()
+
+        for field in self.all_fields:
+            dt, _ = get_underlying_type(field.data_type)
+            list_nesting_count = 0
+            while is_list_type(dt):
+                dt = dt.data_type
+                list_nesting_count += 1
+            if field.name in example.value:
+                val = example.value[field.name]
+                if val is None:
+                    # Serialized format doesn't include fields with null.
+                    pass
+                elif is_tag_ref(val):
+                    ex_val[field.name] = val.tag_name
+                elif isinstance(val, BabelExampleRef):
+                    # Embed references to other examples directly.
+                    if not dt._has_example(val.label):
+                        raise InvalidSpec(
+                            "Reference to example for '%s' with label '%s' "
+                            "does not exist." % (dt.name, val.label),
+                            val.lineno, val.path)
+                    v = dt._compute_example(val.label).value
+                    while list_nesting_count > 0:
+                        v = [v]
+                        list_nesting_count -= 1
+                    ex_val[field.name] = v
+                else:
+                    # Use value as is
+                    ex_val[field.name] = val
+            elif list_nesting_count > 0:
+                # For lists of primitives, automatically set the example to
+                # an empty list.
+                v = []
+                while list_nesting_count > 1:
+                    v = [v]
+                    list_nesting_count -= 1
+                ex_val[field.name] = v
+
+        return Example(example.label, example.text, ex_val)
+
+    def _compute_example_enumerated_subtypes(self, label, root=True):
+        """
+        Analogous to :meth:`_compute_example_flat_helper` but for structs with
+        enumerated subtypes.
+        """
+        assert label in self._raw_examples, label
+
+        example = self._raw_examples[label]
+
+        if self.has_enumerated_subtypes():
+            tag, (ref, data_type) = list(example.value.items())[0]
+            if not data_type._has_example(ref.label):
+                raise InvalidSpec(
+                    "Reference to example for '%s' with label '%s' does not "
+                    "exist." % (data_type.name, ref.label),
+                    ref.lineno, ref.path)
+            flat_example, ex_sub_value = \
+                data_type._compute_example_enumerated_subtypes(ref.label, False)
+            ex_value = OrderedDict()
+            ex_value[tag] = ex_sub_value
+            for field in self.fields:
+                if field.name in flat_example.value:
+                    ex_value[field.name] = flat_example.value[field.name]
+                    del flat_example.value[field.name]
+            if root:
+                return Example(label, example.text, ex_value)
+            else:
+                return flat_example, ex_value
+        else:
+            # If we're at a leaf of a subtypes tree, then compute the example
+            # as if it were a flat struct. The caller is responsible for moving
+            # fields into different nesting levels based on the subtypes tree.
+            flat_example = self._compute_example_flat_helper(label)
+            ex_value = OrderedDict()
+            for field in self.fields:
+                if field.name in flat_example.value:
+                    ex_value[field.name] = flat_example.value[field.name]
+                    del flat_example.value[field.name]
+            return flat_example, ex_value
 
     def __repr__(self):
         return 'Struct(%r, %r)' % (self.name, self.fields)
@@ -936,41 +1094,173 @@ class Union(CompositeType):
         """
         fields = []
         if self.parent_type:
-            fields.extend(self.parent_type.all_fields)
+            parent_dt, _ = get_underlying_type(self.parent_type)
+            fields.extend(parent_dt.all_fields)
         fields.extend([f for f in self.fields])
         return fields
 
-    def has_example(self, label):
-        for field in self.fields:
-            if (isinstance(field, Field)
-                    and isinstance(field.data_type, CompositeType)
-                    and field.data_type.has_example(label)):
+    def _add_example(self, example):
+        """Adds a "raw example" for this type.
 
-                return True
+        This does basic sanity checking to ensure that the example is valid
+        (required fields specified, no unknown fields, correct types, ...).
+
+        The example is not available via :meth:`get_examples` until
+        :meth:`_compute_examples` is called.
+
+        Args:
+            example (babelapi.babel.parser.BabelExample): An example of this
+                type.
+        """
+        if len(example.fields) != 1:
+            raise InvalidSpec(
+                'Example for union must specify exactly one tag.',
+                example.lineno, example.path)
+
+        # Extract the only tag in the example.
+        example_field = list(example.fields.values())[0]
+        tag = example_field.name
+        val = example_field.value
+
+        # Find the union member that corresponds to the tag.
+        for field in self.all_fields:
+            if tag == field.name:
+                break
         else:
-            for field in self.fields:
-                if is_void_type(field.data_type) and field.name == label:
-                    return True
+            # Error: Tag doesn't match any union member.
+            raise InvalidSpec(
+                "Unknown tag '%s' in example." % tag,
+                example.lineno, example.path
+            )
 
-            return False
-        return False
-
-    def get_example(self, label):
-        for field in self.fields:
-            if (isinstance(field, Field)
-                    and isinstance(field.data_type, CompositeType)
-                    and field.data_type.has_example(label)):
-                return {field.name: field.data_type.get_example(label)}
-        else:
-            # Fallback to checking for tags of the same name as the label.
-            for field in self.fields:
-                if is_void_type(field.data_type) and field.name == label:
-                    return field.name
+        dt, nullable_dt = get_underlying_type(field.data_type)
+        while is_list_type(dt):
+            dt = dt.data_type
+        if val is None:
+            # null can only be explicit for a nullable or void type
+            if not nullable_dt and not is_void_type(dt):
+                raise InvalidSpec(
+                    "Tag '%s' is not nullable but is set to null by example." %
+                    tag, example_field.lineno, example_field.path)
             else:
-                return None
+                # Use the compact representation (just the tag, no value)
+                composite_example = Example(
+                    example.label, example.text, tag)
+        elif isinstance(dt, CompositeType):
+            if isinstance(val, BabelExampleRef):
+                composite_example = Example(
+                    example.label, example.text, OrderedDict([(tag, val)]))
+            else:
+                raise InvalidSpec(
+                    "Example for field '%s' must be reference to example "
+                    "for '%s'." % (field.name, dt.name),
+                    example_field.lineno, example_field.path)
+        else:
+            try:
+                dt.check(val)
+            except ValueError as e:
+                raise InvalidSpec(
+                    "Tag '%s' had bad example: %s" % (field.name, e.args[0]),
+                    example_field.lineno, example_field.path)
+            else:
+                composite_example = Example(
+                    example.label, example.text, OrderedDict([(tag, val)]))
 
-    def add_example(self, label, example):
-        raise NotImplemented
+        self._raw_examples[example.label] = composite_example
+
+    def _has_example(self, label):
+        """Whether this data type has an example with the given ``label``."""
+        if label in self._raw_examples:
+            return True
+        else:
+            for field in self.all_fields:
+                dt, _ = get_underlying_type(field.data_type)
+                if not is_composite_type(dt) and not is_void_type(dt):
+                    continue
+                if label == field.name:
+                    return True
+            else:
+                return False
+
+    def _compute_examples(self):
+        """
+        Populates the ``_examples`` instance attribute by computing full
+        examples for each label in ``_raw_examples``.
+
+        The logic in this method is separate from :meth:`_add_example` because
+        this method requires that every type have ``_raw_examples`` assigned
+        for resolving example references.
+        """
+        for label in self._raw_examples:
+            self._examples[label] = self._compute_example(label)
+
+        # Add examples for each void union member.
+        for field in self.all_fields:
+            dt, _ = get_underlying_type(field.data_type)
+            if is_void_type(dt):
+                self._examples[field.name] = \
+                    Example(field.name, None, field.name)
+
+    def _compute_example(self, label):
+        """
+        From the "raw example," resolves references to examples of other data
+        types to compute the final example.
+
+        Returns an Example object. The `value` attribute contains a
+        JSON-serializable representation of the example.
+        """
+        if label in self._raw_examples:
+            example = self._raw_examples[label]
+
+            # Do a deep copy of the example because we're going to mutate it.
+            example_copy = copy.deepcopy(example)
+
+            if isinstance(example.value, six.text_type):
+                # If it's a compact representation, we can just return it.
+                return Example(example.label, example.text, example.value)
+
+            assert len(example.value) == 1  # Verified in _add_raw_example()
+            tag, val = list(example.value.items())[0]
+            # Find the field referenced by this tag.
+            for field in self.all_fields:
+                if tag == field.name:
+                        break
+            else:
+                raise AssertionError('Unknown tag %r' % tag)
+
+            dt, _ = get_underlying_type(field.data_type)
+            list_nesting_count = 0
+            while is_list_type(dt):
+                dt = dt.data_type
+                list_nesting_count += 1
+            if isinstance(val, BabelExampleRef):
+                # If it's a reference to an example, inject it in.
+                if not dt._has_example(val.label):
+                    raise InvalidSpec(
+                        "Reference to example for '%s' with label '%s' does not "
+                        "exist." % (dt.name, val.label), val.lineno, val.path)
+                ex_val = dt._compute_example(val.label).value
+            else:
+                assert isinstance(dt, PrimitiveType), dt
+                ex_val = val
+            while list_nesting_count > 0:
+                ex_val = [ex_val]
+                list_nesting_count -= 1
+            example_copy.value = {tag: ex_val}
+
+            return example_copy
+
+        else:
+            # Try to fallback to a union member with tag matching the label
+            # with a data type that is composite or void.
+            for field in self.all_fields:
+                if label == field.name:
+                    break
+            else:
+                raise AssertionError('No example for label %r' % label)
+
+            assert is_void_type(field.data_type)
+            return Example(field.name, field.doc, field.name)
 
     def unique_field_data_types(self):
         """
@@ -1024,6 +1314,27 @@ class TagRef(object):
 
     def __repr__(self):
         return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
+
+def get_underlying_type(data_type):
+    """
+    Convenience method to ignore ForeignRef and/or Nullable wrappers around
+    a DataType.
+
+    Args:
+        data_type (DataType): The type to unwrap.
+
+    Return:
+        Tuples[DataType, bool]: The underlying data type and a bool indicating
+            whether the input type was nullable.
+    """
+    if is_foreign_ref(data_type):
+        dt = data_type.data_type
+    else:
+        dt = data_type
+    if is_nullable_type(dt):
+        return dt.data_type, True
+    else:
+        return dt, False
 
 def is_binary_type(data_type):
     return isinstance(data_type, Binary)

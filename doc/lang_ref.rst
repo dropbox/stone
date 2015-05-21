@@ -286,13 +286,14 @@ In practice, defaults are useful when `evolving a spec <evolve_spec.rst>`_.
 Examples
 --------
 
-Examples help you include realistic samples of data in definitions. This gives
+Examples let you include realistic samples of data in definitions. This gives
 spec readers a concrete idea of what typical values will look like. Also,
 examples help demonstrate how distinct fields might interact with each other.
-Lastly, generators have access to examples, which is useful when automatically
+
+Generators have access to examples, which is useful when automatically
 generating documentation.
 
-An example is declared by using the ``example`` keyword followed by a label,
+An example is declared by using the ``example`` keyword followed by a label
 and optionally a descriptive string. By convention, "default" should
 be used as the label name for an example that can be considered a good
 representation of the general case for the type::
@@ -306,17 +307,68 @@ representation of the general case for the type::
             "The status of the account."
 
         example default "A regular user"
-            account_id="id-48sa2f0"
-            email="alex@example.org"
-            name="Alexander the Great"
+            account_id = "id-48sa2f0"
+            email = "alex@example.org"
+            name = "Alexander the Great"
 
-        example unnamed "An unnamed user"
-            account_id="id-29sk2p1"
-            email="anony@example.org"
-            name=null
+        example unnamed "An anonymous user"
+            account_id = "id-29sk2p1"
+            email = "anony@example.org"
+            name = null
 
-As you can see, ``null`` should be used to mark that a nullable field is not
-present.
+Every required field (not nullable and no default) must be specified, otherwise
+an error will be returned. ``null`` can be used to mark that a nullable type
+is not present.
+
+When you have a set of nested types, each type defines examples for primitive
+fields only. Here's an example where ``Name`` is now its own struct::
+
+    struct Account extends BasicAccount
+
+        name Name
+
+        example default
+            account_id = "id-48sa2f0"
+            email = "alex@example.org"
+            name = default
+
+        example anonymous
+            account_id = "id-29sk2p1"
+            email = "anony@example.org"
+            name = anonymous
+
+    struct Name
+        first_name String?
+
+        example default
+            first_name = "Alexander the Great"
+
+        example anonymous
+            first_name = null
+
+As you can see, the ``anonymous`` example for ``Account`` explicitly references
+the ``anonymous`` example for ``Name``.
+
+Examples for unions must only specify one field, since only one union member
+can be selected at a time. For example::
+
+    union Owner
+        nobody
+        account Account
+        organization String
+
+        example default
+            nobody = null
+
+        example person
+            account = default
+
+        example group
+            organization = "Dropbox"
+
+In the ``default`` example, notice that void tags are specified with a value of
+``null``. In the ``person`` example, the ``default`` example for the
+``Account`` type is referenced.
 
 Union
 =====

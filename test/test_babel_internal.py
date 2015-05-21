@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import unittest
 
 from babelapi.data_type import (
@@ -6,6 +8,7 @@ from babelapi.data_type import (
     Float64,
     Int32,
     Int64,
+    InvalidSpec,
     List,
     ParameterError,
     String,
@@ -14,12 +17,16 @@ from babelapi.data_type import (
     UInt64,
     Void,
 )
-
 from babelapi.data_type import (
     Struct,
     StructField,
     Union,
     UnionField,
+)
+from babelapi.babel.parser import (
+    BabelExample,
+    BabelExampleField,
+    BabelExampleRef,
 )
 
 class TestBabelInternal(unittest.TestCase):
@@ -204,19 +211,54 @@ class TestBabelInternal(unittest.TestCase):
             ],
         )
 
-        # add a example that doesn't fit the definition of a struct
-        with self.assertRaises(KeyError) as cm:
-            quota_info.add_example('default', None, {'bad_field': 'xyz123'})
-        self.assertIn('has invalid fields', cm.exception.args[0])
+        # add an example that doesn't fit the definition of a struct
+        with self.assertRaises(InvalidSpec) as cm:
+            quota_info._add_example(
+                BabelExample(path=None,
+                             lineno=None,
+                             lexpos=None,
+                             label='default',
+                             text=None,
+                             fields={'bad_field': BabelExampleField(
+                                 None,
+                                 None,
+                                 None,
+                                 'bad_field',
+                                 'xyz123')}))
+        self.assertIn('has unknown field', cm.exception.msg)
 
-        quota_info.add_example('default', None, {'quota': 64000})
+        quota_info._add_example(
+            BabelExample(path=None,
+                         lineno=None,
+                         lexpos=None,
+                         label='default',
+                         text=None,
+                         fields={'quota': BabelExampleField(
+                             None,
+                             None,
+                             None,
+                             'quota',
+                             64000)}))
 
         # set null for a required field
-        with self.assertRaises(ValueError) as cm:
-            quota_info.add_example('null', None, {'quota': None})
-        self.assertIn('type is not nullable', cm.exception.args[0])
+        with self.assertRaises(InvalidSpec) as cm:
+            quota_info._add_example(
+                BabelExample(path=None,
+                             lineno=None,
+                             lexpos=None,
+                             label='null',
+                             text=None,
+                             fields={'quota': BabelExampleField(
+                                 None,
+                                 None,
+                                 None,
+                                 'quota',
+                                 None)}))
+        self.assertEqual(
+            "Bad example for field 'quota': null is not a valid integer type",
+            cm.exception.msg)
 
-        self.assertTrue(quota_info.has_example('default'))
+        self.assertTrue(quota_info._has_example('default'))
 
         quota_info.nullable = True
 
@@ -233,10 +275,35 @@ class TestBabelInternal(unittest.TestCase):
             ],
         )
 
-        account_info.add_example('default', None, {'account_id': 'xyz123'})
+        account_info._add_example(
+            BabelExample(path=None,
+                         lineno=None,
+                         lexpos=None,
+                         label='default',
+                         text=None,
+                         fields={
+                             'account_id': BabelExampleField(
+                                 None,
+                                 None,
+                                 None,
+                                 'account_id',
+                                 'xyz123'),
+                             'quota_info': BabelExampleField(
+                                 None,
+                                 None,
+                                 None,
+                                 'quota_info',
+                                 BabelExampleRef(
+                                     None,
+                                     None,
+                                     None,
+                                     'default'))})
+        )
+
+        account_info._compute_examples()
 
         # ensure that an example for quota_info is propagated up
-        self.assertIn('quota_info', account_info.get_example('default'))
+        self.assertIn('quota_info', account_info.get_examples()['default'].value)
 
     def test_union(self):
 
@@ -250,7 +317,18 @@ class TestBabelInternal(unittest.TestCase):
                 StructField('parent_rev', String(), 'The revision to be updated.', None)
             ],
         )
-        update_parent_rev.add_example('default', None, {'parent_rev': 'xyz123'})
+        update_parent_rev._add_example(
+            BabelExample(path=None,
+                         lineno=None,
+                         lexpos=None,
+                         label='default',
+                         text=None,
+                         fields={'parent_rev': BabelExampleField(
+                             None,
+                             None,
+                             None,
+                             'parent_rev',
+                             'xyz123')}))
 
         # test variants with only tags, as well as those with structs.
         conflict = Union(
@@ -272,8 +350,24 @@ class TestBabelInternal(unittest.TestCase):
             ],
         )
 
-        # test that only a symbol is returned for an example of a SymbolField
-        self.assertEqual(conflict.get_example('reject'), 'reject')
+        conflict._add_example(
+            BabelExample(path=None,
+                         lineno=None,
+                         lexpos=None,
+                         label='default',
+                         text=None,
+                         fields={'update_if_matching_parent_rev': BabelExampleField(
+                             None,
+                             None,
+                             None,
+                             'update_if_matching_parent_rev',
+                             BabelExampleRef(None, None, None, 'default'))}))
+
+        conflict._compute_examples()
+
+        # test that only null value is returned for an example of a Void type
+        self.assertEqual(conflict.get_examples()['reject'].value, 'reject')
 
         # test that dict is returned for a tagged struct variant
-        self.assertIn('update_if_matching_parent_rev', conflict.get_example('default'))
+        self.assertEqual(conflict.get_examples()['default'].value,
+            {'update_if_matching_parent_rev': {'parent_rev': 'xyz123'}})

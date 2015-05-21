@@ -73,7 +73,8 @@ class BabelAlias(_Element):
 
 class BabelTypeDef(_Element):
 
-    def __init__(self, path, lineno, lexpos, name, extends, doc, fields):
+    def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
+                 examples):
         """
         Args:
             name (str): Name assigned to the type.
@@ -81,8 +82,9 @@ class BabelTypeDef(_Element):
             doc (Optional[str]): Docstring for the type.
             fields (List[BabelField]): Fields of a type, not including
                 inherited ones.
+            examples (Optional[OrderedDict[str, BabelExample]]): Map from label
+                to example.
         """
-
         super(BabelTypeDef, self).__init__(path, lineno, lexpos)
 
         assert isinstance(name, six.text_type), type(name)
@@ -91,12 +93,10 @@ class BabelTypeDef(_Element):
         self.extends = extends
         assert isinstance(doc, (six.text_type, type(None)))
         self.doc = doc
-        self.examples = OrderedDict()
         assert isinstance(fields, list)
         self.fields = fields
-
-    def add_example(self, label, text, example):
-        self.examples[label] = (text, example)
+        assert isinstance(examples, (OrderedDict, type(None))), type(examples)
+        self.examples = examples
 
     def __str__(self):
         return self.__repr__()
@@ -111,7 +111,7 @@ class BabelTypeDef(_Element):
 class BabelStructDef(BabelTypeDef):
 
     def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
-                 subtypes=None):
+                 examples, subtypes=None):
         """
         Args:
             subtypes (Tuple[List[BabelSubtypeField], bool]): Inner list
@@ -122,7 +122,7 @@ class BabelStructDef(BabelTypeDef):
         """
 
         super(BabelStructDef, self).__init__(
-            path, lineno, lexpos, name, extends, doc, fields)
+            path, lineno, lexpos, name, extends, doc, fields, examples)
         assert isinstance(subtypes, (tuple, type(None))), type(subtypes)
         self.subtypes = subtypes
 
@@ -267,6 +267,42 @@ class BabelRouteDef(_Element):
     def set_attrs(self, attrs):
         self.attrs = attrs
 
+class BabelExample(_Element):
+
+    def __init__(self, path, lineno, lexpos, label, text, fields):
+        super(BabelExample, self).__init__(path, lineno, lexpos)
+        self.label = label
+        self.text = text
+        self.fields = fields
+
+    def __repr__(self):
+        return 'BabelExample({!r}, {!r}, {!r})'.format(
+            self.label,
+            self.text,
+            self.fields,
+        )
+
+class BabelExampleField(_Element):
+
+    def __init__(self, path, lineno, lexpos, name, value):
+        super(BabelExampleField, self).__init__(path, lineno, lexpos)
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return 'BabelExampleField({!r}, {!r})'.format(
+            self.name,
+            self.value,
+        )
+
+class BabelExampleRef(_Element):
+
+    def __init__(self, path, lineno, lexpos, label):
+        super(BabelExampleRef, self).__init__(path, lineno, lexpos)
+        self.label = label
+
+    def __repr__(self):
+        return 'BabelExampleRef({!r})'.format(self.label)
 
 class BabelParser(object):
     """
@@ -531,7 +567,7 @@ class BabelParser(object):
 
     def p_struct(self, p):
         """struct : STRUCT ID inheritance NEWLINE \
-                     INDENT docsection enumerated_subtypes field_list example_list DEDENT"""
+                     INDENT docsection enumerated_subtypes field_list examples DEDENT"""
         p[0] = BabelStructDef(
             path=self.path,
             lineno=p.lineno(2),
@@ -540,10 +576,8 @@ class BabelParser(object):
             extends=p[3],
             doc=p[6],
             subtypes=p[7],
-            fields=p[8])
-        if p[9] is not None:
-            for label, text, example in p[9]:
-                p[0].add_example(label, text, example)
+            fields=p[8],
+            examples=p[9])
 
     def p_inheritance(self, p):
         """inheritance : EXTENDS type_ref
@@ -637,7 +671,7 @@ class BabelParser(object):
     # void_field demonstrates the notation for a catch all variant.
 
     def p_union(self, p):
-        'union : UNION ID inheritance NEWLINE INDENT docsection field_list example_list DEDENT'
+        'union : UNION ID inheritance NEWLINE INDENT docsection field_list examples DEDENT'
         p[0] = BabelUnionDef(
             path=self.path,
             lineno=p.lineno(1),
@@ -645,10 +679,8 @@ class BabelParser(object):
             name=p[2],
             extends=p[3],
             doc=p[6],
-            fields=p[7])
-        if p[8]:
-            for label, text, example in p[8]:
-                p[0].add_example(label, text, example)
+            fields=p[7],
+            examples=p[8])
 
     def p_asterix_option(self, p):
         """asterix_option : ASTERIX
@@ -700,10 +732,26 @@ class BabelParser(object):
                 p[0].set_attrs(dict(p[8]))
 
     def p_attrs_section(self, p):
-        """attrssection : ATTRS NEWLINE INDENT example_field_list DEDENT
+        """attrssection : ATTRS NEWLINE INDENT attr_fields DEDENT
                          | empty"""
         if p[1]:
             p[0] = p[4]
+
+    def p_attr_fields_create(self, p):
+        'attr_fields : attr_field'
+        p[0] = [p[1]]
+
+    def p_attr_fields_add(self, p):
+        'attr_fields : attr_fields attr_field'
+        p[0] = p[1]
+        p[0].append(p[2])
+
+    def p_attr_field(self, p):
+        'attr_field : ID EQ primitive NEWLINE'
+        if p[3] is BabelNull:
+            p[0] = (p[1], None)
+        else:
+            p[0] = (p[1], p[3])
 
     # --------------------------------------------------------------
     # Doc sections
@@ -744,41 +792,68 @@ class BabelParser(object):
     #     example default "This is a label"
     #         number=42
 
-    def p_example(self, p):
-        """example : KEYWORD ID STRING NEWLINE INDENT example_field_list DEDENT
-                   | KEYWORD ID empty NEWLINE INDENT example_field_list DEDENT"""
-        p[0] = (p[2], p[3], p[6])
-
-    def p_example_field_list(self, p):
-        """example_field_list : example_field
-                              | PASS NEWLINE"""
-        if p[1] == 'pass':
-            p[0] = []
-        else:
-            p[0] = [p[1]]
-
-    def p_example_field_list_2(self, p):
-        'example_field_list : example_field_list example_field'
-        p[0] = p[1]
-        p[0].append(p[2])
-
-    def p_example_create(self, p):
-        """example_list : example
-                        | empty"""
+    def p_examples_create(self, p):
+        """examples : example
+                    | empty"""
+        p[0] = OrderedDict()
         if p[1] is not None:
-            p[0] = [p[1]]
+            p[0][p[1].label] = p[1]
 
-    def p_example_list_extend(self, p):
-        'example_list : example_list example'
+    def p_examples_add(self, p):
+        'examples : examples example'
+        p[0] = p[1]
+        if p[2].label in p[0]:
+            existing_ex = p[0][p[2].label]
+            self.errors.append(
+                ("Example with label '%s' already defined on line %d." %
+                 (existing_ex.label, existing_ex.lineno),
+                 p[2].lineno, p[2].path))
+        p[0][p[2].label] = p[2]
+
+    # It's possible for no example fields to be specified.
+    def p_example(self, p):
+        """example : KEYWORD ID STRING NEWLINE INDENT example_fields DEDENT
+                   | KEYWORD ID empty NEWLINE INDENT example_fields DEDENT
+                   | KEYWORD ID STRING NEWLINE
+                   | KEYWORD ID empty NEWLINE"""
+        if len(p) > 5:
+            seen_fields = set()
+            for example_field in p[6]:
+                if example_field.name in seen_fields:
+                    self.errors.append(
+                        ("Example with label '%s' defines field '%s' more "
+                        "than once." % (p[2], example_field.name),
+                        p.lineno(1), self.path))
+                seen_fields.add(example_field.name)
+            p[0] = BabelExample(
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[3],
+                OrderedDict((f.name, f) for f in p[6]))
+        else:
+            p[0] = BabelExample(
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[3], OrderedDict())
+
+    def p_example_fields_create(self, p):
+        'example_fields : example_field'
+        p[0] = [p[1]]
+
+    def p_example_fields_add(self, p):
+        'example_fields : example_fields example_field'
         p[0] = p[1]
         p[0].append(p[2])
 
     def p_example_field(self, p):
         'example_field : ID EQ primitive NEWLINE'
         if p[3] is BabelNull:
-            p[0] = (p[1], None)
+            p[0] = BabelExampleField(
+                self.path, p.lineno(1), p.lexpos(1), p[1], None)
         else:
-            p[0] = (p[1], p[3])
+            p[0] = BabelExampleField(
+                self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
+
+    def p_example_field_ref(self, p):
+        'example_field : ID EQ ID NEWLINE'
+        p[0] = BabelExampleField(self.path, p.lineno(1), p.lexpos(1),
+            p[1], BabelExampleRef(self.path, p.lineno(3), p.lexpos(3), p[3]))
 
     # --------------------------------------------------------------
 

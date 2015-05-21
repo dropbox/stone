@@ -132,6 +132,7 @@ class TowerOfBabel(object):
         self._add_aliases_to_api(raw_api)
         self._populate_type_attributes()
         self._populate_enumerated_subtypes()
+        self._populate_examples()
         self._validate_doc_refs()
 
         return self.api
@@ -302,9 +303,6 @@ class TowerOfBabel(object):
                     raise AssertionError('Unhandled type: %r' %
                                          type(data_type))
                 self._resolution_in_progress.remove(data_type)
-
-                for ex_label, (ex_text, example) in data_type._token.examples.items():
-                    data_type.add_example(ex_label, ex_text, dict(example))
 
         # Since nothing depends on routes, do them last.
         for namespace in self.api.namespaces.values():
@@ -739,6 +737,23 @@ class TowerOfBabel(object):
                             subtype_field.data_type.name,
                             subtype_field.data_type._token.lineno,
                             subtype_field.data_type._token.path)
+
+    def _populate_examples(self):
+        """Construct every possible example for every type.
+
+        This is done in two passes. The first pass assigns examples to their
+        associated types, but does not resolve references between examples for
+        different types. This is because the referenced examples may not yet
+        exist. The second pass resolves references.
+        """
+        for namespace in self.api.namespaces.values():
+            for data_type in namespace.data_types:
+                for example in data_type._token.examples.values():
+                    data_type._add_example(example)
+
+        for namespace in self.api.namespaces.values():
+            for data_type in namespace.data_types:
+                data_type._compute_examples()
 
     def _validate_doc_refs(self):
         """

@@ -220,6 +220,11 @@ is_member_of_enumerated_subtypes_tree()
     Structs that are members of trees must be able to be serialized without
     their inherited fields.
 
+get_examples()
+    Returns an `OrderedDict
+    <https://docs.python.org/2/library/collections.html#collections.OrderedDict>`_
+    mapping labels to ``Example`` objects.
+
 StructField
 -----------
 
@@ -289,6 +294,11 @@ has_documented_type_or_fields(include_inherited_fields=False)
 has_documented_fields(include_inherited_fields=False)
     Returns whether at least one field is documented.
 
+get_examples()
+    Returns an `OrderedDict
+    <https://docs.python.org/2/library/collections.html#collections.OrderedDict>`_
+    mapping labels to ``Example`` objects.
+
 UnionField
 ----------
 
@@ -303,6 +313,20 @@ data_type
 
 catch_all
     A boolean indicating whether this field is the catch-all for the union.
+
+Example
+-------
+
+label
+    The label for the example defined in the spec.
+
+text
+    A textual description of the example that follows the label in the spec.
+    Is ``None`` if no text was provided.
+
+example
+    A JSON representation of the example that is generated based on the example
+    defined in the spec.
 
 .. _emit_methods:
 

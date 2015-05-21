@@ -1146,3 +1146,1004 @@ struct S2
         self.assertEqual(
             t.api.namespaces['ns1'].doc,
             'This is a docstring for ns1.\n\nThis is another docstring for ns1.\n')
+
+    def test_examples(self):
+
+        # Test simple struct example
+        text = """\
+namespace test
+
+struct S
+    f String
+
+    example default
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_types[0]
+        self.assertTrue(s_dt.get_examples()['default'], {'f': 'A'})
+
+        # Test example with bad type
+        text = """\
+namespace test
+
+struct S
+    f String
+
+    example default
+        f = 5
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Bad example for field 'f': integer is not a valid string",
+            cm.exception.msg)
+
+        # Test example with label "true". "false" and "null" are also
+        # disallowed because they conflict with the identifiers for primitives.
+        text = """\
+namespace test
+
+struct S
+    f String
+
+    example true
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            # This raises an unexpected token error.
+            t.parse()
+
+        # Test error case where two examples share the same label
+        text = """\
+namespace test
+
+struct S
+    f String
+
+    example default
+        f = "ZZZZZZ3"
+    example default
+        f = "ZZZZZZ4"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Example with label 'default' already defined on line 6.",
+            cm.exception.msg)
+
+        # Test error case where an example has the same field defined twice.
+        text = """\
+namespace test
+
+struct S
+    f String
+
+    example default
+        f = "ZZZZZZ3"
+        f = "ZZZZZZ4"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Example with label 'default' defines field 'f' more than once.",
+            cm.exception.msg)
+
+        # Test empty examples
+        text = """\
+namespace test
+
+struct S
+
+    example default
+    example other
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_types[0]
+        self.assertIn('default', s_dt.get_examples())
+        self.assertIn('other', s_dt.get_examples())
+        self.assertNotIn('missing', s_dt.get_examples())
+
+        # Test missing field in example
+        text = """\
+namespace test
+
+struct S
+    f String
+
+    example default
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Missing field 'f' in example.",
+            cm.exception.msg)
+
+        # Test missing default example
+        text = """\
+namespace test
+
+struct S
+    t T
+
+    example default
+
+struct T
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Missing field 't' in example.",
+            cm.exception.msg)
+
+        # Test primitive field with default will use the default in the
+        # example if it's missing.
+        text = """\
+namespace test
+
+struct S
+    f String = "S"
+
+    example default
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_types[0]
+        # Example should have no keys
+        self.assertEqual(s_dt.get_examples()['default'].value['f'], 'S')
+
+        # Test nullable primitive field missing from example
+        text = """\
+namespace test
+
+struct S
+    f String?
+
+    example default
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_types[0]
+        # Example should have no keys
+        self.assertEqual(len(s_dt.get_examples()['default'].value), 0)
+
+        # Test nullable primitive field explicitly set to null in example
+        text = """\
+namespace test
+
+struct S
+    f String?
+
+    example default
+        f = null
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_types[0]
+        # Example should have no keys
+        self.assertEqual(len(s_dt.get_examples()['default'].value), 0)
+
+        # Test non-nullable primitive field explicitly set to null in example
+        text = """\
+namespace test
+
+struct S
+    f String
+
+    example default
+        f = null
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Bad example for field 'f': null is not a valid string",
+            cm.exception.msg)
+
+        # TODO(kelkabany): Example of lists of primitives doesn't work because
+        # the parser doesn't support declaring a list.
+        # TODO(kelkabany): Need a way to specify an example of a list of
+        # composites where more than one entry comes back.
+
+        # Test field of list of primitives with bad example
+        text = """\
+namespace test
+
+struct S
+    l List(String)
+
+    example default
+        l = "a"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Example for field 'l' is unsupported because it's a list of primitives.",
+            cm.exception.msg)
+
+        # Test example of list of composite types
+        text = """\
+namespace test
+
+struct S
+    l List(T)
+
+    example default
+        l = default
+
+struct T
+    f String
+
+    example default
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'l': [{'f': 'A'}]})
+
+        # Test example of composite type
+        text = """\
+namespace test
+
+struct S
+    t T
+
+    example default
+        t = default
+
+struct T
+    f String
+
+    example default
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'t': {'f': 'A'}})
+
+        # Test nullable composite missing from example
+        text = """\
+namespace test
+
+struct S
+    t T?
+
+    example default
+        t = default
+
+struct T
+    f String
+
+    example default
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'t': {'f': 'A'}})
+
+        # Test nullable composite explicitly set to null
+        text = """\
+namespace test
+
+struct S
+    t T?
+
+    example default
+        t = null
+
+struct T
+    f String
+
+    example default
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {})
+
+        # Test custom label
+        text = """\
+namespace test
+
+struct S
+    t T?
+
+    example default
+        t = special
+
+struct T
+    f String
+    r R
+
+    example default
+        f = "A"
+        r = default
+
+    example special
+        f = "B"
+        r = other
+
+struct R
+    g String
+
+    example default
+        g = "D"
+
+    example other
+        g = "C"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'t': {'f': 'B', 'r': {'g': 'C'}}})
+
+        # Test missing label for composite example
+        text = """\
+namespace test
+
+struct S
+    t T?
+
+    example default
+        t = missing
+
+struct T
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Reference to example for 'T' with label 'missing' does not exist.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
+
+        # Test missing label for composite example
+        text = """\
+namespace test
+
+struct S
+    t T
+
+    example default
+
+struct T
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Missing field 't' in example.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test bad label for composite example
+        text = """\
+namespace test
+
+struct S
+    t T?
+
+    example default
+        t = 34
+
+struct T
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Field 't' must be set to an example label for type 'T'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
+
+        # Test with list of composites
+        text = """\
+namespace test
+
+struct S
+    a List(List(T))
+
+    example default
+        a = default
+
+struct T
+    f String
+
+    example default
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'a': [[{'f': 'A'}]]})
+
+        # Test with list of primitives
+        text = """\
+namespace test
+
+struct S
+    a List(List(String))
+
+    example default
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'a': [[]]})
+
+        # Test solution for recursive struct
+        # TODO: Omitting `s=null` will result in infinite recursion.
+        text = """\
+namespace test
+
+struct S
+    s S?
+    f String
+
+    example default
+        f = "A"
+        s = null
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value, {'f': 'A'})
+
+        # Test examples with inheritance trees
+        text = """\
+namespace test
+
+struct A
+    a String
+
+struct B extends A
+    b String
+
+struct C extends B
+    c String
+
+    example default
+        a = "A"
+        b = "B"
+        c = "C"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        text = """\
+namespace test
+
+struct A
+    a String
+
+struct B extends A
+    b String
+
+struct C extends B
+    c String
+
+    example default
+        b = "B"
+        c = "C"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Missing field 'a' in example.",
+            cm.exception.msg)
+
+    def test_examples_union(self):
+        # Test bad example with no fields specified
+        text = """\
+namespace test
+
+union U
+    a
+
+    example default
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'Example for union must specify exactly one tag.',
+            cm.exception.msg)
+
+        # Test bad example with more than one field specified
+        text = """\
+namespace test
+
+union U
+    a String
+    b String
+
+    example default
+        a = "A"
+        b = "B"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'Example for union must specify exactly one tag.',
+            cm.exception.msg)
+
+        # Test bad example with unknown tag
+        text = """\
+namespace test
+
+union U
+    a String
+
+    example default
+        z = "Z"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Unknown tag 'z' in example.",
+            cm.exception.msg)
+
+        # Test bad example with reference
+        text = """\
+namespace test
+
+union U
+    a String
+
+    example default
+        a = default
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Tag 'a' had bad example: reference is not a valid string",
+            cm.exception.msg)
+
+        # Test bad example with null value for non-nullable
+        text = """\
+namespace test
+
+union U
+    a String
+
+    example default
+        a = null
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Tag 'a' is not nullable but is set to null by example.",
+            cm.exception.msg)
+
+        # Test example with null value for void type member
+        text = """\
+namespace test
+
+union U
+    a
+
+    example default
+        a = null
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        self.assertEqual(u_dt.get_examples()['default'].value, 'a')
+
+        # Test simple union
+        text = """\
+namespace test
+
+union U
+    a
+    b String
+    c UInt64
+
+    example default
+        b = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        self.assertEqual(u_dt.get_examples()['default'].value,
+                         {'b': 'A'})
+        self.assertEqual(u_dt.get_examples()['a'].value, 'a')
+        self.assertNotIn('b', u_dt.get_examples())
+
+        # Test union with list
+        text = """\
+namespace test
+
+union U
+    a List(List(S))
+
+    example default
+        a = default
+
+struct S
+    f String
+
+    example default
+        f = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        self.assertEqual(u_dt.get_examples()['default'].value,
+                         {'a': [[{'f': 'A'}]]})
+
+        # Test union with list of primitives
+        text = """\
+namespace test
+
+union U
+    a List(List(String))
+
+    example default
+        a = "hi"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        self.assertEqual(u_dt.get_examples()['default'].value,
+                         {'a': [['hi']]})
+
+        # Test union with list of primitives (bad type)
+        text = """\
+namespace test
+
+union U
+    a List(List(String))
+
+    example default
+        a = 42
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Tag 'a' had bad example: integer is not a valid string",
+            cm.exception.msg)
+
+        # Test union with inheritance
+        text = """\
+namespace test
+
+union U
+    a String
+
+union V extends U
+    b String
+
+    example default
+        a = "A"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        v_dt = t.api.namespaces['test'].data_type_by_name['V']
+        self.assertEqual(v_dt.get_examples()['default'].value,
+                         {'a': 'A'})
+
+        # Test union and struct
+        text = """\
+namespace test
+
+union U
+    a
+    s S
+
+    example default
+        s = default
+
+    example other
+        s = other
+
+struct S
+    f String
+
+    example default
+        f = "F"
+
+    example other
+        f = "O"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        self.assertEqual(u_dt.get_examples()['default'].value,
+                         {'s': {'f': 'F'}})
+        self.assertEqual(u_dt.get_examples()['other'].value,
+                         {'s': {'f': 'O'}})
+
+        # Test union referencing non-existent struct example
+        text = """\
+namespace test
+
+union U
+    a
+    s S
+
+    example default
+        s = missing
+
+struct S
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Reference to example for 'S' with label 'missing' does not exist.",
+            cm.exception.msg)
+
+        # Test fallback to union void member
+        text = """\
+namespace test
+
+struct S
+    u U
+
+    example default
+        u = a
+
+union U
+    a
+    b
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'u': 'a'})
+
+        # Test fallback to union member of composite type
+        text = """\
+namespace test
+
+struct S
+    u U
+
+    example default
+        u = default
+
+union U
+    a
+    b S2
+
+    example default
+        b = default
+
+struct S2
+    f String
+
+    example default
+        f = "F"
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'u': {'b': {'f': 'F'}}})
+
+        # Test TagRef
+        text = """\
+namespace test
+
+union U
+    a
+    b
+
+struct S
+    u U = a
+
+    example default
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'u': 'a'})
+
+        # Test bad void union member example value
+        text = """\
+namespace test
+
+union U
+    a
+
+    example default
+        a = false
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Tag 'a' had bad example: void type can only be null",
+            cm.exception.msg)
+
+    def test_examples_enumerated_subtypes(self):
+        # Test missing custom example
+        text = """\
+namespace test
+
+struct S
+    t T
+
+    example other
+
+struct T
+    f String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Missing field 't' in example.",
+            cm.exception.msg)
+
+        # Test with two subtypes referenced
+        text = """\
+namespace test
+
+struct R
+    union
+        s S
+        t T
+    a String
+
+    example default
+        s = default
+        t = default
+
+struct S extends R
+    b String
+
+struct T extends R
+    c String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Example for struct with enumerated subtypes must only specify one subtype tag.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 9)
+
+        # Test bad subtype reference
+        text = """\
+namespace test
+
+struct R
+    union
+        s S
+        t T
+    a String
+
+    example default
+        s = 34
+
+struct S extends R
+    b String
+
+struct T extends R
+    c String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Example of struct with enumerated subtypes must be a reference "
+            "to a subtype's example.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 10)
+
+        # Test unknown subtype
+        text = """\
+namespace test
+
+struct R
+    union
+        s S
+        t T
+    a String
+
+    example default
+        z = default
+
+struct S extends R
+    b String
+
+struct T extends R
+    c String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Unknown subtype tag 'z' in example.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 10)
+
+        # Test correct example of enumerated subtypes
+        text = """\
+namespace test
+
+struct R
+    union
+        s S
+        t T
+    a String
+
+    example default
+        s = default
+
+struct S extends R
+    b String
+
+    example default
+        a = "A"
+        b = "B"
+
+struct T extends R
+    c String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        r_dt = t.api.namespaces['test'].data_type_by_name['R']
+        self.assertEqual(r_dt.get_examples()['default'].value,
+                         {'a': 'A', 's': {'b': 'B'}})
+
+        # Test missing custom example
+        text = """\
+namespace test
+
+struct R
+    union
+        s S
+        t T
+    a String
+
+    example default
+        s = default
+
+struct S extends R
+    b String
+
+struct T extends R
+    c String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Reference to example for 'S' with label 'default' does not exist.",
+            cm.exception.msg)
