@@ -79,7 +79,7 @@ class ApiNamespace(object):
         """
         assert self.name != namespace.name, \
             'Namespace cannot reference itself.'
-        if namespace.name not in self.referenced_namespaces:
+        if namespace not in self.referenced_namespaces:
             self.referenced_namespaces.append(namespace)
             self.referenced_namespaces.sort(key=lambda n: n.name)
 
@@ -118,6 +118,9 @@ class ApiNamespace(object):
         The List data type is never returned because it isn't user-defined, but
         if it contains a user-defined type, then that type is included in the
         return set.
+
+        Foreign references *are* returned.  The caller presumably has to
+        handle these differently.
         """
         data_types = set()
         for route in self.routes:
@@ -125,9 +128,8 @@ class ApiNamespace(object):
                           route.error_data_type):
                 while is_list_type(dtype):
                     dtype = dtype.data_type
-                if not is_composite_type(dtype):
-                    continue
-                data_types.add(dtype)
+                if isinstance(dtype, ForeignRef) or is_composite_type(dtype):
+                    data_types.add(dtype)
         return data_types
 
 class ApiRoute(object):

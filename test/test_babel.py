@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import textwrap
 import unittest
 
 from babelapi.babel.parser import (
@@ -2240,3 +2241,29 @@ struct S
             "Symbol 'S' already defined (test1.babel:3).",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 4)
+
+    def test_referenced_namespaces(self):
+        text1 = textwrap.dedent("""\
+            namespace ns1
+            struct S1
+                f1 String
+            struct S2
+                f2 String
+        """)
+        text2 = textwrap.dedent("""\
+            namespace ns2
+            import ns1
+            struct S3
+                f3 String
+            route r1(ns1.S1, ns1.S2, S3)
+        """)
+        t = TowerOfBabel([('ns1.babel', text1), ('ns2.babel', text2)])
+        t.parse()
+        self.assertEqual(t.api.namespaces['ns2'].referenced_namespaces,
+                         [t.api.namespaces['ns1']])
+        xs = t.api.namespaces['ns2'].distinct_route_io_data_types()
+        xs = sorted(xs, key=lambda x: x.name.lower())
+        self.assertEqual(len(xs), 3)
+        self.assertEqual(xs[0].name, 'ns1.S1')
+        self.assertEqual(xs[1].name, 'ns1.S2')
+        self.assertEqual(xs[2].name, 'S3')

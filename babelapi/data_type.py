@@ -1299,6 +1299,15 @@ class ForeignRef(object):
         self.namespace_name = namespace_name
         self.data_type = data_type
 
+    @property
+    def name(self):
+        """Return the namespace name concatenated with the data type's name.
+
+        This is a convenience so a set of composite and foreign data
+        types can be sorted by the 'name' attribute.
+        """
+        return '{}.{}'.format(self.namespace_name, self.data_type.name)
+
     def __repr__(self):
         return 'ForeignRef(%r, %r)' % (self.namespace_name, self.data_type)
 
