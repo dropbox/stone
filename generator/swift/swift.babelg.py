@@ -55,10 +55,6 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         shutil.copy(os.path.join(cur_folder, 'Client.swift'),
                     self.target_folder_path)
 
-        self.logger.info('Copying Auth.swift to output folder')
-        shutil.copy(os.path.join(cur_folder, 'Auth.swift'),
-                    self.target_folder_path)
-
         for namespace in api.namespaces.values():
             path = '{}.swift'.format(self.lang.format_class(namespace.name))
             with self.output_to_relative_path(path):
@@ -497,7 +493,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     def _generate_routes(self, namespace):
         if not len(namespace.routes):
             return
-        with self.block('extension DropboxClient'):
+        with self.block('extension BabelClient'):
             for route in namespace.routes:
                 self._generate_route(namespace, route)
 
@@ -544,7 +540,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
         with self.function_block('public func {}'.format(func_name),
                                  args=self._func_args(arg_list, force_first=True),
-                                 return_type='Dropbox{}Request<{}, {}>'.format(route_type,
+                                 return_type='Babel{}Request<{}, {}>'.format(route_type,
                                                                                rtype,
                                                                                etype)):
 
@@ -570,4 +566,4 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                                                            namespace=namespace)),
             ])
 
-            self.emit('return Dropbox{}Request({})'.format(route_type, self._func_args(func_args)))
+            self.emit('return Babel{}Request({})'.format(route_type, self._func_args(func_args)))
