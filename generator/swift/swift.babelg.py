@@ -297,7 +297,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     'return "\(prepareJSONForSerialization({}().serialize(self)))"'.format(cls)
                 )
 
-        self._generate_struct_class_serializer(data_type)
+        self._generate_struct_class_serializer(namespace, data_type)
 
     def _struct_init_args(self, data_type, namespace=None):
         args = []
@@ -326,6 +326,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     def _generate_struct_init(self, namespace, data_type):
         # init method
         args = self._struct_init_args(data_type)
+        if data_type.parent_type and not data_type.fields:
+            return
         with self.function_block('public init', self._func_args(args)):
             for field in data_type.fields:
                 v = self.lang.format_variable(field.name)
@@ -339,7 +341,54 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                              for f in data_type.parent_type.all_fields]
                 self.emit('super.init({})'.format(self._func_args(func_args)))
 
-    def _generate_struct_class_serializer(self, data_type):
+    def _generate_enumerated_subtype_serializer(self, namespace, data_type):
+        with self.block('switch value'):
+            for tag, subtype in data_type.get_all_subtypes_with_tags():
+                tagvar = self.lang.format_variable(tag)
+                self.emit('case let {} as {}:'.format(
+                    tagvar,
+                    self._swift_type_mapping(subtype, namespace=namespace)
+                ))
+
+                with self.indent():
+                    with self.block('for (k,v) in Serialization.getFields({}.serialize({}))'.format(
+                        self._serializer_obj(subtype), tagvar
+                    )):
+                        self.emit('output[k] = v')
+                    self.emit('output[".tag"] = .Str("{}")'.format(tag))
+            self.emit('default: fatalError("Tried to serialize unexpected subtype")')
+
+    def _generate_struct_base_class_deserializer(self, namespace, data_type):
+            args = []
+            for field in data_type.all_fields:
+                var = self.lang.format_variable(field.name)
+                self.emit('let {} = {}.deserialize(dict["{}"] ?? .Null)'.format(
+                    var,
+                    self._serializer_obj(field.data_type),
+                    field.name,
+                ))
+
+                args.append((var, var))
+            self.emit('return {}({})'.format(
+                self.class_data_type(data_type),
+                self._func_args(args)
+            ))
+
+    def _generate_enumerated_subtype_deserializer(self, namespace, data_type):
+        self.emit('let tag = Serialization.getTag(dict)')
+        with self.block('switch tag'):
+            for tag, subtype in data_type.get_all_subtypes_with_tags():
+                self.emit('case "{}":'.format(tag))
+                with self.indent():
+                    self.emit('return {}.deserialize(json)'.format(self._serializer_obj(subtype)))
+            self.emit('default:')
+            with self.indent():
+                if data_type.is_catch_all():
+                    self._generate_struct_base_class_deserializer(namespace, data_type)
+                else:
+                    self.emit('fatalError("Unknown tag \\(tag)")')
+
+    def _generate_struct_class_serializer(self, namespace, data_type):
         with self.serializer_block(data_type):
             with self.serializer_func(data_type):
                 if not data_type.all_fields:
@@ -353,25 +402,18 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                             self.lang.format_variable(field.name)
                         ))
                     self.emit(']')
+
+                    if data_type.has_enumerated_subtypes():
+                        self._generate_enumerated_subtype_serializer(namespace, data_type)
                 self.emit('return .Dictionary(output)')
             with self.deserializer_func(data_type):
                 with self.block("switch json"):
                     self.emit("case .Dictionary(let dict):")
                     with self.indent():
-                        args = []
-                        for field in data_type.all_fields:
-                            var = self.lang.format_variable(field.name)
-                            self.emit('let {} = {}.deserialize(dict["{}"] ?? .Null)'.format(
-                                var,
-                                self._serializer_obj(field.data_type),
-                                field.name,
-                            ))
-
-                            args.append((var, var))
-                        self.emit('return {}({})'.format(
-                            self.class_data_type(data_type),
-                            self._func_args(args)
-                        ))
+                        if data_type.has_enumerated_subtypes():
+                            self._generate_enumerated_subtype_deserializer(namespace, data_type)
+                        else:
+                            self._generate_struct_base_class_deserializer(namespace, data_type)
                     self.emit("default:")
                     with self.indent():
                         self.emit('assert(false, "Type error deserializing")')
@@ -405,6 +447,12 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
         self._generate_union_serializer(data_type)
 
+    def _tag_type(self, data_type, field):
+        return "{}.{}".format(
+            self.class_data_type(data_type),
+            self.lang.format_class(field.name)
+        )
+
     def _generate_union_serializer(self, data_type):
         with self.serializer_block(data_type):
             with self.serializer_func(data_type), self.block('switch value'):
@@ -412,83 +460,52 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     field_type = field.data_type
                     if is_nullable_type(field_type):
                         field_type = field_type.data_type
-                        nullable = True
-                    else:
-                        nullable = False
                     case = '.{}'.format(self.lang.format_class(field.name))
-                    if is_void_type(field_type):
-                        ret = '.Str("{}")'.format(field.name)
-                    else:
+                    d = ['".tag": .Str("{}")'.format(field.name)]
+                    if not is_void_type(field_type):
                         case += '(let arg)'
-                        if nullable:
-                            ret = 'arg == nil ? .Str("{}") : .Dictionary(["{}" : {}.serialize(arg!)])'.format(
-                                field.name,
-                                field.name,
-                                self._serializer_obj(field.data_type)
-                            )
-                        else:
-                            ret = '.Dictionary(["{}": {}.serialize(arg)])'.format(
-                                field.name,
-                                self._serializer_obj(field_type))
+                        d.append('"{}": {}.serialize(arg)'.format(
+                            field.name,
+                            self._serializer_obj(field.data_type)
+                        ))
+
+                    ret = ".Dictionary([{}])".format(", ".join(d))
                     self.emit('case {}:'.format(case))
                     with self.indent():
                         self.emit('return {}'.format(ret))
             with self.deserializer_func(data_type):
-                composites = []
-                symbols = []
-
-                for field in data_type.fields:
-                    field_type = field.data_type
-                    if is_nullable_type(field_type):
-                        field_type = field_type.data_type
-                        nullable = True
-                    else:
-                        nullable = False
-                    if is_void_type(field_type):
-                        ret = "return {}.{}".format(
-                            self.class_data_type(data_type),
-                            self.lang.format_class(field.name)
-                        )
-                        symbols.append((field.name, ret))
-                    else:
-                        serializer = self._serializer_obj(field_type)
-                        composites.append((field.name, serializer))
-                    # and since we allow both "tag" and {"tag": null} to represent a nullable field,
-                    # we *also* add this to the String-tag based deserialization.
-                    if nullable:
-                        ret = "return {}.{}(nil)".format(
-                            self.class_data_type(data_type),
-                            self.lang.format_class(field.name)
-                        )
-                        symbols.append((field.name, ret))
-
                 with self.block("switch json"):
-                    if symbols:
-                        self.emit("case .Str(let str):")
-                        with self.indent(), self.block('switch str'):
-                            for case, ret in symbols:
-                                self.emit('case "{}":'.format(case))
+                    self.emit("case .Dictionary(let d):")
+                    with self.indent():
+                        self.emit('let tag = Serialization.getTag(d)')
+                        with self.block('switch tag'):
+                            for field in data_type.fields:
+                                field_type = field.data_type
+                                if is_nullable_type(field_type):
+                                    field_type = field_type.data_type
+
+                                self.emit('case "{}":'.format(field.name))
+
+                                tag_type = self._tag_type(data_type, field)
                                 with self.indent():
-                                    self.emit(ret)
+                                    if is_void_type(field_type):
+                                        self.emit('return {}'.format(tag_type))
+                                    else:
+                                        self.emit('let v = {}.deserialize(d["{}"] ?? .Null)'.format(
+                                            self._serializer_obj(field_type), field.name
+                                        ))
+                                        self.emit('return {}(v)'.format(tag_type))
                             self.emit('default:')
                             with self.indent():
-                                self.emit('assert(false, "Invalid tag \\"\\(str)\\"")')
-                    if composites:
-                        self.emit("case .Dictionary(let d):")
-                        with self.indent():
-                            self.emit('assert(d.count == 1, "Expected 1 key, got \\(d.count)")')
-                            prefix = ''
-                            for f, serializer in composites:
-                                with self.block('{}if let val = d["{}"]'.format(prefix, f)):
-                                    self.emit('let obj = {}.deserialize(val)'.format(serializer))
-                                    self.emit('return {}.{}(obj)'.format(
-                                        self.class_data_type(data_type),
-                                        self.lang.format_class(f),
+                                if data_type.catch_all_field:
+                                    self.emit('return {}'.format(
+                                        self._tag_type(data_type, data_type.catch_all_field)
                                     ))
-                                prefix = 'else '
-                            self.emit('else { assert(false, "Unexpected tag") }')
+                                else:
+                                    self.emit('fatalError("Unknown tag \(tag)")')
                     self.emit("default:")
                     with self.indent():
+
                         self.emit('assert(false, "Failed to deserialize")')
     def _generate_routes(self, namespace):
         if not len(namespace.routes):
