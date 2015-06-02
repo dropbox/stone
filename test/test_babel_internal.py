@@ -370,4 +370,4 @@ class TestBabelInternal(unittest.TestCase):
 
         # test that dict is returned for a tagged struct variant
         self.assertEqual(conflict.get_examples()['default'].value,
-            {'update_if_matching_parent_rev': {'parent_rev': 'xyz123'}})
+            {'.tag': 'update_if_matching_parent_rev', 'parent_rev': 'xyz123'})

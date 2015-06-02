@@ -59,14 +59,24 @@ serializes to::
 Setting ``name`` or ``address`` to ``null`` is not a valid serialization;
 deserializers will raise an error.
 
+An explicit ``null`` is allowed for fields with nullable types. While it's
+less compact, this makes serialization easier in some languages. The previous
+example could therefore be represented as::
+
+    {
+     "age": 28,
+     "address": null
+    }
+
 Enumerated Subtypes
 -------------------
 
-A struct that enumerates subtypes serializes differently from a regular
-struct. Here's an example to demonstrate::
+A struct that enumerates subtypes serializes similarly to a regular struct,
+but includes a ``.tag`` key to distinguish the type. Here's an example to
+demonstrate::
 
     struct A
-        union
+        union*
             b B
             c C
         w Int64
@@ -75,114 +85,106 @@ struct. Here's an example to demonstrate::
         x Int64
 
     struct C extends A
-        union*
-            c1 C1
-            c2 C2
         y Int64
-
-    struct C1 extends C
-        z Int64
-
-    struct C2 extends C
-        "No new fields."
 
 Serializing ``A`` when it contains a struct ``B`` (with values of ``1`` for
 each field) appears as::
 
     {
+     ".tag": "b",
      "w": 1,
-     "b": {
-      "x": 1
-     }
+     "x": 1
     }
 
-Serializing ``A`` when it contains a struct ``C1`` appears as::
-
-    {
-     "w": 1,
-     "c": {
-      "y": 1,
-      "c1": {
-       "z": 1
-      }
-     }
-    }
-
-Serializing ``A`` when it contains a struct ``C2`` appears as::
-
-    {
-     "w": 1,
-     "c": {
-      "y": 1,
-      "c2": {}
-     }
-    }
-
-Note how type tags are treated identically to fields in the JSON object. A type
-tag always has a JSON object as its value which contains data specific to the
-referenced subtype.
-
-If the recipient receives a tag it is unaware of, it should at first apply the
-same policy it uses for fields it is unaware of. In fact, a recipient will be
-unable to determine whether the unknown JSON object key refers to a type tag or
-a field. The recipient should then determine if the tag refers to a struct
-that's a catch-all. If so, it should return that base type, otherwise, the
-message should be rejected.
+If the recipient receives a tag it cannot match to a type, it should fallback
+to the parent type if it's specified as a catch-all.
 
 For example::
 
     {
+     ".tag": "d",
      "w": 1,
-     "c": {
-      "y": 1,
-      "c3": {}
-     }
+     "z": 1
     }
 
-Because ``c3`` is unknown, the recipient checks that struct ``C`` is a
-catch-all. Since it is, it deserializes the message to a ``C`` object.
+Because ``d`` is unknown, the recipient checks that struct ``A`` is a
+catch-all. Since it is, it deserializes the message to an ``A`` object.
 
 Union
 =====
 
-A tag with an associated type is represented as a JSON object. The key is the
-tag name, and the value is the tag value. For example::
+Let's use the following example to illustrate how a union is serialized::
 
     union U
+        singularity
         number Int64
-        string String
+        coord Coordinate?
 
-If the ``number`` tag is populated with ``42``, this serializes to::
+    struct Coordinate
+        x Int64
+        y Int64
+
+The serialization of ``U`` with tag ``singularity`` is::
 
     {
-      "number": 42
+     ".tag": "singularity"
     }
 
-In the case of a tag with a Void type, the union serializes to a string of the
-tag name. For example::
+The ``.tag`` key makes it easy for a recipient to immediately determine the
+selected union member.
 
-    union U
-        a
-        b
+For a union member of primitive type (``number`` in the example), the
+serialization is as follows::
 
-This serializes to either::
+    {
+     ".tag": "number",
+     "number": 42
+    }
 
-    "a"
+Note that ``number`` is used as the value for ``.tag`` and as a key to hold
+the value. This same pattern is used for union members with types that are
+other unions or structs with enumerated subtypes.
 
-or::
+Union members that are structs that do no enumerate subtypes (``coord`` in the
+example) serialize as the struct with the addition of a ``.tag`` key. For
+example, the serialization of ``Coordinate`` is::
 
-    "b"
+    {
+     "x": 1,
+     "y": 2
+    }
 
-Likewise, if a tag has a nullable value that is unset, then the union
-serializes to a string of the tag name. For example::
+The serialization of ``U`` with tag ``coord`` is::
 
-    union U
-        a Int64?
-        b String
+    {
+     ".tag": "coord",
+     "x": 1,
+     "y": 2
+    }
 
-If ``a`` is selected with an unset value, this serializes to::
+Nullable
+^^^^^^^^
 
-    "number"
+Note that ``coord`` references a nullable type. If it's unset, then the
+serialization only includes the tag::
 
-It is not a valid serialization to use a JSON object with a ``number`` key
-and ``null`` value; deserializers will raise an error.
+    {
+     ".tag": "coord"
+    }
+
+You may notice that if ``Coordinate`` was defined to have no fields, it is
+impossible to differentiate between an unset value and a value of coordinate.
+In these cases, we prescribe that the deserializer should return a null
+or unset value.
+
+Compact Form
+^^^^^^^^^^^^
+
+Deserializers should support an additional representation of void union
+members: the tag itself as a string. For example, tag ``singularity`` could
+be serialized as simply::
+
+    "singularity"
+
+This is convenient for humans manually entering the argument, allowing them to
+avoid typing an extra layer of JSON object nesting.

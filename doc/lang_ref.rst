@@ -492,18 +492,8 @@ subtypes. For example::
 Anywhere ``Resource`` is referenced, an instance of ``File`` or ``Folder``
 satisfies the type constraint.
 
-As you can infer, all leaf structs in the hierarchy will have no subtypes to
-enumerate, and thus will omit the ``union`` section. If a leaf struct is
-referenced as a type, it is indistinguishable from an ordinary struct
-definition.
-
-Enumerated subtypes have several additional constraints:
-
-    * If a struct enumerates subtypes, its parent must also enumerate its own
-      subtypes.
-    * If a struct's parent enumerates subtypes, it must enumerate its own
-      subtypes if it has any.
-    * Type tags cannot match the names of any of the struct fields.
+A struct that enumerates subtypes cannot inherit from any other struct. Also,
+type tags cannot match any field names.
 
 Catch-all
 ---------

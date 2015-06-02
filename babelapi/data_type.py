@@ -8,7 +8,7 @@ languages and serialization formats we want to support.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from abc import ABCMeta, abstractmethod
-from collections import OrderedDict
+from collections import OrderedDict, deque
 import copy
 import datetime
 import math
@@ -728,38 +728,47 @@ class Struct(CompositeType):
         self._is_catch_all = is_catch_all
         self._enumerated_subtypes = []
 
+        if self.parent_type:
+            raise InvalidSpec(
+                "'%s' enumerates subtypes so it cannot extend another struct."
+                % self.name, self._token.lineno, self._token.path)
+
         # Require that if this struct enumerates subtypes, its parent (and thus
         # the entire hierarchy above this struct) does as well.
         if self.parent_type and not self.parent_type.has_enumerated_subtypes():
             raise InvalidSpec(
                 "'%s' cannot enumerate subtypes if parent '%s' does not." %
-                (self.name, self.parent_type.name), self._token.lineno)
+                (self.name, self.parent_type.name),
+                self._token.lineno, self._token.path)
 
         enumerated_subtype_names = set()  # Set[str]
         for subtype_field in subtype_fields:
+            path = subtype_field._token.path
             lineno = subtype_field._token.lineno
 
             # Require that a subtype only has a single type tag.
             if subtype_field.data_type.name in enumerated_subtype_names:
                 raise InvalidSpec(
                     "Subtype '%s' can only be specified once." %
-                    subtype_field.data_type.name, lineno)
+                    subtype_field.data_type.name, lineno, path)
 
             # Require that a subtype has this struct as its parent.
             if subtype_field.data_type.parent_type != self:
                 raise InvalidSpec(
                     "'%s' is not a subtype of '%s'." %
-                    (subtype_field.data_type.name, self.name), lineno)
+                    (subtype_field.data_type.name, self.name), lineno, path)
 
             # Check for subtype tags that conflict with this struct's
             # non-inherited fields.
             if subtype_field.name in self._fields_by_name:
                 # Since the union definition comes first, use its line number
                 # as the source of the field's original declaration.
+                orig_field = self._fields_by_name[subtype_field.name]
                 raise InvalidSpec(
                     "Field '%s' already defined on line %d." %
                     (subtype_field.name, lineno),
-                    self._fields_by_name[subtype_field.name]._token.lineno)
+                    orig_field._token.lineno,
+                    orig_field._token.path)
 
             # Walk up parent tree hierarchy to ensure no field conflicts.
             # Checks for conflicts with subtype tags and regular fields.
@@ -768,10 +777,10 @@ class Struct(CompositeType):
                 if subtype_field.name in cur_type._fields_by_name:
                     orig_field = cur_type._fields_by_name[subtype_field.name]
                     raise InvalidSpec(
-                        "Field '%s' already defined in parent '%s' on line %d."
+                        "Field '%s' already defined in parent '%s' (%s:%d)."
                         % (subtype_field.name, cur_type.name,
-                           orig_field._token.lineno),
-                        lineno)
+                           orig_field._token.path, orig_field._token.lineno),
+                        lineno, path)
                 cur_type = cur_type.parent_type
 
             # Note the discrepancy between `fields` which contains only the
@@ -795,9 +804,7 @@ class Struct(CompositeType):
         """
         Unlike other enumerated-subtypes-related functionality, this method
         returns not just direct subtypes, but all subtypes of this struct. The
-        tag of each subtype is the tag of the enumerated subtype from which it
-        descended, which means that it's likely that subtypes will share the
-        same tag.
+        tag of each subtype is the list of tags from which the type descends.
 
         This method only applies to structs that enumerate subtypes.
 
@@ -806,17 +813,43 @@ class Struct(CompositeType):
         in the serialized format.
 
         Returns:
-            List[Tuple[String, Struct]]
+            List[Tuple[List[String], Struct]]
         """
         assert self.has_enumerated_subtypes(), 'Enumerated subtypes not set.'
-        subtypes_with_tags = []  # List[Tuple[String, Struct]]
-        for subtype_field in self.get_enumerated_subtypes():
-            subtypes_with_tags.append(
-                (subtype_field.name, subtype_field.data_type))
-            for subtype in subtype_field.data_type.subtypes:
-                subtypes_with_tags.append(
-                    (subtype_field.name, subtype))
+        subtypes_with_tags = []  # List[Tuple[List[String], Struct]]
+        fifo = deque([subtype_field.data_type
+                      for subtype_field in self.get_enumerated_subtypes()])
+        # Traverse down the hierarchy registering subtypes as they're found.
+        while fifo:
+            data_type = fifo.popleft()
+            subtypes_with_tags.append((data_type._get_subtype_tags(), data_type))
+            if data_type.has_enumerated_subtypes():
+                for subtype_field in data_type.get_enumerated_subtypes():
+                    fifo.append(subtype_field.data_type)
         return subtypes_with_tags
+
+    def _get_subtype_tags(self):
+        """
+        Returns a list of type tags that refer to this type starting from the
+        base of the struct hierarchy.
+        """
+        assert self.is_member_of_enumerated_subtypes_tree(), \
+            'Not a part of a subtypes tree.'
+        cur = self.parent_type
+        cur_dt = self
+        tags = []
+        while cur:
+            assert cur.has_enumerated_subtypes()
+            for subtype_field in cur.get_enumerated_subtypes():
+                if subtype_field.data_type is cur_dt:
+                    tags.append(subtype_field.name)
+                    break
+            else:
+                assert False, 'Could not find?!'
+            cur_dt = cur
+            cur = cur.parent_type
+        tags.reverse()
+        return tuple(tags)
 
     def _add_example(self, example):
         """Adds a "raw example" for this type.
@@ -1009,7 +1042,7 @@ class Struct(CompositeType):
 
         return Example(example.label, example.text, ex_val)
 
-    def _compute_example_enumerated_subtypes(self, label, root=True):
+    def _compute_example_enumerated_subtypes(self, label):
         """
         Analogous to :meth:`_compute_example_flat_helper` but for structs with
         enumerated subtypes.
@@ -1018,36 +1051,15 @@ class Struct(CompositeType):
 
         example = self._raw_examples[label]
 
-        if self.has_enumerated_subtypes():
-            tag, (ref, data_type) = list(example.value.items())[0]
-            if not data_type._has_example(ref.label):
-                raise InvalidSpec(
-                    "Reference to example for '%s' with label '%s' does not "
-                    "exist." % (data_type.name, ref.label),
-                    ref.lineno, ref.path)
-            flat_example, ex_sub_value = \
-                data_type._compute_example_enumerated_subtypes(ref.label, False)
-            ex_value = OrderedDict()
-            ex_value[tag] = ex_sub_value
-            for field in self.fields:
-                if field.name in flat_example.value:
-                    ex_value[field.name] = flat_example.value[field.name]
-                    del flat_example.value[field.name]
-            if root:
-                return Example(label, example.text, ex_value)
-            else:
-                return flat_example, ex_value
-        else:
-            # If we're at a leaf of a subtypes tree, then compute the example
-            # as if it were a flat struct. The caller is responsible for moving
-            # fields into different nesting levels based on the subtypes tree.
-            flat_example = self._compute_example_flat_helper(label)
-            ex_value = OrderedDict()
-            for field in self.fields:
-                if field.name in flat_example.value:
-                    ex_value[field.name] = flat_example.value[field.name]
-                    del flat_example.value[field.name]
-            return flat_example, ex_value
+        tag, (ref, data_type) = list(example.value.items())[0]
+        if not data_type._has_example(ref.label):
+            raise InvalidSpec(
+                "Reference to example for '%s' with label '%s' does not "
+                "exist." % (data_type.name, ref.label),
+                ref.lineno, ref.path)
+        flat_example = data_type._compute_example_flat_helper(ref.label)
+        flat_example.value['.tag'] = tag
+        return flat_example
 
     def __repr__(self):
         return 'Struct(%r, %r)' % (self.name, self.fields)
@@ -1224,11 +1236,12 @@ class Union(CompositeType):
             # Find the field referenced by this tag.
             for field in self.all_fields:
                 if tag == field.name:
-                        break
+                    break
             else:
                 raise AssertionError('Unknown tag %r' % tag)
 
-            dt, _ = get_underlying_type(field.data_type)
+            orig_dt, _ = get_underlying_type(field.data_type)
+            dt = orig_dt
             list_nesting_count = 0
             while is_list_type(dt):
                 dt = dt.data_type
@@ -1246,7 +1259,11 @@ class Union(CompositeType):
             while list_nesting_count > 0:
                 ex_val = [ex_val]
                 list_nesting_count -= 1
-            example_copy.value = {tag: ex_val}
+            if isinstance(orig_dt, Struct) and not dt.has_enumerated_subtypes():
+                ex_val.update({'.tag': tag})
+                example_copy.value = ex_val
+            else:
+                example_copy.value = {'.tag': tag, tag: ex_val}
 
             return example_copy
 

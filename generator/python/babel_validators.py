@@ -484,7 +484,7 @@ class Void(Primitive):
             raise ValidationError('expected NoneType, got %s' %
                                   generic_type_name(val))
 
-class Nullable(Primitive):
+class Nullable(Validator):
 
     def __init__(self, validator):
         assert isinstance(validator, (Primitive, Composite)), \

@@ -616,10 +616,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
         # the validator of the referenced subtype. Used on deserialization
         # to look up the subtype for a given tag.
         tag_to_subtype_items = []
-        for subtype_field in data_type.get_enumerated_subtypes():
-            tag_to_subtype_items.append("'{}': {}".format(
-                subtype_field.name,
-                self._generate_validator_constructor(subtype_field.data_type)))
+        for tags, subtype in data_type.get_all_subtypes_with_tags():
+            tag_to_subtype_items.append("{}: {}".format(
+                tags,
+                self._generate_validator_constructor(subtype)))
+
         self.generate_multiline_list(
             tag_to_subtype_items,
             before='{}._tag_to_subtype_ = '.format(data_type.name),
@@ -627,15 +628,15 @@ class PythonGenerator(CodeGeneratorMonolingual):
             compact=False)
 
         # Generate _pytype_to_tag_and_subtype_: Map from Python class to a
-        # tuple of (type tag, subtype). Used on serialization to lookup which
-        # how a class should be encoded based on the root struct that
-        # that enumerates subtypes.
+        # tuple of (type tag, subtype). Used on serialization to lookup how a
+        # class should be encoded based on the root struct's enumerated
+        # subtypes.
         items = []
         for tag, subtype in data_type.get_all_subtypes_with_tags():
-            items.append("{0}: ('{1}', {2}._tag_to_subtype_['{1}'])".format(
+            items.append("{0}: ({1}, {2})".format(
                 self.lang.format_class(subtype.name),
                 tag,
-                data_type.name))
+                self._generate_validator_constructor(subtype)))
         self.generate_multiline_list(
             items,
             before='{}._pytype_to_tag_and_subtype_ = '.format(data_type.name),

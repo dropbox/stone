@@ -343,7 +343,9 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
     def _generate_enumerated_subtype_serializer(self, namespace, data_type):
         with self.block('switch value'):
-            for tag, subtype in data_type.get_all_subtypes_with_tags():
+            for tags, subtype in data_type.get_all_subtypes_with_tags():
+                assert len(tags) == 1, tags
+                tag = tags[0]
                 tagvar = self.lang.format_variable(tag)
                 self.emit('case let {} as {}:'.format(
                     tagvar,
@@ -377,7 +379,9 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     def _generate_enumerated_subtype_deserializer(self, namespace, data_type):
         self.emit('let tag = Serialization.getTag(dict)')
         with self.block('switch tag'):
-            for tag, subtype in data_type.get_all_subtypes_with_tags():
+            for tags, subtype in data_type.get_all_subtypes_with_tags():
+                assert len(tags) == 1, tags
+                tag = tags[0]
                 self.emit('case "{}":'.format(tag))
                 with self.indent():
                     self.emit('return {}.deserialize(json)'.format(self._serializer_obj(subtype)))

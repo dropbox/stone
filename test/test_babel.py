@@ -764,6 +764,32 @@ struct File extends Resource
             t.parse()
         self.assertIn("already defined on", cm.exception.msg)
 
+        # Test if a leaf and its parent do not enumerate subtypes, but its
+        # grandparent does.
+        text = """\
+namespace test
+
+struct A
+    union
+        b B
+    c String
+
+struct B extends A
+    "No enumerated subtypes."
+
+struct C extends B
+    "No enumerated subtypes."
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("cannot be extended", cm.exception.msg)
+
+    def unused_enumerated_subtypes_tests(self):
+        # Currently, Babel does not allow for a struct that enumerates subtypes
+        # to inherit from another struct that does. These tests only apply if
+        # this restriction is removed.
+
         # Test name conflict with field in parent
         text = """\
 namespace test
@@ -829,27 +855,6 @@ struct D extends C
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("cannot enumerate subtypes if parent", cm.exception.msg)
-
-        # Test if a leaf and its parent do not enumerate subtypes, but its
-        # grandparent does.
-        text = """\
-namespace test
-
-struct A
-    union
-        b B
-    c String
-
-struct B extends A
-    "No enumerated subtypes."
-
-struct C extends B
-    "No enumerated subtypes."
-"""
-        t = TowerOfBabel([('test.babel', text)])
-        with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
-        self.assertIn("cannot be extended", cm.exception.msg)
 
     def test_nullable(self):
         # Test stacking nullable
@@ -1776,7 +1781,7 @@ union U
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'b': 'A'})
+                         {'.tag': 'b', 'b': 'A'})
         self.assertEqual(u_dt.get_examples()['a'].value, 'a')
         self.assertNotIn('b', u_dt.get_examples())
 
@@ -1800,7 +1805,7 @@ struct S
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'a': [[{'f': 'A'}]]})
+                         {'.tag': 'a', 'a': [[{'f': 'A'}]]})
 
         # Test union with list of primitives
         text = """\
@@ -1816,7 +1821,7 @@ union U
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'a': [['hi']]})
+                         {'.tag': 'a', 'a': [['hi']]})
 
         # Test union with list of primitives (bad type)
         text = """\
@@ -1852,7 +1857,7 @@ union V extends U
         t.parse()
         v_dt = t.api.namespaces['test'].data_type_by_name['V']
         self.assertEqual(v_dt.get_examples()['default'].value,
-                         {'a': 'A'})
+                         {'.tag': 'a', 'a': 'A'})
 
         # Test union and struct
         text = """\
@@ -1881,9 +1886,9 @@ struct S
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'s': {'f': 'F'}})
+                         {'.tag': 's', 'f': 'F'})
         self.assertEqual(u_dt.get_examples()['other'].value,
-                         {'s': {'f': 'O'}})
+                         {'.tag': 's', 'f': 'O'})
 
         # Test union referencing non-existent struct example
         text = """\
@@ -1953,7 +1958,7 @@ struct S2
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'u': {'b': {'f': 'F'}}})
+                         {'u': {'.tag': 'b', 'f': 'F'}})
 
         # Test TagRef
         text = """\
@@ -2121,7 +2126,7 @@ struct T extends R
         t.parse()
         r_dt = t.api.namespaces['test'].data_type_by_name['R']
         self.assertEqual(r_dt.get_examples()['default'].value,
-                         {'a': 'A', 's': {'b': 'B'}})
+                         {'.tag': 's', 'a': 'A', 'b': 'B'})
 
         # Test missing custom example
         text = """\
