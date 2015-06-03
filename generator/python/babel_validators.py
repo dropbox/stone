@@ -27,14 +27,18 @@ else:
 class ValidationError(Exception):
     """Raised when a value doesn't pass validation by its validator."""
 
-    def __init__(self, message):
+    def __init__(self, message, parent=None):
         """
         Args:
             message (str): Error message detailing validation failure.
+            parent (str): Adds the parent as the closest reference point for
+                the error. Use :meth:`add_parent` to add more.
         """
         super(ValidationError, self).__init__(message)
         self.message = message
         self._parents = []
+        if parent:
+            self._parents.append(parent)
 
     def add_parent(self, parent):
         """

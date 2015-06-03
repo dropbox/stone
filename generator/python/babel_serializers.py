@@ -97,7 +97,7 @@ def json_compat_obj_encode(data_type, obj, old_style=False):
         data_type.validate(obj)
     return _json_compat_obj_encode_helper(data_type, obj, old_style)
 
-def _json_compat_obj_encode_helper(data_type, obj, old_style=False):
+def _json_compat_obj_encode_helper(data_type, obj, old_style):
     """
     See json_encode() for argument descriptions.
     """
@@ -120,7 +120,7 @@ def _json_compat_obj_encode_helper(data_type, obj, old_style=False):
         raise AssertionError('Unsupported data type %r' %
                              type(data_type).__name__)
 
-def _encode_list(data_type, obj, old_style=False):
+def _encode_list(data_type, obj, old_style):
     """
     The data_type argument must be a List.
     See json_encode() for argument descriptions.
@@ -130,7 +130,7 @@ def _encode_list(data_type, obj, old_style=False):
     return [_json_compat_obj_encode_helper(data_type.item_validator, item, old_style)
             for item in obj]
 
-def _encode_nullable(data_type, obj, old_style=False):
+def _encode_nullable(data_type, obj, old_style):
     """
     The data_type argument must be a Nullable.
     See json_encode() for argument descriptions.
@@ -140,7 +140,7 @@ def _encode_nullable(data_type, obj, old_style=False):
     else:
         return None
 
-def _encode_struct(data_type, obj, old_style=False):
+def _encode_struct(data_type, obj, old_style):
     """
     The data_type argument must be a Struct or StructTree.
     See json_encode() for argument descriptions.
@@ -180,7 +180,7 @@ def _encode_union(data_type, obj):
     else:
         try:
             encoded_val = _json_compat_obj_encode_helper(
-                field_data_type, obj._value)
+                field_data_type, obj._value, False)
         except bv.ValidationError as e:
             e.add_parent(obj._tag)
             raise
@@ -225,7 +225,7 @@ def _encode_union_old(data_type, obj):
             else:
                 return {obj._tag: encoded_val}
 
-def _encode_struct_tree(data_type, obj, old_style=False):
+def _encode_struct_tree(data_type, obj, old_style):
     """
     Args:
         data_type (StructTree)
@@ -239,17 +239,15 @@ def _encode_struct_tree(data_type, obj, old_style=False):
         '%r is not a serializable subtype of %r.' %
         (type(obj), data_type.definition))
     tags, subtype = data_type.definition._pytype_to_tag_and_subtype_[type(obj)]
+    assert len(tags) == 1, tags
     assert not isinstance(subtype, bv.StructTree), (
         'Cannot serialize type %r because it enumerates subtypes.' %
         subtype.definition)
     if old_style:
         return {tags[0]: _encode_struct(subtype, obj, old_style)}
     d = collections.OrderedDict()
-    tag_key = '.tag'
-    for tag in tags:
-        d[tag_key] = tag
-        tag_key = '.tag.%s' % tag
-    d.update(_encode_struct(subtype, obj))
+    d['.tag'] = tags[0]
+    d.update(_encode_struct(subtype, obj, old_style))
     return d
 
 def _make_json_friendly(data_type, val):
@@ -326,29 +324,29 @@ def json_compat_obj_decode(data_type, obj, strict=True, old_style=False):
     else:
         return _json_compat_obj_decode_helper(data_type, obj, strict, old_style)
 
-def _json_compat_obj_decode_helper(data_type, obj, strict, old_style=False):
+def _json_compat_obj_decode_helper(data_type, obj, strict, old_style):
     """
     See json_compat_obj_decode() for argument descriptions.
     """
     if isinstance(data_type, bv.StructTree):
         return _decode_struct_tree(data_type, obj, strict)
     elif isinstance(data_type, bv.Struct):
-        return _decode_struct(data_type, obj, strict)
+        return _decode_struct(data_type, obj, strict, old_style)
     elif isinstance(data_type, bv.Union):
         if old_style:
             return _decode_union_old(data_type, obj, strict)
         else:
             return _decode_union(data_type, obj, strict)
     elif isinstance(data_type, bv.List):
-        return _decode_list(data_type, obj, strict)
+        return _decode_list(data_type, obj, strict, old_style)
     elif isinstance(data_type, bv.Nullable):
-        return _decode_nullable(data_type, obj, strict)
+        return _decode_nullable(data_type, obj, strict, old_style)
     elif isinstance(data_type, bv.Primitive):
         return _make_babel_friendly(data_type, obj, strict, False)
     else:
         raise AssertionError('Cannot handle type %r.' % data_type)
 
-def _decode_struct(data_type, obj, strict):
+def _decode_struct(data_type, obj, strict, old_style):
     """
     The data_type argument must be a Struct.
     See json_compat_obj_decode() for argument descriptions.
@@ -362,12 +360,13 @@ def _decode_struct(data_type, obj, strict):
                     not key.startswith('.tag')):
                 raise bv.ValidationError("unknown field '%s'" % key)
     ins = data_type.definition()
-    _decode_struct_fields(ins, data_type.definition._all_fields_, obj, strict)
+    _decode_struct_fields(ins, data_type.definition._all_fields_, obj, strict,
+                          old_style)
     # Check that all required fields have been set.
     data_type.validate_fields_only(ins)
     return ins
 
-def _decode_struct_fields(ins, fields, obj, strict):
+def _decode_struct_fields(ins, fields, obj, strict, old_style):
     """
     Args:
         ins: An instance of the class representing the data type being decoded.
@@ -383,7 +382,7 @@ def _decode_struct_fields(ins, fields, obj, strict):
         if name in obj:
             try:
                 v = _json_compat_obj_decode_helper(
-                    field_data_type, obj[name], strict)
+                    field_data_type, obj[name], strict, old_style)
                 setattr(ins, name, v)
             except bv.ValidationError as e:
                 e.add_parent(name)
@@ -452,7 +451,7 @@ def _decode_union_dict(data_type, obj, strict):
             raw_val = obj[tag]
             try:
                 val = _json_compat_obj_decode_helper(
-                    val_data_type, raw_val, strict)
+                    val_data_type, raw_val, strict, False)
             except bv.ValidationError as e:
                 e.add_parent(tag)
                 raise
@@ -473,7 +472,7 @@ def _decode_union_dict(data_type, obj, strict):
             raw_val = obj
             try:
                 val = _json_compat_obj_decode_helper(
-                    val_data_type, raw_val, strict)
+                    val_data_type, raw_val, strict, False)
             except bv.ValidationError as e:
                 e.add_parent(tag)
                 raise
@@ -523,7 +522,7 @@ def _decode_union_old(data_type, obj, strict):
             else:
                 try:
                     val = _json_compat_obj_decode_helper(
-                        val_data_type, raw_val, strict, True)
+                        val_data_type, raw_val, strict, old_style=True)
                 except bv.ValidationError as e:
                     e.add_parent(tag)
                     raise
@@ -543,7 +542,7 @@ def _decode_struct_tree(data_type, obj, strict):
     See json_compat_obj_decode() for argument descriptions.
     """
     subtype = _determine_struct_tree_subtype(data_type, obj, strict)
-    return _decode_struct(subtype, obj, strict)
+    return _decode_struct(subtype, obj, strict, False)
 
 def _determine_struct_tree_subtype(data_type, obj, strict):
     """
@@ -552,20 +551,13 @@ def _determine_struct_tree_subtype(data_type, obj, strict):
     """
     if '.tag' not in obj:
         raise bv.ValidationError("missing '.tag' key")
-
-    # Collect all the tags
-    tags = []
-    cur_tag = '.tag'
-    while cur_tag in obj:
-        next_subtag = obj[cur_tag]
-        if not isinstance(next_subtag, six.string_types):
-            raise bv.ValidationError('expected string, got %s' %
-                                     bv.generic_type_name(next_subtag))
-        cur_tag += '.' + next_subtag
-        tags.append(next_subtag)
+    if not isinstance(obj['.tag'], six.string_types):
+        raise bv.ValidationError('expected string, got %s' %
+                                 bv.generic_type_name(obj['.tag']),
+                                 parent='.tag')
 
     # Find the subtype the tags refer to
-    full_tags_tuple = tuple(tags)
+    full_tags_tuple = (obj['.tag'],)
     if full_tags_tuple in data_type.definition._tag_to_subtype_:
         subtype = data_type.definition._tag_to_subtype_[full_tags_tuple]
         if isinstance(subtype, bv.StructTree):
@@ -579,25 +571,15 @@ def _determine_struct_tree_subtype(data_type, obj, strict):
             raise bv.ValidationError("unknown subtype '%s'" %
                                      '.'.join(full_tags_tuple))
         else:
-            # Remove tags one at a time until a matching subtype is found.
-            while tags:
-                if tuple(tags) in data_type.definition._tag_to_subtype_:
-                    subtype = data_type.definition._tag_to_subtype_[tuple(tags)]
-                    break
-                else:
-                    tags.pop()
-            else:
-                # If not subtype was found, use the base.
-                subtype = data_type
-
-            if subtype.definition._is_catch_all_:
-                return subtype
+            # If subtype was not found, use the base.
+            if data_type.definition._is_catch_all_:
+                return data_type
             else:
                 raise bv.ValidationError(
                     "unknown subtype '%s' and '%s' is not a catch-all" %
-                    ('.'.join(full_tags_tuple), subtype.definition.__name__))
+                    ('.'.join(full_tags_tuple), data_type.definition.__name__))
 
-def _decode_list(data_type, obj, strict):
+def _decode_list(data_type, obj, strict, old_style):
     """
     The data_type argument must be a List.
     See json_compat_obj_decode() for argument descriptions.
@@ -606,16 +588,17 @@ def _decode_list(data_type, obj, strict):
         raise bv.ValidationError(
             'expected list, got %s' % bv.generic_type_name(obj))
     return [_json_compat_obj_decode_helper(data_type.item_validator,
-                                           item, strict)
+                                           item, strict, old_style)
             for item in obj]
 
-def _decode_nullable(data_type, obj, strict):
+def _decode_nullable(data_type, obj, strict, old_style):
     """
     The data_type argument must be a Nullable.
     See json_compat_obj_decode() for argument descriptions.
     """
     if obj is not None:
-        return _json_compat_obj_decode_helper(data_type.validator, obj, strict)
+        return _json_compat_obj_decode_helper(data_type.validator, obj, strict,
+                                              old_style)
     else:
         return None
 

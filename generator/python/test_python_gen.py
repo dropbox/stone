@@ -530,6 +530,7 @@ union V
     t7 Resource
     t8 Resource?
     t9 List(String)
+    t10 List(U)
 
 struct S
     f String
@@ -778,6 +779,15 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(v, self.ns.V)
         self.assertEqual(v.get_t9(), ['a', 'b'])
 
+        # Test member that is a list (old style)
+        v = json_decode(
+            bv.Union(self.ns.V),
+            json.dumps({'t10': [{'t1': 'hello'}]}),
+            old_style=True)
+        self.assertIsInstance(v, self.ns.V)
+        t10 = v.get_t10()
+        self.assertEqual(t10[0].get_t1(), 'hello')
+
     def test_union_encoding(self):
         # Test void union member
         v_t0 = self.ns.V.t0
@@ -900,7 +910,7 @@ class TestGeneratedPython(unittest.TestCase):
             json_compat_obj_decode(
                 bv.StructTree(self.ns.Resource),
                 {'.tag': 123, 'name': 'test.doc'})
-        self.assertEqual("expected string, got integer", str(cm.exception))
+        self.assertEqual(".tag: expected string, got integer", str(cm.exception))
 
         # Test deserializing an unknown leaf in strict mode
         with self.assertRaises(bv.ValidationError) as cm:
