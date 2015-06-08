@@ -458,17 +458,20 @@ class CompositeType(DataType):
 
     DEFAULT_EXAMPLE_LABEL = 'default'
 
-    def __init__(self, name, token):
+    def __init__(self, name, namespace, token):
         """
         When this is instantiated, the type is treated as a forward reference.
         Only when :meth:`set_attributes` is called is the type considered to
         be fully defined.
 
-        :param str name: Name of type
+        :param str name: Name of type.
+        :param babelapi.api.Namespace namespace: The namespace this type is
+            defined in.
         :param token: Raw type definition from the parser.
         :type token: babelapi.babel.parser.BabelTypeDef
         """
         self._name = name
+        self.namespace = namespace
         self._token = token
         self._is_forward_ref = True
 
@@ -492,6 +495,7 @@ class CompositeType(DataType):
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self.fields = fields
+        self.parent_type = parent_type
         self._raw_examples = OrderedDict()
         self._examples = OrderedDict()
         self._fields_by_name = {}  # Dict[str, Field]
@@ -505,18 +509,9 @@ class CompositeType(DataType):
                                   field._token.lineno)
             self._fields_by_name[field.name] = field
 
-        self.parent_type = parent_type
-        if self.parent_type:
-            if isinstance(parent_type, ForeignRef):
-                self.parent_type_deref = self.parent_type.data_type
-            else:
-                self.parent_type_deref = self.parent_type
-        else:
-            self.parent_type_deref = None
-
         # Check that the fields for this type do not match any of the fields of
         # its parents.
-        cur_type = self.parent_type_deref
+        cur_type = self.parent_type
         while cur_type:
             for field in self.fields:
                 if field.name in cur_type._fields_by_name:
@@ -525,7 +520,7 @@ class CompositeType(DataType):
                         "Field '%s' already defined in parent '%s' on line %d."
                         % (field.name, cur_type.name, lineno),
                         field._token.lineno)
-            cur_type = cur_type.parent_type_deref
+            cur_type = cur_type.parent_type
 
         # Indicate that the attributes of the type have been populated.
         self._is_forward_ref = False
@@ -597,9 +592,7 @@ class Struct(CompositeType):
         """
 
         if parent_type:
-            assert (isinstance(parent_type, Struct) or
-                    (isinstance(parent_type, ForeignRef) and
-                     isinstance(parent_type.data_type, Struct)))
+            assert isinstance(parent_type, Struct)
 
         self.subtypes = []
 
@@ -609,8 +602,8 @@ class Struct(CompositeType):
 
         super(Struct, self).set_attributes(doc, fields, parent_type)
 
-        if self.parent_type_deref:
-            self.parent_type_deref.subtypes.append(self)
+        if self.parent_type:
+            self.parent_type.subtypes.append(self)
 
     def check(self, val):
         # Enforce the existence of all fields
@@ -641,11 +634,7 @@ class Struct(CompositeType):
         """
         fields = []
         if self.parent_type:
-            if isinstance(self.parent_type, ForeignRef):
-                parent_type = self.parent_type.data_type
-            else:
-                parent_type = self.parent_type
-            fields.extend(parent_type._filter_fields(filter_function))
+            fields.extend(self.parent_type._filter_fields(filter_function))
         fields.extend(filter(filter_function, self.fields))
         return fields
 
@@ -691,8 +680,8 @@ class Struct(CompositeType):
         and deserialized differently, use this method to detect these.
         """
         return (self.has_enumerated_subtypes() or
-                (self.parent_type_deref and
-                 self.parent_type_deref.has_enumerated_subtypes()))
+                (self.parent_type and
+                 self.parent_type.has_enumerated_subtypes()))
 
     def is_catch_all(self):
         """
@@ -1077,9 +1066,7 @@ class Union(CompositeType):
         See :meth:`CompositeType.set_attributes` for parameter definitions.
         """
         if parent_type:
-            assert (isinstance(parent_type, Union) or
-                    (isinstance(parent_type, ForeignRef) and
-                     isinstance(parent_type.data_type, Union)))
+            assert isinstance(parent_type, Union)
 
         super(Union, self).set_attributes(doc, fields, parent_type)
 
@@ -1300,34 +1287,6 @@ class Union(CompositeType):
     def __repr__(self):
         return 'Union(%r, %r)' % (self.name, self.fields)
 
-class ForeignRef(object):
-    """
-    Used when a reference is made to a type in a different namespace.
-    """
-
-    def __init__(self, namespace_name, data_type):
-        """
-        Args:
-            namespace_name (str): The name of the namespace this data type
-                belongs to.
-            data_type (DataType): The referenced data type.
-        """
-        assert isinstance(data_type, DataType), type(data_type)
-        self.namespace_name = namespace_name
-        self.data_type = data_type
-
-    @property
-    def name(self):
-        """Return the namespace name concatenated with the data type's name.
-
-        This is a convenience so a set of composite and foreign data
-        types can be sorted by the 'name' attribute.
-        """
-        return '{}.{}'.format(self.namespace_name, self.data_type.name)
-
-    def __repr__(self):
-        return 'ForeignRef(%r, %r)' % (self.namespace_name, self.data_type)
-
 class TagRef(object):
     """
     Used when an ID in Babel refers to a tag of a union.
@@ -1343,8 +1302,7 @@ class TagRef(object):
 
 def get_underlying_type(data_type):
     """
-    Convenience method to ignore ForeignRef and/or Nullable wrappers around
-    a DataType.
+    Convenience method to unwrap Nullable from around a DataType.
 
     Args:
         data_type (DataType): The type to unwrap.
@@ -1353,14 +1311,10 @@ def get_underlying_type(data_type):
         Tuples[DataType, bool]: The underlying data type and a bool indicating
             whether the input type was nullable.
     """
-    if is_foreign_ref(data_type):
-        dt = data_type.data_type
+    if is_nullable_type(data_type):
+        return data_type.data_type, True
     else:
-        dt = data_type
-    if is_nullable_type(dt):
-        return dt.data_type, True
-    else:
-        return dt, False
+        return data_type, False
 
 def is_binary_type(data_type):
     return isinstance(data_type, Binary)
@@ -1372,8 +1326,6 @@ def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
 def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
-def is_foreign_ref(data_type):
-    return isinstance(data_type, ForeignRef)
 def is_list_type(data_type):
     return isinstance(data_type, List)
 def is_nullable_type(data_type):

@@ -152,6 +152,9 @@ Struct
 name
     The name of the struct.
 
+namespace
+    The namespace the struct was defined in.
+
 doc
     The documentation string for the struct.
 
@@ -266,6 +269,9 @@ Union
 
 name
     The name of the union.
+
+namespace
+    The namespace the struct was defined in.
 
 doc
     The documentation string for the union.
@@ -473,25 +479,6 @@ available::
     is_timestamp_type(data_type)
     is_union_type(data_type)
     is_void_type(data_type)
-
-Foreign Data Type Reference
-===========================
-
-In places where you expect a data type, you may encounter a ``ForeignRef``
-object. This object indicates that the referenced alias or definition is
-defined in another namespace. The following are its attributes:
-
-ForeignRef
-----------
-
-namespace_name
-    The name of the namespace the data type is defined in.
-
-deta_type
-    The DataType object.
-
-To check for a ``ForeignRef``, use ``is_foreign_ref(data_type)`` which can be
-imported from ``babelapi.data_type``.
 
 Union Tag Reference
 ===================

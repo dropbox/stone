@@ -2254,12 +2254,18 @@ struct S
                 f1 String
             struct S2
                 f2 String
+            alias Iso8601 = Timestamp("%Y-%m-%dT%H:%M:%SZ")
         """)
         text2 = textwrap.dedent("""\
             namespace ns2
             import ns1
             struct S3
                 f3 String
+                f4 ns1.Iso8601?
+                f5 ns1.S1?
+                example default
+                    f3 = "hello"
+                    f4 = "2015-05-12T15:50:38Z"
             route r1(ns1.S1, ns1.S2, S3)
         """)
         t = TowerOfBabel([('ns1.babel', text1), ('ns2.babel', text2)])
@@ -2269,6 +2275,13 @@ struct S
         xs = t.api.namespaces['ns2'].distinct_route_io_data_types()
         xs = sorted(xs, key=lambda x: x.name.lower())
         self.assertEqual(len(xs), 3)
-        self.assertEqual(xs[0].name, 'ns1.S1')
-        self.assertEqual(xs[1].name, 'ns1.S2')
+
+        ns1 = t.api.namespaces['ns1']
+        ns2 = t.api.namespaces['ns2']
+
+        self.assertEqual(xs[0].namespace, ns1)
+        self.assertEqual(xs[1].namespace, ns1)
+
+        s3_dt = ns2.data_type_by_name['S3']
+        self.assertEqual(s3_dt.fields[2].data_type.data_type.namespace, ns1)
         self.assertEqual(xs[2].name, 'S3')

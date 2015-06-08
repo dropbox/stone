@@ -16,7 +16,6 @@ from ..data_type import (
     DataType,
     Float32,
     Float64,
-    ForeignRef,
     Int32,
     Int64,
     List,
@@ -270,15 +269,16 @@ class TowerOfBabel(object):
                 'Symbol %s already defined (%s:%d).' %
                 (quote(item.name), existing_dt._token.path,
                  existing_dt._token.lineno), item.lineno, item.path)
+        namespace = self.api.ensure_namespace(env.namespace_name)
         if isinstance(item, BabelStructDef):
             try:
-                api_type = Struct(name=item.name, token=item)
+                api_type = Struct(name=item.name, namespace=namespace, token=item)
             except ParameterError as e:
                 raise InvalidSpec(
                     'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
                     item.lineno, item.path)
         elif isinstance(item, BabelUnionDef):
-            api_type = Union(name=item.name, token=item)
+            api_type = Union(name=item.name, namespace=namespace, token=item)
         else:
             raise AssertionError('Unknown type definition %r' % type(item))
 
@@ -324,18 +324,14 @@ class TowerOfBabel(object):
             # A parent type must be fully defined and not just a forward
             # reference.
             parent_type = self._resolve_type(env, extends, True)
-            if isinstance(parent_type, ForeignRef):
-                parent_type_deref = parent_type.data_type
-            else:
-                parent_type_deref = parent_type
-            if isinstance(parent_type_deref, Nullable):
+            if isinstance(parent_type, Nullable):
                 raise InvalidSpec(
                     'A struct cannot extend a nullable type.',
                     data_type._token.lineno, data_type._token.path)
-            if not isinstance(parent_type_deref, Struct):
+            if not isinstance(parent_type, Struct):
                 raise InvalidSpec(
                     'A struct can only extend another struct: '
-                    '%s is not a struct.' % quote(parent_type_deref.name),
+                    '%s is not a struct.' % quote(parent_type.name),
                     data_type._token.lineno, data_type._token.path)
         api_type_fields = []
         for babel_field in data_type._token.fields:
@@ -349,7 +345,6 @@ class TowerOfBabel(object):
         Converts a forward reference of a union into a complete definition.
         """
         parent_type = None
-        parent_type_deref = None
         extends = data_type._token.extends
         if extends:
             # A parent type must be fully defined and not just a forward
@@ -359,14 +354,10 @@ class TowerOfBabel(object):
                 raise InvalidSpec(
                     'A union cannot extend a nullable type.',
                     data_type._token.lineno, data_type._token.path)
-            if isinstance(parent_type, ForeignRef):
-                parent_type_deref = parent_type.data_type
-            else:
-                parent_type_deref = parent_type
-            if not isinstance(parent_type_deref, Union):
+            if not isinstance(parent_type, Union):
                 raise InvalidSpec(
                     'A union can only extend another union: '
-                    '%s is not a union.' % quote(parent_type_deref.name),
+                    '%s is not a union.' % quote(parent_type.name),
                     data_type._token.lineno, data_type._token.path)
         api_type_fields = []
         catch_all_field = None
@@ -380,7 +371,7 @@ class TowerOfBabel(object):
 
                 # Verify that no subtype already has a catch-all tag.
                 # Do this here so that we still have access to line nums.
-                cur_subtype = parent_type_deref
+                cur_subtype = parent_type
                 while cur_subtype:
                     if cur_subtype.catch_all_field:
                         raise InvalidSpec(
@@ -623,9 +614,6 @@ class TowerOfBabel(object):
                 self._populate_union_type_attributes(env, data_type)
             self._resolution_in_progress.remove(data_type)
 
-        if type_ref.ns:
-            data_type = ForeignRef(type_ref.ns, data_type)
-
         if type_ref.nullable:
             if isinstance(data_type, Nullable):
                 raise InvalidSpec(
@@ -644,12 +632,7 @@ class TowerOfBabel(object):
 
         def check_value(v):
             if isinstance(v, BabelTypeRef):
-                if v.name not in env:
-                    raise InvalidSpec(
-                        'Symbol %s is undefined.' % quote(v.name),
-                        v.lineno, v.path)
-                else:
-                    return self._resolve_type(env, v)
+                return self._resolve_type(env, v)
             else:
                 return v
 

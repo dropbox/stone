@@ -2,6 +2,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 
+from babelapi.api import (
+    ApiNamespace,
+)
 from babelapi.data_type import (
     Boolean,
     Float32,
@@ -200,9 +203,12 @@ class TestBabelInternal(unittest.TestCase):
 
     def test_struct(self):
 
+        ns = ApiNamespace('test')
+
         quota_info = Struct(
             'QuotaInfo',
             None,
+            ns,
         )
         quota_info.set_attributes(
             "Information about a user's space quota.",
@@ -266,6 +272,7 @@ class TestBabelInternal(unittest.TestCase):
         account_info = Struct(
             'AccountInfo',
             None,
+            ns,
         )
         account_info.set_attributes(
             "Information about an account.",
@@ -307,9 +314,12 @@ class TestBabelInternal(unittest.TestCase):
 
     def test_union(self):
 
+        ns = ApiNamespace('files')
+
         update_parent_rev = Struct(
             'UpdateParentRev',
             None,
+            ns,
         )
         update_parent_rev.set_attributes(
             "Overwrite existing file if the parent rev matches.",
@@ -334,6 +344,7 @@ class TestBabelInternal(unittest.TestCase):
         conflict = Union(
             'WriteConflictPolicy',
             None,
+            ns,
         )
         conflict.set_attributes(
             'Policy for managing write conflicts.',

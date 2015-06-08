@@ -6,7 +6,6 @@ import six
 
 from babelapi.data_type import (
     CompositeType,
-    ForeignRef,
     doc_unwrap,
     is_composite_type,
     is_list_type,
@@ -97,7 +96,7 @@ class ApiNamespace(object):
         def add_data_type(data_type):
             if data_type in seen_data_types:
                 return
-            elif isinstance(data_type, ForeignRef):
+            elif data_type.namespace != self:
                 # We're only concerned with types defined in this namespace.
                 return
             if isinstance(data_type, CompositeType) and data_type.parent_type:
@@ -128,9 +127,12 @@ class ApiNamespace(object):
                           route.error_data_type):
                 while is_list_type(dtype):
                     dtype = dtype.data_type
-                if isinstance(dtype, ForeignRef) or is_composite_type(dtype):
+                if is_composite_type(dtype):
                     data_types.add(dtype)
         return data_types
+
+    def __repr__(self):
+        return 'ApiNamespace({!r})'.format(self.name)
 
 class ApiRoute(object):
     """
@@ -168,3 +170,6 @@ class ApiRoute(object):
         self.response_data_type = response_data_type
         self.error_data_type = error_data_type
         self.attrs = attrs
+
+    def __repr__(self):
+        return 'ApiRoute({!r})'.format(self.name)

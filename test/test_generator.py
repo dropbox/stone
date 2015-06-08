@@ -27,9 +27,9 @@ class TestGenerator(unittest.TestCase):
 
     def test_api_namespace(self):
         ns = ApiNamespace('files')
-        a1 = Struct('A1', None)
+        a1 = Struct('A1', None, ns)
         a1.set_attributes(None, [StructField('f1', Boolean(), None, None)])
-        a2 = Struct('A2', None)
+        a2 = Struct('A2', None, ns)
         a2.set_attributes(None, [StructField('f2', Boolean(), None, None)])
         l = List(a1)
         s = String()

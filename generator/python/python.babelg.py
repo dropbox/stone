@@ -8,11 +8,11 @@ import os
 import re
 import shutil
 from babelapi.data_type import (
+    get_underlying_type,
     is_binary_type,
     is_boolean_type,
     is_composite_type,
     is_float_type,
-    is_foreign_ref,
     is_integer_type,
     is_list_type,
     is_nullable_type,
@@ -95,20 +95,23 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         for data_type in namespace.linearize_data_types():
             if is_struct_type(data_type):
-                self._generate_struct_class(data_type)
+                self._generate_struct_class(namespace, data_type)
             elif is_union_type(data_type):
-                self._generate_union_class(data_type)
+                self._generate_union_class(namespace, data_type)
             else:
                 raise TypeError('Cannot handle type %r' % type(data_type))
         # Generate the struct->subtype tag mapping at the end so that
         # references to later-defined subtypes don't cause errors.
         for data_type in namespace.linearize_data_types():
             if is_struct_type(data_type):
-                self._generate_struct_class_reflection_attributes(data_type)
+                self._generate_struct_class_reflection_attributes(
+                    namespace, data_type)
                 if data_type.has_enumerated_subtypes():
-                    self._generate_enumerated_subtypes_tag_mapping(data_type)
+                    self._generate_enumerated_subtypes_tag_mapping(
+                        namespace, data_type)
             elif is_union_type(data_type):
-                self._generate_union_class_reflection_attributes(data_type)
+                self._generate_union_class_reflection_attributes(
+                    namespace, data_type)
                 self._generate_union_class_symbol_creators(data_type)
 
     def _docf(self, tag, val):
@@ -138,7 +141,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         else:
             raise RuntimeError('Unknown doc ref tag %r' % tag)
 
-    def _python_type_mapping(self, data_type):
+    def _python_type_mapping(self, ns, data_type):
         """Map Babel data types to their most natural equivalent in Python
         for documentation purposes."""
         if is_string_type(data_type):
@@ -149,8 +152,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
             return 'bool'
         elif is_float_type(data_type):
             return 'float'
-        elif is_foreign_ref(data_type):
-            return self._python_type_mapping(data_type.data_type)
         elif is_integer_type(data_type):
             return 'long'
         elif is_void_type(data_type):
@@ -158,25 +159,22 @@ class PythonGenerator(CodeGeneratorMonolingual):
         elif is_timestamp_type(data_type):
             return 'datetime.datetime'
         elif is_composite_type(data_type):
-            return self._class_name_for_data_type(data_type)
+            class_name = self._class_name_for_data_type(data_type)
+            if data_type.namespace.name != ns.name:
+                return '%s.%s' % (data_type.namespace.name, class_name)
+            else:
+                return class_name
         elif is_list_type(data_type):
             # PyCharm understands this description format for a list
-            return 'list of [{}]'.format(self._python_type_mapping(data_type.data_type))
+            return 'list of [{}]'.format(self._python_type_mapping(
+                ns, data_type.data_type))
         else:
             raise TypeError('Unknown data type %r' % data_type)
 
     def _class_name_for_data_type(self, data_type):
-        assert (is_composite_type(data_type) or
-                (is_foreign_ref(data_type) and
-                 is_composite_type(data_type.data_type))), \
+        assert is_composite_type(data_type), \
             'Expected composite type, got %r' % type(data_type)
-
-        if is_foreign_ref(data_type):
-            return '{}.{}'.format(
-                data_type.namespace_name,
-                self.lang.format_class(data_type.data_type.name))
-        else:
-            return self.lang.format_class(data_type.name)
+        return self.lang.format_class(data_type.name)
 
     #
     # Struct Types
@@ -192,7 +190,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         return 'class {}({}):'.format(
             self._class_name_for_data_type(data_type), extends)
 
-    def _generate_struct_class(self, data_type):
+    def _generate_struct_class(self, ns, data_type):
         """Defines a Python class that represents a struct in Babel."""
         self.emit(self._class_declaration_for_struct(data_type))
         with self.indent():
@@ -215,7 +213,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
             self._generate_struct_class_slots(data_type)
             self._generate_struct_class_init(data_type)
-            self._generate_struct_class_properties(data_type)
+            self._generate_struct_class_properties(ns, data_type)
             self._generate_struct_class_repr(data_type)
 
     def _func_args_from_dict(self, d):
@@ -238,36 +236,17 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit("'_%s_present'," % field_name)
         self.emit()
 
-    def _generate_struct_class_vars(self, data_type):
-        """
-        Each class has a class attribute for each field. The attribute is a
-        validator for the field.
-        """
-        lineno = self.lineno
-        for field in data_type.fields:
-            field_name = self.lang.format_variable(field.name)
-            validator_name = self._generate_validator_constructor(field.data_type)
-            self.emit('_{}_validator = {}'.format(field_name,
-                                                  validator_name))
-        if lineno != self.lineno:
-            self.emit()
-
-    def _generate_validator_constructor(self, data_type, foreign_ns=None):
+    def _generate_validator_constructor(self, ns, data_type):
         """
         Given a Babel data type, returns a string that can be used to construct
         the appropriate validation object in Python.
         """
-        if is_nullable_type(data_type):
-            dt = data_type.data_type
-            nullable_dt = True
-        else:
-            dt = data_type
-            nullable_dt = False
+        dt, nullable_dt = get_underlying_type(data_type)
         if is_list_type(dt):
             v = self._generate_func_call(
                 'bv.List',
                 args=[
-                    self._generate_validator_constructor(dt.data_type)],
+                    self._generate_validator_constructor(ns, dt.data_type)],
                 kwargs=[
                     ('min_items', dt.min_items),
                     ('max_items', dt.max_items)],
@@ -301,8 +280,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
             else:
                 validator_name = 'bv.Struct'
             name = self.lang.format_class(dt.name)
-            if foreign_ns:
-                name = '{}.{}'.format(foreign_ns,
+            if ns.name != dt.namespace.name:
+                name = '{}.{}'.format(dt.namespace.name,
                                       self.lang.format_class(dt.name))
             v = self._generate_func_call(
                 validator_name,
@@ -310,16 +289,13 @@ class PythonGenerator(CodeGeneratorMonolingual):
             )
         elif is_union_type(dt):
             name = self.lang.format_class(dt.name)
-            if foreign_ns:
-                name = '{}.{}'.format(foreign_ns,
+            if ns.name != dt.namespace.name:
+                name = '{}.{}'.format(dt.namespace.name,
                                       self.lang.format_class(dt.name))
             v = self._generate_func_call(
                 'bv.Union',
                 args=[name],
             )
-        elif is_foreign_ref(dt):
-            v = self._generate_validator_constructor(
-                dt.data_type, dt.namespace_name)
         else:
             v = self._generate_func_call('bv.{}'.format(dt.name))
         if nullable_dt:
@@ -350,7 +326,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                             for k, v in kwargs if v is not None)
         return '{}({})'.format(name, ', '.join(all_args))
 
-    def _generate_struct_class_reflection_attributes(self, data_type):
+    def _generate_struct_class_reflection_attributes(self, ns, data_type):
         """
         Generates two class attributes:
           * _all_field_names_: Set of all field names including inherited fields.
@@ -375,7 +351,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         for field in data_type.fields:
             field_name = self.lang.format_variable(field.name)
-            validator_name = self._generate_validator_constructor(field.data_type)
+            validator_name = self._generate_validator_constructor(ns, field.data_type)
             self.emit('{}._{}_validator = {}'.format(
                 class_name, field_name, validator_name))
 
@@ -467,13 +443,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
             # Call the parent constructor if a super type exists
             if data_type.parent_type:
                 class_name = self._class_name_for_data_type(data_type)
-                if is_foreign_ref(data_type.parent_type):
-                    parent_type = data_type.parent_type.data_type
-                else:
-                    parent_type = data_type.parent_type
                 self.generate_multiline_list(
                     [self.lang.format_method(f.name, True)
-                     for f in parent_type.all_fields],
+                     for f in data_type.parent_type.all_fields],
                     before='super({}, self).__init__'.format(class_name))
 
             # initialize each field
@@ -501,7 +473,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         else:
             return self.lang.format_obj(value)
 
-    def _generate_struct_class_properties(self, data_type):
+    def _generate_struct_class_properties(self, ns, data_type):
         """
         Each field of the struct has a corresponding setter and getter.
         The setter validates the value being set.
@@ -528,7 +500,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     # rtype declaration.
                     self.emit()
                 self.emit(':rtype: {}'.format(
-                    self._python_type_mapping(field_dt)))
+                    self._python_type_mapping(ns, field_dt)))
                 self.emit('"""')
                 self.emit('if self._{}_present:'.format(field_name))
                 with self.indent():
@@ -604,7 +576,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                                % self._class_name_for_data_type(data_type))
         self.emit()
 
-    def _generate_enumerated_subtypes_tag_mapping(self, data_type):
+    def _generate_enumerated_subtypes_tag_mapping(self, ns, data_type):
         """
         Generates attributes needed for serializing and deserializing structs
         with enumerated subtypes. These assignments are made after all the
@@ -619,7 +591,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         for tags, subtype in data_type.get_all_subtypes_with_tags():
             tag_to_subtype_items.append("{}: {}".format(
                 tags,
-                self._generate_validator_constructor(subtype)))
+                self._generate_validator_constructor(ns, subtype)))
 
         self.generate_multiline_list(
             tag_to_subtype_items,
@@ -636,7 +608,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             items.append("{0}: ({1}, {2})".format(
                 self.lang.format_class(subtype.name),
                 tag,
-                self._generate_validator_constructor(subtype)))
+                self._generate_validator_constructor(ns, subtype)))
         self.generate_multiline_list(
             items,
             before='{}._pytype_to_tag_and_subtype_ = '.format(data_type.name),
@@ -663,7 +635,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         return 'class {}({}):'.format(
             self._class_name_for_data_type(data_type), extends)
 
-    def _generate_union_class(self, data_type):
+    def _generate_union_class(self, ns, data_type):
         """Defines a Python class that represents a union in Babel."""
         self.emit(self._class_declaration_for_union(data_type))
         with self.indent():
@@ -688,7 +660,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                             self.process_doc(field.doc, self._docf))
                     else:
                         ivar_doc = ':ivar {} {}: {}'.format(
-                            self._python_type_mapping(field.data_type),
+                            self._python_type_mapping(ns, field.data_type),
                             self.lang.format_variable(field.name), field.doc)
                     self.emit_wrapped_text(ivar_doc, subsequent_prefix='    ')
                 self.emit('"""')
@@ -737,7 +709,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         if lineno != self.lineno:
             self.emit()
 
-    def _generate_union_class_reflection_attributes(self, data_type):
+    def _generate_union_class_reflection_attributes(self, ns, data_type):
         """
         Adds a class attribute for each union member assigned to a validator.
         Also adds an attribute that is a map from tag names to validators.
@@ -747,7 +719,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         for field in data_type.fields:
             field_name = self.lang.format_variable(field.name)
             validator_name = self._generate_validator_constructor(
-                field.data_type)
+                ns, field.data_type)
             self.emit('{}._{}_validator = {}'.format(
                 class_name, field_name, validator_name))
 
