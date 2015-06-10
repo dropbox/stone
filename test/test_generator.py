@@ -38,7 +38,7 @@ class TestGenerator(unittest.TestCase):
         ns.add_route(route)
 
         # Test that only user-defined types are returned.
-        route_io = ns.distinct_route_io_data_types()
+        route_io = ns.get_route_io_data_types()
         self.assertIn(a1, route_io)
         self.assertIn(a2, route_io)
         self.assertNotIn(l, route_io)

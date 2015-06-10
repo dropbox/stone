@@ -2247,7 +2247,7 @@ struct S
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 4)
 
-    def test_referenced_namespaces(self):
+    def test_imported_namespaces(self):
         text1 = textwrap.dedent("""\
             namespace ns1
             struct S1
@@ -2270,9 +2270,9 @@ struct S
         """)
         t = TowerOfBabel([('ns1.babel', text1), ('ns2.babel', text2)])
         t.parse()
-        self.assertEqual(t.api.namespaces['ns2'].referenced_namespaces,
+        self.assertEqual(t.api.namespaces['ns2'].get_imported_namespaces(),
                          [t.api.namespaces['ns1']])
-        xs = t.api.namespaces['ns2'].distinct_route_io_data_types()
+        xs = t.api.namespaces['ns2'].get_route_io_data_types()
         xs = sorted(xs, key=lambda x: x.name.lower())
         self.assertEqual(len(xs), 3)
 
@@ -2285,3 +2285,47 @@ struct S
         s3_dt = ns2.data_type_by_name['S3']
         self.assertEqual(s3_dt.fields[2].data_type.data_type.namespace, ns1)
         self.assertEqual(xs[2].name, 'S3')
+
+    def test_namespace_obj(self):
+        text = textwrap.dedent("""\
+            namespace ns1
+            struct S1
+                f1 String
+            struct S2
+                f2 String
+                s3 S3
+            struct S3
+                f3 String
+            struct S4
+                f4 String
+            alias A = S2
+            route r(S1, List(S4?)?, A)
+        """)
+        t = TowerOfBabel([('ns1.babel', text)])
+        t.parse()
+        ns1 = t.api.namespaces['ns1']
+
+        # Check that all data types are defined
+        self.assertIn('S1', ns1.data_type_by_name)
+        self.assertIn('S2', ns1.data_type_by_name)
+        self.assertIn('S3', ns1.data_type_by_name)
+        self.assertIn('S4', ns1.data_type_by_name)
+        self.assertEqual(len(ns1.data_types), 4)
+
+        # Check that route is defined
+        self.assertIn('r', ns1.route_by_name)
+        self.assertEqual(len(ns1.routes), 1)
+
+        s1 = ns1.data_type_by_name['S1']
+        s2 = ns1.data_type_by_name['S2']
+        s3 = ns1.data_type_by_name['S3']
+        s4 = ns1.data_type_by_name['S4']
+        route_data_types = ns1.get_route_io_data_types()
+
+        self.assertIn(s1, route_data_types)
+        # Test that aliased reference is followed
+        self.assertIn(s2, route_data_types)
+        # Test that field type is not present
+        self.assertNotIn(s3, route_data_types)
+        # Check that type that is wrapped by a list and/or nullable is present
+        self.assertIn(s4, route_data_types)

@@ -77,19 +77,20 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         self.emit_raw(validators_import)
 
-        if namespace.referenced_namespaces:
+        imported_namespaces = namespace.get_imported_namespaces()
+        if imported_namespaces:
             # Generate import statements for all referenced namespaces.
             self.emit('try:')
             with self.indent():
                 self.emit('from . import (')
                 with self.indent():
-                    for ns in namespace.referenced_namespaces:
+                    for ns in imported_namespaces:
                         self.emit(ns.name + ',')
                 self.emit(')')
             self.emit('except ValueError:')
             # Fallback if imported from outside a package.
             with self.indent():
-                for ns in namespace.referenced_namespaces:
+                for ns in imported_namespaces:
                     self.emit('import %s' % ns.name)
             self.emit()
 
@@ -171,28 +172,40 @@ class PythonGenerator(CodeGeneratorMonolingual):
         else:
             raise TypeError('Unknown data type %r' % data_type)
 
-    def _class_name_for_data_type(self, data_type):
+    def _class_name_for_data_type(self, data_type, ns=None):
+        """
+        Returns the name of the Python class that maps to a user-defined type.
+        The name is identical to the name in the spec.
+
+        If ``ns`` is set to a Namespace and the namespace of `data_type` does
+        not match, then a namespace prefix is added to the returned name.
+        For example, ``foreign_ns.TypeName``.
+        """
         assert is_composite_type(data_type), \
             'Expected composite type, got %r' % type(data_type)
-        return self.lang.format_class(data_type.name)
+        name = self.lang.format_class(data_type.name)
+        if ns and data_type.namespace != ns:
+            # If from an imported namespace, add a namespace prefix.
+            name = '{}.{}'.format(data_type.namespace.name, name)
+        return name
 
-    #
-    # Struct Types
-    #
-
-    def _class_declaration_for_struct(self, data_type):
-        assert is_struct_type(data_type), \
+    def _class_declaration_for_type(self, ns, data_type):
+        assert is_composite_type(data_type), \
             'Expected struct, got %r' % type(data_type)
         if data_type.parent_type:
-            extends = self._class_name_for_data_type(data_type.parent_type)
+            extends = self._class_name_for_data_type(data_type.parent_type, ns)
         else:
             extends = 'object'
         return 'class {}({}):'.format(
             self._class_name_for_data_type(data_type), extends)
 
+    #
+    # Struct Types
+    #
+
     def _generate_struct_class(self, ns, data_type):
         """Defines a Python class that represents a struct in Babel."""
-        self.emit(self._class_declaration_for_struct(data_type))
+        self.emit(self._class_declaration_for_type(ns, data_type))
         with self.indent():
             if data_type.has_documented_type_or_fields():
                 self.emit('"""')
@@ -281,8 +294,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 validator_name = 'bv.Struct'
             name = self.lang.format_class(dt.name)
             if ns.name != dt.namespace.name:
-                name = '{}.{}'.format(dt.namespace.name,
-                                      self.lang.format_class(dt.name))
+                name = '{}.{}'.format(dt.namespace.name, name)
             v = self._generate_func_call(
                 validator_name,
                 args=[name],
@@ -290,8 +302,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         elif is_union_type(dt):
             name = self.lang.format_class(dt.name)
             if ns.name != dt.namespace.name:
-                name = '{}.{}'.format(dt.namespace.name,
-                                      self.lang.format_class(dt.name))
+                name = '{}.{}'.format(dt.namespace.name, name)
             v = self._generate_func_call(
                 'bv.Union',
                 args=[name],
@@ -345,7 +356,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         class_name = self._class_name_for_data_type(data_type)
         if data_type.parent_type:
             parent_type_class_name = self._class_name_for_data_type(
-                data_type.parent_type)
+                data_type.parent_type, ns)
         else:
             parent_type_class_name = None
 
@@ -625,19 +636,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
     # Tagged Union Types
     #
 
-    def _class_declaration_for_union(self, data_type):
-        assert is_union_type(data_type), \
-            'Expected union, got %r' % type(data_type)
-        if data_type.parent_type:
-            extends = self._class_name_for_data_type(data_type.parent_type)
-        else:
-            extends = 'object'
-        return 'class {}({}):'.format(
-            self._class_name_for_data_type(data_type), extends)
-
     def _generate_union_class(self, ns, data_type):
         """Defines a Python class that represents a union in Babel."""
-        self.emit(self._class_declaration_for_union(data_type))
+        self.emit(self._class_declaration_for_type(ns, data_type))
         with self.indent():
             if data_type.has_documented_type_or_fields():
                 self.emit('"""')

@@ -284,8 +284,7 @@ class JavaCodeGenerator(CodeGenerator):
             out('import com.dropbox.core.json.JsonReadException;')
             out('import com.dropbox.core.json.JsonWriter;')
 
-            namespace_data_types = sorted(namespace.distinct_route_io_data_types(),
-                                          key=lambda dt: dt.name)
+            namespace_data_types = namespace.get_route_io_data_types()
             if namespace_data_types:
                 to_import = []
                 for data_type in namespace_data_types:

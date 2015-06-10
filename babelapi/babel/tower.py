@@ -574,7 +574,7 @@ class TowerOfBabel(object):
                     '%s is not a namespace.' % quote(type_ref.ns),
                     *loc)
             namespace = self.api.ensure_namespace(orig_namespace_name)
-            namespace.add_referenced_namespace(
+            namespace.add_imported_namespace(
                 self.api.ensure_namespace(type_ref.ns))
         if type_ref.name not in env:
             raise InvalidSpec(

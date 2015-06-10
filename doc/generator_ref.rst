@@ -102,16 +102,22 @@ data_types
 data_type_by_name
     A map from data type name to DataType object.
 
-distinct_route_io_data_types()
-    A set of all user-defined data types that are referenced as either a
-    request, response, or error data type of a route. If a route has a List
-    data type, then the contained data type is returned if it's a user-defined
-    type.
+get_imported_namespaces()
+    A list of Namespace objects. A namespace is a member of this list if it is
+    imported by the current namespace and a data type is referenced from it.
+    Namespaces are in ASCII order by name.
 
-referenced_namespaces
-    A list of Namespace objects. Each namespace is referenced by this
-    namespace. A namespace is added to this list if it is imported and a data
-    type is referenced from it. Namespaces are in ASCII order by name.
+get_namespaces_imported_by_route_io()
+    A list of Namespace objects. A namespace is a member of this list if it is
+    imported by the current namespace and has a data type from it referenced as
+    an argument, result, or error of a route. Namespaces are in ASCII order by
+    name.
+
+get_route_io_data_types()
+    A list of all user-defined data types that are referenced as either an
+    argument, result, or error of a route. If a List or Nullable data type is
+    referenced, then the contained data type is returned assuming it's a
+    user-defined type.
 
 Route
 -----

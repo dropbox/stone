@@ -5,10 +5,10 @@ from distutils.version import StrictVersion
 import six
 
 from babelapi.data_type import (
-    CompositeType,
     doc_unwrap,
     is_composite_type,
     is_list_type,
+    is_nullable_type,
 )
 
 class Api(object):
@@ -43,7 +43,7 @@ class ApiNamespace(object):
         self.route_by_name = {}
         self.data_types = []
         self.data_type_by_name = {}
-        self.referenced_namespaces = []
+        self._imported_namespaces = []
 
     def add_doc(self, docstring):
         """Adds a docstring for this namespace.
@@ -69,18 +69,18 @@ class ApiNamespace(object):
         self.data_types.append(data_type)
         self.data_type_by_name[data_type.name] = data_type
 
-    def add_referenced_namespace(self, namespace):
+    def add_imported_namespace(self, namespace):
         """
-        For a namespace to be considered "referenced," it must be imported by
-        this namespace. Also, at least one data type from the namespace must be
+        For a namespace to be considered imported, it must be imported by
+        this namespace, and have at least one data type from the namespace
         referenced by this one. The caller of this method is responsible for
         verifying these requirements.
         """
         assert self.name != namespace.name, \
-            'Namespace cannot reference itself.'
-        if namespace not in self.referenced_namespaces:
-            self.referenced_namespaces.append(namespace)
-            self.referenced_namespaces.sort(key=lambda n: n.name)
+            'Namespace cannot import itself.'
+        if namespace not in self._imported_namespaces:
+            self._imported_namespaces.append(namespace)
+            self._imported_namespaces.sort(key=lambda n: n.name)
 
     def linearize_data_types(self):
         """
@@ -99,7 +99,7 @@ class ApiNamespace(object):
             elif data_type.namespace != self:
                 # We're only concerned with types defined in this namespace.
                 return
-            if isinstance(data_type, CompositeType) and data_type.parent_type:
+            if is_composite_type(data_type) and data_type.parent_type:
                 add_data_type(data_type.parent_type)
             linearized_data_types.append(data_type)
             seen_data_types.add(data_type)
@@ -109,27 +109,46 @@ class ApiNamespace(object):
 
         return linearized_data_types
 
-    def distinct_route_io_data_types(self):
+    def get_route_io_data_types(self):
         """
-        Returns all user-defined data types that are referenced as the request,
-        response, or error data type for a route in this namespace.
-
-        The List data type is never returned because it isn't user-defined, but
-        if it contains a user-defined type, then that type is included in the
-        return set.
-
-        Foreign references *are* returned.  The caller presumably has to
-        handle these differently.
+        Returns a list of all user-defined data types that are referenced as
+        either an argument, result, or error of a route. If a List or Nullable
+        data type is referenced, then the contained data type is returned
+        assuming it's a user-defined type.
         """
         data_types = set()
         for route in self.routes:
             for dtype in (route.request_data_type, route.response_data_type,
                           route.error_data_type):
-                while is_list_type(dtype):
+                while is_list_type(dtype) or is_nullable_type(dtype):
                     dtype = dtype.data_type
                 if is_composite_type(dtype):
                     data_types.add(dtype)
-        return data_types
+
+        return sorted(data_types, key=lambda dt: dt.name)
+
+    def get_imported_namespaces(self):
+        """
+        Returns a list of Namespace objects. A namespace is a member of this
+        list if it is imported by the current namespace and a data type is
+        referenced from it. Namespaces are in ASCII order by name.
+        """
+        return self._imported_namespaces[:]
+
+    def get_namespaces_imported_by_route_io(self):
+        """
+        Returns a list of Namespace objects. A namespace is a member of this
+        list if it is imported by the current namespace and has a data type
+        from it referenced as an argument, result, or error of a route.
+        Namespaces are in ASCII order by name.
+        """
+        namespace_data_types = sorted(self.get_route_io_data_types(),
+                                      key=lambda dt: dt.name)
+        referenced_namespaces = set()
+        for data_type in namespace_data_types:
+            if data_type.namespace != self:
+                referenced_namespaces.add(data_type.namespace)
+        return sorted(referenced_namespaces, key=lambda n: n.name)
 
     def __repr__(self):
         return 'ApiNamespace({!r})'.format(self.name)
