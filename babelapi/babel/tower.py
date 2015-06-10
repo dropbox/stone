@@ -558,6 +558,7 @@ class TowerOfBabel(object):
         reference.
         """
         loc = type_ref.lineno, type_ref.path
+        orig_namespace_name = env.namespace_name
         if type_ref.ns:
             # TODO(kelkabany): If a spec file imports a namespace, it is
             # available to all spec files that are part of the same namespace.
@@ -565,21 +566,15 @@ class TowerOfBabel(object):
             # to a file.
             if type_ref.ns not in env:
                 raise InvalidSpec(
-                    'Namespace %s is not imported' % quote(type_ref.ns),
-                    *loc)
-            orig_namespace_name = env.namespace_name
+                    'Namespace %s is not imported' % quote(type_ref.ns), *loc)
             env = env[type_ref.ns]
             if not isinstance(env, Environment):
                 raise InvalidSpec(
-                    '%s is not a namespace.' % quote(type_ref.ns),
-                    *loc)
-            namespace = self.api.ensure_namespace(orig_namespace_name)
-            namespace.add_imported_namespace(
-                self.api.ensure_namespace(type_ref.ns))
+                    '%s is not a namespace.' % quote(type_ref.ns), *loc)
         if type_ref.name not in env:
             raise InvalidSpec(
-                'Symbol %s is undefined.' % quote(type_ref.name),
-                *loc)
+                'Symbol %s is undefined.' % quote(type_ref.name), *loc)
+
         obj = env[type_ref.name]
         if obj is Void and type_ref.nullable:
             raise InvalidSpec('Void cannot be marked nullable.',
@@ -600,6 +595,14 @@ class TowerOfBabel(object):
                               *loc)
         else:
             data_type = env[type_ref.name]
+
+        if type_ref.ns and isinstance(data_type, CompositeType):
+            # Add the source namespace as an import only if the type is a
+            # reference to a user-defined type. Aliases to primitives are
+            # ignored.
+            namespace = self.api.ensure_namespace(orig_namespace_name)
+            namespace.add_imported_namespace(
+                self.api.ensure_namespace(type_ref.ns))
 
         if (enforce_fully_defined and isinstance(data_type, CompositeType) and
                 data_type._is_forward_ref):
