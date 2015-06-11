@@ -377,7 +377,7 @@ class TestBabelInternal(unittest.TestCase):
         conflict._compute_examples()
 
         # test that only null value is returned for an example of a Void type
-        self.assertEqual(conflict.get_examples()['reject'].value, 'reject')
+        self.assertEqual(conflict.get_examples()['reject'].value, {'.tag': 'reject'})
 
         # test that dict is returned for a tagged struct variant
         self.assertEqual(conflict.get_examples()['default'].value,

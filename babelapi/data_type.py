@@ -558,10 +558,43 @@ class CompositeType(DataType):
     def prepend_field(self, field):
         self.fields.insert(0, field)
 
-    def get_examples(self):
-        """Returns an OrderedDict mapping labels to Example objects."""
+    def get_examples(self, compact=False):
+        """
+        Returns an OrderedDict mapping labels to Example objects.
+
+        Args:
+            compact (bool): If True, union members of void type are converted
+                to their compact representation: no ".tag" key or containing
+                dict, just the tag as a string.
+        """
         # Copy it just in case the caller wants to mutate the object.
-        return copy.deepcopy(self._examples)
+        examples = copy.deepcopy(self._examples)
+        if not compact:
+            return examples
+
+        def make_compact(d):
+            # Traverse through dicts looking for ones that have a lone .tag
+            # key, which can be converted into the compact form.
+            if not isinstance(d, dict):
+                return
+            for key in d:
+                if isinstance(d[key], dict):
+                    inner_d = d[key]
+                    if len(inner_d) == 1 and '.tag' in inner_d:
+                        d[key] = inner_d['.tag']
+                    else:
+                        make_compact(inner_d)
+
+        for example in examples.values():
+            if (isinstance(example.value, dict) and
+                        len(example.value) == 1 and '.tag' in example.value):
+                # Handle the case where the top-level of the example can be
+                # made compact.
+                example.value = example.value['.tag']
+            else:
+                make_compact(example.value)
+
+        return examples
 
 class Example(object):
     """An example of a struct or union type."""
@@ -1004,7 +1037,7 @@ class Struct(CompositeType):
                     # Serialized format doesn't include fields with null.
                     pass
                 elif is_tag_ref(val):
-                    ex_val[field.name] = val.tag_name
+                    ex_val[field.name] = {'.tag': val.tag_name}
                 elif isinstance(val, BabelExampleRef):
                     # Embed references to other examples directly.
                     if not dt._has_example(val.label):
@@ -1144,7 +1177,7 @@ class Union(CompositeType):
             else:
                 # Use the compact representation (just the tag, no value)
                 composite_example = Example(
-                    example.label, example.text, tag)
+                    example.label, example.text, OrderedDict([('.tag', tag)]))
         elif isinstance(dt, CompositeType):
             if isinstance(val, BabelExampleRef):
                 composite_example = Example(
@@ -1198,7 +1231,8 @@ class Union(CompositeType):
             dt, _ = get_underlying_type(field.data_type)
             if is_void_type(dt):
                 self._examples[field.name] = \
-                    Example(field.name, None, field.name)
+                    Example(
+                        field.name, None, OrderedDict([('.tag', field.name)]))
 
     def _compute_example(self, label):
         """
@@ -1214,7 +1248,7 @@ class Union(CompositeType):
             # Do a deep copy of the example because we're going to mutate it.
             example_copy = copy.deepcopy(example)
 
-            if isinstance(example.value, six.text_type):
+            if len(example.value) == 1 and '.tag' in example.value:
                 # If it's a compact representation, we can just return it.
                 return Example(example.label, example.text, example.value)
 
@@ -1264,7 +1298,8 @@ class Union(CompositeType):
                 raise AssertionError('No example for label %r' % label)
 
             assert is_void_type(field.data_type)
-            return Example(field.name, field.doc, field.name)
+            return Example(
+                field.name, field.doc, OrderedDict([('.tag', field.name)]))
 
     def unique_field_data_types(self):
         """

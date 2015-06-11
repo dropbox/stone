@@ -1763,7 +1763,8 @@ union U
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(u_dt.get_examples()['default'].value, 'a')
+        self.assertEqual(u_dt.get_examples()['default'].value, {'.tag': 'a'})
+        self.assertEqual(u_dt.get_examples(compact=True)['default'].value, 'a')
 
         # Test simple union
         text = """\
@@ -1782,7 +1783,8 @@ union U
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
                          {'.tag': 'b', 'b': 'A'})
-        self.assertEqual(u_dt.get_examples()['a'].value, 'a')
+        self.assertEqual(u_dt.get_examples()['a'].value, {'.tag': 'a'})
+        self.assertEqual(u_dt.get_examples(compact=True)['a'].value, 'a')
         self.assertNotIn('b', u_dt.get_examples())
 
         # Test union with list
@@ -1929,6 +1931,8 @@ union U
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'u': {'.tag': 'a'}})
+        self.assertEqual(s_dt.get_examples(compact=True)['default'].value,
                          {'u': 'a'})
 
         # Test fallback to union member of composite type
@@ -1977,6 +1981,8 @@ struct S
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'u': {'.tag': 'a'}})
+        self.assertEqual(s_dt.get_examples(compact=True)['default'].value,
                          {'u': 'a'})
 
         # Test bad void union member example value
