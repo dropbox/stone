@@ -1153,6 +1153,16 @@ struct S2
             t.api.namespaces['ns1'].doc,
             'This is a docstring for ns1.\n\nThis is another docstring for ns1.\n')
 
+        # Test that namespaces without types or routes are deleted.
+        text = """\
+namespace test
+
+alias S = String
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        self.assertEqual(t.api.namespaces, {})
+
     def test_examples(self):
 
         # Test simple struct example

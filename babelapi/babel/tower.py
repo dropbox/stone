@@ -134,6 +134,12 @@ class TowerOfBabel(object):
         self._populate_examples()
         self._validate_doc_refs()
 
+        # Remove namespaces that don't define data types or routes. These are
+        # either entirely empty, or only define aliases.
+        for namespace in self.api.namespaces.values():
+            if not namespace.data_types and not namespace.routes:
+                del self.api.namespaces[namespace.name]
+
         return self.api
 
     def parse_spec(self, spec, path=None):
