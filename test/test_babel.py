@@ -1901,6 +1901,8 @@ struct S
                          {'.tag': 's', 'f': 'F'})
         self.assertEqual(u_dt.get_examples()['other'].value,
                          {'.tag': 's', 'f': 'O'})
+        self.assertEqual(list(u_dt.get_examples()['default'].value.keys())[0],
+                         '.tag')
 
         # Test union referencing non-existent struct example
         text = """\
@@ -2143,6 +2145,8 @@ struct T extends R
         r_dt = t.api.namespaces['test'].data_type_by_name['R']
         self.assertEqual(r_dt.get_examples()['default'].value,
                          {'.tag': 's', 'a': 'A', 'b': 'B'})
+        self.assertEqual(list(r_dt.get_examples()['default'].value.keys())[0],
+                         '.tag')
 
         # Test missing custom example
         text = """\

@@ -1079,8 +1079,10 @@ class Struct(CompositeType):
                 "Reference to example for '%s' with label '%s' does not "
                 "exist." % (data_type.name, ref.label),
                 ref.lineno, ref.path)
+        ordered_value = OrderedDict([('.tag', tag)])
         flat_example = data_type._compute_example_flat_helper(ref.label)
-        flat_example.value['.tag'] = tag
+        ordered_value.update(flat_example.value)
+        flat_example.value = ordered_value
         return flat_example
 
     def __repr__(self):
@@ -1281,8 +1283,9 @@ class Union(CompositeType):
                 ex_val = [ex_val]
                 list_nesting_count -= 1
             if isinstance(orig_dt, Struct) and not dt.has_enumerated_subtypes():
-                ex_val.update({'.tag': tag})
-                example_copy.value = ex_val
+                new_val = OrderedDict([('.tag', tag)])
+                new_val.update(ex_val)
+                example_copy.value = new_val
             else:
                 example_copy.value = {'.tag': tag, tag: ex_val}
 
