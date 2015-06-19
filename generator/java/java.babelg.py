@@ -14,10 +14,10 @@ import os
 
 from babelapi.generator import CodeGenerator
 from babelapi.data_type import (
+    get_underlying_type,
     is_binary_type,
     is_boolean_type,
     is_composite_type,
-    is_foreign_ref,
     is_numeric_type,
     is_nullable_type,
     is_list_type,
@@ -100,8 +100,7 @@ def maptype(namespace, data_type):
     There are special cases for primitive types, list (array) types,
     and struct/union types.
     """
-    while is_nullable_type(data_type) or is_foreign_ref(data_type):
-        data_type = data_type.data_type
+    data_type, _ = get_underlying_type(data_type)
     if is_list_type(data_type):
         return 'java.util.ArrayList<%s>' % maptype(namespace, data_type.data_type)
     if data_type.name in type_map:
@@ -122,8 +121,7 @@ def mapreader(namespace, data_type):
     The generated code assumes all classes from com.dropbox.core.json
     have been imported.
     """
-    while is_nullable_type(data_type) or is_foreign_ref(data_type):
-        data_type = data_type.data_type
+    data_type, _ = get_underlying_type(data_type)
     if is_list_type(data_type):
         return 'JsonArrayReader.mk(%s)' % mapreader(namespace, data_type.data_type)
     if is_composite_type(data_type):
@@ -288,9 +286,8 @@ class JavaCodeGenerator(CodeGenerator):
             if namespace_data_types:
                 to_import = []
                 for data_type in namespace_data_types:
-                    if is_foreign_ref(data_type):
-                        dt_name = data_type.name.split('.')[-1]
-                        to_import.append((data_type.namespace_name, dt_name))
+                    if data_type.namespace != namespace:
+                        to_import.append((data_type.namespace.name, data_type.name))
                 if to_import:
                     out('')
                     for ns_name, dt_name in to_import:
