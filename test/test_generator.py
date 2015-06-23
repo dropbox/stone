@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import argparse
 import unittest
 
 from babelapi.api import (
@@ -17,6 +18,12 @@ from babelapi.generator import CodeGenerator
 
 class Tester(CodeGenerator):
     """A no-op generator used to test helper methods."""
+    def generate(self, api):
+        pass
+
+class TesterCmdline(CodeGenerator):
+    cmdline_parser = argparse.ArgumentParser()
+    cmdline_parser.add_argument('-v', '--verbose', action='store_true')
     def generate(self, api):
         pass
 
@@ -45,13 +52,13 @@ class TestGenerator(unittest.TestCase):
         self.assertNotIn(s, route_io)
 
     def test_code_generator_helpers(self):
-        t = Tester(None)
+        t = Tester(None, [])
         self.assertEqual(t.filter_out_none_valued_keys({}), {})
         self.assertEqual(t.filter_out_none_valued_keys({'a': None}), {})
         self.assertEqual(t.filter_out_none_valued_keys({'a': None, 'b': 3}), {'b': 3})
 
     def test_code_generator_basic_emitters(self):
-        t = Tester(None)
+        t = Tester(None, [])
 
         # Check basic emit
         t.emit('hello')
@@ -93,7 +100,7 @@ hello
         t.clear_output_buffer()
 
     def test_code_generator_list_gen(self):
-        t = Tester(None)
+        t = Tester(None, [])
 
         t.generate_multiline_list(['a=1', 'b=2'])
         expected = """\
@@ -170,7 +177,7 @@ def func(
         t.clear_output_buffer()
 
     def test_code_generator_block_gen(self):
-        t = Tester(None)
+        t = Tester(None, [])
 
         with t.block('int sq(int x)', ';'):
             t.emit('return x*x;')
@@ -202,3 +209,7 @@ int sq(int x) <
 """
         self.assertEqual(t.output_buffer_to_string(), expected)
         t.clear_output_buffer()
+
+    def test_generator_cmdline(self):
+        t = TesterCmdline(None, ['-v'])
+        self.assertTrue(t.args.verbose)

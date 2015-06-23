@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from abc import ABCMeta, abstractmethod
+import argparse
 from contextlib import contextmanager
 import logging
 import os
@@ -32,7 +33,10 @@ class Generator(six.with_metaclass(ABCMeta)):
     # Can be overridden by a subclass
     tabs_for_indents = False
 
-    def __init__(self, target_folder_path):
+    # Can be overridden with an argparse.ArgumentParser object.
+    cmdline_parser = None
+
+    def __init__(self, target_folder_path, args):
         """
         Args:
             target_folder_path (str): Path to the folder where all generated
@@ -46,6 +50,14 @@ class Generator(six.with_metaclass(ABCMeta)):
         self.output = []
         self.lineno = 1
         self.cur_indent = 0
+
+        if self.cmdline_parser:
+            assert isinstance(self.cmdline_parser, argparse.ArgumentParser), (
+                'expected cmdline_parser to be ArgumentParser, got %r' %
+                self.cmdline_parser)
+            self.args = self.cmdline_parser.parse_args(args)
+        else:
+            self.args = None
 
     @abstractmethod
     def generate(self, api):
@@ -334,6 +346,7 @@ class CodeGeneratorMonolingual(CodeGenerator):
     # An instance of a :class:`babelapi.lang.lang.TargetLanguage` object.
     lang = None
 
-    def __init__(self, target_folder_path):
+    def __init__(self, target_folder_path, generator_args):
         assert self.lang, 'Language must be specified'
-        super(CodeGeneratorMonolingual, self).__init__(target_folder_path)
+        super(CodeGeneratorMonolingual, self).__init__(
+            target_folder_path, generator_args)

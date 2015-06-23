@@ -30,6 +30,7 @@ class Compiler(object):
     def __init__(self,
                  api,
                  generator_module,
+                 generator_args,
                  build_path,
                  clean_build=False):
         """
@@ -39,6 +40,8 @@ class Compiler(object):
         :param generator_module: Python module that contains at least one
             top-level class definition that descends from a
             :class:`babelapi.generator.Generator`.
+        :param list(str) generator_args: A list of command-line arguments to
+            pass to the generator.
         :param str build_path: Location to save compiled sources to. If None,
             source files are compiled into the same directories.
         :param bool clean_build: If True, the build_path is removed before
@@ -48,6 +51,7 @@ class Compiler(object):
 
         self.api = api
         self.generator_module = generator_module
+        self.generator_args = generator_args
         self.build_path = build_path
 
         # Remove existing build directory if it's a clean build
@@ -96,7 +100,7 @@ class Compiler(object):
                     issubclass(attr_value, Generator) and
                     not inspect.isabstract(attr_value)):
                 self._logger.info('Running generator: %s', attr_value.__name__)
-                generator = attr_value(self.build_path)
+                generator = attr_value(self.build_path, self.generator_args)
                 try:
                     generator.generate(self.api)
                 except:

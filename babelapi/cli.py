@@ -48,7 +48,14 @@ _cmdline_parser.add_argument(
 def main():
     """The entry point for the program."""
 
-    args = _cmdline_parser.parse_args()
+    if '--' in sys.argv:
+        cli_args = sys.argv[1:sys.argv.index('--')]
+        generator_args = sys.argv[sys.argv.index('--')+1:]
+    else:
+        cli_args = sys.argv[1:]
+        generator_args = []
+
+    args = _cmdline_parser.parse_args(cli_args)
     debug = False
     if args.verbose is None:
         logging_level = logging.WARNING
@@ -129,6 +136,7 @@ def main():
     c = Compiler(
         api,
         generator_module,
+        generator_args,
         args.output,
         clean_build=args.clean_build,
     )

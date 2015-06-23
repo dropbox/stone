@@ -505,6 +505,58 @@ tag_name
 To check for a default value that is a ``TagRef``, use ``is_tag_ref(val)``
 which can be imported from ``babelapi.data_type``.
 
+Command-Line Arguments
+======================
+
+Generators can receive arguments from the command-line. A ``--`` is used to
+separate arguments to the ``babelapi`` program and the generator. For example::
+
+    $ babelapi generator/python/python.babelg spec.babel . -- -h
+    usage: python-generator [-h] [-r ROUTE_METHOD]
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      -r ROUTE_METHOD, --route-method ROUTE_METHOD
+                            A string used to construct the location of a Python
+                            method for a given route; use {ns} as a placeholder
+                            for namespace name and {route} for the route name.
+                            This is used to translate Babel doc references to
+                            routes to references in Python docstrings.
+
+The above prints the help string specific to the included Python generator.
+
+Command-line parsing relies on Python's `argparse module
+<https://docs.python.org/2.7/library/argparse.html>`_ so familiarity with it
+is helpful.
+
+To define a command-line parser for a generator, assign an `Argument Parser
+<https://docs.python.org/2.7/library/argparse.html#argumentparser-objects>`_
+object to the ``cmdline_parser`` class variable of your generator. Set the
+``prog`` keyword to the name of your generator, otherwise, the help string
+will claim to be for ``babelapi``.
+
+The ``generate`` method will have access to an ``args`` instance variable with
+an `argparse.Namespace object
+<https://docs.python.org/2.7/library/argparse.html#the-namespace-object>`_
+holding the parsed command-line arguments.
+
+Here's a minimal example::
+
+    import argparse
+    from babelapi.generator import CodeGenerator
+
+    _cmdline_parser = argparse.ArgumentParser(prog='example')
+    _cmdline_parser.add_argument('-v', '--verbose', action='store_true',
+                                 help='Prints to stdout.')
+
+    class ExampleGenerator(CodeGenerator):
+
+        cmdline_parser = _cmdline_parser
+
+        def generate(self, api):
+            if self.args.verbose:
+                print 'Running in verbose mode'
+
 Examples
 ========
 
