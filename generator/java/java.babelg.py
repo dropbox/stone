@@ -11,6 +11,7 @@ See https://github.com/dropbox/babelapi
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
+import argparse
 
 from babelapi.generator import CodeGenerator
 from babelapi.data_type import (
@@ -232,7 +233,11 @@ def get_ancestors(data_type):
     return ancestors
 
 
+_cmdline_parser = argparse.ArgumentParser(prog='java-generator')
+_cmdline_parser.add_argument('--package', type=str, help='base package name', required=True)
+
 class JavaCodeGenerator(CodeGenerator):
+    cmdline_parser = _cmdline_parser
 
     def bsemi(self, before=''):
         """Like self.block(), but with a semicolon after the closing brace."""
@@ -245,8 +250,8 @@ class JavaCodeGenerator(CodeGenerator):
         """
         # Create a package for each namespace containing datatypes and routes.
         for namespace in api.namespaces.values():
-            package_components = ['com', 'dropbox', camelcase(namespace.name)]
-            package_name = '.'.join(package_components)
+            package_name = self.args.package
+            package_components = package_name.split('.')
             package_relpath = os.path.join(*package_components)
             package_fullpath = os.path.join(self.target_folder_path, package_relpath)
             if not os.path.isdir(package_fullpath):
