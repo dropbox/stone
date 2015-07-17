@@ -513,6 +513,19 @@ alias R = S(min_length=1)
                       cm.exception.msg)
 
     def test_struct_semantics(self):
+        # Test field with implicit void type
+        text = """
+namespace test
+
+struct S
+    option_a
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Struct field 'option_a' cannot have a Void type.",
+                         cm.exception.msg)
+
         # Test duplicate fields
         text = """\
 namespace test

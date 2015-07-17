@@ -418,6 +418,12 @@ class TowerOfBabel(object):
         Returns:
             babelapi.data_type.StructField: A field of a struct.
         """
+        if isinstance(babel_field, BabelVoidField):
+            raise InvalidSpec(
+                'Struct field %s cannot have a Void type.' %
+                quote(babel_field.name),
+                babel_field.lineno, babel_field.path)
+
         data_type = self._resolve_type(env, babel_field.type_ref)
         if isinstance(data_type, Void):
             raise InvalidSpec(
