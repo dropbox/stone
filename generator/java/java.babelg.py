@@ -108,9 +108,6 @@ def maptype(namespace, data_type):
         return type_map[data_type.name]
     assert is_composite_type(data_type), data_type
     return classname(data_type.name)
-    return 'com.dropbox.%s.%s.%s' % (camelcase(namespace.name),
-                                     classname(namespace.name),
-                                     classname(data_type.name))
 
 
 def mapreader(namespace, data_type):
@@ -296,8 +293,8 @@ class JavaCodeGenerator(CodeGenerator):
                 if to_import:
                     out('')
                     for ns_name, dt_name in to_import:
-                        out('import com.dropbox.%s.%s.%s;' %
-                            (ns_name, classname(ns_name), classname(dt_name)))
+                        out('import com.dropbox.%s.%s;' %
+                            (classname(ns_name), classname(dt_name)))
 
             out('')
             self.generate_doc('Classes and routes in namespace "%s".' % namespace.name)
