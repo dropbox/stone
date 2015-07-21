@@ -293,8 +293,8 @@ class JavaCodeGenerator(CodeGenerator):
                 if to_import:
                     out('')
                     for ns_name, dt_name in to_import:
-                        out('import com.dropbox.%s.%s;' %
-                            (classname(ns_name), classname(dt_name)))
+                        out('import %s.%s.%s;' %
+                            (package_name, classname(ns_name), classname(dt_name)))
 
             out('')
             self.generate_doc('Classes and routes in namespace "%s".' % namespace.name)
