@@ -464,19 +464,22 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     field_type = field.data_type
                     if is_nullable_type(field_type):
                         field_type = field_type.data_type
-                    case = '.{}'.format(self.lang.format_class(field.name))
-                    d = ['".tag": .Str("{}")'.format(field.name)]
-                    if not is_void_type(field_type):
-                        case += '(let arg)'
-                        d.append('"{}": {}.serialize(arg)'.format(
-                            field.name,
-                            self._serializer_obj(field.data_type)
-                        ))
-
-                    ret = ".Dictionary([{}])".format(", ".join(d))
+                    case = '.{}{}'.format(self.lang.format_class(field.name),
+                                         '' if is_void_type(field_type) else '(let arg)')
                     self.emit('case {}:'.format(case))
+
                     with self.indent():
-                        self.emit('return {}'.format(ret))
+                        if is_void_type(field_type):
+                            self.emit('var d = [String : JSON]()')
+                        elif is_struct_type(field_type):
+                            self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
+                                self._serializer_obj(field_type)))
+                        else:
+                            self.emit('var d = ["{}": {}.serialize(arg)]'.format(
+                                field.name,
+                                self._serializer_obj(field_type)))
+                        self.emit('d[".tag"] = .Str("{}")'.format(field.name))
+                        self.emit('return .Dictionary(d)')
             with self.deserializer_func(data_type):
                 with self.block("switch json"):
                     self.emit("case .Dictionary(let d):")
@@ -495,8 +498,13 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                                     if is_void_type(field_type):
                                         self.emit('return {}'.format(tag_type))
                                     else:
-                                        self.emit('let v = {}.deserialize(d["{}"] ?? .Null)'.format(
-                                            self._serializer_obj(field_type), field.name
+                                        if is_struct_type(field_type):
+                                            subdict = 'json'
+                                        else:
+                                            subdict = 'd["{}"] ?? .Null'.format(field.name)
+
+                                        self.emit('let v = {}.deserialize({})'.format(
+                                            self._serializer_obj(field_type), subdict
                                         ))
                                         self.emit('return {}(v)'.format(tag_type))
                             self.emit('default:')
