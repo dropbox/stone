@@ -13,19 +13,17 @@ then
     exit 1
 fi
 
-# Do not use the -s or -t flag for nose2. It requires our test files
-# to be in Python packages.
 echo "Running tests for babelapi package"
-PYTHONPATH=.. python2.7 -m nose2
+PYTHONPATH=.. python2.7 -m pytest
 
 echo
 echo "Running tests for babelapi package using Python 3"
-PYTHONPATH=.. python3 -m nose2
+PYTHONPATH=.. python3 -m pytest
 
 echo
 echo "Running tests for Python generator"
-(cd ../generator/python && PYTHONPATH=../.. python2.7 -m nose2)
+(cd ../generator/python && PYTHONPATH=../.. python2.7 -m pytest)
 
 echo
 echo "Running tests for Python generator using Python 3"
-(cd ../generator/python && PYTHONPATH=../.. python3 -m nose2)
+(cd ../generator/python && PYTHONPATH=../.. python3 -m pytest)
