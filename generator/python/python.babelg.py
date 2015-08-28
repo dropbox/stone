@@ -186,6 +186,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
             # PyCharm understands this description format for a list
             return 'list of [{}]'.format(self._python_type_mapping(
                 ns, data_type.data_type))
+        elif is_nullable_type(data_type):
+            return 'Optional[{}]'.format(
+                self._python_type_mapping(ns, data_type.data_type))
         else:
             raise TypeError('Unknown data type %r' % data_type)
 

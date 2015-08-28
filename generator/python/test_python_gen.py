@@ -512,6 +512,7 @@ struct D
     a String
     b UInt64 = 10
     c String?
+    d List(Int64?)
 
 union U
     "Sample union doc."
@@ -598,28 +599,43 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIn('Sample field doc.', self.ns.U.t0.__doc__)
 
     def test_struct_decoding(self):
-        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'b': 1, 'c': 'C'}))
+        d = json_decode(bv.Struct(self.ns.D),
+                        json.dumps({'a': 'A', 'b': 1, 'c': 'C', 'd': []}))
         self.assertIsInstance(d, self.ns.D)
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
         self.assertEqual(d.c, 'C')
+        self.assertEqual(d.d, [])
 
         # Test with missing value for nullable field
-        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'b': 1}))
+        d = json_decode(bv.Struct(self.ns.D),
+                        json.dumps({'a': 'A', 'b': 1, 'd': []}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
         self.assertEqual(d.c, None)
+        self.assertEqual(d.d, [])
 
         # Test with missing value for field with default
-        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'c': 'C'}))
+        d = json_decode(bv.Struct(self.ns.D),
+                        json.dumps({'a': 'A', 'c': 'C', 'd': [1]}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 10)
         self.assertEqual(d.c, 'C')
+        self.assertEqual(d.d, [1])
 
         # Test with explicitly null value for nullable field
-        d = json_decode(bv.Struct(self.ns.D), json.dumps({'a': 'A', 'c': None}))
+        d = json_decode(bv.Struct(self.ns.D),
+                        json.dumps({'a': 'A', 'c': None, 'd': [1, 2]}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
+        self.assertEqual(d.d, [1, 2])
+
+        # Test with None and numbers in list
+        d = json_decode(bv.Struct(self.ns.D),
+                        json.dumps({'a': 'A', 'c': None, 'd': [None, 1]}))
+        self.assertEqual(d.a, 'A')
+        self.assertEqual(d.c, None)
+        self.assertEqual(d.d, [None, 1])
 
         # Test with explicitly null value for field with default
         with self.assertRaises(bv.ValidationError) as cm:
