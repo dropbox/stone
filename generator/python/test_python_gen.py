@@ -514,6 +514,12 @@ struct D
     c String?
     d List(Int64?)
 
+struct DocTest
+    b Boolean
+        "If :val:`true` then..."
+    t String
+        "References :type:`D`."
+
 union U
     "Sample union doc."
     t0
@@ -597,6 +603,11 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIn('Sample field doc.', self.ns.A.a.__doc__)
         self.assertIn('Sample union doc.', self.ns.U.__doc__)
         self.assertIn('Sample field doc.', self.ns.U.t0.__doc__)
+
+        # Test doc conversion of Python bool.
+        self.assertIn('``True``', self.ns.DocTest.b.__doc__)
+        # Test doc converts type reference to sphinx-friendly representation.
+        self.assertIn(':class:`D`', self.ns.DocTest.t.__doc__)
 
     def test_struct_decoding(self):
         d = json_decode(bv.Struct(self.ns.D),

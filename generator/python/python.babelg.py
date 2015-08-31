@@ -151,7 +151,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             if val == 'null':
                 return 'None'
             elif val == 'true' or val == 'false':
-                return val.capitalize()
+                return '``{}``'.format(val.capitalize())
             else:
                 return val
         elif tag == 'field':
