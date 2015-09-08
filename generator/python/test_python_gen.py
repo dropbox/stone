@@ -514,6 +514,11 @@ struct D
     c String?
     d List(Int64?)
 
+struct E
+    a String = "test"
+    b UInt64 = 10
+    c Int64?
+
 struct DocTest
     b Boolean
         "If :val:`true` then..."
@@ -964,6 +969,27 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(
             "unknown subtype 'symlink' and 'Resource' is not a catch-all",
             str(cm.exception))
+
+    def test_defaults(self):
+        # Test void type
+        v = bv.Void()
+        self.assertTrue(v.has_default())
+        self.assertEqual(v.get_default(), None)
+
+        # Test nullable type
+        n = bv.Nullable(bv.Struct(self.ns.D))
+        self.assertTrue(n.has_default())
+        self.assertEqual(n.get_default(), None)
+
+        # Test struct where all fields have defaults
+        s = bv.Struct(self.ns.E)
+        self.assertTrue(s.has_default())
+        s.get_default()
+
+        # Test struct where not all fields have defaults
+        s = bv.Struct(self.ns.D)
+        self.assertFalse(s.has_default())
+        self.assertRaises(AssertionError, s.get_default)
 
     def tearDown(self):
         # Clear input and output of babelapi tool after all tests.

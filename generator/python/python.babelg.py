@@ -245,6 +245,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit()
 
             self._generate_struct_class_slots(data_type)
+            self._generate_struct_class_has_required_fields(data_type)
             self._generate_struct_class_init(data_type)
             self._generate_struct_class_properties(ns, data_type)
             self._generate_struct_class_repr(data_type)
@@ -268,6 +269,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit("'_%s_value'," % field_name)
                 self.emit("'_%s_present'," % field_name)
         self.emit()
+
+    def _generate_struct_class_has_required_fields(self, data_type):
+        has_required_fields = len(data_type.all_required_fields) > 0
+        self.emit('_has_required_fields = %r' % has_required_fields)
 
     def _generate_validator_constructor(self, ns, data_type):
         """
