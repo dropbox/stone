@@ -5,7 +5,7 @@ public class Box<T> {
 	public let unboxed : T
 	init (_ v : T) { self.unboxed = v }
 }
-public enum CallError<ErrorType> : Printable {
+public enum CallError<ErrorType> : CustomStringConvertible {
     case InternalServerError(Int, String?)
     case BadInputError(String?)
     case RateLimitError
@@ -38,7 +38,7 @@ public enum CallError<ErrorType> : Printable {
                 ret += ": \(m)"
             }
             return ret
-        case .RouteError(let box):
+        case .RouteError:
             return "API route error - handle programmatically"
         }
     }
@@ -59,7 +59,7 @@ func asciiEscape(s: String) -> String {
             esc = "\(char)"
         }
         out += esc
-        
+
     }
     return out
 }
@@ -80,11 +80,11 @@ public class BabelRequest<RType : JSONSerializer, EType : JSONSerializer> {
         route: String,
         responseSerializer: RType,
         errorSerializer: EType,
-        requestEncoder: (URLRequestConvertible, [String: AnyObject]?) -> (NSURLRequest, NSError?)) {
+        requestEncoder: (URLRequestConvertible, [String: AnyObject]?) -> (NSMutableURLRequest, NSError?)) {
             self.errorSerializer = errorSerializer
             self.responseSerializer = responseSerializer
             let url = "\(client.baseHosts[host]!)\(route)"
-            self.request = client.manager.request(.POST, url, parameters: [:], encoding: .Custom(requestEncoder))
+            self.request = client.manager.request(.POST, url, parameters: [:], encoding: ParameterEncoding.Custom(requestEncoder))
     }
     
 
@@ -137,7 +137,7 @@ public class BabelRpcRequest<RType : JSONSerializer, EType : JSONSerializer> : B
     public func response(completionHandler: (RType.ValueType?, CallError<EType.ValueType>?) -> Void) -> Self {
         self.request.validate().response {
             (request, response, dataObj, error) -> Void in
-            let data = dataObj as! NSData
+            let data = dataObj!
             if error != nil {
                 completionHandler(nil, self.handleResponseError(response, data: data))
             } else {
@@ -170,7 +170,7 @@ public class BabelUploadRequest<RType : JSONSerializer, EType : JSONSerializer> 
     ///         a callback taking three arguments (`bytesWritten`, `totalBytesWritten`, `totalBytesExpectedToWrite`)
     /// :returns: The request, for chaining purposes
     public func progress(closure: ((Int64, Int64, Int64) -> Void)? = nil) -> Self {
-        self.request.progress(closure: closure)
+        self.request.progress(closure)
         return self
     }
     
@@ -182,7 +182,7 @@ public class BabelUploadRequest<RType : JSONSerializer, EType : JSONSerializer> 
     public func response(completionHandler: (RType.ValueType?, CallError<EType.ValueType>?) -> Void) -> Self {
         self.request.validate().response {
             (request, response, dataObj, error) -> Void in
-            let data = dataObj as! NSData
+            let data = dataObj!
             if error != nil {
                 completionHandler(nil, self.handleResponseError(response, data: data))
             } else {
@@ -214,7 +214,7 @@ public class BabelDownloadRequest<RType : JSONSerializer, EType : JSONSerializer
     ///         a callback taking three arguments (`bytesRead`, `totalBytesRead`, `totalBytesExpectedToRead`)
     /// :returns: The request, for chaining purposes.
     public func progress(closure: ((Int64, Int64, Int64) -> Void)? = nil) -> Self {
-        self.request.progress(closure: closure)
+        self.request.progress(closure)
         return self
     }
     
@@ -226,7 +226,7 @@ public class BabelDownloadRequest<RType : JSONSerializer, EType : JSONSerializer
     public func response(completionHandler: ( (RType.ValueType, NSData)?, CallError<EType.ValueType>?) -> Void) -> Self {
         self.request.validate().response {
             (request, response, dataObj, error) -> Void in
-            let data = dataObj as! NSData
+            let data = dataObj!
             if error != nil {
                 completionHandler(nil, self.handleResponseError(response, data: data))
             } else {
