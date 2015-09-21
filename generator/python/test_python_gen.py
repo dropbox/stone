@@ -496,6 +496,8 @@ class TestDropInModules(unittest.TestCase):
 test_spec = """\
 namespace ns
 
+import ns2
+
 struct A
     "Sample struct doc."
     a String
@@ -573,6 +575,23 @@ struct File2 extends ResourceLax
 
 struct Folder2 extends ResourceLax
     "Regular folder"
+
+struct ImportTestS extends ns2.BaseS
+    a String
+
+union ImportTestU extends ns2.BaseU
+    a UInt64
+"""
+
+test_ns2_spec = """\
+namespace ns2
+
+struct BaseS
+    z Int64
+
+union BaseU
+    z
+    x String
 """
 
 class TestGeneratedPython(unittest.TestCase):
@@ -585,6 +604,8 @@ class TestGeneratedPython(unittest.TestCase):
         # Write spec to file for babelapi
         with open('ns.babel', 'w') as f:
             f.write(test_spec)
+        with open('ns2.babel', 'w') as f:
+            f.write(test_ns2_spec)
 
         # Compile spec by calling out to babelapi
         p = subprocess.Popen(
@@ -593,12 +614,15 @@ class TestGeneratedPython(unittest.TestCase):
              'babelapi.cli',
              'python.babelg.py',
              'ns.babel',
+             'ns2.babel',
              'output/'],
             stderr=subprocess.PIPE)
         if p.wait() != 0:
             raise AssertionError('Could not execute babelapi tool: %s' %
                                  p.stderr.read().decode('ascii'))
 
+        # Load ns2 first since ns depends on it.
+        self.ns2 = imp.load_source('ns2', 'output/ns2.py')
         self.ns = imp.load_source('ns', 'output/ns.py')
 
     def test_docstring(self):
@@ -995,3 +1019,4 @@ class TestGeneratedPython(unittest.TestCase):
         # Clear input and output of babelapi tool after all tests.
         shutil.rmtree('output')
         os.remove('ns.babel')
+        os.remove('ns2.babel')

@@ -103,7 +103,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     for ns in imported_namespaces:
                         self.emit(ns.name + ',')
                 self.emit(')')
-            self.emit('except ValueError:')
+            self.emit('except (SystemError, ValueError):')
             # Fallback if imported from outside a package.
             with self.indent():
                 for ns in imported_namespaces:
@@ -759,7 +759,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         if data_type.parent_type:
             self.emit('{0}._tagmap.update({1}._tagmap)'.format(
-                class_name, self._class_name_for_data_type(data_type.parent_type)))
+                class_name,
+                self._class_name_for_data_type(data_type.parent_type, ns)))
 
         self.emit()
 
