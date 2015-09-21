@@ -401,7 +401,7 @@ class Field(object):
 
 class StructField(Field):
     """
-    Represents a field in a composite type.
+    Represents a field of a struct.
     """
 
     def __init__(self,
@@ -441,6 +441,10 @@ class StructField(Field):
                                         self.data_type)
 
 class UnionField(Field):
+    """
+    Represents a field of a union.
+    """
+
     def __init__(self,
                  name,
                  data_type,
@@ -449,6 +453,11 @@ class UnionField(Field):
                  catch_all=False):
         super(UnionField, self).__init__(name, data_type, doc, token)
         self.catch_all = catch_all
+
+    def __repr__(self):
+        return 'UnionField(%r, %r, %r)' % (self.name,
+                                           self.data_type,
+                                           self.catch_all)
 
 class CompositeType(DataType):
     """
