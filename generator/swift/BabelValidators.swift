@@ -2,7 +2,7 @@ import Foundation
 
 // The objects in this file are used by generated code and should not need to be invoked manually.
 
-var _assertFunc: (Bool,String) -> Void = { cond, message in assert(cond, message) }
+var _assertFunc: (Bool,String) -> Void = { cond, message in precondition(cond, message) }
 
 public func setAssertFunc( assertFunc: (Bool, String) -> Void) {
     _assertFunc = assertFunc
@@ -28,7 +28,7 @@ public func arrayValidator<T>(itemValidator itemValidator: T -> Void)(value : Ar
     arrayValidator(minItems: nil, maxItems: nil, itemValidator: itemValidator)(value: value)
 }
 
-public func stringValidator(minLength : Int? = nil, maxLength : Int? = nil, pattern: String? = nil)(value: String) -> Void {
+public func stringValidator(minLength minLength : Int? = nil, maxLength : Int? = nil, pattern: String? = nil)(value: String) -> Void {
     let length = value.characters.count
     if let min = minLength {
         _assertFunc(length >= min, "\"\(value)\" must be at least \(min) characters")
@@ -38,13 +38,13 @@ public func stringValidator(minLength : Int? = nil, maxLength : Int? = nil, patt
     }
     
     if let pat = pattern {
-        let re = try! NSRegularExpression(pattern: pat, options: [])
-        let matches = re.matchesInString(value, options: [], range: NSMakeRange(0, length))
+        let re = try! NSRegularExpression(pattern: pat, options: NSRegularExpressionOptions())
+        let matches = re.matchesInString(value, options: NSMatchingOptions(), range: NSMakeRange(0, length))
         _assertFunc(matches.count > 0, "\"\(value) must match pattern \"\(re.pattern)\"")
     }
 }
 
-public func comparableValidator<T: Comparable>(minValue : T? = nil, maxValue : T? = nil)(value: T) -> Void {
+public func comparableValidator<T: Comparable>(minValue minValue : T? = nil, maxValue : T? = nil)(value: T) -> Void {
     if let min = minValue {
         _assertFunc(min <= value, "\(value) must be at least \(min)")
     }
