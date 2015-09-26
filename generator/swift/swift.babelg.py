@@ -142,7 +142,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     def class_data_type(self, data_type):
         return self.lang.format_class(data_type.name)
 
-    def _serializer_obj(self, data_type, namespace=None):
+    def _serializer_obj(self, data_type):
         if is_nullable_type(data_type):
             data_type = data_type.data_type
             nullable = True
@@ -150,7 +150,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             nullable = False
         if is_list_type(data_type):
             ret = 'ArraySerializer({})'.format(
-                self._serializer_obj(data_type.data_type, namespace=namespace))
+                self._serializer_obj(data_type.data_type))
         elif is_string_type(data_type):
             ret = 'Serialization._StringSerializer'
         elif is_timestamp_type(data_type):
@@ -174,15 +174,15 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         elif isinstance(data_type, Float64):
             ret = 'Serialization._DoubleSerializer'
         elif is_composite_type(data_type):
-            ret = self.lang.format_class(namespace.name) + '.' if namespace else ''
-            ret += self.class_data_type(data_type) + 'Serializer()'
+            ret = "{}.{}Serializer()".format(self.lang.format_class(data_type.namespace.name),
+                                             self.class_data_type(data_type))
 
         if nullable:
             ret = 'NullableSerializer({})'.format(ret)
 
         return ret
 
-    def _swift_type_mapping(self, data_type, namespace=None, serializer=False):
+    def _swift_type_mapping(self, data_type, serializer=False):
         suffix = 'Serializer' if serializer else ''
         if is_nullable_type(data_type):
             data_type = data_type.data_type
@@ -192,7 +192,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         if is_list_type(data_type):
             ret = 'Array{}<{}>'.format(
                 suffix,
-                self._swift_type_mapping(data_type.data_type, namespace, serializer)
+                self._swift_type_mapping(data_type.data_type, serializer)
             )
             suffix = ''
         elif is_string_type(data_type):
@@ -218,8 +218,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         elif isinstance(data_type, Float64):
             ret = 'Double'
         elif is_composite_type(data_type):
-            ret = self.lang.format_class(namespace.name) + "." if namespace else ""
-            ret += self.class_data_type(data_type)
+            ret = '{}.{}'.format(self.lang.format_class(data_type.namespace.name),
+                                 self.class_data_type(data_type))
         ret += suffix
         if nullable:
             if serializer:
@@ -307,7 +307,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         args = []
         for field in data_type.all_fields:
             name = self.lang.format_variable(field.name)
-            value = self._swift_type_mapping(field.data_type, namespace=namespace)
+            value = self._swift_type_mapping(field.data_type)
             field_type = field.data_type
             if is_nullable_type(field_type):
                 field_type = field_type.data_type
@@ -353,7 +353,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                 tagvar = self.lang.format_variable(tag)
                 self.emit('case let {} as {}:'.format(
                     tagvar,
-                    self._swift_type_mapping(subtype, namespace=namespace)
+                    self._swift_type_mapping(subtype)
                 ))
 
                 with self.indent():
@@ -431,7 +431,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         if is_void_type(data_type):
             return ''
         else:
-            return '({})'.format(self._swift_type_mapping(data_type, namespace))
+            return '({})'.format(self._swift_type_mapping(data_type))
 
     def _generate_union_type(self, namespace, data_type):
         if data_type.doc:
@@ -537,7 +537,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
     def _generate_route(self, namespace, route):
         host_ident = route.attrs.get('host', 'meta')
-        request_type = self._swift_type_mapping(route.request_data_type, namespace=namespace)
+        request_type = self._swift_type_mapping(route.request_data_type)
         route_style = route.attrs.get('style')
 
         if is_struct_type(route.request_data_type):
@@ -566,9 +566,9 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         route_type = self.STYLE_MAPPING[route.attrs.get('style')]
 
         rtype = self._swift_type_mapping(route.response_data_type,
-                                         namespace=namespace, serializer=True)
+                                         serializer=True)
         etype = self._swift_type_mapping(route.error_data_type,
-                                         namespace=namespace, serializer=True)
+                                         serializer=True)
 
         with self.function_block('public func {}'.format(func_name),
                                  args=self._func_args(arg_list, force_first=True),
@@ -585,17 +585,15 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                 ('host', '"'+host_ident+'"'),
                 ('route', '"/{}/{}"'.format(namespace.name, route.name)),
                 ('params', '{}.serialize({})'.format(
-                    self._serializer_obj(route.request_data_type, namespace=namespace),
+                    self._serializer_obj(route.request_data_type),
                     '' if is_void_type(route.request_data_type) else 'request'))
             ]
             if route_style == 'upload':
                 func_args.append(('body', 'body'))
 
             func_args.extend([
-                ('responseSerializer', self._serializer_obj(route.response_data_type,
-                                                              namespace=namespace)),
-                ('errorSerializer', self._serializer_obj(route.error_data_type,
-                                                           namespace=namespace)),
+                ('responseSerializer', self._serializer_obj(route.response_data_type)),
+                ('errorSerializer', self._serializer_obj(route.error_data_type)),
             ])
 
             self.emit('return Babel{}Request({})'.format(route_type, self._func_args(func_args)))
