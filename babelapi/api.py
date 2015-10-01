@@ -55,11 +55,11 @@ class ApiNamespace(object):
         to the end of the existing one with two newlines separating them.
         """
         assert isinstance(docstring, six.text_type), type(docstring)
-        normalized_docstring = docstring.strip() + '\n'
+        normalized_docstring = doc_unwrap(docstring) + '\n'
         if self.doc is None:
             self.doc = normalized_docstring
         else:
-            self.doc = '%s\n%s' % (self.doc, normalized_docstring)
+            self.doc += normalized_docstring
 
     def add_route(self, route):
         self.routes.append(route)
