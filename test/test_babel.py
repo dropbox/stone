@@ -1164,7 +1164,7 @@ struct S2
         t.parse()
         self.assertEqual(
             t.api.namespaces['ns1'].doc,
-            'This is a docstring for ns1.\n\nThis is another docstring for ns1.\n')
+            'This is a docstring for ns1.\nThis is another docstring for ns1.\n')
 
         # Test that namespaces without types or routes are deleted.
         text = """\
