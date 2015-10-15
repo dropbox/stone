@@ -136,7 +136,7 @@ class TowerOfBabel(object):
 
         # Remove namespaces that don't define data types or routes. These are
         # either entirely empty, or only define aliases.
-        for namespace in self.api.namespaces.values():
+        for namespace in list(self.api.namespaces.values()):
             if not namespace.data_types and not namespace.routes:
                 del self.api.namespaces[namespace.name]
 
