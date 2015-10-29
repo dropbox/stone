@@ -49,7 +49,7 @@ from .parser import (
 )
 
 def quote(s):
-    assert s.replace('_', '').replace('.', '').isalnum(), \
+    assert s.replace('_', '').replace('.', '').replace('/', '').isalnum(), \
         'Only use quote() with names or IDs in Babel.'
     return "'%s'" % s
 
