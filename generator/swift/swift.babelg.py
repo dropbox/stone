@@ -443,13 +443,14 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             self.emit('/// - {}{}'.format(self.lang.format_class(f.name), ':' if f.doc else ''))
             if f.doc:
                 self.emit_wrapped_text(self.process_doc(f.doc, self._docf), prefix='///   ')
-        with self.block('public enum {} : CustomStringConvertible'.format(self.class_data_type(data_type))):
+        class_type = self.class_data_type(data_type)
+        with self.block('public enum {}: CustomStringConvertible'.format(class_type)):
             for field in data_type.fields:
                 typ = self._format_tag_type(namespace, field.data_type)
                 self.emit('case {}{}'.format(self.lang.format_class(field.name),
                                                   typ))
             with self.block('public var description : String'):
-                cls = self.class_data_type(data_type)+'Serializer'
+                cls = class_type+'Serializer'
                 self.emit(
                     'return "\(prepareJSONForSerialization({}().serialize(self)))"'.format(cls)
                 )
@@ -535,11 +536,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         'download': 'Download',
     }
 
-    def _generate_route(self, namespace, route):
-        host_ident = route.attrs.get('host', 'meta')
+    def _get_route_args(self, namespace, route):
         request_type = self._swift_type_mapping(route.request_data_type)
-        route_style = route.attrs.get('style')
-
         if is_struct_type(route.request_data_type):
             arg_list = self._struct_init_args(route.request_data_type, namespace=namespace)
             doc_list = [(self.lang.format_variable(f.name), self.process_doc(f.doc, self._docf))
@@ -547,18 +545,22 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         else:
             arg_list = [] if is_void_type(route.request_data_type) else [('request', request_type)]
             doc_list = []
+        return arg_list, doc_list
 
-        if route_style == 'upload':
-            arg_list.append(('body', 'NSData'))
-            doc_list.append(('body', 'The binary payload to upload'))
+    def _emit_route(self, namespace, route, extra_args=None, extra_docs=None):
+        arg_list, doc_list = self._get_route_args(namespace, route)
+        extra_args = extra_args or []
+        extra_docs = extra_docs or []
 
+        request_type = self._swift_type_mapping(route.request_data_type)
         func_name = self.lang.format_method('{}_{}'.format(namespace.name, route.name))
+
         if route.doc:
             self.emit_wrapped_text(route.doc, prefix='/// ')
         else:
             self.emit_wrapped_text('/// The {} route'.format(func_name))
         self.emit('///')
-        for name, doc in doc_list:
+        for name, doc in doc_list + extra_docs:
             self.emit('/// :param: {}'.format(name))
             if doc:
                 self.emit_wrapped_text(doc, prefix='///        ')
@@ -570,30 +572,59 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         etype = self._swift_type_mapping(route.error_data_type,
                                          serializer=True)
 
+        host_ident = route.attrs.get('host', 'meta')
+        func_args = [
+            ('client', 'self'),
+            ('host', '"'+host_ident+'"'),
+            ('route', '"/{}/{}"'.format(namespace.name, route.name)),
+            ('params', '{}.serialize({})'.format(
+                self._serializer_obj(route.request_data_type),
+                '' if is_void_type(route.request_data_type) else 'request')),
+            ('responseSerializer', self._serializer_obj(route.response_data_type)),
+            ('errorSerializer', self._serializer_obj(route.error_data_type)),
+        ]
+
+        for name, typ, value in extra_args:
+            arg_list.append((name, typ))
+            func_args.append((name, value))
+
         with self.function_block('public func {}'.format(func_name),
                                  args=self._func_args(arg_list, force_first=True),
                                  return_type='Babel{}Request<{}, {}>'.format(route_type,
                                                                                rtype,
                                                                                etype)):
-
             if is_struct_type(route.request_data_type):
                 args = [(name, name) for name, _ in self._struct_init_args(route.request_data_type)]
                 self.emit('let request = {}({})'.format(request_type, self._func_args(args)))
 
-            func_args = [
-                ('client', 'self'),
-                ('host', '"'+host_ident+'"'),
-                ('route', '"/{}/{}"'.format(namespace.name, route.name)),
-                ('params', '{}.serialize({})'.format(
-                    self._serializer_obj(route.request_data_type),
-                    '' if is_void_type(route.request_data_type) else 'request'))
-            ]
-            if route_style == 'upload':
-                func_args.append(('body', 'body'))
-
-            func_args.extend([
-                ('responseSerializer', self._serializer_obj(route.response_data_type)),
-                ('errorSerializer', self._serializer_obj(route.error_data_type)),
-            ])
-
             self.emit('return Babel{}Request({})'.format(route_type, self._func_args(func_args)))
+
+    def _generate_upload_route_bindings(self, namespace, route):
+        for case, typ in (('.Data', 'NSData'),
+                                ('.File', 'NSURL'),
+                                ('.Stream', 'NSInputStream')):
+            extra_args = [("body", typ, "{}(body)".format(case))]
+            extra_docs = [("body", "The file to upload, as an {} object".format(typ))]
+
+            self._emit_route(namespace, route, extra_args, extra_docs)
+
+    def _generate_download_route_bindings(self, namespace, route):
+        extra_args = [(
+            'destination', '(NSURL, NSHTTPURLResponse) -> NSURL', 'destination',
+        )]
+        extra_docs = [(
+            'destination',
+            'A closure used to compute the destination,'
+            + 'given the temporary file location and the response'
+        )]
+
+        self._emit_route(namespace, route, extra_args, extra_docs)
+
+    def _generate_route(self, namespace, route):
+        route_type = route.attrs.get('style')
+        if route_type == 'upload':
+            self._generate_upload_route_bindings(namespace, route)
+        elif route_type == 'download':
+            self._generate_download_route_bindings(namespace, route)
+        else:
+            self._emit_route(namespace, route)
