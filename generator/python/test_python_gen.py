@@ -835,7 +835,15 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(v, self.ns.V)
         self.assertEqual(v.get_t9(), ['a', 'b'])
 
-        # Test member that is a list (old style)
+        # Test member that is a list of composites
+        v = json_decode(
+            bv.Union(self.ns.V),
+            json.dumps({'.tag': 't10', 't10': [{'.tag': 't1', 't1': 'hello'}]}))
+        self.assertIsInstance(v, self.ns.V)
+        t10 = v.get_t10()
+        self.assertEqual(t10[0].get_t1(), 'hello')
+
+        # Test member that is a list of composites (old style)
         v = json_decode(
             bv.Union(self.ns.V),
             json.dumps({'t10': [{'t1': 'hello'}]}),
@@ -913,6 +921,21 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(
             json_compat_obj_encode(bv.Union(self.ns.V), v_t9),
             {'.tag': 't9', 't9': ['a', 'b']})
+
+    def test_list_coding(self):
+        # Test decoding list of composites
+        v = json_decode(
+            bv.List(bv.Struct(self.ns.S)),
+            json.dumps([{'f': 'Test'}]))
+        self.assertIsInstance(v, list)
+        self.assertIsInstance(v[0], self.ns.S)
+        self.assertEqual(v[0].f, 'Test')
+
+        # Test encoding list of composites
+        v = json_encode(
+            bv.List(bv.Struct(self.ns.S)),
+            [self.ns.S('Test')])
+        self.assertEqual(v, json.dumps([{'f': 'Test'}]))
 
     def test_objs(self):
 
