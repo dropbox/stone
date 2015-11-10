@@ -125,7 +125,7 @@ class TowerOfBabel(object):
                 raw_api.append((namespace, res))
                 self._add_data_types_and_routes_to_api(namespace, res)
             else:
-                self._logger.warn('No output generated from file')
+                self._logger.info('Empty spec: %s', path)
 
         self._add_imports_to_env(raw_api)
         self._add_aliases_to_api(raw_api)
