@@ -492,9 +492,6 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                         with self.block('switch tag'):
                             for field in data_type.fields:
                                 field_type = field.data_type
-                                if is_nullable_type(field_type):
-                                    field_type = field_type.data_type
-
                                 self.emit('case "{}":'.format(field.name))
 
                                 tag_type = self._tag_type(data_type, field)
