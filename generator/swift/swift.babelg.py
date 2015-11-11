@@ -105,7 +105,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         if isinstance(thing, DataType):
             name = self.class_data_type(thing)
             if thing.parent_type:
-                extensions.append(self.class_data_type(thing.parent_type))
+                extensions.append(self._swift_type_mapping(thing.parent_type))
         elif isinstance(thing, six.text_type):
             name = thing
         else:
