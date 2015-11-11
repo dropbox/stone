@@ -60,9 +60,27 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             with self.output_to_relative_path(path):
                 self._generate_base_namespace_module(namespace)
 
+        client_path = 'BabelRoutes.swift'
+
+        with self.output_to_relative_path(client_path):
+            self._generate_all_routes_for_api(api)
+
+    def _generate_all_routes_for_api(self, api):
+        self.emit_raw(base)
+
+        self.emit('/**')
+        self.emit('    All routes for this API')
+        self.emit('*/')
+        with self.block('public class BabelRoutes : BabelClient'):
+            for namespace in api.namespaces.values():
+                self._generate_routes(namespace)
+
     def _generate_base_namespace_module(self, namespace):
         self.emit_raw(base)
 
+        self.emit('/**')
+        self.emit('    Datatypes and serializers for the {} namespace'.format(namespace.name))
+        self.emit('*/')
         with self.block('public class {}'.format(self.lang.format_class(namespace.name))):
             for data_type in namespace.linearize_data_types():
                 if is_struct_type(data_type):
@@ -71,7 +89,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     self._generate_union_type(namespace, data_type)
 #            else:
 #                raise TypeError('Cannot handle type %r' % type(data_type))
-        self._generate_routes(namespace)
+        #self._generate_routes(namespace)
 
     # generation helper methods
 
@@ -521,11 +539,9 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
                         self.emit('fatalError("Failed to deserialize")')
     def _generate_routes(self, namespace):
-        if not len(namespace.routes):
-            return
-        with self.block('extension BabelClient'):
-            for route in namespace.routes:
-                self._generate_route(namespace, route)
+        self.emit("// MARK: {} routes".format(self.lang.format_class(namespace.name)))
+        for route in namespace.routes:
+            self._generate_route(namespace, route)
 
     STYLE_MAPPING = {
         None: 'Rpc',
@@ -552,16 +568,18 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         request_type = self._swift_type_mapping(route.request_data_type)
         func_name = self.lang.format_method('{}_{}'.format(namespace.name, route.name))
 
+        self.emit('/**')
         if route.doc:
-            self.emit_wrapped_text(route.doc, prefix='/// ')
+            route_doc = route.doc
         else:
-            self.emit_wrapped_text('/// The {} route'.format(func_name))
-        self.emit('///')
+            route_doc = 'The {} route'.format(func_name)
+        self.emit_wrapped_text(route_doc, prefix='    ', width=120)
+        self.emit()
         for name, doc in doc_list + extra_docs:
-            self.emit('/// :param: {}'.format(name))
-            if doc:
-                self.emit_wrapped_text(doc, prefix='///        ')
-
+            if not doc:
+                doc = 'Undocumented'
+            self.emit_wrapped_text('- parameter {}: {}'.format(name, doc), prefix='    ', width=120)
+        self.emit('*/')
         route_type = self.STYLE_MAPPING[route.attrs.get('style')]
 
         rtype = self._swift_type_mapping(route.response_data_type,
