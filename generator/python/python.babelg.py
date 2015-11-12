@@ -816,8 +816,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
                         'Create an instance of this class set to the ``%s`` '
                         'tag with value ``val``.' % field_name)
                     self.emit()
-                    self.emit(':rtype: {}'.format(
+                    self.emit(':param {} val:'.format(
                         self._python_type_mapping(ns, field_dt)))
+                    self.emit(':rtype: {}'.format(
+                        self.lang.format_class(data_type.name)))
                     self.emit('"""')
                     self.emit("return cls('{}', val)".format(field_name))
                 self.emit()
