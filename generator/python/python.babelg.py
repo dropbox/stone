@@ -666,39 +666,46 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """Defines a Python class that represents a union in Babel."""
         self.emit(self._class_declaration_for_type(ns, data_type))
         with self.indent():
-            if data_type.has_documented_type_or_fields():
-                self.emit('"""')
-                if data_type.doc:
-                    self.emit_wrapped_text(
-                        self.process_doc(data_type.doc, self._docf))
-                    if data_type.has_documented_fields():
-                        self.emit()
-                for field in data_type.fields:
-                    if not field.doc:
-                        continue
-                    if is_void_type(field.data_type):
-                        ivar_doc = ':ivar {}: {}'.format(
-                            self.lang.format_variable(field.name),
-                            self.process_doc(field.doc, self._docf))
-                    elif is_composite_type(field.data_type):
-                        ivar_doc = ':ivar {} {}: {}'.format(
-                            self.lang.format_class(field.data_type.name),
-                            self.lang.format_variable(field.name),
-                            self.process_doc(field.doc, self._docf))
-                    else:
-                        ivar_doc = ':ivar {} {}: {}'.format(
-                            self._python_type_mapping(ns, field.data_type),
-                            self.lang.format_variable(field.name), field.doc)
-                    self.emit_wrapped_text(ivar_doc, subsequent_prefix='    ')
-                self.emit('"""')
+            self.emit('"""')
+            if data_type.doc:
+                self.emit_wrapped_text(
+                    self.process_doc(data_type.doc, self._docf))
+                self.emit()
+
+            self.emit_wrapped_text(
+                'This class acts as a tagged union. Only one of the ``is_*`` '
+                'methods will return true. To get the associated value of a '
+                'tag (if one exists), use the corresponding ``get_*`` method.')
+
+            if data_type.has_documented_fields():
+                self.emit()
+
+            for field in data_type.fields:
+                if not field.doc:
+                    continue
+                if is_void_type(field.data_type):
+                    ivar_doc = ':ivar {}: {}'.format(
+                        self.lang.format_variable(field.name),
+                        self.process_doc(field.doc, self._docf))
+                elif is_composite_type(field.data_type):
+                    ivar_doc = ':ivar {} {}: {}'.format(
+                        self.lang.format_class(field.data_type.name),
+                        self.lang.format_variable(field.name),
+                        self.process_doc(field.doc, self._docf))
+                else:
+                    ivar_doc = ':ivar {} {}: {}'.format(
+                        self._python_type_mapping(ns, field.data_type),
+                        self.lang.format_variable(field.name), field.doc)
+                self.emit_wrapped_text(ivar_doc, subsequent_prefix='    ')
+            self.emit('"""')
             self.emit()
 
             self._generate_union_class_slots()
             self._generate_union_class_vars(data_type)
             self._generate_union_class_init(data_type)
-            self._generate_union_class_variant_creators(data_type)
+            self._generate_union_class_variant_creators(ns, data_type)
             self._generate_union_class_is_set(data_type)
-            self._generate_union_class_get_helpers(data_type)
+            self._generate_union_class_get_helpers(ns, data_type)
             self._generate_union_class_repr(data_type)
 
     def _generate_union_class_slots(self):
@@ -788,7 +795,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit('self._value = value')
             self.emit()
 
-    def _generate_union_class_variant_creators(self, data_type):
+    def _generate_union_class_variant_creators(self, ns, data_type):
         """
         Each non-symbol, non-any variant has a corresponding class method that
         can be used to construct a union with that variant selected.
@@ -797,9 +804,21 @@ class PythonGenerator(CodeGeneratorMonolingual):
             if not is_void_type(field.data_type):
                 field_name = self.lang.format_method(field.name)
                 field_name_reserved_check = self.lang.format_method(field.name, True)
+                if is_nullable_type(field.data_type):
+                    field_dt = field.data_type.data_type
+                else:
+                    field_dt = field.data_type
                 self.emit('@classmethod')
                 self.emit('def {}(cls, val):'.format(field_name_reserved_check))
                 with self.indent():
+                    self.emit('"""')
+                    self.emit(
+                        'Create an instance of this class set to the ``%s`` '
+                        'tag with value ``val``.' % field_name)
+                    self.emit()
+                    self.emit(':rtype: {}'.format(
+                        self._python_type_mapping(ns, field_dt)))
+                    self.emit('"""')
                     self.emit("return cls('{}', val)".format(field_name))
                 self.emit()
 
@@ -808,10 +827,15 @@ class PythonGenerator(CodeGeneratorMonolingual):
             field_name = self.lang.format_method(field.name)
             self.emit('def is_{}(self):'.format(field_name))
             with self.indent():
+                self.emit('"""')
+                self.emit('Check if the union tag is ``%s``.' % field_name)
+                self.emit()
+                self.emit(':rtype: bool')
+                self.emit('"""')
                 self.emit("return self._tag == '{}'".format(field_name))
             self.emit()
 
-    def _generate_union_class_get_helpers(self, data_type):
+    def _generate_union_class_get_helpers(self, ns, data_type):
         """
         These are the getters used to access the value of a variant, once
         the tag has been switched on.
@@ -823,6 +847,24 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 # generate getter for field
                 self.emit('def get_{}(self):'.format(field_name))
                 with self.indent():
+                    if is_nullable_type(field.data_type):
+                        field_dt = field.data_type.data_type
+                    else:
+                        field_dt = field.data_type
+                    self.emit('"""')
+                    if field.doc:
+                        self.emit_wrapped_text(
+                            self.process_doc(field.doc, self._docf))
+                        self.emit()
+                    self.emit("Only call this if :meth:`is_%s` is true." %
+                              field_name)
+                    # Sphinx wants an extra line between the text and the
+                    # rtype declaration.
+                    self.emit()
+                    self.emit(':rtype: {}'.format(
+                        self._python_type_mapping(ns, field_dt)))
+                    self.emit('"""')
+
                     self.emit('if not self.is_{}():'.format(field_name))
                     with self.indent():
                         self.emit(
@@ -838,7 +880,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """
         self.emit('def __repr__(self):')
         with self.indent():
-            self.emit("return '{}(%r)' % self._tag".format(
+            self.emit("return '{}(%r, %r)' % (self._tag, self._value)".format(
                 self._class_name_for_data_type(data_type),
             ))
         self.emit()
