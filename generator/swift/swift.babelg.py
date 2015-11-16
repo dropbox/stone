@@ -4,6 +4,8 @@ import os
 import shutil
 import six
 
+import json
+
 from contextlib import contextmanager
 
 from babelapi.data_type import (
@@ -39,41 +41,98 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     lang = SwiftTargetLanguage()
 
     def _docf(self, tag, val):
-        return '`{}`'.format(val)
+        if tag == 'route':
+            return self.lang.format_method(val)
+        elif tag == 'field':
+            if '.' in val:
+                cls, field = val.split('.')
+                return '{} in {}'.format(self.lang.format_variable(field), self.lang.format_class(cls))
+            else:
+                return self.lang.format_variable(val)
+        elif tag in ('type', 'val', 'link'):
+            return val
+        else:
+            import pdb
+            pdb.set_trace()
+            return val
 
     def generate(self, api):
         cur_folder = os.path.dirname(__file__)
         self.logger.info('Copying BabelSerializers.swift to output folder')
         shutil.copy(os.path.join(cur_folder, 'BabelSerializers.swift'),
-                    self.target_folder_path)
+                    os.path.join(self.target_folder_path, 'Source'))
 
         self.logger.info('Copying BabelValidators.swift to output folder')
         shutil.copy(os.path.join(cur_folder, 'BabelValidators.swift'),
-                    self.target_folder_path)
+                    os.path.join(self.target_folder_path, 'Source'))
 
         self.logger.info('Copying Client.swift to output folder')
         shutil.copy(os.path.join(cur_folder, 'Client.swift'),
-                    self.target_folder_path)
+                    os.path.join(self.target_folder_path, 'Source'))
+
+        jazzy_cfg_path = os.path.join(cur_folder, 'jazzy.json')
+        with open(jazzy_cfg_path) as jazzy_file:
+            jazzy_cfg = json.load(jazzy_file)
 
         for namespace in api.namespaces.values():
-            path = '{}.swift'.format(self.lang.format_class(namespace.name))
+
+            ns_class = self.lang.format_class(namespace.name)
+            path = os.path.join('Source', '{}.swift'.format(ns_class))
             with self.output_to_relative_path(path):
                 self._generate_base_namespace_module(namespace)
+            jazzy_cfg['custom_categories'][1]['children'].append(ns_class)
 
-        client_path = 'BabelRoutes.swift'
+            if len(namespace.routes) > 0:
+                path = os.path.join('Source', '{}Routes.swift'.format(ns_class))
+                with self.output_to_relative_path(path):
+                    self._generate_routes(namespace)
+                jazzy_cfg['custom_categories'][0]['children'].append(ns_class + 'Routes')
 
-        with self.output_to_relative_path(client_path):
-            self._generate_all_routes_for_api(api)
+        with self.output_to_relative_path('.jazzy.json'):
+            self.emit_raw(json.dumps(jazzy_cfg, indent=2)+'\n')
 
-    def _generate_all_routes_for_api(self, api):
+        client_path = os.path.join('Source', 'DropboxClient.swift')
+        dropbox_raw_path = os.path.join(cur_folder, 'DropboxClient-raw.swift')
+
+        with open(dropbox_raw_path) as raw_client, self.output_to_relative_path(client_path):
+            self._generate_bound_client(api, raw_client)
+
+    # At this point I've basically given up trying to separate out the
+    # generated code from the generator. They are tightly coupled and babel
+    # supplies no reasoanble interface for avoiding that.
+    #
+    # So this code makes deep assumptions about the layout of concrete syntax
+    # and the general structure of handwritten code in the Dropbox-specific
+    # swift SDK. Eventually we should work on separating out the generated code more cleanly from the rest of the SDK.
+    def _generate_bound_client(self, api, raw_client):
+
         self.emit_raw(base)
+        self.emit('import Alamofire')
 
-        self.emit('/**')
-        self.emit('    All routes for this API')
-        self.emit('*/')
-        with self.block('public class BabelRoutes : BabelClient'):
+        self.emit('/// The client for the API. Call routes using the namespaces inside this object.')
+        with self.block('public class DropboxClient : BabelClient'):
+            self.emit_raw(raw_client.read())
+            namespace_fields = []
             for namespace in api.namespaces.values():
-                self._generate_routes(namespace)
+                if len(namespace.routes) > 0:
+                    namespace_fields.append( (namespace.name,
+                                              self.lang.format_class(namespace.name)))
+
+            my_props = [('accessToken', 'DropboxAccessToken')]
+            super_props = [('manager', 'Manager'), ('baseHosts', '[String : String]')]
+
+            for var, typ in namespace_fields:
+                self.emit('/// Routes within the {} namespace. See {}Routes for details.'.format(var, typ))
+                self.emit('public var {} : {}Routes!'.format(var, typ))
+
+            with self.function_block('public init', self._func_args(my_props + super_props)):
+                for var, typ in my_props:
+                    self.emit('self.{} = {}'.format(var, var))
+                self.emit('super.init({})'.format(self._func_args((name,name) for name, _ in super_props)))
+
+                for var, typ in namespace_fields:
+                    self.emit('self.{} = {}Routes(client: self)'.format(var, typ))
+
 
     def _generate_base_namespace_module(self, namespace):
         self.emit_raw(base)
@@ -289,16 +348,18 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         return v
 
     def _generate_struct_class(self, namespace, data_type):
+        self.emit('/**')
         if data_type.doc:
-            self.emit_wrapped_text(self.process_doc(data_type.doc, self._docf), prefix='/// ')
+            doc = self.process_doc(data_type.doc, self._docf)
         else:
-            self.emit('/// The {} struct'.format(self.class_data_type(data_type)))
-        self.emit('///')
+            doc = 'The {} struct'.format(self.class_data_type(data_type))
+        self.emit_wrapped_text(doc, prefix='    ', width=120)
+        self.emit()
         for f in data_type.fields:
-            self.emit('/// :param: {}'.format(self.lang.format_variable(f.name)))
-            if f.doc:
-                self.emit_wrapped_text(self.process_doc(f.doc, self._docf), prefix='///        ')
-
+            self.emit_wrapped_text('- parameter {}: {}'.format(
+                self.lang.format_variable(f.name), self.process_doc(f.doc, self._docf) if f.doc else 'Undocumented'),
+            prefix='    ', width=120)
+        self.emit('*/')
         protocols = []
         if not data_type.parent_type:
             protocols.append('CustomStringConvertible')
@@ -452,19 +513,23 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             return '({})'.format(self._swift_type_mapping(data_type))
 
     def _generate_union_type(self, namespace, data_type):
+        self.emit('/**')
         if data_type.doc:
-            self.emit_wrapped_text(self.process_doc(data_type.doc, self._docf), prefix='/// ')
+            doc = self.process_doc(data_type.doc, self._docf)
         else:
-            self.emit('/// The {} union'.format(self.class_data_type(data_type)))
-        self.emit('///')
-        for f in data_type.fields:
-            self.emit('/// - {}{}'.format(self.lang.format_class(f.name), ':' if f.doc else ''))
-            if f.doc:
-                self.emit_wrapped_text(self.process_doc(f.doc, self._docf), prefix='///   ')
+            doc = 'The {} union'.format(self.class_data_type(data_type))
+        self.emit_wrapped_text(doc, prefix='    ', width=120)
+        self.emit('*/')
+
         class_type = self.class_data_type(data_type)
         with self.block('public enum {}: CustomStringConvertible'.format(class_type)):
             for field in data_type.fields:
                 typ = self._format_tag_type(namespace, field.data_type)
+                if field.doc:
+                    self.emit('/**')
+                    self.emit_wrapped_text(self.process_doc(field.doc, self._docf),
+                                           prefix='    ', width=120)
+                    self.emit('*/')
                 self.emit('case {}{}'.format(self.lang.format_class(field.name),
                                                   typ))
             with self.block('public var description : String'):
@@ -539,9 +604,16 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
                         self.emit('fatalError("Failed to deserialize")')
     def _generate_routes(self, namespace):
-        self.emit("// MARK: {} routes".format(self.lang.format_class(namespace.name)))
-        for route in namespace.routes:
-            self._generate_route(namespace, route)
+        ns_class = self.lang.format_class(namespace.name)
+        self.emit('/// Routes for the {} namespace'.format(namespace.name))
+        with self.block('public class {}Routes'.format(ns_class)):
+            self.emit('public let client : BabelClient')
+            args = [('client', 'BabelClient')]
+            with self.function_block('init', self._func_args(args)):
+                self.emit('self.client = client')
+
+            for route in namespace.routes:
+                self._generate_route(namespace, route)
 
     STYLE_MAPPING = {
         None: 'Rpc',
@@ -554,7 +626,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         if is_struct_type(route.request_data_type):
             arg_list = self._struct_init_args(route.request_data_type, namespace=namespace)
             doc_list = [(self.lang.format_variable(f.name), self.process_doc(f.doc, self._docf))
-                        for f in route.request_data_type.fields if f.doc]
+                        for f in route.request_data_type.fields]
         else:
             arg_list = [] if is_void_type(route.request_data_type) else [('request', request_type)]
             doc_list = []
@@ -566,11 +638,11 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         extra_docs = extra_docs or []
 
         request_type = self._swift_type_mapping(route.request_data_type)
-        func_name = self.lang.format_method('{}_{}'.format(namespace.name, route.name))
+        func_name = self.lang.format_method(route.name)
 
         self.emit('/**')
         if route.doc:
-            route_doc = route.doc
+            route_doc = self.process_doc(route.doc, self._docf)
         else:
             route_doc = 'The {} route'.format(func_name)
         self.emit_wrapped_text(route_doc, prefix='    ', width=120)
@@ -589,7 +661,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
         host_ident = route.attrs.get('host', 'meta')
         func_args = [
-            ('client', 'self'),
+            ('client', 'self.client'),
             ('host', '"'+host_ident+'"'),
             ('route', '"/{}/{}"'.format(namespace.name, route.name)),
             ('params', '{}.serialize({})'.format(
@@ -629,7 +701,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         )]
         extra_docs = [(
             'destination',
-            'A closure used to compute the destination,'
+            'A closure used to compute the destination, '
             + 'given the temporary file location and the response'
         )]
 

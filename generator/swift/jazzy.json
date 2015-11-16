@@ -1,0 +1,39 @@
+{
+  "author_name": "Dropbox, Inc.",
+  "author_url": "https://dropbox.com/developers",
+  "podspec": "SwiftyDropbox.podspec",
+  "skip_undocumented": true,
+  "hide_documentation_coverage": true,
+  "excluded_files": [
+    "Source/BabelSerializers.swift",
+    "Source/BabelValidators.swift",
+    "Source/Client.swift"
+  ],
+  "swift_version": 2,
+  "custom_categories": [
+    {
+      "name": "Routes",
+      "children": []
+    },
+    {
+      "name": "Data Types",
+      "children": []
+    },
+    {
+      "name": "Authentication",
+      "children": [
+        "DropboxAuthManager",
+        "DropboxAuthResult",
+        "DropboxAccessToken",
+        "OAuth2Error"
+      ]
+    },
+    {
+      "name": "Client Classes",
+      "children": [
+        "Dropbox",
+        "DropboxClient"
+      ]
+    }
+  ]
+}
