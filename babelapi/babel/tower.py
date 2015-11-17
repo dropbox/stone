@@ -130,6 +130,7 @@ class TowerOfBabel(object):
         self._add_imports_to_env(raw_api)
         self._add_aliases_to_api(raw_api)
         self._populate_type_attributes()
+        self._populate_field_defaults()
         self._populate_enumerated_subtypes()
         self._populate_examples()
         self._validate_doc_refs()
@@ -391,6 +392,44 @@ class TowerOfBabel(object):
         data_type.set_attributes(
             data_type._token.doc, api_type_fields, parent_type, catch_all_field)
 
+    def _populate_field_defaults(self):
+        """
+        Populate the defaults of each field. This is done in a separate pass
+        because defaults that specify a union tag require the union to have
+        been defined.
+        """
+        for namespace in self.api.namespaces.values():
+            for data_type in namespace.data_types:
+                # Only struct fields can have default
+                if not isinstance(data_type, Struct):
+                    continue
+
+                for field in data_type.fields:
+                    if not field._token.has_default:
+                        continue
+
+                    if isinstance(field._token.default, BabelTagRef):
+                        if field._token.default.union_name is not None:
+                            raise InvalidSpec(
+                                'Field %s has a qualified default which is '
+                                'unnecessary since the type %s is known' %
+                                (quote(field._token.name),
+                                 quote(field._token.default.union_name)),
+                                field._token.lineno, field._token.path)
+                        default_value = TagRef(field.data_type, field._token.default.tag)
+                    else:
+                        default_value = field._token.default
+                    if not (field._token.type_ref.nullable and default_value is None):
+                        # Verify that the type of the default value is correct for this field
+                        try:
+                            field.data_type.check(default_value)
+                        except ValueError as e:
+                            raise InvalidSpec(
+                                'Field %s has an invalid default: %s' %
+                                (quote(field._token.name), e),
+                                field._token.lineno, field._token.path)
+                    field.set_default(default_value)
+
     def _populate_route_attributes(self, env, route):
         """
         Converts a forward reference of a route into a complete definition.
@@ -442,28 +481,6 @@ class TowerOfBabel(object):
             token=babel_field,
             deprecated=babel_field.deprecated,
         )
-        if babel_field.has_default:
-            if isinstance(babel_field.default, BabelTagRef):
-                if babel_field.default.union_name is not None:
-                    raise InvalidSpec(
-                        'Field %s has a qualified default which is '
-                        'unnecessary since the type %s is known' %
-                        (quote(babel_field.name),
-                         quote(babel_field.default.union_name)),
-                        babel_field.lineno, babel_field.path)
-                default_value = TagRef(data_type, babel_field.default.tag)
-            else:
-                default_value = babel_field.default
-            if not (babel_field.type_ref.nullable and default_value is None):
-                # Verify that the type of the default value is correct for this field
-                try:
-                    data_type.check(default_value)
-                except ValueError as e:
-                    raise InvalidSpec(
-                        'Field %s has an invalid default: %s' %
-                        (quote(babel_field.name), e),
-                        babel_field.lineno, babel_field.path)
-            api_type_field.set_default(default_value)
         return api_type_field
 
     def _create_union_field(self, env, babel_field):

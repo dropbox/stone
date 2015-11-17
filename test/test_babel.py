@@ -968,6 +968,25 @@ struct S
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
+        # Test forward union ref
+        text = """\
+namespace test
+
+struct S
+    s U = a
+
+union U
+    a
+"""
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        self.assertTrue(t.api.namespaces['test'].data_types[0].fields[0].has_default)
+        self.assertEqual(
+            t.api.namespaces['test'].data_types[0].fields[0].default.union_data_type,
+            t.api.namespaces['test'].data_types[1])
+        self.assertEqual(
+            t.api.namespaces['test'].data_types[0].fields[0].default.tag_name, 'a')
+
     def test_import(self):
         # Test field reference to another namespace
         ns1_text = """\
