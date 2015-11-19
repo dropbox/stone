@@ -354,11 +354,6 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         else:
             doc = 'The {} struct'.format(self.class_data_type(data_type))
         self.emit_wrapped_text(doc, prefix='    ', width=120)
-        self.emit()
-        for f in data_type.fields:
-            self.emit_wrapped_text('- parameter {}: {}'.format(
-                self.lang.format_variable(f.name), self.process_doc(f.doc, self._docf) if f.doc else 'Undocumented'),
-            prefix='    ', width=120)
         self.emit('*/')
         protocols = []
         if not data_type.parent_type:
@@ -366,6 +361,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
         with self.class_block(data_type, protocols=protocols):
             for field in data_type.fields:
+                fdoc = self.process_doc(field.doc, self._docf) if field.doc else 'Undocumented'
+                self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
                 self.emit('public let {} : {}'.format(
                     self.lang.format_variable(field.name),
                     self._swift_type_mapping(field.data_type),
