@@ -13,6 +13,7 @@
 
 	public convenience init(accessToken: DropboxAccessToken) {
 		let manager = Manager(serverTrustPolicyManager: DropboxServerTrustPolicyManager())
+        manager.startRequestsImmediately = false
 		self.init(accessToken: accessToken,
 				  manager: manager,
 				  baseHosts: [
