@@ -812,7 +812,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit('def {}(cls, val):'.format(field_name_reserved_check))
                 with self.indent():
                     self.emit('"""')
-                    self.emit(
+                    self.emit_wrapped_text(
                         'Create an instance of this class set to the ``%s`` '
                         'tag with value ``val``.' % field_name)
                     self.emit()
