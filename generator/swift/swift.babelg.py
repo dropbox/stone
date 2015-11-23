@@ -555,7 +555,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     with self.indent():
                         if is_void_type(field_type):
                             self.emit('var d = [String : JSON]()')
-                        elif is_struct_type(field_type):
+                        elif is_struct_type(field_type) and not field_type.has_enumerated_subtypes():
                             self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
                                 self._serializer_obj(field_type)))
                         else:
@@ -579,7 +579,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                                     if is_void_type(field_type):
                                         self.emit('return {}'.format(tag_type))
                                     else:
-                                        if is_struct_type(field_type):
+                                        if is_struct_type(field_type) and not field_type.has_enumerated_subtypes():
                                             subdict = 'json'
                                         else:
                                             subdict = 'd["{}"] ?? .Null'.format(field.name)
