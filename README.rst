@@ -168,6 +168,7 @@ service. Our hypothetical spec lives in a file called ``users.babel``::
             account_id="id-48sa2f0"
             email="alex@example.org"
             name="Alexander the Great"
+            status=active
 
     # This struct represents the input data to the route.
     struct GetAccountReq

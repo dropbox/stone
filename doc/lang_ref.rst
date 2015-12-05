@@ -43,6 +43,7 @@ The spec should live in a file called ``users.babel``::
             account_id="id-48sa2f0"
             email="alex@example.org"
             name="Alexander the Great"
+            status=active
 
     # This struct represents the input data to the route.
     struct GetAccountReq
@@ -310,11 +311,13 @@ representation of the general case for the type::
             account_id = "id-48sa2f0"
             email = "alex@example.org"
             name = "Alexander the Great"
+            status = active
 
         example unnamed "An anonymous user"
             account_id = "id-29sk2p1"
             email = "anony@example.org"
             name = null
+            status = active
 
 Every required field (not nullable and no default) must be specified, otherwise
 an error will be returned. ``null`` can be used to mark that a nullable type
@@ -331,11 +334,13 @@ fields only. Here's an example where ``Name`` is now its own struct::
             account_id = "id-48sa2f0"
             email = "alex@example.org"
             name = default
+            status = active
 
         example anonymous
             account_id = "id-29sk2p1"
             email = "anony@example.org"
             name = anonymous
+            status = active
 
     struct Name
         first_name String?
