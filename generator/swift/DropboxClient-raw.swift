@@ -1,10 +1,11 @@
 	let accessToken : DropboxAccessToken
+	static var version = "InternalVersion"
 
 	/// Shared instance for convenience
 	public static var sharedClient : DropboxClient!
 
 	public override func additionalHeaders(noauth : Bool) -> [String: String] {
-		var headers = ["User-Agent": "OfficialDropboxSwiftSDKv2/0.7.1"]
+		var headers = ["User-Agent": "OfficialDropboxSwiftSDKv2/\(DropboxClient.version)"]
 		if (!noauth) {
 			headers["Authorization"] = "Bearer \(self.accessToken)"
 		}
