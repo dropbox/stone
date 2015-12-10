@@ -842,7 +842,8 @@ class BabelParser(object):
         p[0].append(p[2])
 
     def p_example_field(self, p):
-        'example_field : ID EQ primitive NEWLINE'
+        """example_field : ID EQ primitive NEWLINE
+                         | ID EQ ex_list NEWLINE"""
         if p[3] is BabelNull:
             p[0] = BabelExampleField(
                 self.path, p.lineno(1), p.lexpos(1), p[1], None)
@@ -854,6 +855,41 @@ class BabelParser(object):
         'example_field : ID EQ ID NEWLINE'
         p[0] = BabelExampleField(self.path, p.lineno(1), p.lexpos(1),
             p[1], BabelExampleRef(self.path, p.lineno(3), p.lexpos(3), p[3]))
+
+    # --------------------------------------------------------------
+    # Example of list
+
+    def p_ex_list(self, p):
+        """ex_list : LBRACKET ex_list_items RBRACKET
+                   | LBRACKET empty RBRACKET"""
+        if p[2] is None:
+            p[0] = []
+        else:
+            p[0] = p[2]
+
+    def p_ex_list_item_primitive(self, p):
+        'ex_list_item : primitive'
+        if p[1] is BabelNull:
+            p[0] = None
+        else:
+            p[0] = p[1]
+
+    def p_ex_list_item_id(self, p):
+        'ex_list_item : ID'
+        p[0] = BabelExampleRef(self.path, p.lineno(1), p.lexpos(1), p[1])
+
+    def p_ex_list_item_list(self, p):
+        'ex_list_item : ex_list'
+        p[0] = p[1]
+
+    def p_ex_list_items_create(self, p):
+        """ex_list_items : ex_list_item"""
+        p[0] = [p[1]]
+
+    def p_ex_list_items_extend(self, p):
+        """ex_list_items : ex_list_items COMMA ex_list_item"""
+        p[0] = p[1]
+        p[0].append(p[3])
 
     # --------------------------------------------------------------
 

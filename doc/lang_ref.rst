@@ -323,8 +323,10 @@ Every required field (not nullable and no default) must be specified, otherwise
 an error will be returned. ``null`` can be used to mark that a nullable type
 is not present.
 
-When you have a set of nested types, each type defines examples for primitive
-fields only. Here's an example where ``Name`` is now its own struct::
+When you have a set of nested types, each type defines examples for its fields
+with primitive types. For fields with composite types, the value of the example
+must be a label of an example in the target composite type. Here's an example
+where ``Name`` is now its own struct::
 
     struct Account extends BasicAccount
 
@@ -374,6 +376,27 @@ can be selected at a time. For example::
 In the ``default`` example, notice that void tags are specified with a value of
 ``null``. In the ``person`` example, the ``default`` example for the
 ``Account`` type is referenced.
+
+Lists can be expressed with bracket notation::
+
+    struct S
+        l1 List(String)
+        l2 List(T)
+        l3 List(List(T))
+
+        example default
+            l1 = ["hello", "world"]
+            l2 = [start, end]
+            l3 = [[start], []]
+
+    struct T
+        i UInt64
+
+        example start
+            i = 0
+
+        example end
+            i = 42
 
 Union
 =====
@@ -723,10 +746,6 @@ Basic::
     INDENT = Incremental indentation
     DEDENT = Decremented indentation
 
-Specification Header::
-
-    SpecHeader ::= Definition*
-
 TODO: Need to add additional information about handling of NL, INDENT, DEDENT,
-and whitespace between tokens. Also, the attrs section of Routes and the
-examples section of Structs haven't been addressed.
+and whitespace between tokens. Also, the attrs section of Routes and
+examples (+ lists).

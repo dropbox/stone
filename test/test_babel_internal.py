@@ -37,27 +37,118 @@ class TestBabelInternal(unittest.TestCase):
     Tests the internal representation of a Babel.
     """
 
-    def test_list(self):
+    def test_check_example(self):
 
-        l = List(String(), min_items=1, max_items=3)
+        #
+        # Test string
+        #
 
-        # check proper list
-        l.check(['1'])
+        s = String(min_length=1, max_length=5)
+        s.check_example(
+            BabelExampleField(
+                path='test.babel',
+                lineno=1,
+                lexpos=0,
+                name='v',
+                value='hello',
+            ))
 
-        # check bad item type
-        with self.assertRaises(ValueError) as cm:
-            l.check([1.5])
-        self.assertIn('not a valid string', cm.exception.args[0])
+        with self.assertRaises(InvalidSpec) as cm:
+            s.check_example(
+                BabelExampleField(
+                    path='test.babel',
+                    lineno=1,
+                    lexpos=0,
+                    name='v',
+                    value='',
+                ))
+        self.assertIn("'' has fewer than 1 character(s)", cm.exception.msg)
 
-        # check too many items
-        with self.assertRaises(ValueError) as cm:
-            l.check(['e1', 'e2', 'e3', 'e4'])
-        self.assertIn('more than 3 items', cm.exception.args[0])
+        #
+        # Test list
+        #
 
-        # check too few items
-        with self.assertRaises(ValueError) as cm:
-            l.check([])
-        self.assertIn('fewer than 1 items', cm.exception.args[0])
+        l = List(String(min_length=1), min_items=1, max_items=3)
+
+        l.check_example(
+            BabelExampleField(
+                path='test.babel',
+                lineno=1,
+                lexpos=0,
+                name='v',
+                value=['asd'],
+            ))
+
+        with self.assertRaises(InvalidSpec) as cm:
+            l.check_example(
+                BabelExampleField(
+                    path='test.babel',
+                    lineno=1,
+                    lexpos=0,
+                    name='v',
+                    value=[],
+                ))
+        self.assertIn("has fewer than 1 item(s)", cm.exception.msg)
+
+        #
+        # Test list of lists
+        #
+
+        l = List(List(String(min_length=1), min_items=1))
+
+        l.check_example(
+            BabelExampleField(
+                path='test.babel',
+                lineno=1,
+                lexpos=0,
+                name='v',
+                value=[['asd']],
+            ))
+
+        with self.assertRaises(InvalidSpec) as cm:
+            l.check_example(
+                BabelExampleField(
+                    path='test.babel',
+                    lineno=1,
+                    lexpos=0,
+                    name='v',
+                    value=[[]],
+                ))
+        self.assertIn("has fewer than 1 item(s)", cm.exception.msg)
+
+        s = Struct('S', None, None)
+        s.set_attributes(
+            "Docstring",
+            [
+                StructField('a', UInt64(), 'a field', None),
+                StructField('b', List(String()), 'a field', None),
+            ],
+        )
+
+        s._add_example(
+            BabelExample(
+                'test.babel',
+                lineno=1,
+                lexpos=0,
+                label='default',
+                text='Default example',
+                fields={
+                    'a': BabelExampleField(
+                        path='test.babel',
+                        lineno=2,
+                        lexpos=0,
+                        name='a',
+                        value=132,
+                    ),
+                    'b': BabelExampleField(
+                        path='test.babel',
+                        lineno=2,
+                        lexpos=0,
+                        name='b',
+                        value=['a'],
+                    ),
+                }
+            ))
 
     def test_string(self):
 
@@ -77,12 +168,12 @@ class TestBabelInternal(unittest.TestCase):
         # check too many characters
         with self.assertRaises(ValueError) as cm:
             s.check('12345')
-        self.assertIn('more than 3 characters', cm.exception.args[0])
+        self.assertIn('more than 3 character(s)', cm.exception.args[0])
 
         # check too few characters
         with self.assertRaises(ValueError) as cm:
             s.check('')
-        self.assertIn('fewer than 1 characters', cm.exception.args[0])
+        self.assertIn('fewer than 1 character(s)', cm.exception.args[0])
 
     def test_int(self):
 
@@ -261,7 +352,7 @@ class TestBabelInternal(unittest.TestCase):
                                  'quota',
                                  None)}))
         self.assertEqual(
-            "Bad example for field 'quota': null is not a valid integer type",
+            "Bad example for field 'quota': null is not a valid integer",
             cm.exception.msg)
 
         self.assertTrue(quota_info._has_example('default'))

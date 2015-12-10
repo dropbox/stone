@@ -15,13 +15,19 @@ import math
 import numbers
 import re
 import six
+import warnings
 
 from .babel.exception import InvalidSpec
-from .babel.parser import BabelExampleRef
+from .babel.parser import (
+    BabelExampleField,
+    BabelExampleRef,
+)
+
 
 class ParameterError(Exception):
     """Raised when a data type is parameterized with a bad type or value."""
     pass
+
 
 def generic_type_name(v):
     """
@@ -43,6 +49,7 @@ def generic_type_name(v):
         return 'null'
     else:
         return type(v).__name__
+
 
 class DataType(object):
     """
@@ -67,16 +74,39 @@ class DataType(object):
     @abstractmethod
     def check(self, val):
         """
-        Checks if val is a valid Python representation for this type. Either
-        raises a ValueError or returns None. Return value should be ignored.
+        Checks if a value specified in a spec (translated to a Python object)
+        is a valid Python value for this type. Returns nothing, but can raise
+        an exception.
+
+        Args:
+            val (object)
+
+        Raises:
+            ValueError
+        """
+        pass
+
+    @abstractmethod
+    def check_example(self, ex_field):
+        """
+        Checks if an example field from a spec is valid. Returns nothing, but
+        can raise an exception.
+
+        Args:
+            ex_field (BabelExampleField)
+
+        Raises:
+            InvalidSpec
         """
         pass
 
     def __repr__(self):
         return self.name
 
+
 class PrimitiveType(DataType):
     pass
+
 
 class Nullable(DataType):
 
@@ -87,17 +117,34 @@ class Nullable(DataType):
         if val is not None:
             return self.data_type.check(val)
 
+    def check_example(self, ex_field):
+        if ex_field.value is not None:
+            return self.data_type.check_example(ex_field)
+
+
 class Void(PrimitiveType):
 
     def check(self, val):
         if val is not None:
             raise ValueError('void type can only be null')
 
+    def check_example(self, ex_field):
+        if ex_field.value is not None:
+            raise InvalidSpec('example of void type must be null',
+                              ex_field.lineno, ex_field.path)
+
+
 class Binary(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, str):
             raise ValueError('%r is not valid binary (Python str)' % val)
+
+    def check_example(self, ex_field):
+        if not isinstance(ex_field.value, bytes):
+            raise InvalidSpec("'%s' is not valid binary",
+                              ex_field.lineno, ex_field.path)
+
 
 class _BoundedInteger(PrimitiveType):
     """
@@ -129,7 +176,7 @@ class _BoundedInteger(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, numbers.Integral):
-            raise ValueError('%s is not a valid integer type' %
+            raise ValueError('%s is not a valid integer' %
                              generic_type_name(val))
         if not (self.minimum <= val <= self.maximum):
             raise ValueError('%d is not within range [%r, %r]'
@@ -141,24 +188,35 @@ class _BoundedInteger(PrimitiveType):
             raise ValueError('%d is greater than %d' %
                              (val, self.max_value))
 
+    def check_example(self, ex_field):
+        try:
+            self.check(ex_field.value)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
+
     def __repr__(self):
         return '%s()' % self.name
+
 
 class Int32(_BoundedInteger):
     minimum = -2**31
     maximum = 2**31 - 1
 
+
 class UInt32(_BoundedInteger):
     minimum = 0
     maximum = 2**32 - 1
+
 
 class Int64(_BoundedInteger):
     minimum = -2**63
     maximum = 2**63 - 1
 
+
 class UInt64(_BoundedInteger):
     minimum = 0
     maximum = 2**64 - 1
+
 
 class _BoundedFloat(PrimitiveType):
     """
@@ -168,6 +226,7 @@ class _BoundedFloat(PrimitiveType):
     native float implementation is a float64/double. Therefore, any Python
     float will pass the data type range check automatically.
     """
+
     minimum = None
     maximum = None
 
@@ -213,6 +272,7 @@ class _BoundedFloat(PrimitiveType):
             except OverflowError:
                 raise ValueError('%r is too large for float' % val)
         if math.isnan(val) or math.isinf(val):
+            # Parser doesn't support NaN or Inf yet.
             raise ValueError('%f values are not supported' % val)
         if self.minimum is not None and val < self.minimum:
             raise ValueError('%f is less than %f' %
@@ -227,22 +287,38 @@ class _BoundedFloat(PrimitiveType):
             raise ValueError('%f is greater than %f' %
                              (val, self.min_value))
 
+    def check_example(self, ex_field):
+        try:
+            self.check(ex_field.value)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
+
     def __repr__(self):
         return '%s()' % self.name
+
 
 class Float32(_BoundedFloat):
     # Maximum and minimums from the IEEE 754-1985 standard
     minimum = -3.40282 * 10**38
     maximum = 3.40282 * 10**38
 
+
 class Float64(_BoundedFloat):
     pass
+
 
 class Boolean(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, bool):
             raise ValueError('%r is not a valid boolean' % val)
+
+    def check_example(self, ex_field):
+        try:
+            self.check(ex_field.value)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
+
 
 class String(PrimitiveType):
 
@@ -281,17 +357,23 @@ class String(PrimitiveType):
             raise ValueError('%s is not a valid string' %
                              generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
-            raise ValueError('%r has more than %s characters'
+            raise ValueError("'%s' has more than %d character(s)"
                              % (val, self.max_length))
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValueError('%r has fewer than %s characters'
+            raise ValueError("'%s' has fewer than %d character(s)"
                              % (val, self.min_length))
         elif self.pattern and not self.pattern_re.match(val):
-            raise ValueError('%r did not match pattern %r'
+            raise ValueError("'%s' did not match pattern '%s'"
                              % (val, self.pattern))
 
+    def check_example(self, ex_field):
+        try:
+            self.check(ex_field.value)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
+
+
 class Timestamp(PrimitiveType):
-    """Should support any timestamp format, not just the Dropbox format."""
 
     def __init__(self, format):
         if not isinstance(format, six.string_types):
@@ -300,13 +382,19 @@ class Timestamp(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, six.string_types):
-            raise ValueError('Timestamp must be specified as a string')
+            raise ValueError('timestamp must be specified as a string')
 
         # Raises a ValueError if val is the incorrect format
         datetime.datetime.strptime(val, self.format)
 
+    def check_example(self, ex_field):
+        try:
+            self.check(ex_field.value)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
+
+
 class List(DataType):
-    """Assumes list contents are homogeneous with respect to types."""
 
     def __init__(self, data_type, min_items=None, max_items=None):
         self.data_type = data_type
@@ -322,28 +410,29 @@ class List(DataType):
         self.max_items = max_items
 
     def check(self, val):
+        raise NotImplementedError
+
+    def check_example(self, ex_field):
+        try:
+            self._check_list_container(ex_field.value)
+            for item in ex_field.value:
+                new_ex_field = BabelExampleField(ex_field.path,
+                                                 ex_field.lineno,
+                                                 ex_field.lexpos,
+                                                 ex_field.name,
+                                                 item)
+                self.data_type.check_example(new_ex_field)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
+
+    def _check_list_container(self, val):
         if not isinstance(val, list):
             raise ValueError('%s is not a valid list' % generic_type_name(val))
         elif self.max_items is not None and len(val) > self.max_items:
-            raise ValueError('%r has more than %s items'
-                             % (val, self.max_items))
+            raise ValueError('list has more than %s item(s)' % self.max_items)
         elif self.min_items is not None and len(val) < self.min_items:
-            raise ValueError('%r has fewer than %s items'
-                             % (val, self.min_items))
-        for item in val:
-            self.data_type.check(item)
+            raise ValueError('list has fewer than %s item(s)' % self.min_items)
 
-    def has_example(self, label):
-        if isinstance(self.data_type, CompositeType):
-            return self.data_type.has_example(label)
-        else:
-            return False
-
-    def get_example(self, label):
-        if isinstance(self.data_type, CompositeType):
-            return self.data_type.get_example(label)
-        else:
-            return None
 
 def doc_unwrap(raw_doc):
     """
@@ -369,6 +458,7 @@ def doc_unwrap(raw_doc):
             consecutive_newlines = 0
             docstring += c
     return docstring
+
 
 class Field(object):
     """
@@ -398,6 +488,7 @@ class Field(object):
     def __repr__(self):
         return 'Field(%r, %r)' % (self.name,
                                   self.data_type)
+
 
 class StructField(Field):
     """
@@ -440,6 +531,7 @@ class StructField(Field):
         return 'StructField(%r, %r)' % (self.name,
                                         self.data_type)
 
+
 class UnionField(Field):
     """
     Represents a field of a union.
@@ -458,6 +550,7 @@ class UnionField(Field):
         return 'UnionField(%r, %r, %r)' % (self.name,
                                            self.data_type,
                                            self.catch_all)
+
 
 class CompositeType(DataType):
     """
@@ -605,6 +698,7 @@ class CompositeType(DataType):
 
         return examples
 
+
 class Example(object):
     """An example of a struct or union type."""
 
@@ -620,6 +714,7 @@ class Example(object):
     def __repr__(self):
         return 'Example({!r}, {!r}, {!r})'.format(
             self.label, self.text, self.value)
+
 
 class Struct(CompositeType):
     """
@@ -648,15 +743,13 @@ class Struct(CompositeType):
             self.parent_type.subtypes.append(self)
 
     def check(self, val):
-        # Enforce the existence of all fields
-        if not isinstance(val, dict):
-            raise ValueError('val must be a dict')
+        raise NotImplementedError
 
-        for field in self.fields:
-            if field.name in val:
-                field.check(val[field.name])
-            else:
-                raise ValueError('Field %r is unspecified' % field.name)
+    def check_example(self, ex_field):
+        if not isinstance(ex_field.value, BabelExampleRef):
+            raise InvalidSpec(
+                "example must reference label of '%s'" % self.name,
+                ex_field.lineno, ex_field.path)
 
     @property
     def all_fields(self):
@@ -920,12 +1013,8 @@ class Struct(CompositeType):
 
         for subtype_field in self.get_enumerated_subtypes():
             if subtype_field.name == tag:
-                self._raw_examples[example.label] = Example(
-                    tag,
-                    example.text,
-                    OrderedDict([(tag, (val, subtype_field.data_type))]),
-                    example)
-                return
+                self._raw_examples[example.label] = example
+                break
         else:
             raise InvalidSpec(
                 "Unknown subtype tag '%s' in example." % tag,
@@ -943,49 +1032,16 @@ class Struct(CompositeType):
                     example_field.lineno, example_field.path,
                 )
 
-        # This stores a modified version of the example from the spec.
-        ex_value = OrderedDict()
-
         for field in self.all_fields:
-            dt, nullable_dt = get_underlying_type(field.data_type)
-            list_dt = False
-            while is_list_type(dt):
-                dt = dt.data_type
-                list_dt = True
             if field.name in example.fields:
                 example_field = example.fields[field.name]
-                if nullable_dt and example_field.value is None:
-                    ex_value[field.name] = None
-                elif isinstance(dt, CompositeType):
-                    if isinstance(example_field.value, BabelExampleRef):
-                        # This is a value that refers to an example of the
-                        # field's data type.
-                        ex_value[field.name] = example_field.value
-                    else:
-                        raise InvalidSpec(
-                            "Field '%s' must be set to an example label for "
-                            "type '%s'." % (field.name, dt.name),
-                            example_field.lineno, example_field.path)
-                elif list_dt:
-                    # TODO(kelkabany): We need examples for lists, which we
-                    # cannot even parse right now.
-                    raise InvalidSpec(
-                        "Example for field '%s' is unsupported because it's a "
-                        "list of primitives." % field.name,
-                        example_field.lineno, example_field.path)
-                else:
-                    try:
-                        dt.check(example_field.value)
-                    except ValueError as e:
-                        raise InvalidSpec(
-                            "Bad example for field '%s': %s" %
-                            (field.name, e.args[0]),
-                            example_field.lineno, example_field.path)
-                    else:
-                        ex_value[field.name] = example_field.value
-            elif field.has_default:
-                ex_value[field.name] = field.default
-            elif list_dt or nullable_dt:
+                try:
+                    field.data_type.check_example(example_field)
+                except InvalidSpec as e:
+                    e.msg = "Bad example for field '{}': {}".format(
+                        field.name, e.msg)
+                    raise e
+            elif field.has_default or isinstance(field.data_type, Nullable):
                 # These don't need examples.
                 pass
             else:
@@ -993,9 +1049,7 @@ class Struct(CompositeType):
                     "Missing field '%s' in example." % field.name,
                     example.lineno, example.path)
 
-        composite_example = Example(
-            example.label, example.text, ex_value, example)
-        self._raw_examples[example.label] = composite_example
+        self._raw_examples[example.label] = example
 
     def _has_example(self, label):
         """Whether this data type has an example with the given ``label``."""
@@ -1031,47 +1085,43 @@ class Struct(CompositeType):
 
         example = self._raw_examples[label]
 
+        def deref_example_ref(dt, val):
+            dt, _ = unwrap_nullable(dt)
+            if not dt._has_example(val.label):
+                raise InvalidSpec(
+                    "Reference to example for '%s' with label '%s' "
+                    "does not exist." % (dt.name, val.label),
+                    val.lineno, val.path)
+            return dt._compute_example(val.label).value
+
         # Do a deep copy of the example because we're going to mutate it.
         ex_val = OrderedDict()
 
+        def get_json_val(dt, val):
+            if isinstance(val, BabelExampleRef):
+                # Embed references to other examples directly.
+                return deref_example_ref(dt, val)
+            elif isinstance(val, TagRef):
+                return val.union_data_type._compute_example(val.tag_name).value
+            elif isinstance(val, list):
+                return [get_json_val(dt.data_type, v) for v in val]
+            else:
+                return val
+
         for field in self.all_fields:
-            dt, _ = get_underlying_type(field.data_type)
-            list_nesting_count = 0
-            while is_list_type(dt):
-                dt = dt.data_type
-                list_nesting_count += 1
-            if field.name in example.value:
-                val = example.value[field.name]
-                if val is None:
+            if field.name in example.fields:
+                example_field = example.fields[field.name]
+                if example_field.value is None:
                     # Serialized format doesn't include fields with null.
                     pass
-                elif is_tag_ref(val):
-                    ex_val[field.name] = {'.tag': val.tag_name}
-                elif isinstance(val, BabelExampleRef):
-                    # Embed references to other examples directly.
-                    if not dt._has_example(val.label):
-                        raise InvalidSpec(
-                            "Reference to example for '%s' with label '%s' "
-                            "does not exist." % (dt.name, val.label),
-                            val.lineno, val.path)
-                    v = dt._compute_example(val.label).value
-                    while list_nesting_count > 0:
-                        v = [v]
-                        list_nesting_count -= 1
-                    ex_val[field.name] = v
                 else:
-                    # Use value as is
-                    ex_val[field.name] = val
-            elif list_nesting_count > 0:
-                # For lists of primitives, automatically set the example to
-                # an empty list.
-                v = []
-                while list_nesting_count > 1:
-                    v = [v]
-                    list_nesting_count -= 1
-                ex_val[field.name] = v
+                    ex_val[field.name] = get_json_val(
+                        field.data_type, example_field.value)
+            elif field.has_default:
+                ex_val[field.name] = get_json_val(
+                    field.data_type, field.default)
 
-        return Example(example.label, example.text, ex_val)
+        return Example(example.label, example.text, ex_val, token=example)
 
     def _compute_example_enumerated_subtypes(self, label):
         """
@@ -1082,13 +1132,21 @@ class Struct(CompositeType):
 
         example = self._raw_examples[label]
 
-        tag, (ref, data_type) = list(example.value.items())[0]
+        example_field = list(example.fields.values())[0]
+
+        for subtype_field in self.get_enumerated_subtypes():
+            if subtype_field.name == example_field.name:
+                data_type = subtype_field.data_type
+                break
+
+        ref = example_field.value
         if not data_type._has_example(ref.label):
             raise InvalidSpec(
                 "Reference to example for '%s' with label '%s' does not "
                 "exist." % (data_type.name, ref.label),
                 ref.lineno, ref.path)
-        ordered_value = OrderedDict([('.tag', tag)])
+
+        ordered_value = OrderedDict([('.tag', example_field.name)])
         flat_example = data_type._compute_example_flat_helper(ref.label)
         ordered_value.update(flat_example.value)
         flat_example.value = ordered_value
@@ -1096,6 +1154,7 @@ class Struct(CompositeType):
 
     def __repr__(self):
         return 'Struct(%r, %r)' % (self.name, self.fields)
+
 
 class Union(CompositeType):
     """Defines a tagged union. Fields are variants."""
@@ -1118,16 +1177,23 @@ class Union(CompositeType):
         self.parent_type = parent_type
 
     def check(self, val):
-        if not isinstance(val, TagRef):
-            raise ValueError('%r is not a tag of %s' % (val, self.name))
+        assert isinstance(val, TagRef)
         for field in self.all_fields:
             if val.tag_name == field.name:
                 if not is_void_type(field.data_type):
-                    raise ValueError('invalid reference to non-void tag %r' %
-                                     val.tag_name)
-                return None
+                    raise ValueError(
+                        "invalid reference to non-void option '%s'" %
+                        val.tag_name)
+                break
         else:
-            raise ValueError('unknown tag %r for %s' % (val.tag_name, self.name))
+            raise ValueError(
+                "invalid reference to unknown tag '%s'" % val.tag_name)
+
+    def check_example(self, ex_field):
+        if not isinstance(ex_field.value, BabelExampleRef):
+            raise InvalidSpec(
+                "example must reference label of '%s'" % self.name,
+                ex_field.lineno, ex_field.path)
 
     @property
     def all_fields(self):
@@ -1137,8 +1203,7 @@ class Union(CompositeType):
         """
         fields = []
         if self.parent_type:
-            parent_dt, _ = get_underlying_type(self.parent_type)
-            fields.extend(parent_dt.all_fields)
+            fields.extend(self.parent_type.all_fields)
         fields.extend([f for f in self.fields])
         return fields
 
@@ -1163,7 +1228,6 @@ class Union(CompositeType):
         # Extract the only tag in the example.
         example_field = list(example.fields.values())[0]
         tag = example_field.name
-        val = example_field.value
 
         # Find the union member that corresponds to the tag.
         for field in self.all_fields:
@@ -1176,40 +1240,14 @@ class Union(CompositeType):
                 example.lineno, example.path
             )
 
-        dt, nullable_dt = get_underlying_type(field.data_type)
-        while is_list_type(dt):
-            dt = dt.data_type
-        if val is None:
-            # null can only be explicit for a nullable or void type
-            if not nullable_dt and not is_void_type(dt):
-                raise InvalidSpec(
-                    "Tag '%s' is not nullable but is set to null by example." %
-                    tag, example_field.lineno, example_field.path)
-            else:
-                # Use the compact representation (just the tag, no value)
-                composite_example = Example(
-                    example.label, example.text, OrderedDict([('.tag', tag)]))
-        elif isinstance(dt, CompositeType):
-            if isinstance(val, BabelExampleRef):
-                composite_example = Example(
-                    example.label, example.text, OrderedDict([(tag, val)]))
-            else:
-                raise InvalidSpec(
-                    "Example for field '%s' must be reference to example "
-                    "for '%s'." % (field.name, dt.name),
-                    example_field.lineno, example_field.path)
-        else:
-            try:
-                dt.check(val)
-            except ValueError as e:
-                raise InvalidSpec(
-                    "Tag '%s' had bad example: %s" % (field.name, e.args[0]),
-                    example_field.lineno, example_field.path)
-            else:
-                composite_example = Example(
-                    example.label, example.text, OrderedDict([(tag, val)]))
+        try:
+            field.data_type.check_example(example_field)
+        except InvalidSpec as e:
+            e.msg = "Bad example for field '{}': {}".format(
+                field.name, e.msg)
+            raise e
 
-        self._raw_examples[example.label] = composite_example
+        self._raw_examples[example.label] = example
 
     def _has_example(self, label):
         """Whether this data type has an example with the given ``label``."""
@@ -1217,7 +1255,7 @@ class Union(CompositeType):
             return True
         else:
             for field in self.all_fields:
-                dt, _ = get_underlying_type(field.data_type)
+                dt, _ = unwrap_nullable(field.data_type)
                 if not is_composite_type(dt) and not is_void_type(dt):
                     continue
                 if label == field.name:
@@ -1239,7 +1277,7 @@ class Union(CompositeType):
 
         # Add examples for each void union member.
         for field in self.all_fields:
-            dt, _ = get_underlying_type(field.data_type)
+            dt, _ = unwrap_nullable(field.data_type)
             if is_void_type(dt):
                 self._examples[field.name] = \
                     Example(
@@ -1254,51 +1292,46 @@ class Union(CompositeType):
         JSON-serializable representation of the example.
         """
         if label in self._raw_examples:
+
             example = self._raw_examples[label]
 
-            # Do a deep copy of the example because we're going to mutate it.
-            example_copy = copy.deepcopy(example)
-
-            if len(example.value) == 1 and '.tag' in example.value:
-                # If it's a compact representation, we can just return it.
-                return Example(example.label, example.text, example.value)
-
-            assert len(example.value) == 1  # Verified in _add_raw_example()
-            tag, val = list(example.value.items())[0]
-            # Find the field referenced by this tag.
-            for field in self.all_fields:
-                if tag == field.name:
-                    break
-            else:
-                raise AssertionError('Unknown tag %r' % tag)
-
-            orig_dt, _ = get_underlying_type(field.data_type)
-            dt = orig_dt
-            list_nesting_count = 0
-            while is_list_type(dt):
-                dt = dt.data_type
-                list_nesting_count += 1
-            if isinstance(val, BabelExampleRef):
-                # If it's a reference to an example, inject it in.
+            def deref_example_ref(dt, val):
+                dt, _ = unwrap_nullable(dt)
                 if not dt._has_example(val.label):
                     raise InvalidSpec(
-                        "Reference to example for '%s' with label '%s' does not "
-                        "exist." % (dt.name, val.label), val.lineno, val.path)
-                ex_val = dt._compute_example(val.label).value
-            else:
-                assert isinstance(dt, PrimitiveType), dt
-                ex_val = val
-            while list_nesting_count > 0:
-                ex_val = [ex_val]
-                list_nesting_count -= 1
-            if isinstance(orig_dt, Struct) and not dt.has_enumerated_subtypes():
-                new_val = OrderedDict([('.tag', tag)])
-                new_val.update(ex_val)
-                example_copy.value = new_val
-            else:
-                example_copy.value = {'.tag': tag, tag: ex_val}
+                        "Reference to example for '%s' with label '%s' "
+                        "does not exist." % (dt.name, val.label),
+                        val.lineno, val.path)
+                return dt._compute_example(val.label).value
 
-            return example_copy
+            def get_json_val(dt, val):
+                if isinstance(val, BabelExampleRef):
+                    # Embed references to other examples directly.
+                    return deref_example_ref(dt, val)
+                elif isinstance(val, list):
+                    return [get_json_val(dt.data_type, v) for v in val]
+                else:
+                    return val
+
+            example_field = list(example.fields.values())[0]
+
+            # Do a deep copy of the example because we're going to mutate it.
+            ex_val = OrderedDict([('.tag', example_field.name)])
+
+            for field in self.all_fields:
+                if field.name == example_field.name:
+                    break
+
+            data_type, _ = unwrap_nullable(field.data_type)
+            inner_ex_val = get_json_val(data_type, example_field.value)
+            if (isinstance(data_type, Struct) and
+                    not data_type.has_enumerated_subtypes()):
+                ex_val.update(inner_ex_val)
+            else:
+                if inner_ex_val is not None:
+                    ex_val[field.name] = inner_ex_val
+
+            return Example(example.label, example.text, ex_val, token=example)
 
         else:
             # Try to fallback to a union member with tag matching the label
@@ -1334,6 +1367,7 @@ class Union(CompositeType):
     def __repr__(self):
         return 'Union(%r, %r)' % (self.name, self.fields)
 
+
 class TagRef(object):
     """
     Used when an ID in Babel refers to a tag of a union.
@@ -1347,7 +1381,8 @@ class TagRef(object):
     def __repr__(self):
         return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
 
-def get_underlying_type(data_type):
+
+def unwrap_nullable(data_type):
     """
     Convenience method to unwrap Nullable from around a DataType.
 
@@ -1362,6 +1397,13 @@ def get_underlying_type(data_type):
         return data_type.data_type, True
     else:
         return data_type, False
+
+
+def get_underlying_type(data_type):
+    warnings.warn("get_underlying_type is deprecated. Use unwrap_nullable().",
+                  DeprecationWarning)
+    return unwrap_nullable(data_type)
+
 
 def is_binary_type(data_type):
     return isinstance(data_type, Binary)

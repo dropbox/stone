@@ -474,7 +474,6 @@ available::
     is_boolean_type(data_type)
     is_composite_type(data_type)
     is_integer_type(data_type)
-    is_empty(data_type)
     is_float_type(data_type)
     is_list_type(data_type)
     is_nullable_type(data_type)
@@ -485,6 +484,10 @@ available::
     is_timestamp_type(data_type)
     is_union_type(data_type)
     is_void_type(data_type)
+
+There is also an ``unwrap_nullable(data_type)`` function that takes a
+``Nullable`` object and returns the type that it wraps. If the argument is not
+a ``Nullable``, then it's returned unmodified.
 
 Union Tag Reference
 ===================

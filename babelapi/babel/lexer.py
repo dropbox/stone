@@ -124,6 +124,12 @@ class BabelLexer(object):
         'STRING',
     )
 
+    # List notation
+    tokens += (
+        'LBRACKET',
+        'RBRACKET',
+    )
+
     tokens += (
         'ASTERIX',
         'Q',
@@ -133,6 +139,8 @@ class BabelLexer(object):
     t_DOT = r'\.'
     t_LPAR = r'\('
     t_RPAR = r'\)'
+    t_LBRACKET = r'\['
+    t_RBRACKET = r'\]'
     t_EQ = r'='
     t_COMMA = r','
     t_ASTERIX = r'\*'
