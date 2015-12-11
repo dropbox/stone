@@ -330,6 +330,73 @@ route GetAccountInfo(Void, Void, Void)
         out = self.parser.parse(text)
         self.assertEqual(out[1].doc, '0\n\n1\n\n2\n\n3\n')
 
+        # Test deprecation
+        text = textwrap.dedent("""\
+            namespace test
+
+            route old_route (Void, Void, Void) deprecated
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        r = t.api.namespaces['test'].route_by_name['old_route']
+        self.assertIsNotNone(r.deprecated)
+        self.assertIsNone(r.deprecated.by)
+
+        # Test deprecation with target route
+        text = textwrap.dedent("""\
+            namespace test
+
+            route old_route (Void, Void, Void) deprecated by new_route
+            route new_route (Void, Void, Void)
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        r_old = t.api.namespaces['test'].route_by_name['old_route']
+        r_new = t.api.namespaces['test'].route_by_name['new_route']
+        self.assertIsNotNone(r.deprecated)
+        self.assertEqual(r_old.deprecated.by, r_new)
+
+        # Test deprecation with target route (more complex route names)
+        text = textwrap.dedent("""\
+            namespace test
+
+            route test/old_route (Void, Void, Void) deprecated by test/new_route
+            route test/new_route (Void, Void, Void)
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        r_old = t.api.namespaces['test'].route_by_name['test/old_route']
+        r_new = t.api.namespaces['test'].route_by_name['test/new_route']
+        self.assertIsNotNone(r.deprecated)
+        self.assertEqual(r_old.deprecated.by, r_new)
+
+        # Try deprecation by undefined route
+        text = textwrap.dedent("""\
+            namespace test
+
+            route old_route (Void, Void, Void) deprecated by unk_route
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Undefined route 'unk_route'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Try deprecation by struct
+        text = textwrap.dedent("""\
+            namespace test
+
+            route old_route (Void, Void, Void) deprecated by S
+
+            struct S
+                f String
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("'S' must be a route.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
     def test_lexing_errors(self):
         text = """
 namespace users

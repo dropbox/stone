@@ -41,7 +41,7 @@ class TestGenerator(unittest.TestCase):
         l = List(a1)
         s = String()
         route = ApiRoute('test/route', None)
-        route.set_attributes(None, l, a2, s, None)
+        route.set_attributes(None, None, l, a2, s, None)
         ns.add_route(route)
 
         # Test that only user-defined types are returned.

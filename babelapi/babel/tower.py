@@ -8,6 +8,7 @@ import re
 from ..api import (
     Api,
     ApiRoute,
+    DeprecationInfo,
 )
 from ..data_type import (
     Binary,
@@ -438,7 +439,27 @@ class TowerOfBabel(object):
         response_dt = self._resolve_type(env, route._token.response_type_ref)
         error_dt = self._resolve_type(env, route._token.error_type_ref)
 
+        if route._token.deprecated:
+            assert route._token.deprecated[0]
+            new_route_name = route._token.deprecated[1]
+            if new_route_name:
+                if new_route_name not in env:
+                    raise InvalidSpec(
+                        'Undefined route %s.' % quote(new_route_name),
+                        route._token.lineno, route._token.path)
+                new_route = env[new_route_name]
+                if not isinstance(new_route, ApiRoute):
+                    raise InvalidSpec(
+                        '%s must be a route.' % quote(new_route_name),
+                        route._token.lineno, route._token.path)
+                deprecated = DeprecationInfo(new_route)
+            else:
+                deprecated = DeprecationInfo()
+        else:
+            deprecated = None
+
         route.set_attributes(
+            deprecated=deprecated,
             doc=route._token.doc,
             request_data_type=request_dt,
             response_data_type=response_dt,

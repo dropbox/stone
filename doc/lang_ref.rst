@@ -603,6 +603,20 @@ followed by an arbitrary set of ``key=value`` pairs::
 
 Code generators will populate a route object with these attributes.
 
+Deprecation
+-----------
+
+You can mark a route as deprecated as follows::
+
+    route old_route (Arg, Void, Void) deprecated
+
+If the route is deprecated in favor of a newer route, use ``deprecated by``
+followed by the new route's name::
+
+    route old_route (Arg, Void, Void) deprecated by new_route
+
+    route new_route (NewArg, NewResult, Void)
+
 Import
 ======
 

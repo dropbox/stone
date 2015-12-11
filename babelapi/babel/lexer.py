@@ -146,8 +146,11 @@ class BabelLexer(object):
     t_ASTERIX = r'\*'
     t_Q = r'\?'
 
+    # TODO(kelkabany): Use scoped/conditional lexing to restrict where keywords
+    # are identified as such.
     KEYWORDS = [
         'alias',
+        'by',
         'deprecated',
         'doc',
         'example',
@@ -165,6 +168,7 @@ class BabelLexer(object):
 
     RESERVED = {
         'deprecated': 'DEPRECATED',
+        'by': 'BY',
         'extends': 'EXTENDS',
         'attrs': 'ATTRS',
         'import': 'IMPORT',

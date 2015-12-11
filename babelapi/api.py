@@ -11,6 +11,7 @@ from babelapi.data_type import (
     is_nullable_type,
 )
 
+
 class Api(object):
     """
     A full description of an API's namespaces, data types, and routes.
@@ -30,6 +31,7 @@ class Api(object):
         if name not in self.namespaces:
             self.namespaces[name] = ApiNamespace(name)
         return self.namespaces.get(name)
+
 
 class ApiNamespace(object):
     """
@@ -153,6 +155,7 @@ class ApiNamespace(object):
     def __repr__(self):
         return 'ApiNamespace({!r})'.format(self.name)
 
+
 class ApiRoute(object):
     """
     Represents an API endpoint.
@@ -169,12 +172,22 @@ class ApiRoute(object):
         self.name = name
         self._token = token
 
-    def set_attributes(self, doc, request_data_type, response_data_type,
-                       error_data_type, attrs):
+        # These attributes are set later by set_attributes()
+        self.deprecated = None
+        self.raw_doc = None
+        self.doc = None
+        self.request_data_type = None
+        self.response_data_type = None
+        self.error_data_type = None
+        self.attrs = None
+
+    def set_attributes(self, deprecated, doc, request_data_type,
+                       response_data_type, error_data_type, attrs):
         """
         Converts a forward reference definition of a route into a full
         definition.
 
+        :param DeprecationInfo deprecated: Set if this route is deprecated.
         :param str doc: Description of the endpoint.
         :type request_data_type: :class:`babelapi.data_type.DataType`
         :type response_data_type: :class:`babelapi.data_type.DataType`
@@ -183,6 +196,7 @@ class ApiRoute(object):
             float, bool, str, or None. These are the route attributes assigned
             in the spec.
         """
+        self.deprecated = deprecated
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self.request_data_type = request_data_type
@@ -192,3 +206,13 @@ class ApiRoute(object):
 
     def __repr__(self):
         return 'ApiRoute({!r})'.format(self.name)
+
+
+class DeprecationInfo(object):
+
+    def __init__(self, by=None):
+        """
+        :param ApiRoute by: The route that replaces this deprecated one.
+        """
+        assert by is None or isinstance(by, ApiRoute), repr(by)
+        self.by = by

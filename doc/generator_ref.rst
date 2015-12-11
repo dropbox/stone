@@ -125,6 +125,11 @@ Route
 name
     The name of the route.
 
+deprecated
+    Set to a ``DeprecationInfo`` object if this route is deprecated. If the
+    route was deprecated by a newer route, ``DeprecationInfo`` will have
+    a ``by`` attribute populated with the new route.
+
 doc
     The documentation string for the route.
 

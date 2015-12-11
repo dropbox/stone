@@ -251,10 +251,11 @@ class BabelSubtypeField(_Element):
 
 class BabelRouteDef(_Element):
 
-    def __init__(self, path, lineno, lexpos, name, request_type_ref,
-                 response_type_ref, error_type_ref=None):
+    def __init__(self, path, lineno, lexpos, name, deprecated,
+                 request_type_ref, response_type_ref, error_type_ref=None):
         super(BabelRouteDef, self).__init__(path, lineno, lexpos)
         self.name = name
+        self.deprecated = deprecated
         self.request_type_ref = request_type_ref
         self.response_type_ref = response_type_ref
         self.error_type_ref = error_type_ref
@@ -707,6 +708,23 @@ class BabelParser(object):
     #
     # The error type is optional.
 
+    def p_route(self, p):
+        """route : ROUTE route_name route_io route_deprecation NEWLINE \
+                        INDENT docsection attrssection DEDENT
+                 | ROUTE route_name route_io route_deprecation NEWLINE"""
+        p[0] = BabelRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], *p[3])
+        if len(p) > 6:
+            p[0].set_doc(p[7])
+            if p[8]:
+                p[0].set_attrs(dict(p[8]))
+
+    def p_route_name(self, p):
+        'route_name : ID route_path'
+        if p[2]:
+            p[0] = p[1] + p[2]
+        else:
+            p[0] = p[1]
+
     def p_route_path_suffix(self, p):
         """route_path : PATH
                       | empty"""
@@ -720,20 +738,18 @@ class BabelParser(object):
         else:
             p[0] = (p[2], p[4], None)
 
-    def p_route(self, p):
-        """route : ROUTE ID route_path route_io NEWLINE INDENT docsection attrssection DEDENT
-                 | ROUTE ID route_path route_io NEWLINE"""
-        if p[3]:
-            p[2] += p[3]
-        p[0] = BabelRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], *p[4])
-        if len(p) > 6:
-            p[0].set_doc(p[7])
-            if p[8]:
-                p[0].set_attrs(dict(p[8]))
+    def p_route_deprecation(self, p):
+        """route_deprecation : DEPRECATED
+                             | DEPRECATED BY route_name
+                             | empty"""
+        if len(p) == 4:
+            p[0] = (True, p[3])
+        elif p[1]:
+            p[0] = (True, None)
 
     def p_attrs_section(self, p):
         """attrssection : ATTRS NEWLINE INDENT attr_fields DEDENT
-                         | empty"""
+                        | empty"""
         if p[1]:
             p[0] = p[4]
 
