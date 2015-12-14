@@ -15,6 +15,7 @@ from babelapi.babel.tower import (
     TowerOfBabel,
 )
 
+
 class TestBabel(unittest.TestCase):
     """
     Tests the Babel format.
@@ -24,37 +25,43 @@ class TestBabel(unittest.TestCase):
         self.parser = BabelParser(debug=False)
 
     def test_namespace_decl(self):
-        text = """namespace files"""
+        text = textwrap.dedent("""\
+            namespace files
+            """)
         out = self.parser.parse(text)
         self.assertIsInstance(out[0], BabelNamespace)
         self.assertEqual(out[0].name, 'files')
 
         # test starting with newlines
-        text = """\n\nnamespace files"""
+        text = textwrap.dedent("""\
+
+
+            namespace files
+            """)
         out = self.parser.parse(text)
         self.assertIsInstance(out[0], BabelNamespace)
         self.assertEqual(out[0].name, 'files')
 
     def test_comments(self):
-        text = """
-# comment at top
-namespace files
+        text = textwrap.dedent("""\
+            # comment at top
+            namespace files
 
-# another full line comment
-alias Rev = String # partial line comment
+            # another full line comment
+            alias Rev = String # partial line comment
 
-struct S # comment before INDENT
-    "Doc"
-    # inner comment
-    f1 UInt64 # partial line comment
-    # trailing comment
+            struct S # comment before INDENT
+                "Doc"
+                # inner comment
+                f1 UInt64 # partial line comment
+                # trailing comment
 
-struct S2 # struct def following comment
-    # start with comment
-    f1 String # end with partial-line comment
+            struct S2 # struct def following comment
+                # start with comment
+                f1 String # end with partial-line comment
 
-# footer comment
-"""
+            # footer comment
+            """)
         out = self.parser.parse(text)
         self.assertIsInstance(out[0], BabelNamespace)
         self.assertIsInstance(out[1], BabelAlias)
@@ -62,13 +69,13 @@ struct S2 # struct def following comment
         self.assertEqual(out[3].name, 'S2')
 
     def test_type_args(self):
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias T = String(min_length=3)
-alias F = Float64(max_value=3.2e1)
-alias Numbers = List(UInt64)
-"""
+            alias T = String(min_length=3)
+            alias F = Float64(max_value=3.2e1)
+            alias Numbers = List(UInt64)
+            """)
         out = self.parser.parse(text)
         self.assertIsInstance(out[1], BabelAlias)
         self.assertEqual(out[1].name, 'T')
@@ -88,25 +95,25 @@ alias Numbers = List(UInt64)
     def test_struct_decl(self):
 
         # test struct decl with no docs
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-struct QuotaInfo
-    quota UInt64
-"""
+            struct QuotaInfo
+                quota UInt64
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].fields[0].name, 'quota')
         self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
 
         # test struct with only a top-level doc
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-struct QuotaInfo
-    "The space quota info for a user."
-    quota UInt64
-"""
+            struct QuotaInfo
+                "The space quota info for a user."
+                quota UInt64
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
@@ -114,14 +121,14 @@ struct QuotaInfo
         self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
 
         # test struct with field doc
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-struct QuotaInfo
-    "The space quota info for a user."
-    quota UInt64
-        "The user's total quota allocation (bytes)."
-"""
+            struct QuotaInfo
+                "The space quota info for a user."
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
@@ -130,14 +137,14 @@ struct QuotaInfo
         self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
 
         # test without newline after field doc
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-struct QuotaInfo
-    "The space quota info for a user."
-    quota UInt64
-        "The user's total quota allocation (bytes)."
-"""
+            struct QuotaInfo
+                "The space quota info for a user."
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
@@ -146,64 +153,64 @@ struct QuotaInfo
         self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
 
         # test with example
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-struct QuotaInfo
-    "The space quota info for a user."
-    quota UInt64
-        "The user's total quota allocation (bytes)."
-    example default
-        quota=64000
-"""
+            struct QuotaInfo
+                "The space quota info for a user."
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+                example default
+                    quota=64000
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertIn('default', out[1].examples)
 
         # test with multiple examples
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-struct QuotaInfo
-    "The space quota info for a user."
-    quota UInt64
-        "The user's total quota allocation (bytes)."
-    example default
-        quota=2000000000
-    example pro
-        quota=100000000000
-"""
+            struct QuotaInfo
+                "The space quota info for a user."
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+                example default
+                    quota=2000000000
+                example pro
+                    quota=100000000000
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertIn('default', out[1].examples)
         self.assertIn('pro', out[1].examples)
 
         # test with inheritance
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S1
-    f1 UInt64
+            struct S1
+                f1 UInt64
 
-struct S2 extends S1
-    f2 String
-"""
+            struct S2 extends S1
+                f2 String
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'S1')
         self.assertEqual(out[2].name, 'S2')
         self.assertEqual(out[2].extends.name, 'S1')
 
         # test with defaults
-        text = """
-namespace ns
-struct S
-    n1 Int32 = -5
-    n2 Int32 = 5
-    f1 Float64 = -1.
-    f2 Float64 = -4.2
-    f3 Float64 = -5e-3
-    f4 Float64 = -5.1e-3
-"""
+        text = textwrap.dedent("""\
+            namespace ns
+            struct S
+                n1 Int32 = -5
+                n2 Int32 = 5
+                f1 Float64 = -1.
+                f2 Float64 = -4.2
+                f3 Float64 = -5e-3
+                f4 Float64 = -5.1e-3
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'S')
         self.assertEqual(out[1].fields[0].name, 'n1')
@@ -217,19 +224,19 @@ struct S
 
     def test_union_decl(self):
         # test union with only symbols
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-union Role
-    "The role a user may have in a shared folder."
+            union Role
+                "The role a user may have in a shared folder."
 
-    owner
-        "Owner of a file."
-    viewer
-        "Read only permission."
-    editor
-        "Read and write permission."
-"""
+                owner
+                    "Owner of a file."
+                viewer
+                    "Read only permission."
+                editor
+                    "Read and write permission."
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'Role')
         self.assertEqual(out[1].doc, 'The role a user may have in a shared folder.')
@@ -242,46 +249,46 @@ union Role
 
         # TODO: Test a union that includes a struct.
 
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-union Error
-    A
-        "Variant A"
-    B
-        "Variant B"
-    UNK*
-"""
+            union Error
+                A
+                    "Variant A"
+                B
+                    "Variant B"
+                UNK*
+            """)
         out = self.parser.parse(text)
         self.assertTrue(out[1].fields[2].catch_all)
 
         # test with inheritance
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union U1
-    t1 UInt64
+            union U1
+                t1 UInt64
 
-union U2 extends U1
-    t2 String
-"""
+            union U2 extends U1
+                t2 String
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'U1')
         self.assertEqual(out[2].name, 'U2')
         self.assertEqual(out[2].extends.name, 'U1')
 
     def test_composition(self):
-        text = """
-namespace files
+        text = textwrap.dedent("""\
+            namespace files
 
-union UploadMode
-    add
-    overwrite
+            union UploadMode
+                add
+                overwrite
 
-struct Upload
-    path String
-    mode UploadMode = add
-"""
+            struct Upload
+                path String
+                mode UploadMode = add
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[2].name, 'Upload')
         self.assertIsInstance(out[2].fields[1].default, BabelTagRef)
@@ -289,23 +296,23 @@ struct Upload
 
     def test_route_decl(self):
 
-        text = """
-namespace users
+        text = textwrap.dedent("""\
+            namespace users
 
-route GetAccountInfo(Void, Void, Void)
-"""
+            route GetAccountInfo(Void, Void, Void)
+            """)
         # Test route definition with no docstring
         self.parser.parse(text)
 
-        text = """
-namespace users
+        text = textwrap.dedent("""\
+            namespace users
 
-struct AccountInfo
-    email String
+            struct AccountInfo
+                email String
 
-route GetAccountInfo(AccountInfo, Void, Void)
-    "Gets the account info for a user"
-"""
+            route GetAccountInfo(AccountInfo, Void, Void)
+                "Gets the account info for a user"
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'AccountInfo')
         self.assertEqual(out[2].name, 'GetAccountInfo')
@@ -314,19 +321,19 @@ route GetAccountInfo(AccountInfo, Void, Void)
         self.assertEqual(out[2].error_type_ref.name, 'Void')
 
         # Test raw documentation
-        text = """
-namespace users
+        text = textwrap.dedent("""\
+            namespace users
 
-route GetAccountInfo(Void, Void, Void)
-    "0
+            route GetAccountInfo(Void, Void, Void)
+                "0
 
-    1
+                1
 
-    2
+                2
 
-    3
-    "
-"""
+                3
+                "
+            """)
         out = self.parser.parse(text)
         self.assertEqual(out[1].doc, '0\n\n1\n\n2\n\n3\n')
 
@@ -398,18 +405,19 @@ route GetAccountInfo(Void, Void, Void)
         self.assertEqual(cm.exception.lineno, 3)
 
     def test_lexing_errors(self):
-        text = """
-namespace users
+        text = textwrap.dedent("""\
 
-%
+            namespace users
 
-# testing line numbers
+            %
 
-%
+            # testing line numbers
 
-struct AccountInfo
-    email String
-"""
+            %
+
+            struct AccountInfo
+                email String
+            """)
         out = self.parser.parse(text)
         msg, lineno = self.parser.lexer.errors[0]
         self.assertEqual(msg, "Illegal character '%'.")
@@ -420,68 +428,69 @@ struct AccountInfo
         # Check that despite lexing errors, parser marched on successfully.
         self.assertEqual(out[1].name, 'AccountInfo')
 
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    # Indent below is only 3 spaces
-   f String
-"""
+            struct S
+                # Indent below is only 3 spaces
+               f String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("Indent is not divisible by 4.", cm.exception.msg)
 
     def test_parsing_errors(self):
-        text = """
-namespace users
+        text = textwrap.dedent("""\
 
-strct AccountInfo
-    email String
-"""
+            namespace users
+
+            strct AccountInfo
+                email String
+            """)
         self.parser.parse(text)
         msg, lineno, path = self.parser.errors[0]
         self.assertEqual(msg, "Unexpected ID with value 'strct'.")
         self.assertEqual(lineno, 4)
 
-        text = """\
-namespace users
+        text = textwrap.dedent("""\
+            namespace users
 
-route test_route(Blah, Blah, Blah)
-"""
+            route test_route(Blah, Blah, Blah)
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
 
     def test_docstrings(self):
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-# No docstrings at all
-struct E
-    f String
+            # No docstrings at all
+            struct E
+                f String
 
-struct S
-    "Only type doc"
-    f String
+            struct S
+                "Only type doc"
+                f String
 
-struct T
-    f String
-        "Only field doc"
+            struct T
+                f String
+                    "Only field doc"
 
-union U
-    "Only type doc"
-    f String
+            union U
+                "Only type doc"
+                f String
 
-union V
-    f String
-        "Only field doc"
+            union V
+                f String
+                    "Only field doc"
 
-# Check for inherited doc
-struct W extends T
-    g String
-"""
+            # Check for inherited doc
+            struct W extends T
+                g String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
@@ -513,40 +522,40 @@ struct W extends T
 
     def test_alias(self):
         # Test aliasing to primitive
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias R = String
-"""
+            alias R = String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test aliasing to primitive with additional attributes and nullable
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias R = String(min_length=1)?
-"""
+            alias R = String(min_length=1)?
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test aliasing to alias
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias T = String
-alias R = T
-"""
+            alias T = String
+            alias R = T
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test aliasing to alias with attributes already set.
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias T = String(min_length=1)
-alias R = T(min_length=1)
-"""
+            alias T = String(min_length=1)
+            alias R = T(min_length=1)
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -554,25 +563,25 @@ alias R = T(min_length=1)
                       cm.exception.msg)
 
         # Test aliasing to composite
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
-alias R = S
-"""
+            struct S
+                f String
+            alias R = S
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test aliasing to composite with attributes
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
+            struct S
+                f String
 
-alias R = S(min_length=1)
-"""
+            alias R = S(min_length=1)
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -581,12 +590,12 @@ alias R = S(min_length=1)
 
     def test_struct_semantics(self):
         # Test field with implicit void type
-        text = """
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    option_a
-"""
+            struct S
+                option_a
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -594,46 +603,46 @@ struct S
                          cm.exception.msg)
 
         # Test duplicate fields
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct A
-    a UInt64
-    a String
-"""
+            struct A
+                a UInt64
+                a String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined', cm.exception.msg)
 
         # Test duplicate field name -- earlier being in a parent type
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct A
-    a UInt64
+            struct A
+                a UInt64
 
-struct B extends A
-    b String
+            struct B extends A
+                b String
 
-struct C extends B
-    a String
-"""
+            struct C extends B
+                a String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined in parent', cm.exception.msg)
 
         # Test extending from wrong type
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union A
-    a
+            union A
+                a
 
-struct B extends A
-    b UInt64
-"""
+            struct B extends A
+                b UInt64
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -641,44 +650,44 @@ struct B extends A
 
     def test_union_semantics(self):
         # Test duplicate fields
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union A
-    a UInt64
-    a String
-"""
+            union A
+                a UInt64
+                a String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined', cm.exception.msg)
 
         # Test duplicate field name -- earlier being in a parent type
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union A
-    a UInt64
+            union A
+                a UInt64
 
-union B extends A
-    b String
+            union B extends A
+                b String
 
-union C extends B
-    a String
-"""
+            union C extends B
+                a String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined in parent', cm.exception.msg)
 
         # Test catch-all in generator
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union A
-    a*
-    b
-"""
+            union A
+                a*
+                b
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
         A_dt = t.api.namespaces['test'].data_type_by_name['A']
@@ -687,43 +696,43 @@ union A
         self.assertTrue(A_dt.fields[0].catch_all)
 
         # Test two catch-alls
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union A
-    a*
-    b*
-"""
+            union A
+                a*
+                b*
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('Only one catch-all tag', cm.exception.msg)
 
         # Test existing catch-all in parent type
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union A
-    a*
+            union A
+                a*
 
-union B extends A
-    b*
-"""
+            union B extends A
+                b*
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already declared a catch-all tag', cm.exception.msg)
 
         # Test extending from wrong type
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct A
-    a UInt64
+            struct A
+                a UInt64
 
-union B extends A
-    b UInt64
-"""
+            union B extends A
+                b UInt64
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -732,113 +741,113 @@ union B extends A
     def test_enumerated_subtypes(self):
 
         # Test correct definition
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct Resource
-    union
-        file File
-        folder Folder
+            struct Resource
+                union
+                    file File
+                    folder Folder
 
-struct File extends Resource
-    size UInt64
+            struct File extends Resource
+                size UInt64
 
-struct Folder extends Resource
-    icon String
-"""
+            struct Folder extends Resource
+                icon String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test reference to non-struct
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct Resource
-    union
-        file String
-"""
+            struct Resource
+                union
+                    file String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('must be a struct', cm.exception.msg)
 
         # Test reference to undefined type
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct Resource
-    union
-        file File
-"""
+            struct Resource
+                union
+                    file File
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('Undefined', cm.exception.msg)
 
         # Test reference to non-subtype
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct Resource
-    union
-        file File
+            struct Resource
+                union
+                    file File
 
-struct File
-    size UInt64
-"""
+            struct File
+                size UInt64
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('not a subtype of', cm.exception.msg)
 
         # Test subtype listed more than once
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct Resource
-    union
-        file File
-        file2 File
+            struct Resource
+                union
+                    file File
+                    file2 File
 
-struct File extends Resource
-    size UInt64
-"""
+            struct File extends Resource
+                size UInt64
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('only be specified once', cm.exception.msg)
 
         # Test missing subtype
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct Resource
-    union
-        file File
+            struct Resource
+                union
+                    file File
 
-struct File extends Resource
-    size UInt64
+            struct File extends Resource
+                size UInt64
 
-struct Folder extends Resource
-    icon String
-"""
+            struct Folder extends Resource
+                icon String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("missing 'Folder'", cm.exception.msg)
 
         # Test name conflict with field
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct Resource
-    union
-        file File
-    file String
+            struct Resource
+                union
+                    file File
+                file String
 
-struct File extends Resource
-    size UInt64
-"""
+            struct File extends Resource
+                size UInt64
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -846,20 +855,20 @@ struct File extends Resource
 
         # Test if a leaf and its parent do not enumerate subtypes, but its
         # grandparent does.
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct A
-    union
-        b B
-    c String
+            struct A
+                union
+                    b B
+                c String
 
-struct B extends A
-    "No enumerated subtypes."
+            struct B extends A
+                "No enumerated subtypes."
 
-struct C extends B
-    "No enumerated subtypes."
-"""
+            struct C extends B
+                "No enumerated subtypes."
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -871,66 +880,66 @@ struct C extends B
         # this restriction is removed.
 
         # Test name conflict with field in parent
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct A
-    union
-        b B
-    c String
+            struct A
+                union
+                    b B
+                c String
 
-struct B extends A
-    union
-        c C
+            struct B extends A
+                union
+                    c C
 
-struct C extends B
-    d String
-"""
+            struct C extends B
+                d String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test name conflict with union field in parent
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct A
-    union
-        b B
-    c String
+            struct A
+                union
+                    b B
+                c String
 
-struct B extends A
-    union
-        b C
+            struct B extends A
+                union
+                    b C
 
-struct C extends B
-    d String
-"""
+            struct C extends B
+                d String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test non-leaf with no enumerated subtypes
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct A
-    union
-        b B
-    c String
+            struct A
+                union
+                    b B
+                c String
 
-struct B extends A
-    "No enumerated subtypes."
+            struct B extends A
+                "No enumerated subtypes."
 
-struct C extends B
-    union
-        d D
+            struct C extends B
+                union
+                    d D
 
-struct D extends C
-    e String
-"""
+            struct D extends C
+                e String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -938,12 +947,12 @@ struct D extends C
 
     def test_nullable(self):
         # Test stacking nullable
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias A = String?
-alias B = A?
-"""
+            alias A = String?
+            alias B = A?
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -952,14 +961,14 @@ alias B = A?
             cm.exception.msg)
 
         # Test stacking nullable
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias A = String?
+            alias A = String?
 
-struct S
-    f A?
-"""
+            struct S
+                f A?
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -968,15 +977,15 @@ struct S
             cm.exception.msg)
 
         # Test extending nullable
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
+            struct S
+                f String
 
-struct T extends S?
-    g String
-"""
+            struct T extends S?
+                g String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -986,65 +995,65 @@ struct T extends S?
 
     def test_forward_reference(self):
         # Test route def before struct def
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-route test_route(Void, S, Void)
+            route test_route(Void, S, Void)
 
-struct S
-    f String
-"""
+            struct S
+                f String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test extending after...
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct T extends S
-    g String
+            struct T extends S
+                g String
 
-struct S
-    f String
-"""
+            struct S
+                f String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test field ref to later-defined struct
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-route test_route(Void, T, Void)
+            route test_route(Void, T, Void)
 
-struct T
-    s S
+            struct T
+                s S
 
-struct S
-    f String
-"""
+            struct S
+                f String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test self-reference
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    s S?
-"""
+            struct S
+                s S?
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test forward union ref
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    s U = a
+            struct S
+                s U = a
 
-union U
-    a
-"""
+            union U
+                a
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
         self.assertTrue(t.api.namespaces['test'].data_types[0].fields[0].has_default)
@@ -1056,28 +1065,28 @@ union U
 
     def test_import(self):
         # Test field reference to another namespace
-        ns1_text = """\
-namespace ns1
+        ns1_text = textwrap.dedent("""\
+            namespace ns1
 
-import ns2
+            import ns2
 
-struct S
-    f ns2.S
-"""
-        ns2_text = """\
-namespace ns2
+            struct S
+                f ns2.S
+            """)
+        ns2_text = textwrap.dedent("""\
+            namespace ns2
 
-struct S
-    f String
-"""
+            struct S
+                f String
+            """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         t.parse()
 
         # Test incorrectly importing the current namespace
-        text = """\
-namespace test
-import test
-"""
+        text = textwrap.dedent("""\
+            namespace test
+            import test
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -1086,10 +1095,10 @@ import test
             cm.exception.msg)
 
         # Test importing a non-existent namespace
-        text = """\
-namespace test
-import missingns
-"""
+        text = textwrap.dedent("""\
+            namespace test
+            import missingns
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -1098,40 +1107,40 @@ import missingns
             cm.exception.msg)
 
         # Test extending struct from another namespace
-        ns1_text = """\
-namespace ns1
+        ns1_text = textwrap.dedent("""\
+            namespace ns1
 
-import ns2
+            import ns2
 
-struct S extends ns2.T
-    f String
-"""
-        ns2_text = """\
-namespace ns2
+            struct S extends ns2.T
+                f String
+            """)
+        ns2_text = textwrap.dedent("""\
+            namespace ns2
 
-struct T
-    g String
-"""
+            struct T
+                g String
+            """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         t.parse()
 
         # Test extending struct from another namespace that is marked nullable
-        ns1_text = """\
-namespace ns1
+        ns1_text = textwrap.dedent("""\
+            namespace ns1
 
-import ns2
+            import ns2
 
-struct S extends ns2.X
-    f String
-"""
-        ns2_text = """\
-namespace ns2
+            struct S extends ns2.X
+                f String
+            """)
+        ns2_text = textwrap.dedent("""\
+            namespace ns2
 
-alias X = T?
+            alias X = T?
 
-struct T
-    g String
-"""
+            struct T
+                g String
+            """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -1140,60 +1149,60 @@ struct T
             cm.exception.msg)
 
         # Test extending union from another namespace
-        ns1_text = """\
-namespace ns1
+        ns1_text = textwrap.dedent("""\
+            namespace ns1
 
-import ns2
+            import ns2
 
-union V extends ns2.U
-    b String
-"""
-        ns2_text = """\
-namespace ns2
+            union V extends ns2.U
+                b String
+            """)
+        ns2_text = textwrap.dedent("""\
+            namespace ns2
 
-union U
-    a
-"""
+            union U
+                a
+            """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         t.parse()
 
         # Test structs that reference one another
-        ns1_text = """\
-namespace ns1
+        ns1_text = textwrap.dedent("""\
+            namespace ns1
 
-import ns2
+            import ns2
 
-struct S
-    t ns2.T
-"""
-        ns2_text = """\
-namespace ns2
+            struct S
+                t ns2.T
+            """)
+        ns2_text = textwrap.dedent("""\
+            namespace ns2
 
-import ns1
+            import ns1
 
-struct T
-    s ns1.S
-"""
+            struct T
+                s ns1.S
+            """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         t.parse()
 
         # Test mutual inheritance, which can't possibly work.
-        ns1_text = """\
-namespace ns1
+        ns1_text = textwrap.dedent("""\
+            namespace ns1
 
-import ns2
+            import ns2
 
-struct S extends ns2.T
-    a String
-"""
-        ns2_text = """\
-namespace ns2
+            struct S extends ns2.T
+                a String
+            """)
+        ns2_text = textwrap.dedent("""\
+            namespace ns2
 
-import ns1
+            import ns1
 
-struct T extends ns1.S
-    b String
-"""
+            struct T extends ns1.S
+                b String
+            """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -1203,49 +1212,49 @@ struct T extends ns1.S
 
     def test_doc_refs(self):
         # Test union doc referencing field
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union U
-    ":field:`a`"
-    a
-    b
-"""
+            union U
+                ":field:`a`"
+                a
+                b
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
         # Test union field doc referencing other field
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-union U
-    a
-        ":field:`b`"
-    b
-"""
+            union U
+                a
+                    ":field:`b`"
+                b
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
 
     def test_namespace(self):
         # Test that namespace docstrings are combined
-        ns1_text = """\
-namespace ns1
-    "
-    This is a docstring for ns1.
-    "
+        ns1_text = textwrap.dedent("""\
+        namespace ns1
+            "
+            This is a docstring for ns1.
+            "
 
-struct S
-    f String
-"""
-        ns2_text = """\
-namespace ns1
-    "
-    This is another docstring for ns1.
-    "
+        struct S
+            f String
+        """)
+        ns2_text = textwrap.dedent("""\
+            namespace ns1
+                "
+                This is another docstring for ns1.
+                "
 
-struct S2
-    f String
-"""
+            struct S2
+                f String
+            """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         t.parse()
         self.assertEqual(
@@ -1253,11 +1262,11 @@ struct S2
             'This is a docstring for ns1.\nThis is another docstring for ns1.\n')
 
         # Test that namespaces without types or routes are deleted.
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-alias S = String
-"""
+            alias S = String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
         self.assertEqual(t.api.namespaces, {})
@@ -2492,15 +2501,15 @@ alias S = String
 
     def test_name_conflicts(self):
         # Test name conflict in same file
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
+            struct S
+                f String
 
-struct S
-    g String
-"""
+            struct S
+                g String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -2510,14 +2519,14 @@ struct S
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name conflict by route
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
+            struct S
+                f String
 
-route S (Void, Void, Void)
-"""
+            route S (Void, Void, Void)
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -2527,15 +2536,15 @@ route S (Void, Void, Void)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name conflict by union
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
+            struct S
+                f String
 
-union S
-    g String
-"""
+            union S
+                g String
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -2545,14 +2554,14 @@ union S
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name conflict by alias
-        text = """\
-namespace test
+        text = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
+            struct S
+                f String
 
-alias S = UInt64
-"""
+            alias S = UInt64
+            """)
         t = TowerOfBabel([('test.babel', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -2562,19 +2571,19 @@ alias S = UInt64
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name from two specs that are part of the same namespace
-        text1 = """\
-namespace test
+        text1 = textwrap.dedent("""\
+            namespace test
 
-struct S
-    f String
-"""
-        text2 = """\
-namespace test
+            struct S
+                f String
+            """)
+        text2 = textwrap.dedent("""\
+            namespace test
 
 
-struct S
-    f String
-"""
+            struct S
+                f String
+            """)
         t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
@@ -2591,7 +2600,7 @@ struct S
             struct S2
                 f2 String
             alias Iso8601 = Timestamp("%Y-%m-%dT%H:%M:%SZ")
-        """)
+            """)
         text2 = textwrap.dedent("""\
             namespace ns2
             import ns1
@@ -2603,7 +2612,7 @@ struct S
                     f3 = "hello"
                     f4 = "2015-05-12T15:50:38Z"
             route r1(ns1.S1, ns1.S2, S3)
-        """)
+            """)
         t = TowerOfBabel([('ns1.babel', text1), ('ns2.babel', text2)])
         t.parse()
         self.assertEqual(t.api.namespaces['ns2'].get_imported_namespaces(),
@@ -2636,7 +2645,7 @@ struct S
                 f4 String
             alias A = S2
             route r(S1, List(S4?)?, A)
-        """)
+            """)
         t = TowerOfBabel([('ns1.babel', text)])
         t.parse()
         ns1 = t.api.namespaces['ns1']
