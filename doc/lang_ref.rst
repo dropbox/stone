@@ -589,17 +589,29 @@ to a service. For example, the Dropbox API needs a way to specify some routes
 as including a binary body (uploads) for requests. Another example is specifying
 which routes can be used without authentication credentials.
 
-To cover this open ended use case, routes can have an ``attrs`` section declared
+To cover this open-ended use case, routes can have an ``attrs`` section declared
 followed by an arbitrary set of ``key=value`` pairs::
 
-    route get_account (GetAccountReq, Account, GetAccountErr)
-        "Get information about a specified user's account."
+    route ping (Void, Void, Void)
 
         attrs
-            key1="value1"
-            key2=1234
-            key3=3.14
-            key4=false
+            key1 = "value1"
+            key2 = 1234
+            key3 = 3.14
+            key4 = false
+            key5 = null
+
+A value can reference a union tag with void type::
+
+    route ping (Void, Void, Void)
+
+        attrs
+            key = Letters.a
+
+    union Letters
+        a
+        b
+        c
 
 Code generators will populate a route object with these attributes.
 

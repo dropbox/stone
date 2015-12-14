@@ -169,20 +169,25 @@ class BabelTypeRef(_Element):
 
 class BabelTagRef(_Element):
 
-    def __init__(self, path, lineno, lexpos, tag, union_name=None):
+    def __init__(self, path, lineno, lexpos, tag, union_name=None, ns=None):
         """
         Args:
             tag (str): Name of the referenced type.
-            union_name (str): The name of the union the tag belongs to.
+            union_name (Optional[str]): The name of the union the tag belongs
+                to.
+            ns (Optional[str]): Namespace that referred type is a member of.
+                If none, then refers to the current namespace.
         """
         super(BabelTagRef, self).__init__(path, lineno, lexpos)
         self.tag = tag
         self.union_name = union_name
+        self.ns = ns
 
     def __repr__(self):
-        return 'BabelTagRef({!r}, {!r})'.format(
+        return 'BabelTagRef({!r}, {!r}, {!r})'.format(
             self.tag,
             self.union_name,
+            self.ns,
         )
 
 class BabelField(_Element):
@@ -526,14 +531,6 @@ class BabelParser(object):
             ns=p[1],
         )
 
-    def p_tag_ref(self, p):
-        """tag_ref : ID DOT ID
-                   | ID"""
-        if len(p) > 2:
-            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[3], p[1])
-        else:
-            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
-
     # --------------------------------------------------------------
     # Structs
     #
@@ -635,7 +632,7 @@ class BabelParser(object):
 
     def p_default_option(self, p):
         """default_option : EQ primitive
-                          | EQ tag_ref
+                          | EQ short_tag_ref
                           | empty"""
         if p[1]:
             if isinstance(p[2], BabelTagRef):
@@ -656,6 +653,10 @@ class BabelParser(object):
                 p[0].set_default(p[3])
         if has_docstring:
             p[0].set_doc(p[7])
+
+    def p_short_tag_ref(self, p):
+        'short_tag_ref : ID'
+        p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     # --------------------------------------------------------------
     # Unions
@@ -763,11 +764,20 @@ class BabelParser(object):
         p[0].append(p[2])
 
     def p_attr_field(self, p):
-        'attr_field : ID EQ primitive NEWLINE'
+        """attr_field : ID EQ primitive NEWLINE
+                      | ID EQ tag_ref NEWLINE"""
         if p[3] is BabelNull:
             p[0] = (p[1], None)
         else:
             p[0] = (p[1], p[3])
+
+    def p_tag_ref(self, p):
+        """tag_ref : ID DOT ID DOT ID
+                   | ID DOT ID"""
+        if len(p) > 4:
+            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[5], p[3], p[1])
+        else:
+            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[3], p[1])
 
     # --------------------------------------------------------------
     # Doc sections

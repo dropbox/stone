@@ -320,6 +320,9 @@ class TowerOfBabel(object):
             for route in namespace.routes:
                 self._populate_route_attributes(env, route)
 
+        # TODO(kelkabany): Infer the type of each route attr and ensure that
+        # the type is consistent across all routes.
+
         assert len(self._resolution_in_progress) == 0
 
     def _populate_struct_type_attributes(self, env, data_type):
@@ -458,13 +461,37 @@ class TowerOfBabel(object):
         else:
             deprecated = None
 
+        new_attrs = {}
+        for k, v in route._token.attrs.items():
+            if isinstance(v, BabelTagRef):
+                type_ref = BabelTypeRef(
+                    v.path, v.lineno, v.lexpos, v.union_name, args=((), {}),
+                    nullable=False, ns=v.ns)
+                data_type = self._resolve_type(env, type_ref, True)
+                for field in data_type.fields:
+                    if v.tag == field.name:
+                        if not isinstance(field.data_type, Void):
+                            raise InvalidSpec(
+                                'Tag %s referenced by route attribute must be '
+                                'void.' % quote('%s.%s' % (data_type.name, v.tag)),
+                                v.lineno, v.path)
+                        break
+                else:
+                    raise InvalidSpec(
+                        '%s has no tag %s.' %
+                        (quote(data_type.name), quote(v.tag)),
+                        v.lineno, v.path)
+                new_attrs[k] = TagRef(data_type, v.tag)
+            else:
+                new_attrs[k] = v
+
         route.set_attributes(
             deprecated=deprecated,
             doc=route._token.doc,
             request_data_type=request_dt,
             response_data_type=response_dt,
             error_data_type=error_dt,
-            attrs=route._token.attrs)
+            attrs=new_attrs)
 
     def _create_struct_field(self, env, babel_field):
         """

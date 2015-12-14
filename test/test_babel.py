@@ -12,6 +12,7 @@ from babelapi.babel.parser import (
 )
 from babelapi.babel.tower import (
     InvalidSpec,
+    TagRef,
     TowerOfBabel,
 )
 
@@ -403,6 +404,95 @@ class TestBabel(unittest.TestCase):
             t.parse()
         self.assertEqual("'S' must be a route.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
+
+    def test_route_attrs(self):
+        # Test basic attrs
+        text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+                b
+
+            route r (Void, Void, Void)
+                attrs
+                    null_val = null
+                    str_val = "r"
+                    int_val = 3
+                    float_val = 1.2
+                    union_val = U.a
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        r = t.api.namespaces['test'].route_by_name['r']
+        self.assertEqual(r.attrs['null_val'], None)
+        self.assertEqual(r.attrs['str_val'], 'r')
+        self.assertEqual(r.attrs['int_val'], 3)
+        self.assertEqual(r.attrs['float_val'], 1.2)
+        self.assertIsInstance(r.attrs['union_val'], TagRef)
+        self.assertEqual(r.attrs['union_val'].tag_name, 'a')
+        self.assertEqual(r.attrs['union_val'].union_data_type,
+                         t.api.namespaces['test'].data_type_by_name['U'])
+
+        # Try unknown tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+                b
+
+            route r (Void, Void, Void)
+                attrs
+                    union_val = U.z
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("'U' has no tag 'z'.", cm.exception.msg)
+
+        # Try non-void tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+                b String
+
+            route r (Void, Void, Void)
+                attrs
+                    union_val = U.b
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Tag 'U.b' referenced by route attribute must be void.",
+            cm.exception.msg)
+
+        # Test imported union as attr
+        text1 = textwrap.dedent("""\
+            namespace shared
+
+            union U
+                a
+                b
+            """)
+        text2 = textwrap.dedent("""\
+            namespace test
+
+            import shared
+
+            route r (Void, Void, Void)
+                attrs
+                    union_val = shared.U.a
+            """)
+        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t.parse()
+        r = t.api.namespaces['test'].route_by_name['r']
+        self.assertEqual(r.attrs['union_val'].tag_name, 'a')
+        self.assertEqual(r.attrs['union_val'].union_data_type,
+                         t.api.namespaces['shared'].data_type_by_name['U'])
 
     def test_lexing_errors(self):
         text = textwrap.dedent("""\

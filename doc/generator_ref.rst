@@ -143,8 +143,9 @@ error_data_type
     A DataType object of an error.
 
 attrs
-    A map from string keys to Python primitive values that is a direct copy
-    of the attrs specified in the route definition.
+    A map from string keys to values that is a direct copy of the attrs
+    specified in the route definition. Values are limited to Python primitives
+    (None, bool, float, int, str) and `TagRef objects <#union-tag-reference>`_.
 
 See the Python object definition for more information.
 
@@ -497,9 +498,9 @@ a ``Nullable``, then it's returned unmodified.
 Union Tag Reference
 ===================
 
-The default of a struct field with a union data type can be a member of that
-union with void type. If this is the case, the value of the default will be a
-``TagRef`` object with the following attributes:
+Tag references can occur in two instances. First, as the default of a struct
+field with a union data type. Second, as the value of a route attribute.
+References are limited to members with void type.
 
 TagRef
 ------
