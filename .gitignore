@@ -11,3 +11,4 @@ parsetab.py
 /babelapi.egg-info
 /setuptools-3.1-py2.7.egg
 /setuptools-3.1.zip
+/.cache

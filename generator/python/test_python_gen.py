@@ -25,6 +25,13 @@ class TestDropInModules(unittest.TestCase):
     Tests the babel_serializers and babel_validators modules.
     """
 
+    def mk_validator_testers(self, validator):
+        def p(i):
+            validator.validate(i)
+        def f(i):
+            self.assertRaises(bv.ValidationError, validator.validate, i)
+        return p, f  # 'p(input)' if you expect it to pass, 'f(input)' if you expect it to fail.
+
     def test_string_validator(self):
         s = bv.String(min_length=1, max_length=5, pattern='[A-z]+')
         # Not a string
@@ -39,6 +46,15 @@ class TestDropInModules(unittest.TestCase):
         s.validate('a')
         # Check that the validator is converting all strings to unicode
         self.assertEqual(type(s.validate('a')), six.text_type)
+
+    def test_string_regex_anchoring(self):
+        p, f = self.mk_validator_testers(bv.String(pattern=r'abc|xyz'))
+        p('abc')
+        p('xyz')
+        f('_abc')
+        f('abc_')
+        f('_xyz')
+        f('xyz_')
 
     def test_boolean_validator(self):
         b = bv.Boolean()
