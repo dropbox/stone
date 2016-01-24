@@ -648,6 +648,15 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             if not doc:
                 doc = 'Undocumented'
             self.emit_wrapped_text('- parameter {}: {}'.format(name, doc), prefix='    ', width=120)
+<<<<<<< HEAD
+=======
+        self.emit()
+        self.emit_wrapped_text(' - returns: Through the response callback, the caller will receive '+
+                               'a `{}` object on success or a `{}` object on failure.'.format(
+                                   self._swift_type_mapping(route.response_data_type),
+                                   self._swift_type_mapping(route.error_data_type)),
+                              prefix='    ', width=120)
+>>>>>>> 2c67e88... Revert "First version that does anything interesting"
         self.emit('*/')
         route_type = self.STYLE_MAPPING[route.attrs.get('style')]
 
