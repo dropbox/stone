@@ -142,6 +142,8 @@ class TowerOfBabel(object):
             if not namespace.data_types and not namespace.routes:
                 del self.api.namespaces[namespace.name]
 
+        self.api.normalize()
+
         return self.api
 
     def parse_spec(self, spec, path=None):

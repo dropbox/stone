@@ -494,6 +494,38 @@ class TestBabel(unittest.TestCase):
         self.assertEqual(r.attrs['union_val'].union_data_type,
                          t.api.namespaces['shared'].data_type_by_name['U'])
 
+    def test_alphabetizing(self):
+        text1 = textwrap.dedent("""\
+            namespace ns_b
+
+            struct z
+                f UInt64
+
+            union x
+                a
+                b
+
+            struct y
+                f UInt64
+
+            route b(Void, Void, Void)
+
+            route a(Void, Void, Void)
+
+            route c(Void, Void, Void)
+            """)
+        text2 = textwrap.dedent("""\
+            namespace ns_a
+
+            route d (Void, Void, Void)
+            """)
+        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t.parse()
+        assert ['ns_a', 'ns_b'] == list(t.api.namespaces.keys())
+        ns_b = t.api.namespaces['ns_b']
+        assert [dt.name for dt in ns_b.data_types] == ['x', 'y', 'z']
+        assert [dt.name for dt in ns_b.routes] == ['a', 'b', 'c']
+
     def test_lexing_errors(self):
         text = textwrap.dedent("""\
 

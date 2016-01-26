@@ -32,6 +32,19 @@ class Api(object):
             self.namespaces[name] = ApiNamespace(name)
         return self.namespaces.get(name)
 
+    def normalize(self):
+        """
+        Alphabetizes namespaces and routes to make spec parsing order mostly
+        irrelevant.
+        """
+        ordered_namespaces = OrderedDict()
+        # self.namespaces is currently ordered by declaration order.
+        for namespace_name in sorted(self.namespaces.keys()):
+            ordered_namespaces[namespace_name] = self.namespaces[namespace_name]
+        self.namespaces = ordered_namespaces
+
+        for namespace in self.namespaces.values():
+            namespace.normalize()
 
 class ApiNamespace(object):
     """
@@ -151,6 +164,13 @@ class ApiNamespace(object):
             if data_type.namespace != self:
                 referenced_namespaces.add(data_type.namespace)
         return sorted(referenced_namespaces, key=lambda n: n.name)
+
+    def normalize(self):
+        """
+        Alphabetizes routes to make route declaration order irrelevant.
+        """
+        self.routes.sort(key=lambda route: route.name)
+        self.data_types.sort(key=lambda data_type: data_type.name)
 
     def __repr__(self):
         return 'ApiNamespace({!r})'.format(self.name)
