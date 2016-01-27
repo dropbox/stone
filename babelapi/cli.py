@@ -44,6 +44,23 @@ _cmdline_parser.add_argument(
     action='store_true',
     help='The path to the template SDK for the target language.',
 )
+_filter_ns_group = _cmdline_parser.add_mutually_exclusive_group()
+_filter_ns_group.add_argument(
+    '-w',
+    '--whitelist-namespace-routes',
+    action='append',
+    type=str,
+    default=[],
+    help='If set, generators will only see the specified namespaces as having routes.',
+)
+_filter_ns_group.add_argument(
+    '-b',
+    '--blacklist-namespace-routes',
+    action='append',
+    type=str,
+    default=[],
+    help='If set, generators will not see any routes for the specified namespaces.',
+)
 
 def main():
     """The entry point for the program."""
@@ -112,6 +129,25 @@ def main():
             print('You must fix the above parsing errors for generation to '
                   'continue.', file=sys.stderr)
             sys.exit(1)
+
+        if args.whitelist_namespace_routes:
+            for namespace_name in args.whitelist_namespace_routes:
+                if namespace_name not in api.namespaces:
+                    print('error: Whitelisted namespace missing from spec: %s' %
+                          namespace_name, file=sys.stderr)
+                    sys.exit(1)
+            for namespace in api.namespaces.values():
+                if namespace.name not in args.whitelist_namespace_routes:
+                    namespace.routes = []
+
+        if args.blacklist_namespace_routes:
+            for namespace_name in args.blacklist_namespace_routes:
+                if namespace_name not in api.namespaces:
+                    print('error: Blacklisted namespace missing from spec: %s' %
+                          namespace_name, file=sys.stderr)
+                    sys.exit(1)
+                else:
+                    api.namespaces[namespace_name].routes = []
 
     if not os.path.exists(args.generator):
         print("error: Generator '%s' cannot be found." % args.generator,
