@@ -134,15 +134,15 @@ class Void(PrimitiveType):
                               ex_field.lineno, ex_field.path)
 
 
-class Binary(PrimitiveType):
+class Bytes(PrimitiveType):
 
     def check(self, val):
         if not isinstance(val, str):
-            raise ValueError('%r is not valid binary (Python str)' % val)
+            raise ValueError('%r is not valid bytes' % val)
 
     def check_example(self, ex_field):
         if not isinstance(ex_field.value, bytes):
-            raise InvalidSpec("'%s' is not valid binary",
+            raise InvalidSpec("'%s' is not valid bytes",
                               ex_field.lineno, ex_field.path)
 
 
@@ -1405,8 +1405,8 @@ def get_underlying_type(data_type):
     return unwrap_nullable(data_type)
 
 
-def is_binary_type(data_type):
-    return isinstance(data_type, Binary)
+def is_bytes_type(data_type):
+    return isinstance(data_type, Bytes)
 def is_boolean_type(data_type):
     return isinstance(data_type, Boolean)
 def is_composite_type(data_type):

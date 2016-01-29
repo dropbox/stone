@@ -93,17 +93,17 @@ Primitive Types
 The following table shows the mapping between a Babel `primitive type
 <lang_ref.rst#primitive-types>`_ and its corresponding type in Python.
 
-========================== ============ =======================================
-Primitive                  Python 2.x   Notes
-========================== ============ =======================================
-Binary                     str
+========================== ============== =====================================
+Primitive                  Python 2.x / 3    Notes
+========================== ============== =====================================
+Bytes                      bytes
 Boolean                    bool
-Float{32,64}               float        long type within range is converted.
+Float{32,64}               float          long type within range is converted.
 Int{32,64}, UInt{32,64}    long
 List                       list
-String                     unicode      str type is converted to unicode.
+String                     unicode / str  str type is converted to unicode.
 Timestamp                  datetime
-========================== ============ =======================================
+========================== ============== =====================================
 
 Struct
 ------

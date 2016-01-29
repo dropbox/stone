@@ -12,8 +12,8 @@ Primitive Types
 ========================== ====================================================
 Babel Primitive            JSON Representation
 ========================== ====================================================
-Binary                     String: Base64-encoded
 Boolean                    Boolean
+Bytes                      String: Base64-encoded
 Float{32,64}               Number
 Int{32,64}, UInt{32,64}    Number
 List                       Array

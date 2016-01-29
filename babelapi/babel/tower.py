@@ -11,8 +11,8 @@ from ..api import (
     DeprecationInfo,
 )
 from ..data_type import (
-    Binary,
     Boolean,
+    Bytes,
     CompositeType,
     DataType,
     Float32,
@@ -68,7 +68,7 @@ class Environment(dict):
 class TowerOfBabel(object):
 
     data_types = [
-        Binary,
+        Bytes,
         Boolean,
         Float32,
         Float64,

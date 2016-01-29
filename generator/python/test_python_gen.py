@@ -20,6 +20,7 @@ from babel_serializers import (
     json_decode,
 )
 
+
 class TestDropInModules(unittest.TestCase):
     """
     Tests the babel_serializers and babel_validators modules.
@@ -103,8 +104,8 @@ class TestDropInModules(unittest.TestCase):
         # Passes
         f32.validate(0)
 
-    def test_binary_validator(self):
-        b = bv.Binary(min_length=1, max_length=10)
+    def test_bytes_validator(self):
+        b = bv.Bytes(min_length=1, max_length=10)
         # Not a valid binary type
         self.assertRaises(bv.ValidationError, lambda: b.validate(u'asdf'))
         # Too short
@@ -195,7 +196,7 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), now),
                          json.dumps(now.strftime(f)))
         b = b'\xff' * 5
-        self.assertEqual(json_encode(bv.Binary(), b),
+        self.assertEqual(json_encode(bv.Bytes(), b),
                          json.dumps(base64.b64encode(b).decode('ascii')))
         self.assertEqual(json_encode(bv.Nullable(bv.String()), None), json.dumps(None))
         self.assertEqual(json_encode(bv.Nullable(bv.String()), u'abc'), json.dumps('abc'))
@@ -339,11 +340,11 @@ class TestDropInModules(unittest.TestCase):
                                      json.dumps(now.strftime(f))),
                          now)
         b = b'\xff' * 5
-        self.assertEqual(json_decode(bv.Binary(),
+        self.assertEqual(json_decode(bv.Bytes(),
                                      json.dumps(base64.b64encode(b).decode('ascii'))),
                          b)
         self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Binary(), json.dumps(1)))
+                          lambda: json_decode(bv.Bytes(), json.dumps(1)))
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps(None)), None)
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps('abc')), 'abc')
 
@@ -521,7 +522,7 @@ struct A
     b Int64
 
 struct B extends A
-    c Binary
+    c Bytes
 
 struct C extends B
     d Float64

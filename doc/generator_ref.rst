@@ -264,7 +264,7 @@ default
     ========================== ============ ============
     Primitive                  Python 2.x   Python 3.x
     ========================== ============ ============
-    Binary                     str          bytes
+    Bytes                      str          bytes
     Boolean                    bool         bool
     Float{32,64}               float        float
     Int{32,64}, UInt{32,64}    long         int

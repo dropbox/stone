@@ -259,7 +259,7 @@ def _make_json_friendly(data_type, val):
         return None
     elif isinstance(data_type, bv.Timestamp):
         return val.strftime(data_type.format)
-    elif isinstance(data_type, bv.Binary):
+    elif isinstance(data_type, bv.Bytes):
         return base64.b64encode(val).decode('ascii')
     elif isinstance(data_type, bv.Integer) and isinstance(val, bool):
         # A bool is a subclass of an int so it passes Integer validation. But,
@@ -286,7 +286,7 @@ def json_decode(data_type, serialized_obj, strict=True, old_style=False):
 
     Returns:
         The returned object depends on the input data_type.
-            - Binary -> bytes
+            - Bytes -> bytes
             - Boolean -> bool
             - Float -> float
             - Integer -> long
@@ -612,11 +612,11 @@ def _make_babel_friendly(data_type, val, strict, validate):
             return datetime.datetime.strptime(val, data_type.format)
         except ValueError as e:
             raise bv.ValidationError(e.args[0])
-    elif isinstance(data_type, bv.Binary):
+    elif isinstance(data_type, bv.Bytes):
         try:
             return base64.b64decode(val)
         except TypeError:
-            raise bv.ValidationError('invalid base64-encoded binary')
+            raise bv.ValidationError('invalid base64-encoded bytes')
     elif isinstance(data_type, bv.Void):
         if strict and val is not None:
             raise bv.ValidationError("expected null, got value")

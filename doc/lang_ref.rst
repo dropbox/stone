@@ -106,7 +106,7 @@ table of all primitive types and the arguments they take:
 Type                    Arguments (**bold** are required  Notes
                         and positional)
 ======================= ================================= =====================
-Binary                  --                                An array of bytes.
+Bytes                   --                                An array of bytes.
 Boolean                 --
 Float{32,64}            * min_value
                         * max_value
@@ -152,7 +152,7 @@ Here are some more examples::
         y Int64
 
     struct Example
-        f1 Binary
+        f1 Bytes
         f2 Boolean
         f3 Float64(min_value=0)
         # List of primitive types
@@ -754,7 +754,7 @@ Type Reference::
 
 Primitives::
 
-    PrimitiveType ::= 'Binary' | 'Boolean' | 'Float32' | 'Float64' | 'Int32'
+    PrimitiveType ::= 'Bytes' | 'Boolean' | 'Float32' | 'Float64' | 'Int32'
                   | 'Int64' | 'UInt32' | 'UInt64' | 'String' | 'Timestamp'
 
 Basic::

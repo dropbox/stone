@@ -10,8 +10,8 @@ import re
 import shutil
 from babelapi.data_type import (
     get_underlying_type,
-    is_binary_type,
     is_boolean_type,
+    is_bytes_type,
     is_composite_type,
     is_float_type,
     is_integer_type,
@@ -164,8 +164,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
         for documentation purposes."""
         if is_string_type(data_type):
             return 'str'
-        elif is_binary_type(data_type):
-            return 'str'
+        elif is_bytes_type(data_type):
+            return 'bytes'
         elif is_boolean_type(data_type):
             return 'bool'
         elif is_float_type(data_type):
