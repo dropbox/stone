@@ -17,7 +17,7 @@ from babelapi.data_type import (
     UInt32,
     UInt64,
     is_boolean_type,
-    is_binary_type,
+    is_bytes_type,
     is_composite_type,
     is_list_type,
     is_string_type,
@@ -234,7 +234,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             ret = 'NSDateSerializer("{}")'.format(data_type.format)
         elif is_boolean_type(data_type):
             ret = 'Serialization._BoolSerializer'
-        elif is_binary_type(data_type):
+        elif is_bytes_type(data_type):
             ret = 'Serialization._NSDataSerializer'
         elif is_void_type(data_type):
             ret = 'Serialization._VoidSerializer'
@@ -278,7 +278,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             ret = 'NSDate'
         elif is_boolean_type(data_type):
             ret = 'Bool'
-        elif is_binary_type(data_type):
+        elif is_bytes_type(data_type):
             ret = 'NSData'
         elif is_void_type(data_type):
             ret = 'Void'
