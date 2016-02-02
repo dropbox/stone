@@ -598,6 +598,17 @@ struct ImportTestS extends ns2.BaseS
 
 union ImportTestU extends ns2.BaseU
     a UInt64
+
+union U2
+    a
+    b OptionalS
+
+struct OptionalS
+    f1 String = "hello"
+    f2 UInt64 = 3
+
+struct S2
+    f1 OptionalS
 """
 
 test_ns2_spec = """\
@@ -868,6 +879,30 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(v, self.ns.V)
         t10 = v.get_t10()
         self.assertEqual(t10[0].get_t1(), 'hello')
+
+    def test_union_decoding_with_optional_struct(self):
+        # Simulate that U2 used to have a field b with no value, but it's since
+        # been evolved to a field with an optional struct (only has optional
+        # fields).
+        u2 = json_decode(
+            bv.Union(self.ns.U2),
+            json.dumps({'.tag': 'b'}))
+        self.assertIsInstance(u2, self.ns.U2)
+        b = u2.get_b()
+        self.assertIsInstance(b, self.ns.OptionalS)
+        self.assertEqual(b.f1, 'hello')
+        self.assertEqual(b.f2, 3)
+
+    def test_struct_decoding_with_optional_struct(self):
+        # Simulate that S2 used to have no fields, but now it has a new field
+        # that is an optional struct (only has optional fields).
+        s2 = json_decode(
+            bv.Struct(self.ns.S2),
+            json.dumps({}))
+        self.assertIsInstance(s2, self.ns.S2)
+        self.assertIsInstance(s2.f1, self.ns.OptionalS)
+        self.assertEqual(s2.f1.f1, 'hello')
+        self.assertEqual(s2.f1.f2, 3)
 
     def test_union_encoding(self):
         # Test void union member

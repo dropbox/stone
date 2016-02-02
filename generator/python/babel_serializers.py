@@ -387,6 +387,8 @@ def _decode_struct_fields(ins, fields, obj, strict, old_style):
             except bv.ValidationError as e:
                 e.add_parent(name)
                 raise
+        elif field_data_type.has_default():
+            setattr(ins, name, field_data_type.get_default())
 
 def _decode_union(data_type, obj, strict):
     """
