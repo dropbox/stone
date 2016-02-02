@@ -351,7 +351,9 @@ def _decode_struct(data_type, obj, strict, old_style):
     The data_type argument must be a Struct.
     See json_compat_obj_decode() for argument descriptions.
     """
-    if not isinstance(obj, dict):
+    if obj is None and data_type.has_default():
+        return data_type.get_default()
+    elif not isinstance(obj, dict):
         raise bv.ValidationError('expected object, got %s' %
                                  bv.generic_type_name(obj))
     if strict:

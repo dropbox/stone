@@ -894,6 +894,12 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(b.f2, 3)
 
     def test_struct_decoding_with_optional_struct(self):
+        opt_s = json_decode(
+            bv.Struct(self.ns.OptionalS),
+            json.dumps(None))
+        self.assertEqual(opt_s.f1, 'hello')
+        self.assertEqual(opt_s.f2, 3)
+
         # Simulate that S2 used to have no fields, but now it has a new field
         # that is an optional struct (only has optional fields).
         s2 = json_decode(
