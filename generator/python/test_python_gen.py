@@ -1101,3 +1101,33 @@ class TestGeneratedPython(unittest.TestCase):
         shutil.rmtree('output')
         os.remove('ns.babel')
         os.remove('ns2.babel')
+
+    def test_msgpack(self):
+        # Do a limited amount of testing just to make sure that unicode
+        # handling and byte array handling are functional.
+
+        # If the machine doesn't have msgpack, don't worry about these tests.
+        try:
+            from babel_serializers import (
+                msgpack_encode,
+                msgpack_decode,
+            )
+        except ImportError:
+            return
+
+        b = self.ns.B(a='hi', b=32, c=b'\x00\x01')
+        s = msgpack_encode(bv.Struct(self.ns.B), b)
+        b2 = msgpack_decode(bv.Struct(self.ns.B), s)
+        self.assertEqual(b.a, b2.a)
+        self.assertEqual(b.b, b2.b)
+        self.assertEqual(b.c, b2.c)
+
+        bs = b'\x00\x01'
+        s = msgpack_encode(bv.Bytes(), bs)
+        bs2 = msgpack_decode(bv.Bytes(), s)
+        self.assertEqual(bs, bs2)
+
+        u = u'\u2650'
+        s = msgpack_encode(bv.String(), u)
+        u2 = msgpack_decode(bv.String(), s)
+        self.assertEqual(u, u2)

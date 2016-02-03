@@ -14,6 +14,7 @@ EDITING THIS FILE? Please modify the version in the babelapi repo,
 import base64
 import collections
 import datetime
+import functools
 import json
 import six
 
@@ -23,6 +24,7 @@ except (SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
     import babel_validators as bv
+
 
 # --------------------------------------------------------------
 # JSON Encoder
@@ -77,7 +79,8 @@ def json_encode(data_type, obj, old_style=False):
     """
     return json.dumps(json_compat_obj_encode(data_type, obj, old_style))
 
-def json_compat_obj_encode(data_type, obj, old_style=False):
+
+def json_compat_obj_encode(data_type, obj, old_style=False, for_msgpack=False):
     """Encodes an object into a JSON-compatible dict based on its type.
 
     Args:
@@ -95,52 +98,66 @@ def json_compat_obj_encode(data_type, obj, old_style=False):
         data_type.validate_type_only(obj)
     else:
         data_type.validate(obj)
-    return _json_compat_obj_encode_helper(data_type, obj, old_style)
+    return _json_compat_obj_encode_helper(
+        data_type, obj, old_style, for_msgpack)
 
-def _json_compat_obj_encode_helper(data_type, obj, old_style):
+
+def _json_compat_obj_encode_helper(data_type, obj, old_style, for_msgpack):
     """
     See json_encode() for argument descriptions.
     """
     if isinstance(data_type, bv.List):
-        return _encode_list(data_type, obj, old_style=old_style)
+        return _encode_list(
+            data_type, obj, old_style=old_style, for_msgpack=for_msgpack)
     elif isinstance(data_type, bv.Nullable):
-        return _encode_nullable(data_type, obj, old_style=old_style)
+        return _encode_nullable(
+            data_type, obj, old_style=old_style, for_msgpack=for_msgpack)
     elif isinstance(data_type, bv.Primitive):
-        return _make_json_friendly(data_type, obj)
+        return _make_json_friendly(
+            data_type, obj, for_msgpack=for_msgpack)
     elif isinstance(data_type, bv.StructTree):
-        return _encode_struct_tree(data_type, obj, old_style=old_style)
+        return _encode_struct_tree(
+            data_type, obj, old_style=old_style, for_msgpack=for_msgpack)
     elif isinstance(data_type, bv.Struct):
-        return _encode_struct(data_type, obj, old_style=old_style)
+        return _encode_struct(
+            data_type, obj, old_style=old_style, for_msgpack=for_msgpack)
     elif isinstance(data_type, bv.Union):
         if old_style:
-            return _encode_union_old(data_type, obj)
+            return _encode_union_old(data_type, obj, for_msgpack=for_msgpack)
         else:
-            return _encode_union(data_type, obj)
+            return _encode_union(data_type, obj, for_msgpack=for_msgpack)
     else:
         raise AssertionError('Unsupported data type %r' %
                              type(data_type).__name__)
 
-def _encode_list(data_type, obj, old_style):
+
+def _encode_list(data_type, obj, old_style, for_msgpack):
     """
     The data_type argument must be a List.
     See json_encode() for argument descriptions.
     """
     # Because Lists are mutable, we always validate them during serialization.
     obj = data_type.validate(obj)
-    return [_json_compat_obj_encode_helper(data_type.item_validator, item, old_style)
-            for item in obj]
+    return [
+        _json_compat_obj_encode_helper(
+            data_type.item_validator, item, old_style, for_msgpack)
+        for item in obj
+    ]
 
-def _encode_nullable(data_type, obj, old_style):
+
+def _encode_nullable(data_type, obj, old_style, for_msgpack):
     """
     The data_type argument must be a Nullable.
     See json_encode() for argument descriptions.
     """
     if obj is not None:
-        return _json_compat_obj_encode_helper(data_type.validator, obj, old_style)
+        return _json_compat_obj_encode_helper(
+            data_type.validator, obj, old_style, for_msgpack)
     else:
         return None
 
-def _encode_struct(data_type, obj, old_style):
+
+def _encode_struct(data_type, obj, old_style, for_msgpack):
     """
     The data_type argument must be a Struct or StructTree.
     See json_encode() for argument descriptions.
@@ -159,13 +176,14 @@ def _encode_struct(data_type, obj, old_style):
             # fields as null, even if there is a default.
             try:
                 d[field_name] = _json_compat_obj_encode_helper(
-                    field_data_type, val, old_style)
+                    field_data_type, val, old_style, for_msgpack)
             except bv.ValidationError as e:
                 e.add_parent(field_name)
                 raise
     return d
 
-def _encode_union(data_type, obj):
+
+def _encode_union(data_type, obj, for_msgpack):
     """
     The data_type argument must be a Union.
     See json_encode() for argument descriptions.
@@ -180,7 +198,7 @@ def _encode_union(data_type, obj):
     else:
         try:
             encoded_val = _json_compat_obj_encode_helper(
-                field_data_type, obj._value, False)
+                field_data_type, obj._value, False, for_msgpack)
         except bv.ValidationError as e:
             e.add_parent(obj._tag)
             raise
@@ -200,7 +218,8 @@ def _encode_union(data_type, obj):
                     ('.tag', obj._tag),
                     (obj._tag, encoded_val)])
 
-def _encode_union_old(data_type, obj):
+
+def _encode_union_old(data_type, obj, for_msgpack):
     """
     The data_type argument must be a Union.
     See json_encode() for argument descriptions.
@@ -218,14 +237,15 @@ def _encode_union_old(data_type, obj):
         else:
             try:
                 encoded_val = _json_compat_obj_encode_helper(
-                    field_data_type, obj._value, old_style=True)
+                    field_data_type, obj._value, True, for_msgpack)
             except bv.ValidationError as e:
                 e.add_parent(obj._tag)
                 raise
             else:
                 return {obj._tag: encoded_val}
 
-def _encode_struct_tree(data_type, obj, old_style):
+
+def _encode_struct_tree(data_type, obj, old_style, for_msgpack):
     """
     Args:
         data_type (StructTree)
@@ -244,13 +264,14 @@ def _encode_struct_tree(data_type, obj, old_style):
         'Cannot serialize type %r because it enumerates subtypes.' %
         subtype.definition)
     if old_style:
-        return {tags[0]: _encode_struct(subtype, obj, old_style)}
+        return {tags[0]: _encode_struct(subtype, obj, old_style, for_msgpack)}
     d = collections.OrderedDict()
     d['.tag'] = tags[0]
-    d.update(_encode_struct(subtype, obj, old_style))
+    d.update(_encode_struct(subtype, obj, old_style, for_msgpack))
     return d
 
-def _make_json_friendly(data_type, val):
+
+def _make_json_friendly(data_type, val, for_msgpack):
     """
     Convert a primitive type to a Python type that can be serialized by the
     json package.
@@ -260,13 +281,17 @@ def _make_json_friendly(data_type, val):
     elif isinstance(data_type, bv.Timestamp):
         return val.strftime(data_type.format)
     elif isinstance(data_type, bv.Bytes):
-        return base64.b64encode(val).decode('ascii')
+        if for_msgpack:
+            return val
+        else:
+            return base64.b64encode(val).decode('ascii')
     elif isinstance(data_type, bv.Integer) and isinstance(val, bool):
         # A bool is a subclass of an int so it passes Integer validation. But,
         # we want the bool to be encoded as an Integer (1/0) rather than T/F.
         return int(val)
     else:
         return val
+
 
 # --------------------------------------------------------------
 # JSON Decoder
@@ -286,8 +311,8 @@ def json_decode(data_type, serialized_obj, strict=True, old_style=False):
 
     Returns:
         The returned object depends on the input data_type.
-            - Bytes -> bytes
             - Boolean -> bool
+            - Bytes -> bytes
             - Float -> float
             - Integer -> long
             - List -> list
@@ -302,9 +327,12 @@ def json_decode(data_type, serialized_obj, strict=True, old_style=False):
     except ValueError:
         raise bv.ValidationError('could not decode input as JSON')
     else:
-        return json_compat_obj_decode(data_type, deserialized_obj, strict, old_style)
+        return json_compat_obj_decode(
+            data_type, deserialized_obj, strict, old_style)
 
-def json_compat_obj_decode(data_type, obj, strict=True, old_style=False):
+
+def json_compat_obj_decode(
+        data_type, obj, strict=True, old_style=False, for_msgpack=False):
     """
     Decodes a JSON-compatible object based on its data type into a
     representative Python object.
@@ -320,33 +348,37 @@ def json_compat_obj_decode(data_type, obj, strict=True, old_style=False):
         See json_decode().
     """
     if isinstance(data_type, bv.Primitive):
-        return _make_babel_friendly(data_type, obj, strict, True)
+        return _make_babel_friendly(data_type, obj, strict, True, for_msgpack)
     else:
-        return _json_compat_obj_decode_helper(data_type, obj, strict, old_style)
+        return _json_compat_obj_decode_helper(
+            data_type, obj, strict, old_style, for_msgpack)
 
-def _json_compat_obj_decode_helper(data_type, obj, strict, old_style):
+
+def _json_compat_obj_decode_helper(
+        data_type, obj, strict, old_style, for_msgpack):
     """
     See json_compat_obj_decode() for argument descriptions.
     """
     if isinstance(data_type, bv.StructTree):
-        return _decode_struct_tree(data_type, obj, strict)
+        return _decode_struct_tree(data_type, obj, strict, for_msgpack)
     elif isinstance(data_type, bv.Struct):
-        return _decode_struct(data_type, obj, strict, old_style)
+        return _decode_struct(data_type, obj, strict, old_style, for_msgpack)
     elif isinstance(data_type, bv.Union):
         if old_style:
-            return _decode_union_old(data_type, obj, strict)
+            return _decode_union_old(data_type, obj, strict, for_msgpack)
         else:
-            return _decode_union(data_type, obj, strict)
+            return _decode_union(data_type, obj, strict, for_msgpack)
     elif isinstance(data_type, bv.List):
-        return _decode_list(data_type, obj, strict, old_style)
+        return _decode_list(data_type, obj, strict, old_style, for_msgpack)
     elif isinstance(data_type, bv.Nullable):
-        return _decode_nullable(data_type, obj, strict, old_style)
+        return _decode_nullable(data_type, obj, strict, old_style, for_msgpack)
     elif isinstance(data_type, bv.Primitive):
-        return _make_babel_friendly(data_type, obj, strict, False)
+        return _make_babel_friendly(data_type, obj, strict, False, for_msgpack)
     else:
         raise AssertionError('Cannot handle type %r.' % data_type)
 
-def _decode_struct(data_type, obj, strict, old_style):
+
+def _decode_struct(data_type, obj, strict, old_style, for_msgpack):
     """
     The data_type argument must be a Struct.
     See json_compat_obj_decode() for argument descriptions.
@@ -363,12 +395,13 @@ def _decode_struct(data_type, obj, strict, old_style):
                 raise bv.ValidationError("unknown field '%s'" % key)
     ins = data_type.definition()
     _decode_struct_fields(ins, data_type.definition._all_fields_, obj, strict,
-                          old_style)
+                          old_style, for_msgpack)
     # Check that all required fields have been set.
     data_type.validate_fields_only(ins)
     return ins
 
-def _decode_struct_fields(ins, fields, obj, strict, old_style):
+
+def _decode_struct_fields(ins, fields, obj, strict, old_style, for_msgpack):
     """
     Args:
         ins: An instance of the class representing the data type being decoded.
@@ -384,7 +417,7 @@ def _decode_struct_fields(ins, fields, obj, strict, old_style):
         if name in obj:
             try:
                 v = _json_compat_obj_decode_helper(
-                    field_data_type, obj[name], strict, old_style)
+                    field_data_type, obj[name], strict, old_style, for_msgpack)
                 setattr(ins, name, v)
             except bv.ValidationError as e:
                 e.add_parent(name)
@@ -392,7 +425,8 @@ def _decode_struct_fields(ins, fields, obj, strict, old_style):
         elif field_data_type.has_default():
             setattr(ins, name, field_data_type.get_default())
 
-def _decode_union(data_type, obj, strict):
+
+def _decode_union(data_type, obj, strict, for_msgpack):
     """
     The data_type argument must be a Union.
     See json_compat_obj_decode() for argument descriptions.
@@ -413,13 +447,14 @@ def _decode_union(data_type, obj, strict):
             else:
                 raise bv.ValidationError("unknown tag '%s'" % tag)
     elif isinstance(obj, dict):
-        tag, val = _decode_union_dict(data_type, obj, strict)
+        tag, val = _decode_union_dict(data_type, obj, strict, for_msgpack)
     else:
         raise bv.ValidationError("expected string or object, got %s" %
                                  bv.generic_type_name(obj))
     return data_type.definition(tag, val)
 
-def _decode_union_dict(data_type, obj, strict):
+
+def _decode_union_dict(data_type, obj, strict, for_msgpack):
     if '.tag' not in obj:
         raise bv.ValidationError("missing '.tag' key")
     tag = obj['.tag']
@@ -455,7 +490,7 @@ def _decode_union_dict(data_type, obj, strict):
             raw_val = obj[tag]
             try:
                 val = _json_compat_obj_decode_helper(
-                    val_data_type, raw_val, strict, False)
+                    val_data_type, raw_val, strict, False, for_msgpack)
             except bv.ValidationError as e:
                 e.add_parent(tag)
                 raise
@@ -476,7 +511,7 @@ def _decode_union_dict(data_type, obj, strict):
             raw_val = obj
             try:
                 val = _json_compat_obj_decode_helper(
-                    val_data_type, raw_val, strict, False)
+                    val_data_type, raw_val, strict, False, for_msgpack)
             except bv.ValidationError as e:
                 e.add_parent(tag)
                 raise
@@ -484,7 +519,8 @@ def _decode_union_dict(data_type, obj, strict):
         assert False, type(val_data_type)
     return tag, val
 
-def _decode_union_old(data_type, obj, strict):
+
+def _decode_union_old(data_type, obj, strict, for_msgpack):
     """
     The data_type argument must be a Union.
     See json_compat_obj_decode() for argument descriptions.
@@ -526,7 +562,7 @@ def _decode_union_old(data_type, obj, strict):
             else:
                 try:
                     val = _json_compat_obj_decode_helper(
-                        val_data_type, raw_val, strict, old_style=True)
+                        val_data_type, raw_val, strict, True, for_msgpack)
                 except bv.ValidationError as e:
                     e.add_parent(tag)
                     raise
@@ -540,13 +576,15 @@ def _decode_union_old(data_type, obj, strict):
                                  bv.generic_type_name(obj))
     return data_type.definition(tag, val)
 
-def _decode_struct_tree(data_type, obj, strict):
+
+def _decode_struct_tree(data_type, obj, strict, for_msgpack):
     """
     The data_type argument must be a StructTree.
     See json_compat_obj_decode() for argument descriptions.
     """
     subtype = _determine_struct_tree_subtype(data_type, obj, strict)
-    return _decode_struct(subtype, obj, strict, False)
+    return _decode_struct(subtype, obj, strict, False, for_msgpack)
+
 
 def _determine_struct_tree_subtype(data_type, obj, strict):
     """
@@ -583,7 +621,8 @@ def _determine_struct_tree_subtype(data_type, obj, strict):
                     "unknown subtype '%s' and '%s' is not a catch-all" %
                     ('.'.join(full_tags_tuple), data_type.definition.__name__))
 
-def _decode_list(data_type, obj, strict, old_style):
+
+def _decode_list(data_type, obj, strict, old_style, for_msgpack):
     """
     The data_type argument must be a List.
     See json_compat_obj_decode() for argument descriptions.
@@ -591,22 +630,25 @@ def _decode_list(data_type, obj, strict, old_style):
     if not isinstance(obj, list):
         raise bv.ValidationError(
             'expected list, got %s' % bv.generic_type_name(obj))
-    return [_json_compat_obj_decode_helper(data_type.item_validator,
-                                           item, strict, old_style)
-            for item in obj]
+    return [
+        _json_compat_obj_decode_helper(
+            data_type.item_validator, item, strict, old_style, for_msgpack)
+        for item in obj]
 
-def _decode_nullable(data_type, obj, strict, old_style):
+
+def _decode_nullable(data_type, obj, strict, old_style, for_msgpack):
     """
     The data_type argument must be a Nullable.
     See json_compat_obj_decode() for argument descriptions.
     """
     if obj is not None:
-        return _json_compat_obj_decode_helper(data_type.validator, obj, strict,
-                                              old_style)
+        return _json_compat_obj_decode_helper(
+            data_type.validator, obj, strict, old_style, for_msgpack)
     else:
         return None
 
-def _make_babel_friendly(data_type, val, strict, validate):
+
+def _make_babel_friendly(data_type, val, strict, validate, for_msgpack):
     """
     Convert a Python object to a type that will pass validation by its
     validator.
@@ -617,10 +659,16 @@ def _make_babel_friendly(data_type, val, strict, validate):
         except ValueError as e:
             raise bv.ValidationError(e.args[0])
     elif isinstance(data_type, bv.Bytes):
-        try:
-            return base64.b64decode(val)
-        except TypeError:
-            raise bv.ValidationError('invalid base64-encoded bytes')
+        if for_msgpack:
+            if isinstance(val, six.text_type):
+                return val.encode('utf-8')
+            else:
+                return val
+        else:
+            try:
+                return base64.b64decode(val)
+            except TypeError:
+                raise bv.ValidationError('invalid base64-encoded bytes')
     elif isinstance(data_type, bv.Void):
         if strict and val is not None:
             raise bv.ValidationError("expected null, got value")
@@ -629,3 +677,28 @@ def _make_babel_friendly(data_type, val, strict, validate):
         if validate:
             data_type.validate(val)
         return val
+
+try:
+    import msgpack
+except ImportError:
+    pass
+else:
+    msgpack_compat_obj_encode = functools.partial(json_compat_obj_encode,
+                                                  for_msgpack=True)
+
+    def msgpack_encode(data_type, obj):
+        return msgpack.dumps(
+            msgpack_compat_obj_encode(data_type, obj), encoding='utf-8')
+
+    msgpack_compat_obj_decode = functools.partial(json_compat_obj_decode,
+                                                  for_msgpack=True)
+
+    def msgpack_decode(data_type, serialized_obj, strict=True):
+        # We decode everything as utf-8 because we want all object keys to be
+        # unicode. Otherwise, we need to do a lot more refactoring to make
+        # json/msgpack share the same code. We expect byte arrays to fail
+        # decoding, but when they don't, we have to re-encode them as utf-8.
+        deserialized_obj = msgpack.loads(
+            serialized_obj, encoding='utf-8', unicode_errors='ignore')
+        return msgpack_compat_obj_decode(
+            data_type, deserialized_obj, strict)
