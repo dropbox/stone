@@ -623,7 +623,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         if is_struct_type(route.request_data_type):
             arg_list = self._struct_init_args(route.request_data_type, namespace=namespace)
             doc_list = [(self.lang.format_variable(f.name), self.process_doc(f.doc, self._docf))
-                        for f in route.request_data_type.fields]
+                        for f in route.request_data_type.fields if f.doc]
         else:
             arg_list = [] if is_void_type(route.request_data_type) else [('request', request_type)]
             doc_list = []
