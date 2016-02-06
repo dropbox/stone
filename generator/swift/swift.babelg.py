@@ -332,12 +332,14 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                 ])
             )
         elif is_string_type(data_type):
-            pat = data_type.pattern.encode('ascii') if data_type.pattern else None
+            pat = data_type.pattern if data_type.pattern else None
+            if isinstance(pat, six.text_type):
+                pat = pat.encode('unicode_escape')
             v = "stringValidator({})".format(
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(pat.encode('string-escape')) if pat else None),
+                    ("pattern", '"{}"'.format(pat)),
                 ])
             )
         else:
@@ -619,13 +621,13 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     }
 
     def _get_route_args(self, namespace, route):
-        request_type = self._swift_type_mapping(route.request_data_type)
-        if is_struct_type(route.request_data_type):
-            arg_list = self._struct_init_args(route.request_data_type, namespace=namespace)
+        arg_type = self._swift_type_mapping(route.arg_data_type)
+        if is_struct_type(route.arg_data_type):
+            arg_list = self._struct_init_args(route.arg_data_type, namespace=namespace)
             doc_list = [(self.lang.format_variable(f.name), self.process_doc(f.doc, self._docf))
-                        for f in route.request_data_type.fields if f.doc]
+                        for f in route.arg_data_type.fields if f.doc]
         else:
-            arg_list = [] if is_void_type(route.request_data_type) else [('request', request_type)]
+            arg_list = [] if is_void_type(route.arg_data_type) else [('request', arg_type)]
             doc_list = []
         return arg_list, doc_list
 
@@ -634,7 +636,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         extra_args = extra_args or []
         extra_docs = extra_docs or []
 
-        request_type = self._swift_type_mapping(route.request_data_type)
+        arg_type = self._swift_type_mapping(route.arg_data_type)
         func_name = self.lang.format_method(route.name)
 
         self.emit('/**')
@@ -653,14 +655,14 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         self.emit()
         self.emit_wrapped_text(' - returns: Through the response callback, the caller will receive '+
                                'a `{}` object on success or a `{}` object on failure.'.format(
-                                   self._swift_type_mapping(route.response_data_type),
+                                   self._swift_type_mapping(route.result_data_type),
                                    self._swift_type_mapping(route.error_data_type)),
                               prefix='    ', width=120)
 >>>>>>> 2c67e88... Revert "First version that does anything interesting"
         self.emit('*/')
         route_type = self.STYLE_MAPPING[route.attrs.get('style')]
 
-        rtype = self._swift_type_mapping(route.response_data_type,
+        rtype = self._swift_type_mapping(route.result_data_type,
                                          serializer=True)
         etype = self._swift_type_mapping(route.error_data_type,
                                          serializer=True)
@@ -671,9 +673,9 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             ('host', '"'+host_ident+'"'),
             ('route', '"/{}/{}"'.format(namespace.name, route.name)),
             ('params', '{}.serialize({})'.format(
-                self._serializer_obj(route.request_data_type),
-                '' if is_void_type(route.request_data_type) else 'request')),
-            ('responseSerializer', self._serializer_obj(route.response_data_type)),
+                self._serializer_obj(route.arg_data_type),
+                '' if is_void_type(route.arg_data_type) else 'request')),
+            ('responseSerializer', self._serializer_obj(route.result_data_type)),
             ('errorSerializer', self._serializer_obj(route.error_data_type)),
         ]
 
@@ -686,9 +688,9 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                                  return_type='Babel{}Request<{}, {}>'.format(route_type,
                                                                                rtype,
                                                                                etype)):
-            if is_struct_type(route.request_data_type):
-                args = [(name, name) for name, _ in self._struct_init_args(route.request_data_type)]
-                self.emit('let request = {}({})'.format(request_type, self._func_args(args)))
+            if is_struct_type(route.arg_data_type):
+                args = [(name, name) for name, _ in self._struct_init_args(route.arg_data_type)]
+                self.emit('let request = {}({})'.format(arg_type, self._func_args(args)))
 
             self.emit('return Babel{}Request({})'.format(route_type, self._func_args(func_args)))
 

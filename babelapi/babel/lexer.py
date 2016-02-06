@@ -159,8 +159,6 @@ class BabelLexer(object):
         'attrs',
         'import',
         'namespace',
-        'request',
-        'response',
         'route',
         'struct',
         'union',

@@ -257,12 +257,12 @@ class BabelSubtypeField(_Element):
 class BabelRouteDef(_Element):
 
     def __init__(self, path, lineno, lexpos, name, deprecated,
-                 request_type_ref, response_type_ref, error_type_ref=None):
+                 arg_type_ref, result_type_ref, error_type_ref=None):
         super(BabelRouteDef, self).__init__(path, lineno, lexpos)
         self.name = name
         self.deprecated = deprecated
-        self.request_type_ref = request_type_ref
-        self.response_type_ref = response_type_ref
+        self.arg_type_ref = arg_type_ref
+        self.result_type_ref = result_type_ref
         self.error_type_ref = error_type_ref
         self.doc = None
         self.attrs = {}
@@ -701,7 +701,7 @@ class BabelParser(object):
     #
     # An example route looks as follows:
     #
-    # route sample-route/sub-path (request, response, error)
+    # route sample-route/sub-path (arg, result, error)
     #     "This is a docstring for the route"
     #
     #     attrs

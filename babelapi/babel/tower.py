@@ -440,8 +440,8 @@ class TowerOfBabel(object):
         """
         Converts a forward reference of a route into a complete definition.
         """
-        request_dt = self._resolve_type(env, route._token.request_type_ref)
-        response_dt = self._resolve_type(env, route._token.response_type_ref)
+        arg_dt = self._resolve_type(env, route._token.arg_type_ref)
+        result_dt = self._resolve_type(env, route._token.result_type_ref)
         error_dt = self._resolve_type(env, route._token.error_type_ref)
 
         if route._token.deprecated:
@@ -490,8 +490,8 @@ class TowerOfBabel(object):
         route.set_attributes(
             deprecated=deprecated,
             doc=route._token.doc,
-            request_data_type=request_dt,
-            response_data_type=response_dt,
+            arg_data_type=arg_dt,
+            result_data_type=result_dt,
             error_data_type=error_dt,
             attrs=new_attrs)
 

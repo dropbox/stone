@@ -133,14 +133,14 @@ deprecated
 doc
     The documentation string for the route.
 
-request_data_type
-    A DataType object of a request.
+arg_data_type
+    A DataType object of the arg to the route.
 
-response_data_type
-    A DataType object of a response.
+arg_data_type
+    A DataType object of the result of the route.
 
 error_data_type
-    A DataType object of an error.
+    A DataType object of the error of the route.
 
 attrs
     A map from string keys to values that is a direct copy of the attrs

@@ -317,8 +317,8 @@ class TestBabel(unittest.TestCase):
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'AccountInfo')
         self.assertEqual(out[2].name, 'GetAccountInfo')
-        self.assertEqual(out[2].request_type_ref.name, 'AccountInfo')
-        self.assertEqual(out[2].response_type_ref.name, 'Void')
+        self.assertEqual(out[2].arg_type_ref.name, 'AccountInfo')
+        self.assertEqual(out[2].result_type_ref.name, 'Void')
         self.assertEqual(out[2].error_type_ref.name, 'Void')
 
         # Test raw documentation

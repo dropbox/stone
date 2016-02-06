@@ -51,9 +51,9 @@ Backwards Incompatible Changes
         * Similar to the above, if a tag changes, the old receiver's
           handler code will break.
     * Changing any of the types of a route description to an incompatible one.
-        * When changing a request, response, or error data type for a route,
-          you should think about it as applying a series of operations to
-          convert the old data type to the new one.
+        * When changing an arg, result, or error data type for a route, you
+          should think about it as applying a series of operations to convert
+          the old data type to the new one.
         * The change in data type is backwards incompatible if any operation
           is backwards incompatible.
 

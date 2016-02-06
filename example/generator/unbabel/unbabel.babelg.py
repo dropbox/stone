@@ -88,8 +88,8 @@ class UnbabelGenerator(CodeGenerator):
         self.emit_line('')
         self.emit_line('route %s (%s, %s, %s)' %
                        (route.name,
-                        self.format_data_type(route.request_data_type),
-                        self.format_data_type(route.response_data_type),
+                        self.format_data_type(route.arg_data_type),
+                        self.format_data_type(route.result_data_type),
                         self.format_data_type(route.error_data_type)))
         # Output the docstring.
         with self.indent():

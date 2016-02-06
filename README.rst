@@ -217,5 +217,5 @@ Now we can interact with the specification in Python::
     >>> from babel_serializers import json_encode
     >>> a2 = Account(account_id='id-48sa2f0', name='Alexander the Great',
     ...              email='alex@example.org', status=Status.active)
-    >>> json_encode(GetAccountRoute.response_data_type, a2)
+    >>> json_encode(GetAccountRoute.result_data_type, a2)
     '{"status": "active", "account_id": "id-48sa2f0", "name": "Alexander the Great", "email": "alex@example.org"}'

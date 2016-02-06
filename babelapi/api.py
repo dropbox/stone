@@ -133,7 +133,7 @@ class ApiNamespace(object):
         """
         data_types = set()
         for route in self.routes:
-            for dtype in (route.request_data_type, route.response_data_type,
+            for dtype in (route.arg_data_type, route.result_data_type,
                           route.error_data_type):
                 while is_list_type(dtype) or is_nullable_type(dtype):
                     dtype = dtype.data_type
@@ -196,21 +196,21 @@ class ApiRoute(object):
         self.deprecated = None
         self.raw_doc = None
         self.doc = None
-        self.request_data_type = None
-        self.response_data_type = None
+        self.arg_data_type = None
+        self.result_data_type = None
         self.error_data_type = None
         self.attrs = None
 
-    def set_attributes(self, deprecated, doc, request_data_type,
-                       response_data_type, error_data_type, attrs):
+    def set_attributes(self, deprecated, doc, arg_data_type, result_data_type,
+                       error_data_type, attrs):
         """
         Converts a forward reference definition of a route into a full
         definition.
 
         :param DeprecationInfo deprecated: Set if this route is deprecated.
         :param str doc: Description of the endpoint.
-        :type request_data_type: :class:`babelapi.data_type.DataType`
-        :type response_data_type: :class:`babelapi.data_type.DataType`
+        :type arg_data_type: :class:`babelapi.data_type.DataType`
+        :type result_data_type: :class:`babelapi.data_type.DataType`
         :type error_data_type: :class:`babelapi.data_type.DataType`
         :param dict attrs: Map of string keys to values that are either int,
             float, bool, str, or None. These are the route attributes assigned
@@ -219,8 +219,8 @@ class ApiRoute(object):
         self.deprecated = deprecated
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
-        self.request_data_type = request_data_type
-        self.response_data_type = response_data_type
+        self.arg_data_type = arg_data_type
+        self.result_data_type = result_data_type
         self.error_data_type = error_data_type
         self.attrs = attrs
 
