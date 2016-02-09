@@ -5,9 +5,12 @@ A command-line interface for BabelAPI.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
+import codecs
 import imp
+import io
 import logging
 import os
+import six
 import sys
 import traceback
 
@@ -29,15 +32,18 @@ _cmdline_parser.add_argument(
     help='Specify the path to a generator. It must have a .babelg.py extension.',
 )
 _cmdline_parser.add_argument(
-    'spec',
-    nargs='+',
-    type=str,
-    help='Path to API specifications. Each must have a .babel extension.',
-)
-_cmdline_parser.add_argument(
     'output',
     type=str,
     help='The folder to save generated files to.',
+)
+_cmdline_parser.add_argument(
+    'spec',
+    nargs='*',
+    type=str,
+    help=('Path to API specifications. Each must have a .babel extension. '
+          'If omitted or set to "-", the spec is read from stdin. Multiple '
+          'namespaces can be provided over stdin by concatenating multiple '
+          'specs together.'),
 )
 _cmdline_parser.add_argument(
     '--clean-build',
@@ -87,7 +93,7 @@ def main():
 
     logging.basicConfig(level=logging_level)
 
-    if args.spec[0].startswith('+') and args.spec[0].endswith('.py'):
+    if args.spec and args.spec[0].startswith('+') and args.spec[0].endswith('.py'):
         # Hack: Special case for defining a spec in Python for testing purposes
         # Use this if you want to define a Babel spec using a Python module.
         # The module should should contain an api variable that references a
@@ -99,20 +105,50 @@ def main():
                   e, file=sys.stderr)
             sys.exit(1)
     else:
-        specs = []
-        for spec_path in args.spec:
-            if not spec_path.endswith('.babel'):
-                print("error: Specification '%s' must have a .babel extension."
-                      % spec_path,
-                      file=sys.stderr)
+        if args.spec:
+            specs = []
+            read_from_stdin = False
+            for spec_path in args.spec:
+                if spec_path == '-':
+                    read_from_stdin = True
+                elif not spec_path.endswith('.babel'):
+                    print("error: Specification '%s' must have a .babel extension."
+                          % spec_path,
+                          file=sys.stderr)
+                    sys.exit(1)
+                elif not os.path.exists(spec_path):
+                    print("error: Specification '%s' cannot be found." % spec_path,
+                          file=sys.stderr)
+                    sys.exit(1)
+                else:
+                    with open(spec_path) as f:
+                        specs.append((spec_path, f.read()))
+            if read_from_stdin and specs:
+                print("error: Do not specify stdin and specification files "
+                      "simultaneously.", file=sys.stderr)
                 sys.exit(1)
-            elif not os.path.exists(spec_path):
-                print("error: Specification '%s' cannot be found." % spec_path,
-                      file=sys.stderr)
-                sys.exit(1)
+
+        if not args.spec or read_from_stdin:
+            specs = []
+            if debug:
+                print('Reading specification from stdin.')
+
+            if six.PY2:
+                UTF8Reader = codecs.getreader('utf8')
+                sys.stdin = UTF8Reader(sys.stdin)
+                stdin_text = sys.stdin.read()
             else:
-                with open(spec_path) as f:
-                    specs.append((spec_path, f.read()))
+                stdin_text = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8').read()
+
+            parts = stdin_text.split('namespace')
+            if len(parts) == 1:
+                specs.append(('stdin.1', parts[0]))
+            else:
+                specs.append(
+                    ('stdin.1', '%snamespace%s' % (parts.pop(0), parts.pop(0))))
+                while parts:
+                    specs.append(('stdin.%s' % (len(specs) + 1),
+                                  'namespace%s' % parts.pop(0)))
 
         # TODO: Needs version
         tower = TowerOfBabel(specs, debug=debug)

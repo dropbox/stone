@@ -4,7 +4,6 @@ import base64
 import datetime
 import imp
 import json
-import os
 import shutil
 import six
 import subprocess
@@ -615,6 +614,7 @@ test_ns2_spec = """\
 namespace ns2
 
 struct BaseS
+    "This is a test \u2650"
     z Int64
 
 union BaseU
@@ -629,29 +629,29 @@ class TestGeneratedPython(unittest.TestCase):
         # Sanity check: babelapi must be importable for the compiler to work
         __import__('babelapi')
 
-        # Write spec to file for babelapi
-        with open('ns.babel', 'w') as f:
-            f.write(test_spec)
-        with open('ns2.babel', 'w') as f:
-            f.write(test_ns2_spec)
-
         # Compile spec by calling out to babelapi
         p = subprocess.Popen(
             [sys.executable,
              '-m',
              'babelapi.cli',
              'python.babelg.py',
-             'ns.babel',
-             'ns2.babel',
-             'output/'],
+             'output',
+             '-'],
+            stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
+        p.communicate(input=(test_spec + test_ns2_spec).encode('utf-8'))
         if p.wait() != 0:
             raise AssertionError('Could not execute babelapi tool: %s' %
                                  p.stderr.read().decode('ascii'))
 
         # Load ns2 first since ns depends on it.
-        self.ns2 = imp.load_source('ns2', 'output/ns2.py')
-        self.ns = imp.load_source('ns', 'output/ns.py')
+        if six.PY2:
+            self.ns2 = imp.load_source('ns2', 'output/ns2.py')
+            self.ns = imp.load_source('ns', 'output/ns.py')
+        else:
+            sys.path.append('output')
+            self.ns2 = __import__('ns2')
+            self.ns = __import__('ns')
 
     def test_docstring(self):
         # Check that the docstrings from the spec have in some form made it
@@ -1097,10 +1097,8 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertRaises(AssertionError, s.get_default)
 
     def tearDown(self):
-        # Clear input and output of babelapi tool after all tests.
+        # Clear output of babelapi tool after all tests.
         shutil.rmtree('output')
-        os.remove('ns.babel')
-        os.remove('ns2.babel')
 
     def test_msgpack(self):
         # Do a limited amount of testing just to make sure that unicode
