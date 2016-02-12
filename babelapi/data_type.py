@@ -1104,6 +1104,7 @@ class Struct(CompositeType):
             elif isinstance(val, TagRef):
                 return val.union_data_type._compute_example(val.tag_name).value
             elif isinstance(val, list):
+                dt, _ = unwrap_nullable(dt)
                 return [get_json_val(dt.data_type, v) for v in val]
             else:
                 return val

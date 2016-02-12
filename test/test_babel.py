@@ -2343,6 +2343,24 @@ class TestBabel(unittest.TestCase):
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'l': ['a', 'b', 'c']})
 
+        # Test nullable field of list of primitives
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                l List(String)?
+                l2 List(String)?
+
+                example default
+                    l = ["a", "b", "c"]
+                    l2 = null
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s_dt.get_examples()['default'].value,
+                         {'l': ['a', 'b', 'c']})
+
         # Test field of list of nullable primitives
         text = textwrap.dedent("""\
             namespace test
@@ -2388,9 +2406,13 @@ class TestBabel(unittest.TestCase):
 
             struct S
                 l List(T)
+                l2 List(T)?
+                l3 List(T)?
 
                 example default
                     l = [default, default]
+                    l2 = [default]
+                    l3 = null
 
             struct T
                 f String
@@ -2402,7 +2424,8 @@ class TestBabel(unittest.TestCase):
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'l': [{'f': 'A'}, {'f': 'A'}]})
+                         {'l': [{'f': 'A'}, {'f': 'A'}],
+                          'l2': [{'f': 'A'}]})
 
         # Test example of list of nullable composite types
         text = textwrap.dedent("""\
@@ -2498,9 +2521,13 @@ class TestBabel(unittest.TestCase):
 
             union U
                 a List(S)
+                b List(S)?
 
                 example default
                     a = [default, default]
+
+                example default_b
+                    b = [default]
 
             struct S
                 f String
@@ -2513,6 +2540,8 @@ class TestBabel(unittest.TestCase):
         s_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'.tag': 'a', 'a': [{'f': 'A'}, {'f': 'A'}]})
+        self.assertEqual(s_dt.get_examples()['default_b'].value,
+                         {'.tag': 'b', 'b': [{'f': 'A'}]})
 
         # Test union with list of lists of composites
         text = textwrap.dedent("""\
