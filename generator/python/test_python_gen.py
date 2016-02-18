@@ -398,8 +398,9 @@ class TestDropInModules(unittest.TestCase):
                        'c': bv.Struct(S),
                        'd': bv.List(bv.Int64()),
                        'e': bv.Nullable(bv.Int64()),
-                       'f': bv.Nullable(bv.Struct(S))}
-            _catch_all = 'b'
+                       'f': bv.Nullable(bv.Struct(S)),
+                       'g': bv.Void()}
+            _catch_all = 'g'
             _tag = None
             def __init__(self, tag, value=None):
                 self._tag = tag
@@ -445,7 +446,7 @@ class TestDropInModules(unittest.TestCase):
         # Test catch all variant
         u = json_decode(bv.Union(U), json.dumps({'z': 'test'}),
                         strict=False, old_style=True)
-        self.assertEqual(u._tag, 'b')
+        self.assertEqual(u._tag, 'g')
 
         # Test nullable union
         u = json_decode(bv.Nullable(bv.Union(U)), json.dumps(None),
@@ -561,6 +562,7 @@ union V
     t8 Resource?
     t9 List(String)
     t10 List(U)
+    other*
 
 struct S
     f String
@@ -767,6 +769,22 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t1())
         self.assertEqual(v.get_t1(), 'hello')
+
+        # Test catch-all
+        v = json_decode(
+            bv.Union(self.ns.V),
+            json.dumps({'.tag': 'z', 'z': 'hello'}),
+            strict=False)
+        self.assertIsInstance(v, self.ns.V)
+        self.assertTrue(v.is_other())
+
+        # Test catch-all is reject if strict
+        with self.assertRaises(bv.ValidationError):
+            json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 'z'}))
+
+        # Test explicitly using catch-all is reject if strict
+        with self.assertRaises(bv.ValidationError):
+            json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 'other'}))
 
         # Test nullable primitive union member with null value
         v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't2', 't2': None}))

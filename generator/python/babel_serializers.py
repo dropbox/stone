@@ -441,6 +441,9 @@ def _decode_union(data_type, obj, strict, for_msgpack):
             if not isinstance(val_data_type, (bv.Void, bv.Nullable)):
                 raise bv.ValidationError(
                     "expected object for '%s', got symbol" % tag)
+            if tag == data_type.definition._catch_all:
+                raise bv.ValidationError(
+                    "unexpected use of the catch-all tag '%s'" % tag)
         else:
             if not strict and data_type.definition._catch_all:
                 tag = data_type.definition._catch_all
@@ -467,6 +470,9 @@ def _decode_union_dict(data_type, obj, strict, for_msgpack):
             return data_type.definition._catch_all, None
         else:
             raise bv.ValidationError("unknown tag '%s'" % tag)
+    if tag == data_type.definition._catch_all:
+        raise bv.ValidationError(
+            "unexpected use of the catch-all tag '%s'" % tag)
 
     val_data_type = data_type.definition._tagmap[tag]
     if isinstance(val_data_type, bv.Nullable):
