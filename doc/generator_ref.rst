@@ -90,22 +90,31 @@ doc
     If no documentation string exists, this is ``None``.
 
 routes
-    A list of Route objects in the order that they were defined.
+    A list of Route objects in alphabetical order.
 
 route_by_name
     A map from route name to Route object.
 
 data_types
-    A list of user-defined DataType objects in the order that they were
-    defined.
+    A list of user-defined DataType objects in alphabetical order.
 
 data_type_by_name
     A map from data type name to DataType object.
 
-get_imported_namespaces()
+aliases
+    A list of Alias objects in alphabetical order. Aliases will only be
+    available if the generator has set its ``preserve_aliases`` class variable
+    to true.
+
+alias_type_by_name
+    A map from alias name to Alias object.
+
+get_imported_namespaces(must_have_imported_data_type=False)
     A list of Namespace objects. A namespace is a member of this list if it is
-    imported by the current namespace and a data type is referenced from it.
-    Namespaces are in ASCII order by name.
+    imported by the current namespace and a data type or alias is referenced
+    from it. If you want only namespaces with aliases referenced, set the
+    ``must_have_imported_data_type`` parameter to true. Namespaces are in ASCII
+    order by name.
 
 get_namespaces_imported_by_route_io()
     A list of Namespace objects. A namespace is a member of this list if it is
@@ -118,6 +127,18 @@ get_route_io_data_types()
     argument, result, or error of a route. If a List or Nullable data type is
     referenced, then the contained data type is returned assuming it's a
     user-defined type.
+
+linearize_data_types()
+    Returns a list of all data types used in the namespace. Because the
+    inheritance of data types can be modeled as a DAG, the list will be a
+    linearization of the DAG. It's ideal to generate data types in this
+    order so that composite types that reference other composite types are
+    defined in the correct order.
+
+linearize_aliases()
+    Returns a list of all aliases used in the namespace. The aliases are
+    ordered to ensure that if they reference other aliases those aliases come
+    earlier in the list.
 
 Route
 -----
@@ -331,6 +352,18 @@ data_type
 
 catch_all
     A boolean indicating whether this field is the catch-all for the union.
+
+Alias
+-----
+
+name
+    The target name.
+
+data_type
+    The DataType referenced by the alias as the source.
+
+doc
+    The documentation string for the alias.
 
 Example
 -------

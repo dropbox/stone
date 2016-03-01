@@ -6,6 +6,7 @@ import six
 
 from babelapi.data_type import (
     doc_unwrap,
+    is_alias,
     is_composite_type,
     is_list_type,
     is_nullable_type,
@@ -46,6 +47,17 @@ class Api(object):
         for namespace in self.namespaces.values():
             namespace.normalize()
 
+
+class _ImportReason(object):
+    """
+    Tracks the reason a namespace was imported.
+    """
+
+    def __init__(self):
+        self.alias = False
+        self.data_type = False
+
+
 class ApiNamespace(object):
     """
     Represents a category of API endpoints and their associated data types.
@@ -58,7 +70,10 @@ class ApiNamespace(object):
         self.route_by_name = {}
         self.data_types = []
         self.data_type_by_name = {}
-        self._imported_namespaces = []
+        self.aliases = []
+        self.alias_by_name = {}
+        # Dict[Namespace, _ImportReason]
+        self._imported_namespaces = {}
 
     def add_doc(self, docstring):
         """Adds a docstring for this namespace.
@@ -84,18 +99,31 @@ class ApiNamespace(object):
         self.data_types.append(data_type)
         self.data_type_by_name[data_type.name] = data_type
 
-    def add_imported_namespace(self, namespace):
+    def add_alias(self, alias):
+        self.aliases.append(alias)
+        self.alias_by_name[alias.name] = alias
+
+    def add_imported_namespace(self,
+                               namespace,
+                               imported_alias=False,
+                               imported_data_type=False):
         """
-        For a namespace to be considered imported, it must be imported by
-        this namespace, and have at least one data type from the namespace
-        referenced by this one. The caller of this method is responsible for
-        verifying these requirements.
+        Keeps track of namespaces that this namespace imports.
+
+        Args:
+            namespace (Namespace): The imported namespace.
+            imported_alias (bool): Set if this namespace references an alias
+                in the imported namespace.
+            imported_data_type (bool): Set if this namespace references a
+                data type in the imported namespace.
         """
         assert self.name != namespace.name, \
             'Namespace cannot import itself.'
-        if namespace not in self._imported_namespaces:
-            self._imported_namespaces.append(namespace)
-            self._imported_namespaces.sort(key=lambda n: n.name)
+        reason = self._imported_namespaces.setdefault(namespace, _ImportReason())
+        if imported_alias:
+            reason.alias = True
+        if imported_data_type:
+            reason.data_type = True
 
     def linearize_data_types(self):
         """
@@ -124,6 +152,30 @@ class ApiNamespace(object):
 
         return linearized_data_types
 
+    def linearize_aliases(self):
+        """
+        Returns a list of all aliases used in the namespace. The aliases are
+        ordered to ensure that if they reference other aliases those aliases
+        come earlier in the list.
+        """
+        linearized_aliases = []
+        seen_aliases = set()
+
+        def add_alias(alias):
+            if alias in seen_aliases:
+                return
+            elif alias.namespace != self:
+                return
+            if is_alias(alias.data_type):
+                add_alias(alias.data_type)
+            linearized_aliases.append(alias)
+            seen_aliases.add(alias)
+
+        for alias in self.aliases:
+            add_alias(alias)
+
+        return linearized_aliases
+
     def get_route_io_data_types(self):
         """
         Returns a list of all user-defined data types that are referenced as
@@ -137,18 +189,31 @@ class ApiNamespace(object):
                           route.error_data_type):
                 while is_list_type(dtype) or is_nullable_type(dtype):
                     dtype = dtype.data_type
-                if is_composite_type(dtype):
+                if is_composite_type(dtype) or is_alias(dtype):
                     data_types.add(dtype)
 
         return sorted(data_types, key=lambda dt: dt.name)
 
-    def get_imported_namespaces(self):
+    def get_imported_namespaces(self, must_have_imported_data_type=False):
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and a data type is
         referenced from it. Namespaces are in ASCII order by name.
+
+        Args:
+            must_have_imported_data_type (bool): If true, return does not
+                include namespaces that were imported only for aliases.
+
+        Returns:
+            List[Namespace]: A list of imported namespaces.
         """
-        return self._imported_namespaces[:]
+        imported_namespaces = []
+        for imported_namespace, reason in self._imported_namespaces.items():
+            if must_have_imported_data_type and not reason.data_type:
+                continue
+            imported_namespaces.append(imported_namespace)
+        imported_namespaces.sort(key=lambda n: n.name)
+        return imported_namespaces
 
     def get_namespaces_imported_by_route_io(self):
         """
@@ -171,6 +236,7 @@ class ApiNamespace(object):
         """
         self.routes.sort(key=lambda route: route.name)
         self.data_types.sort(key=lambda data_type: data_type.name)
+        self.aliases.sort(key=lambda alias: alias.name)
 
     def __repr__(self):
         return 'ApiNamespace({!r})'.format(self.name)

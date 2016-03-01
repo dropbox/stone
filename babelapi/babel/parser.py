@@ -58,15 +58,17 @@ class BabelImport(_Element):
 
 class BabelAlias(_Element):
 
-    def __init__(self, path, lineno, lexpos, name, type_ref):
+    def __init__(self, path, lineno, lexpos, name, type_ref, doc):
         """
         Args:
             name (str): The name of the alias.
             type_ref (BabelTypeRef): The data type of the field.
+            doc (Optional[str]): Documentation string for the alias.
         """
         super(BabelAlias, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
+        self.doc = doc
 
     def __repr__(self):
         return 'BabelAlias({!r}, {!r})'.format(self.name, self.type_ref)
@@ -417,9 +419,12 @@ class BabelParser(object):
         p[0] = BabelImport(self.path, p.lineno(1), p.lexpos(1), p[2])
 
     def p_alias(self, p):
-        'alias : KEYWORD ID EQ type_ref NEWLINE'
+        """alias : KEYWORD ID EQ type_ref NEWLINE
+                 | KEYWORD ID EQ type_ref NEWLINE INDENT docsection DEDENT"""
         if p[1] == 'alias':
-            p[0] = BabelAlias(self.path, p.lineno(1), p.lexpos(1), p[2], p[4])
+            doc = p[7] if len(p) > 6 else None
+            p[0] = BabelAlias(
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[4], doc)
         else:
             raise ValueError('Expected alias keyword')
 
@@ -438,7 +443,7 @@ class BabelParser(object):
     # References to Types
     #
     # There are several places references to types are made:
-    # 1. Alias targets
+    # 1. Alias sources
     #    alias x = TypeRef
     # 2. Field data types
     #    struct S

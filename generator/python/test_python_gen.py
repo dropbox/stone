@@ -610,6 +610,9 @@ struct OptionalS
 
 struct S2
     f1 OptionalS
+
+alias AliasedS2 = S2
+alias AliasedString = String(max_length=10)
 """
 
 test_ns2_spec = """\
@@ -622,7 +625,10 @@ struct BaseS
 union BaseU
     z
     x String
+
+alias AliasedBaseU = BaseU
 """
+
 
 class TestGeneratedPython(unittest.TestCase):
 
@@ -641,10 +647,11 @@ class TestGeneratedPython(unittest.TestCase):
              '-'],
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
-        p.communicate(input=(test_spec + test_ns2_spec).encode('utf-8'))
+        _, stderr = p.communicate(
+            input=(test_spec + test_ns2_spec).encode('utf-8'))
         if p.wait() != 0:
             raise AssertionError('Could not execute babelapi tool: %s' %
-                                 p.stderr.read().decode('ascii'))
+                                 stderr.decode('utf-8'))
 
         # Load ns2 first since ns depends on it.
         if six.PY2:
@@ -667,6 +674,10 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIn('``True``', self.ns.DocTest.b.__doc__)
         # Test doc converts type reference to sphinx-friendly representation.
         self.assertIn(':class:`D`', self.ns.DocTest.t.__doc__)
+
+    def test_aliases(self):
+        # The left is a validator, the right is the struct devs can use...
+        self.assertEqual(self.ns.AliasedS2, self.ns.S2)
 
     def test_struct_decoding(self):
         d = json_decode(bv.Struct(self.ns.D),

@@ -9,6 +9,56 @@ import six
 import textwrap
 
 from babelapi.babel.tower import doc_ref_re
+from babelapi.data_type import (
+    is_alias,
+)
+
+
+def remove_aliases_from_api(api):
+    for namespace in api.namespaces.values():
+        # Important: Even if this namespace has no aliases, it may reference
+        # an alias in an imported namespace.
+
+        # Remove nested aliases first. This way, when we replace an alias with
+        # its source later on, it too is alias free.
+        for alias in namespace.aliases:
+            data_type = alias
+            while True:
+                # For better or for worse, all non-user-defined types that
+                # reference other types do so with a 'data_type' attribute.
+                if hasattr(data_type, 'data_type'):
+                    if is_alias(data_type.data_type):
+                        # Skip the alias (this looks so terrible...)
+                        data_type.data_type = data_type.data_type.data_type
+                    data_type = data_type.data_type
+                else:
+                    break
+
+        for data_type in namespace.data_types:
+            for field in data_type.fields:
+                data_type = field
+                while True:
+                    if hasattr(data_type, 'data_type'):
+                        if is_alias(data_type.data_type):
+                            data_type.data_type = data_type.data_type.data_type
+                        data_type = data_type.data_type
+                    else:
+                        break
+
+        for route in namespace.routes:
+            if is_alias(route.arg_data_type):
+                route.arg_data_type = route.arg_data_type.data_type
+            if is_alias(route.result_data_type):
+                route.result_data_type = route.result_data_type.data_type
+            if is_alias(route.error_data_type):
+                route.error_data_type = route.error_data_type.data_type
+
+        # Clear aliases
+        namespace.aliases = []
+        namespace.alias_by_name = {}
+
+    return api
+
 
 class Generator(six.with_metaclass(ABCMeta)):
     """
@@ -35,6 +85,12 @@ class Generator(six.with_metaclass(ABCMeta)):
 
     # Can be overridden with an argparse.ArgumentParser object.
     cmdline_parser = None
+
+    # Can be overridden by a subclass. If true, babelapi.data_type.Alias
+    # objects will be present in the API object. If false, aliases are masked
+    # by replacing them with duplicate type definitions as the source type.
+    # For backwards compatibility with existing generators defaults to false.
+    preserve_aliases = False
 
     def __init__(self, target_folder_path, args):
         """
@@ -154,7 +210,7 @@ class Generator(six.with_metaclass(ABCMeta)):
             self.emit_raw('\n')
 
     def emit_wrapped_text(self, s, prefix='', initial_prefix='', subsequent_prefix='',
-            width=80, break_long_words=False, break_on_hyphens=False):
+                          width=80, break_long_words=False, break_on_hyphens=False):
         """
         Adds the input string to the output buffer with indentation and
         wrapping. The wrapping is performed by the :func:`textwrap.fill` Python
@@ -220,6 +276,7 @@ class Generator(six.with_metaclass(ABCMeta)):
             parts.append(sub)
         parts.append(doc[cur_index:])
         return ''.join(parts)
+
 
 class CodeGenerator(Generator):
     """
@@ -337,6 +394,7 @@ class CodeGenerator(Generator):
             yield
 
         self.emit(delim[1] + after)
+
 
 class CodeGeneratorMonolingual(CodeGenerator):
     """Identical to CodeGenerator, except that an additional attribute `lang`

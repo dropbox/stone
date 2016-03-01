@@ -11,6 +11,7 @@ from ..api import (
     DeprecationInfo,
 )
 from ..data_type import (
+    Alias,
     Boolean,
     Bytes,
     CompositeType,
@@ -32,6 +33,7 @@ from ..data_type import (
     Union,
     UnionField,
     Void,
+    unwrap_aliases,
 )
 
 from .exception import InvalidSpec
@@ -129,18 +131,11 @@ class TowerOfBabel(object):
                 self._logger.info('Empty spec: %s', path)
 
         self._add_imports_to_env(raw_api)
-        self._add_aliases_to_api(raw_api)
         self._populate_type_attributes()
         self._populate_field_defaults()
         self._populate_enumerated_subtypes()
         self._populate_examples()
         self._validate_doc_refs()
-
-        # Remove namespaces that don't define data types or routes. These are
-        # either entirely empty, or only define aliases.
-        for namespace in list(self.api.namespaces.values()):
-            if not namespace.data_types and not namespace.routes:
-                del self.api.namespaces[namespace.name]
 
         self.api.normalize()
 
@@ -180,7 +175,7 @@ class TowerOfBabel(object):
     def _add_data_types_and_routes_to_api(self, namespace, desc):
         """
         From the raw output of the parser, create forward references for each
-        user-defined type (struct, union, route).
+        user-defined type (struct, union, route, and alias).
 
         Args:
             namespace (babelapi.api.Namespace): Namespace for definitions.
@@ -189,26 +184,21 @@ class TowerOfBabel(object):
                 namespace declaration.
         """
 
-        # Keep lists of all the types and routes added just from this spec.
-        data_types = []
-        routes = []
         env = self._get_or_create_env(namespace.name)
 
         for item in desc:
             if isinstance(item, BabelTypeDef):
                 api_type = self._create_type(env, item)
-                data_types.append(api_type)
                 namespace.add_data_type(api_type)
             elif isinstance(item, BabelRouteDef):
                 route = self._create_route(env, item)
-                routes.append(route)
                 namespace.add_route(route)
             elif isinstance(item, BabelImport):
                 # Handle imports later.
                 pass
             elif isinstance(item, BabelAlias):
-                # Handle aliases later.
-                pass
+                alias = self._create_alias(env, item)
+                namespace.add_alias(alias)
             else:
                 raise AssertionError('Unknown Babel Declaration Type %r' %
                                      item.__class__.__name__)
@@ -238,24 +228,11 @@ class TowerOfBabel(object):
                     imported_env = self._get_or_create_env(item.target)
                     env[item.target] = imported_env
 
-    def _add_aliases_to_api(self, raw_api):
-        """
-        Scans raw parser output for alias declarations. Call this only when all
-        user-defined types have had forward references created.
-
-        Args:
-            raw_api (Tuple[Namespace, List[babelapi.babel.parser._Element]]):
-                Namespace paired with raw parser output.
-        """
-        for namespace, desc in raw_api:
-            env = self._get_or_create_env(namespace.name)
-            for item in desc:
-                if isinstance(item, BabelAlias):
-                    self._create_alias(env, item)
-
     def _create_alias(self, env, item):
-        # TODO(kelkabany): Currently, aliases cannot point to other aliases. A
-        # less-than-clear "Symbol is undefined" error is displayed.
+        # NOTE: I don't like supporting forward references for aliases
+        # because it makes specs harder to read. But we have to so that if a
+        # namespace is split across multiple files, the order they're specified
+        # in the command line which affects alias ordering is irrelevant.
         if item.name in env:
             existing_dt = env[item.name]
             raise InvalidSpec(
@@ -263,17 +240,15 @@ class TowerOfBabel(object):
                 (quote(item.name), existing_dt._token.path,
                 existing_dt._token.lineno), item.lineno, item.path)
 
-        env[item.name] = self._resolve_type(env, item.type_ref)
+        namespace = self.api.ensure_namespace(env.namespace_name)
+        alias = Alias(item.name, namespace, item)
+        env[item.name] = alias
+        return alias
 
     def _create_type(self, env, item):
         """Create a forward reference for a union or struct."""
 
         if item.name in env:
-            # TODO(kelkabany): This reports the wrong line number for the
-            # original definition if an alias was the source of the name
-            # conflict. It reports the line the aliased type was defined,
-            # rather than the alias itself. Since aliases aren't tracked in
-            # the environment, fixing this will require a refactor.
             existing_dt = env[item.name]
             raise InvalidSpec(
                 'Symbol %s already defined (%s:%d).' %
@@ -302,6 +277,11 @@ class TowerOfBabel(object):
         """
         for namespace in self.api.namespaces.values():
             env = self._get_or_create_env(namespace.name)
+
+            for alias in namespace.aliases:
+                data_type = self._resolve_type(env, alias._token.type_ref)
+                alias.set_attributes(alias._token.doc, data_type)
+
             for data_type in namespace.data_types:
                 if not data_type._is_forward_ref:
                     continue
@@ -337,6 +317,15 @@ class TowerOfBabel(object):
             # A parent type must be fully defined and not just a forward
             # reference.
             parent_type = self._resolve_type(env, extends, True)
+            if isinstance(parent_type, Alias):
+                # Restrict extending aliases because it's difficult to generate
+                # code for it in Python. We put all type references at the end
+                # to avoid out-of-order declaration issues, but using "extends"
+                # in Python forces the reference to happen earlier.
+                raise InvalidSpec(
+                    'A struct cannot extend an alias. '
+                    'Use the canonical name instead.',
+                    data_type._token.lineno, data_type._token.path)
             if isinstance(parent_type, Nullable):
                 raise InvalidSpec(
                     'A struct cannot extend a nullable type.',
@@ -363,6 +352,11 @@ class TowerOfBabel(object):
             # A parent type must be fully defined and not just a forward
             # reference.
             parent_type = self._resolve_type(env, extends, True)
+            if isinstance(parent_type, Alias):
+                raise InvalidSpec(
+                    'A union cannot extend an alias. '
+                    'Use the canonical name instead.',
+                    data_type._token.lineno, data_type._token.path)
             if isinstance(parent_type, Nullable):
                 raise InvalidSpec(
                     'A union cannot extend a nullable type.',
@@ -675,13 +669,17 @@ class TowerOfBabel(object):
         else:
             data_type = env[type_ref.name]
 
-        if type_ref.ns and isinstance(data_type, CompositeType):
-            # Add the source namespace as an import only if the type is a
-            # reference to a user-defined type. Aliases to primitives are
-            # ignored.
+        if type_ref.ns:
+            # Add the source namespace as an import.
             namespace = self.api.ensure_namespace(orig_namespace_name)
-            namespace.add_imported_namespace(
-                self.api.ensure_namespace(type_ref.ns))
+            if isinstance(data_type, CompositeType):
+                namespace.add_imported_namespace(
+                    self.api.ensure_namespace(type_ref.ns),
+                    imported_data_type=True)
+            elif isinstance(data_type, Alias):
+                namespace.add_imported_namespace(
+                    self.api.ensure_namespace(type_ref.ns),
+                    imported_alias=True)
 
         if (enforce_fully_defined and isinstance(data_type, CompositeType) and
                 data_type._is_forward_ref):
@@ -697,7 +695,8 @@ class TowerOfBabel(object):
             self._resolution_in_progress.remove(data_type)
 
         if type_ref.nullable:
-            if isinstance(data_type, Nullable):
+            unwrapped_dt, _ = unwrap_aliases(data_type)
+            if isinstance(unwrapped_dt, Nullable):
                 raise InvalidSpec(
                     'Cannot mark reference to nullable type as nullable.',
                     *loc)

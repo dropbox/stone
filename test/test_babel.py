@@ -15,6 +15,11 @@ from babelapi.babel.tower import (
     TagRef,
     TowerOfBabel,
 )
+from babelapi.data_type import (
+    Alias,
+    Nullable,
+    String,
+)
 
 
 class TestBabel(unittest.TestCase):
@@ -222,6 +227,22 @@ class TestBabel(unittest.TestCase):
         self.assertEqual(out[1].fields[3].default, -4.2)
         self.assertEqual(out[1].fields[4].default, -5e-3)
         self.assertEqual(out[1].fields[5].default, -5.1e-3)
+
+        # Try extending nullable type
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                f1 String
+
+            struct S2 extends S?
+                f2 String
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Reference cannot be nullable.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
 
     def test_union_decl(self):
         # test union with only symbols
@@ -648,9 +669,17 @@ class TestBabel(unittest.TestCase):
             namespace test
 
             alias R = String
+                "This is a test
+                of docstrings"
             """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
+        test_ns = t.api.namespaces['test']
+        self.assertIsInstance(test_ns.aliases[0], Alias)
+        self.assertEqual(test_ns.aliases[0].name, 'R')
+        self.assertIsInstance(test_ns.aliases[0].data_type, String)
+        self.assertEqual(
+            test_ns.aliases[0].doc, 'This is a test of docstrings')
 
         # Test aliasing to primitive with additional attributes and nullable
         text = textwrap.dedent("""\
@@ -660,6 +689,11 @@ class TestBabel(unittest.TestCase):
             """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
+        test_ns = t.api.namespaces['test']
+        self.assertIsInstance(test_ns.aliases[0], Alias)
+        self.assertEqual(test_ns.aliases[0].name, 'R')
+        self.assertIsInstance(test_ns.aliases[0].data_type, Nullable)
+        self.assertIsInstance(test_ns.aliases[0].data_type.data_type, String)
 
         # Test aliasing to alias
         text = textwrap.dedent("""\
@@ -670,8 +704,50 @@ class TestBabel(unittest.TestCase):
             """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
+        test_ns = t.api.namespaces['test']
+        self.assertIsInstance(test_ns.alias_by_name['T'], Alias)
+        self.assertIsInstance(test_ns.alias_by_name['R'], Alias)
+        self.assertIsInstance(test_ns.alias_by_name['R'].data_type, Alias)
+        self.assertEqual(test_ns.alias_by_name['R'].data_type.name, 'T')
 
-        # Test aliasing to alias with attributes already set.
+        # Test order invariance
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias R = T
+            alias T = String
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+
+        # Try re-definition
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias A = String
+            alias A = UInt64
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Symbol 'A' already defined (test.babel:3).",
+                      cm.exception.msg)
+
+        # Try cyclical reference
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias A = B
+            alias B = C
+            alias C = A
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Alias 'C' is part of a cycle.",
+                      cm.exception.msg)
+
+        # Try aliasing to alias with attributes already set.
         text = textwrap.dedent("""\
             namespace test
 
@@ -684,16 +760,20 @@ class TestBabel(unittest.TestCase):
         self.assertIn('Attributes cannot be specified for instantiated type',
                       cm.exception.msg)
 
-        # Test aliasing to composite
+        # Test aliasing to composite and making it nullable
         text = textwrap.dedent("""\
             namespace test
 
             struct S
                 f String
-            alias R = S
+            alias R = S?
             """)
         t = TowerOfBabel([('test.babel', text)])
         t.parse()
+        test_ns = t.api.namespaces['test']
+        S_dt = test_ns.data_type_by_name['S']
+        self.assertIsInstance(test_ns.alias_by_name['R'].data_type, Nullable)
+        self.assertEqual(test_ns.alias_by_name['R'].data_type.data_type, S_dt)
 
         # Test aliasing to composite with attributes
         text = textwrap.dedent("""\
@@ -709,6 +789,66 @@ class TestBabel(unittest.TestCase):
             t.parse()
         self.assertIn('Attributes cannot be specified for instantiated type',
                       cm.exception.msg)
+
+        # Test aliasing from another namespace
+        text1 = textwrap.dedent("""\
+            namespace test1
+
+            struct S
+                f String
+            """)
+        text2 = textwrap.dedent("""\
+            namespace test2
+
+            import test1
+
+            alias S = test1.S
+            """)
+        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t.parse()
+        test1_ns = t.api.namespaces['test1']
+        S_dt = test1_ns.data_type_by_name['S']
+        test2_ns = t.api.namespaces['test2']
+        self.assertEqual(test2_ns.alias_by_name['S'].data_type, S_dt)
+
+        # Try extending an alias-ed struct
+        text1 = textwrap.dedent("""\
+            namespace test1
+
+            alias Z = S
+
+            struct S
+                f1 String
+
+            struct T extends Z
+                f2 String
+            """)
+        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn('A struct cannot extend an alias. Use the canonical name instead.',
+                      cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
+        # Try extending an alias-ed union
+        text1 = textwrap.dedent("""\
+            namespace test1
+
+            alias Z = S
+
+            union S
+                f1 String
+
+            union T extends Z
+                f2 String
+            """)
+        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn(
+            'A union cannot extend an alias. Use the canonical name instead.',
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
 
     def test_struct_semantics(self):
         # Test field with implicit void type
@@ -1246,7 +1386,7 @@ class TestBabel(unittest.TestCase):
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         t.parse()
 
-        # Test extending struct from another namespace that is marked nullable
+        # Test extending aliased struct from another namespace
         ns1_text = textwrap.dedent("""\
             namespace ns1
 
@@ -1258,7 +1398,7 @@ class TestBabel(unittest.TestCase):
         ns2_text = textwrap.dedent("""\
             namespace ns2
 
-            alias X = T?
+            alias X = T
 
             struct T
                 g String
@@ -1267,7 +1407,7 @@ class TestBabel(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
-            'A struct cannot extend a nullable type.',
+            'A struct cannot extend an alias. Use the canonical name instead.',
             cm.exception.msg)
 
         # Test extending union from another namespace
@@ -1382,16 +1522,6 @@ class TestBabel(unittest.TestCase):
         self.assertEqual(
             t.api.namespaces['ns1'].doc,
             'This is a docstring for ns1.\nThis is another docstring for ns1.\n')
-
-        # Test that namespaces without types or routes are deleted.
-        text = textwrap.dedent("""\
-            namespace test
-
-            alias S = String
-            """)
-        t = TowerOfBabel([('test.babel', text)])
-        t.parse()
-        self.assertEqual(t.api.namespaces, {})
 
     def test_examples(self):
 
@@ -2813,14 +2943,14 @@ class TestBabel(unittest.TestCase):
         self.assertEqual(len(ns1.routes), 1)
 
         s1 = ns1.data_type_by_name['S1']
-        s2 = ns1.data_type_by_name['S2']
+        a = ns1.alias_by_name['A']
         s3 = ns1.data_type_by_name['S3']
         s4 = ns1.data_type_by_name['S4']
         route_data_types = ns1.get_route_io_data_types()
 
         self.assertIn(s1, route_data_types)
-        # Test that aliased reference is followed
-        self.assertIn(s2, route_data_types)
+        # Test that aliased reference is included
+        self.assertIn(a, route_data_types)
         # Test that field type is not present
         self.assertNotIn(s3, route_data_types)
         # Check that type that is wrapped by a list and/or nullable is present

@@ -6,7 +6,11 @@ import os
 import shutil
 import traceback
 
-from babelapi.generator import Generator
+from babelapi.generator import (
+    Generator,
+    remove_aliases_from_api,
+)
+
 
 class GeneratorException(Exception):
     """Saves the traceback of an exception raised by a generator."""
@@ -18,6 +22,7 @@ class GeneratorException(Exception):
         """
         self.generator_name = generator_name
         self.traceback = traceback
+
 
 class Compiler(object):
     """
@@ -94,6 +99,7 @@ class Compiler(object):
     def _execute_generator_on_spec(self):
         """Renders a source file into its final form."""
 
+        api_no_aliases_cache = None
         for attr_key in dir(self.generator_module):
             attr_value = getattr(self.generator_module, attr_key)
             if (inspect.isclass(attr_value) and
@@ -101,8 +107,16 @@ class Compiler(object):
                     not inspect.isabstract(attr_value)):
                 self._logger.info('Running generator: %s', attr_value.__name__)
                 generator = attr_value(self.build_path, self.generator_args)
+
+                if generator.preserve_aliases:
+                    api = self.api
+                else:
+                    if not api_no_aliases_cache:
+                        api_no_aliases_cache = remove_aliases_from_api(self.api)
+                    api = api_no_aliases_cache
+
                 try:
-                    generator.generate(self.api)
+                    generator.generate(api)
                 except:
                     # Wrap this exception so that it isn't thought of as a bug
                     # in the babel parser, but rather a bug in the generator.

@@ -51,12 +51,9 @@ def generic_type_name(v):
         return type(v).__name__
 
 
-class DataType(object):
+class MaybeDataType(object):
     """
-    Abstract class representing a data type.
-
-    When extending, use a class name that matches exactly the name you will
-    want to use when referencing in a template.
+    Looks like a data type, but could also be an alias.
     """
 
     __metaclass__ = ABCMeta
@@ -102,6 +99,83 @@ class DataType(object):
 
     def __repr__(self):
         return self.name
+
+
+class Alias(MaybeDataType):
+
+    def __init__(self, name, namespace, token):
+        """
+        When this is instantiated, the type is treated as a forward reference.
+        Only when :meth:`set_attributes` is called is the type considered to
+        be fully defined.
+
+        :param str name: Name of type.
+        :param babelapi.api.Namespace namespace: The namespace this type is
+            defined in.
+        :param token: Raw type definition from the parser.
+        :type token: babelapi.babel.parser.BabelTypeDef
+        """
+        self._name = name
+        self.namespace = namespace
+        self._token = token
+
+        # Populated by :meth:`set_attributes`
+        self.raw_doc = None
+        self.doc = None
+        self.data_type = None
+
+    def set_attributes(self, doc, data_type):
+        """
+        :param Optional[str] doc: Documentation string of alias.
+        :param data_type: The source data type referenced by the alias.
+        """
+        self.raw_doc = doc
+        self.doc = doc_unwrap(doc)
+        self.data_type = data_type
+
+        # Make sure we don't have a cyclic reference.
+        # Since attributes are set one data type at a time, only the last data
+        # type to be populated in a cycle will be able to detect the cycle.
+        # Before that, the cycle will be broken by an alias with no populated
+        # source.
+        cur_data_type = data_type
+        while is_alias(cur_data_type):
+            cur_data_type = cur_data_type.data_type
+            if cur_data_type == self:
+                raise InvalidSpec(
+                    "Alias '%s' is part of a cycle." % self.name,
+                    self._token.lineno, self._token.path)
+
+    @property
+    def name(self):
+        return self._name
+
+    def check(self, val):
+        return self.data_type.check(val)
+
+    def check_example(self, ex_field):
+        # TODO: Assert that this isn't a user-defined type.
+        return self.data_type.check_example(ex_field)
+
+    def _has_example(self, label):
+        # TODO: Assert that this is a user-defined type
+        return self.data_type._has_example(label)
+
+    def _compute_example(self, label):
+        return self.data_type._compute_example(label)
+
+    def __repr__(self):
+        return 'Alias(%r, %r)' % (self.name, self.data_type)
+
+
+class DataType(MaybeDataType):
+    """
+    Abstract class representing a data type.
+
+    When extending, use a class name that matches exactly the name you will
+    want to use when referencing in a template.
+    """
+    pass
 
 
 class PrimitiveType(DataType):
@@ -1388,10 +1462,10 @@ def unwrap_nullable(data_type):
     Convenience method to unwrap Nullable from around a DataType.
 
     Args:
-        data_type (DataType): The type to unwrap.
+        data_type (DataType): The target to unwrap.
 
     Return:
-        Tuples[DataType, bool]: The underlying data type and a bool indicating
+        Tuple[DataType, bool]: The underlying data type and a bool indicating
             whether the input type was nullable.
     """
     if is_nullable_type(data_type):
@@ -1400,12 +1474,32 @@ def unwrap_nullable(data_type):
         return data_type, False
 
 
+def unwrap_aliases(data_type):
+    """
+    Convenience method to unwrap all Alias(es) from around a DataType.
+
+    Args:
+        data_type (DataType): The target to unwrap.
+
+    Return:
+        Tuple[DataType, bool]: The underlying data type and a bool indicating
+            whether the input type had at least one alias layer.
+    """
+    unwrapped_alias = False
+    while is_alias(data_type):
+        unwrapped_alias = True
+        data_type = data_type.data_type
+    return data_type, unwrapped_alias
+
+
 def get_underlying_type(data_type):
     warnings.warn("get_underlying_type is deprecated. Use unwrap_nullable().",
                   DeprecationWarning)
     return unwrap_nullable(data_type)
 
 
+def is_alias(data_type):
+    return isinstance(data_type, Alias)
 def is_bytes_type(data_type):
     return isinstance(data_type, Bytes)
 def is_boolean_type(data_type):

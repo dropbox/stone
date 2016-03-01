@@ -10,6 +10,7 @@ import re
 import shutil
 from babelapi.data_type import (
     get_underlying_type,
+    is_alias,
     is_boolean_type,
     is_bytes_type,
     is_composite_type,
@@ -24,6 +25,7 @@ from babelapi.data_type import (
     is_timestamp_type,
     is_union_type,
     is_void_type,
+    unwrap_aliases,
 )
 from babelapi.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
@@ -60,6 +62,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
     # Instance var of the current namespace being generated
     cur_namespace = None
+
+    preserve_aliases = True
 
     def generate(self, api):
         """
@@ -118,6 +122,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self._generate_union_class(namespace, data_type)
             else:
                 raise TypeError('Cannot handle type %r' % type(data_type))
+
+        for alias in namespace.linearize_aliases():
+            self._generate_alias_definition(namespace, alias)
+
         # Generate the struct->subtype tag mapping at the end so that
         # references to later-defined subtypes don't cause errors.
         for data_type in namespace.linearize_data_types():
@@ -131,6 +139,20 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self._generate_union_class_reflection_attributes(
                     namespace, data_type)
                 self._generate_union_class_symbol_creators(data_type)
+
+    def _generate_alias_definition(self, namespace, alias):
+        v = self._generate_validator_constructor(namespace, alias.data_type)
+        if alias.doc:
+            self.emit_wrapped_text(
+                self.process_doc(alias.doc, self._docf), prefix='# ')
+        self.emit('{}_validator = {}'.format(alias.name, v))
+        unwrapped_dt, _ = unwrap_aliases(alias)
+        if is_composite_type(unwrapped_dt):
+            # If the alias is to a composite type, we want to alias the
+            # generated class as well.
+            self.emit('{} = {}'.format(
+                alias.name,
+                self._class_name_for_data_type(alias.data_type, namespace)))
 
     def _docf(self, tag, val):
         """
@@ -177,10 +199,13 @@ class PythonGenerator(CodeGeneratorMonolingual):
             return 'None'
         elif is_timestamp_type(data_type):
             return 'datetime.datetime'
+        elif is_alias(data_type):
+            return self._python_type_mapping(ns, data_type.data_type)
         elif is_composite_type(data_type):
             class_name = self._class_name_for_data_type(data_type)
             if data_type.namespace.name != ns.name:
-                return '%s.%s' % (data_type.namespace.name, class_name)
+                return '%s.%s_validator' % (
+                    data_type.namespace.name, class_name)
             else:
                 return class_name
         elif is_list_type(data_type):
@@ -202,7 +227,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         not match, then a namespace prefix is added to the returned name.
         For example, ``foreign_ns.TypeName``.
         """
-        assert is_composite_type(data_type), \
+        assert is_composite_type(data_type) or is_alias(data_type), \
             'Expected composite type, got %r' % type(data_type)
         name = self.lang.format_class(data_type.name)
         if ns and data_type.namespace != ns:
@@ -334,8 +359,17 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 'bv.Union',
                 args=[name],
             )
-        else:
+        elif is_alias(dt):
+            # Assume that the alias has already been declared elsewhere.
+            name = self.lang.format_class(dt.name) + '_validator'
+            if ns.name != dt.namespace.name:
+                name = '{}.{}'.format(dt.namespace.name, name)
+            v = name
+        elif is_boolean_type(dt) or is_bytes_type(dt) or is_void_type(dt):
             v = self._generate_func_call('bv.{}'.format(dt.name))
+        else:
+            raise AssertionError('Unsupported data type: %r' % dt)
+
         if nullable_dt:
             return self._generate_func_call('bv.Nullable', args=[v])
         else:

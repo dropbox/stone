@@ -172,10 +172,11 @@ For more information, consult the appropriate guide in `Using Generated Code
 Alias
 =====
 
-Sometimes we prefer to use an alias, rather than re-declaring a type over and
-over again::
+Aliases let you parameterize a type once with a name and optional documentation
+string, and then use that name elsewhere::
 
     alias AccountId = String(min_length=10, max_length=10)
+        "A unique identifier for the user's account."
 
 In our example, declaring an ``AccountId`` alias makes future references to it
 clearer since the name provides an extra semantic hint::
@@ -184,13 +185,15 @@ clearer since the name provides an extra semantic hint::
         "Basic information about a user's account."
 
         account_id AccountId
-            "A unique identifier for the user's account."
 
     struct GetAccountReq
         account_id AccountId
 
-Aliases also make refactoring easier. We only need to change the definition of
-the ``AccountId`` alias to change it everywhere.
+Aliases make refactoring easier. We only need to change the definition of the
+``AccountId`` alias to change it everywhere.
+
+Aliases can reference user-defined types and other aliases, and can make a type
+nullable.
 
 Struct
 ======
@@ -726,7 +729,7 @@ Specification::
     Namespace ::= 'namespace' Identifier
     Import ::= 'import' Identifier
     Definition ::= Alias | Route | Struct | Union
-    Alias ::= 'alias' Identifier '=' TypeRef
+    Alias ::= 'alias' Identifier '=' TypeRef (NL INDENT Doc DEDENT)?
 
 Struct::
 
