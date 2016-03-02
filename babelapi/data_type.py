@@ -780,7 +780,7 @@ class Example(object):
         assert isinstance(label, six.text_type), type(label)
         self.label = label
         assert isinstance(text, (six.text_type, type(None))), type(text)
-        self.text = text
+        self.text = doc_unwrap(text) if text else text
         assert isinstance(value, (six.text_type, OrderedDict)), type(value)
         self.value = value
         self._token = token

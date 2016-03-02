@@ -843,11 +843,9 @@ class BabelParser(object):
 
     # It's possible for no example fields to be specified.
     def p_example(self, p):
-        """example : KEYWORD ID STRING NEWLINE INDENT example_fields DEDENT
-                   | KEYWORD ID empty NEWLINE INDENT example_fields DEDENT
-                   | KEYWORD ID STRING NEWLINE
-                   | KEYWORD ID empty NEWLINE"""
-        if len(p) > 5:
+        """example : KEYWORD ID NEWLINE INDENT docsection example_fields DEDENT
+                   | KEYWORD ID NEWLINE"""
+        if len(p) > 4:
             seen_fields = set()
             for example_field in p[6]:
                 if example_field.name in seen_fields:
@@ -857,11 +855,11 @@ class BabelParser(object):
                         p.lineno(1), self.path))
                 seen_fields.add(example_field.name)
             p[0] = BabelExample(
-                self.path, p.lineno(1), p.lexpos(1), p[2], p[3],
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[5],
                 OrderedDict((f.name, f) for f in p[6]))
         else:
             p[0] = BabelExample(
-                self.path, p.lineno(1), p.lexpos(1), p[2], p[3], OrderedDict())
+                self.path, p.lineno(1), p.lexpos(1), p[2], None, OrderedDict())
 
     def p_example_fields_create(self, p):
         'example_fields : example_field'

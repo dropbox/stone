@@ -39,7 +39,8 @@ The spec should live in a file called ``users.babel``::
         status Status
             "The status of the account."
 
-        example default "A regular user"
+        example default
+            "A regular user"
             account_id="id-48sa2f0"
             email="alex@example.org"
             name="Alexander the Great"
@@ -297,10 +298,9 @@ examples help demonstrate how distinct fields might interact with each other.
 Generators have access to examples, which is useful when automatically
 generating documentation.
 
-An example is declared by using the ``example`` keyword followed by a label
-and optionally a descriptive string. By convention, "default" should
-be used as the label name for an example that can be considered a good
-representation of the general case for the type::
+An example is declared by using the ``example`` keyword followed by a label.
+By convention, "default" should be used as the label name for an example that
+can be considered a good representation of the general case for the type::
 
     struct Account extends BasicAccount
         "Information about a user's account."
@@ -310,13 +310,15 @@ representation of the general case for the type::
         status Status
             "The status of the account."
 
-        example default "A regular user"
+        example default
+            "A regular user"
             account_id = "id-48sa2f0"
             email = "alex@example.org"
             name = "Alexander the Great"
             status = active
 
-        example unnamed "An anonymous user"
+        example unnamed
+            "An anonymous user"
             account_id = "id-29sk2p1"
             email = "anony@example.org"
             name = null
@@ -325,6 +327,9 @@ representation of the general case for the type::
 Every required field (not nullable and no default) must be specified, otherwise
 an error will be returned. ``null`` can be used to mark that a nullable type
 is not present.
+
+An optional multi-line documentation string can be specified after the line
+declaring the example and before the example fields.
 
 When you have a set of nested types, each type defines examples for its fields
 with primitive types. For fields with composite types, the value of the example

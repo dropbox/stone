@@ -2278,6 +2278,48 @@ class TestBabel(unittest.TestCase):
             "Bad example for field 'a': example of void type must be null",
             cm.exception.msg)
 
+    def test_examples_text(self):
+        # Test multi-line example text (verify it gets unwrapp-ed)
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                a String
+
+                example default
+                    "This is the text for the example.
+                    And I guess it's kind of long."
+                    a = "Hello, World."
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        example = s_dt.get_examples()['default']
+        self.assertEqual(
+            example.text,
+            "This is the text for the example. And I guess it's kind of long.")
+
+        # Test union example
+        text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+                b String
+
+                example default
+                    "This is the text for the example.
+                    And I guess it's kind of long."
+                    b = "Hi, World."
+            """)
+        t = TowerOfBabel([('test.babel', text)])
+        t.parse()
+        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        example = u_dt.get_examples()['default']
+        self.assertEqual(
+            example.text,
+            "This is the text for the example. And I guess it's kind of long.")
+
     def test_examples_enumerated_subtypes(self):
         # Test missing custom example
         text = textwrap.dedent("""\
