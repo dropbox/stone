@@ -613,6 +613,9 @@ struct S2
 
 alias AliasedS2 = S2
 alias AliasedString = String(max_length=10)
+
+struct ContainsAlias
+    s AliasedString
 """
 
 test_ns2_spec = """\
@@ -1158,3 +1161,48 @@ class TestGeneratedPython(unittest.TestCase):
         s = msgpack_encode(bv.String(), u)
         u2 = msgpack_decode(bv.String(), s)
         self.assertEqual(u, u2)
+
+    def test_alias_validators(self):
+
+        def aliased_string_validator(val):
+            if ' ' in val:
+                raise bv.ValidationError('No spaces allowed')
+        aliased_validators = {
+            self.ns.AliasedString_validator: aliased_string_validator}
+
+        #
+        # Test decoding
+        #
+
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_compat_obj_decode(
+                self.ns.AliasedString_validator,
+                'hi there',
+                alias_validators=aliased_validators)
+        self.assertEqual("No spaces allowed", str(cm.exception))
+
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_compat_obj_decode(
+                bv.Struct(self.ns.ContainsAlias),
+                {'s': 'hi there'},
+                alias_validators=aliased_validators)
+        self.assertEqual("s: No spaces allowed", str(cm.exception))
+
+        #
+        # Test encoding
+        #
+
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_compat_obj_encode(
+                self.ns.AliasedString_validator,
+                'hi there',
+                alias_validators=aliased_validators)
+        self.assertEqual("No spaces allowed", str(cm.exception))
+
+        ca = self.ns.ContainsAlias(s='hi there')
+        with self.assertRaises(bv.ValidationError) as cm:
+            json_compat_obj_encode(
+                bv.Struct(self.ns.ContainsAlias),
+                ca,
+                alias_validators=aliased_validators)
+        self.assertEqual("s: No spaces allowed", str(cm.exception))
