@@ -226,6 +226,14 @@ class TowerOfBabel(object):
                             item.lineno, item.path)
                     env = self._get_or_create_env(namespace.name)
                     imported_env = self._get_or_create_env(item.target)
+                    if namespace.name in imported_env:
+                        # Block circular imports. The Python generator can't
+                        # easily generate code for circular references.
+                        raise InvalidSpec(
+                            'Circular import of namespaces %s and %s '
+                            'detected.' %
+                            (quote(namespace.name), quote(item.target)),
+                            item.lineno, item.path)
                     env[item.target] = imported_env
 
     def _create_alias(self, env, item):

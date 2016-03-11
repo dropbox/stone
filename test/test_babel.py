@@ -1428,7 +1428,7 @@ class TestBabel(unittest.TestCase):
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         t.parse()
 
-        # Test structs that reference one another
+        # Try circular import
         ns1_text = textwrap.dedent("""\
             namespace ns1
 
@@ -1446,30 +1446,10 @@ class TestBabel(unittest.TestCase):
                 s ns1.S
             """)
         t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
-        t.parse()
-
-        # Test mutual inheritance, which can't possibly work.
-        ns1_text = textwrap.dedent("""\
-            namespace ns1
-
-            import ns2
-
-            struct S extends ns2.T
-                a String
-            """)
-        ns2_text = textwrap.dedent("""\
-            namespace ns2
-
-            import ns1
-
-            struct T extends ns1.S
-                b String
-            """)
-        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn(
-            'Unresolvable circular reference',
+            "Circular import of namespaces 'ns2' and 'ns1' detected.",
             cm.exception.msg)
 
     def test_doc_refs(self):
