@@ -18,7 +18,6 @@ from babelapi.data_type import (
     UInt64,
     is_boolean_type,
     is_bytes_type,
-    is_composite_type,
     is_list_type,
     is_string_type,
     is_struct_type,
@@ -26,6 +25,7 @@ from babelapi.data_type import (
     is_union_type,
     is_numeric_type,
     is_nullable_type,
+    is_user_defined_type,
     is_void_type,
 )
 
@@ -250,7 +250,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             ret = 'Serialization._FloatSerializer'
         elif isinstance(data_type, Float64):
             ret = 'Serialization._DoubleSerializer'
-        elif is_composite_type(data_type):
+        elif is_user_defined_type(data_type):
             ret = "{}.{}Serializer()".format(self.lang.format_class(data_type.namespace.name),
                                              self.class_data_type(data_type))
 
@@ -294,7 +294,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
             ret = 'Float'
         elif isinstance(data_type, Float64):
             ret = 'Double'
-        elif is_composite_type(data_type):
+        elif is_user_defined_type(data_type):
             ret = '{}.{}'.format(self.lang.format_class(data_type.namespace.name),
                                  self.class_data_type(data_type))
         ret += suffix

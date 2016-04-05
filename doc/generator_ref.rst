@@ -132,8 +132,8 @@ linearize_data_types()
     Returns a list of all data types used in the namespace. Because the
     inheritance of data types can be modeled as a DAG, the list will be a
     linearization of the DAG. It's ideal to generate data types in this
-    order so that composite types that reference other composite types are
-    defined in the correct order.
+    order so that user-defined types that reference other user-defined types
+    are defined in the correct order.
 
 linearize_aliases()
     Returns a list of all aliases used in the namespace. The aliases are
@@ -522,6 +522,7 @@ available::
     is_struct_type(data_type)
     is_timestamp_type(data_type)
     is_union_type(data_type)
+    is_user_defined_type(data_type)
     is_void_type(data_type)
 
 There is also an ``unwrap_nullable(data_type)`` function that takes a

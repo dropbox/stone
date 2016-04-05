@@ -14,7 +14,6 @@ from ..data_type import (
     Alias,
     Boolean,
     Bytes,
-    CompositeType,
     DataType,
     Float32,
     Float64,
@@ -32,6 +31,7 @@ from ..data_type import (
     UInt64,
     Union,
     UnionField,
+    UserDefined,
     Void,
     unwrap_aliases,
 )
@@ -680,7 +680,7 @@ class TowerOfBabel(object):
         if type_ref.ns:
             # Add the source namespace as an import.
             namespace = self.api.ensure_namespace(orig_namespace_name)
-            if isinstance(data_type, CompositeType):
+            if isinstance(data_type, UserDefined):
                 namespace.add_imported_namespace(
                     self.api.ensure_namespace(type_ref.ns),
                     imported_data_type=True)
@@ -689,7 +689,7 @@ class TowerOfBabel(object):
                     self.api.ensure_namespace(type_ref.ns),
                     imported_alias=True)
 
-        if (enforce_fully_defined and isinstance(data_type, CompositeType) and
+        if (enforce_fully_defined and isinstance(data_type, UserDefined) and
                 data_type._is_forward_ref):
             if data_type in self._resolution_in_progress:
                 raise InvalidSpec(
@@ -870,7 +870,7 @@ class TowerOfBabel(object):
             env (dict): The environment of defined symbols.
             doc (str): The docstring to validate.
             lineno (int): The line number the docstring begins on in the spec.
-            type_context (babelapi.data_type.CompositeType): If the docstring
+            type_context (babelapi.data_type.UserDefined): If the docstring
                 belongs to a user-defined type (Struct or Union) or one of its
                 fields, set this to the type. This is needed for "field" doc
                 refs that don't name a type to be validated.

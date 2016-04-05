@@ -97,11 +97,11 @@ the Dropbox API has a namespace devoted to all file operations (uploading,
 downloading, ...), and another namespace for all operations relevant to user
 accounts.
 
-Primitive Types
-===============
+Basic Types
+===========
 
-In the example, ``String`` and ``Timestamp`` are primitive types. Here's a
-table of all primitive types and the arguments they take:
+In the example, ``String`` and ``Timestamp`` are basic types. Here's a
+table of all such types and the arguments they take:
 
 ======================= ================================= =====================
 Type                    Arguments (**bold** are required  Notes
@@ -725,8 +725,8 @@ val
     floats, and strings. Generators should convert the value to the native
     representation of the value for the target language.
 
-Formal Grammar
-===============
+Grammar
+=======
 
 Specification::
 
@@ -762,8 +762,12 @@ Type Reference::
 
 Primitives::
 
-    PrimitiveType ::= 'Bytes' | 'Boolean' | 'Float32' | 'Float64' | 'Int32'
+    Primitive ::= 'Bytes' | 'Boolean' | 'Float32' | 'Float64' | 'Int32'
                   | 'Int64' | 'UInt32' | 'UInt64' | 'String' | 'Timestamp'
+
+Composites::
+
+    Composite ::= 'List'
 
 Basic::
 

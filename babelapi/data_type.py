@@ -51,9 +51,9 @@ def generic_type_name(v):
         return type(v).__name__
 
 
-class MaybeDataType(object):
+class DataType(object):
     """
-    Looks like a data type, but could also be an alias.
+    Abstract class representing a data type.
     """
 
     __metaclass__ = ABCMeta
@@ -101,88 +101,19 @@ class MaybeDataType(object):
         return self.name
 
 
-class Alias(MaybeDataType):
-
-    def __init__(self, name, namespace, token):
-        """
-        When this is instantiated, the type is treated as a forward reference.
-        Only when :meth:`set_attributes` is called is the type considered to
-        be fully defined.
-
-        :param str name: Name of type.
-        :param babelapi.api.Namespace namespace: The namespace this type is
-            defined in.
-        :param token: Raw type definition from the parser.
-        :type token: babelapi.babel.parser.BabelTypeDef
-        """
-        self._name = name
-        self.namespace = namespace
-        self._token = token
-
-        # Populated by :meth:`set_attributes`
-        self.raw_doc = None
-        self.doc = None
-        self.data_type = None
-
-    def set_attributes(self, doc, data_type):
-        """
-        :param Optional[str] doc: Documentation string of alias.
-        :param data_type: The source data type referenced by the alias.
-        """
-        self.raw_doc = doc
-        self.doc = doc_unwrap(doc)
-        self.data_type = data_type
-
-        # Make sure we don't have a cyclic reference.
-        # Since attributes are set one data type at a time, only the last data
-        # type to be populated in a cycle will be able to detect the cycle.
-        # Before that, the cycle will be broken by an alias with no populated
-        # source.
-        cur_data_type = data_type
-        while is_alias(cur_data_type):
-            cur_data_type = cur_data_type.data_type
-            if cur_data_type == self:
-                raise InvalidSpec(
-                    "Alias '%s' is part of a cycle." % self.name,
-                    self._token.lineno, self._token.path)
-
-    @property
-    def name(self):
-        return self._name
-
-    def check(self, val):
-        return self.data_type.check(val)
-
-    def check_example(self, ex_field):
-        # TODO: Assert that this isn't a user-defined type.
-        return self.data_type.check_example(ex_field)
-
-    def _has_example(self, label):
-        # TODO: Assert that this is a user-defined type
-        return self.data_type._has_example(label)
-
-    def _compute_example(self, label):
-        return self.data_type._compute_example(label)
-
-    def __repr__(self):
-        return 'Alias(%r, %r)' % (self.name, self.data_type)
+class Primitive(DataType):
+    pass
 
 
-class DataType(MaybeDataType):
+class Composite(DataType):
     """
-    Abstract class representing a data type.
-
-    When extending, use a class name that matches exactly the name you will
-    want to use when referencing in a template.
+    Composite types are any data type which can be constructed using primitive
+    data types and other composite types.
     """
     pass
 
 
-class PrimitiveType(DataType):
-    pass
-
-
-class Nullable(DataType):
+class Nullable(Composite):
 
     def __init__(self, data_type):
         self.data_type = data_type
@@ -196,7 +127,7 @@ class Nullable(DataType):
             return self.data_type.check_example(ex_field)
 
 
-class Void(PrimitiveType):
+class Void(Primitive):
 
     def check(self, val):
         if val is not None:
@@ -208,7 +139,7 @@ class Void(PrimitiveType):
                               ex_field.lineno, ex_field.path)
 
 
-class Bytes(PrimitiveType):
+class Bytes(Primitive):
 
     def check(self, val):
         if not isinstance(val, str):
@@ -220,7 +151,7 @@ class Bytes(PrimitiveType):
                               ex_field.lineno, ex_field.path)
 
 
-class _BoundedInteger(PrimitiveType):
+class _BoundedInteger(Primitive):
     """
     When extending, specify 'minimum' and 'maximum' as class variables. This
     is the range of values supported by the data type.
@@ -292,7 +223,7 @@ class UInt64(_BoundedInteger):
     maximum = 2**64 - 1
 
 
-class _BoundedFloat(PrimitiveType):
+class _BoundedFloat(Primitive):
     """
     When extending, optionally specify 'minimum' and 'maximum' as class
     variables. This is the range of values supported by the data type. For
@@ -381,7 +312,7 @@ class Float64(_BoundedFloat):
     pass
 
 
-class Boolean(PrimitiveType):
+class Boolean(Primitive):
 
     def check(self, val):
         if not isinstance(val, bool):
@@ -394,7 +325,7 @@ class Boolean(PrimitiveType):
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
 
-class String(PrimitiveType):
+class String(Primitive):
 
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
@@ -447,7 +378,7 @@ class String(PrimitiveType):
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
 
-class Timestamp(PrimitiveType):
+class Timestamp(Primitive):
 
     def __init__(self, format):
         if not isinstance(format, six.string_types):
@@ -468,7 +399,7 @@ class Timestamp(PrimitiveType):
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
 
-class List(DataType):
+class List(Composite):
 
     def __init__(self, data_type, min_items=None, max_items=None):
         self.data_type = data_type
@@ -626,10 +557,9 @@ class UnionField(Field):
                                            self.catch_all)
 
 
-class CompositeType(DataType):
+class UserDefined(Composite):
     """
-    Composite types are any data type which can be constructed using primitive
-    data types and other composite types.
+    These are types that are defined directly in specs.
     """
 
     DEFAULT_EXAMPLE_LABEL = 'default'
@@ -665,7 +595,7 @@ class CompositeType(DataType):
 
         :param str doc: Description of type.
         :param list(Field) fields: Ordered list of fields for type.
-        :param Optional[CompositeType] parent_type: The type this type inherits
+        :param Optional[Composite] parent_type: The type this type inherits
             from.
         """
         self.raw_doc = doc
@@ -790,7 +720,7 @@ class Example(object):
             self.label, self.text, self.value)
 
 
-class Struct(CompositeType):
+class Struct(UserDefined):
     """
     Defines a product type: Composed of other primitive and/or struct types.
     """
@@ -799,7 +729,7 @@ class Struct(CompositeType):
 
     def set_attributes(self, doc, fields, parent_type=None):
         """
-        See :meth:`CompositeType.set_attributes` for parameter definitions.
+        See :meth:`Composite.set_attributes` for parameter definitions.
         """
 
         if parent_type:
@@ -1231,7 +1161,7 @@ class Struct(CompositeType):
         return 'Struct(%r, %r)' % (self.name, self.fields)
 
 
-class Union(CompositeType):
+class Union(UserDefined):
     """Defines a tagged union. Fields are variants."""
 
     composite_type = 'union'
@@ -1241,7 +1171,7 @@ class Union(CompositeType):
         :param UnionField catch_all_field: The field designated as the
             catch-all. This field should be a member of the list of fields.
 
-        See :meth:`CompositeType.set_attributes` for parameter definitions.
+        See :meth:`Composite.set_attributes` for parameter definitions.
         """
         if parent_type:
             assert isinstance(parent_type, Union)
@@ -1331,7 +1261,7 @@ class Union(CompositeType):
         else:
             for field in self.all_fields:
                 dt, _ = unwrap_nullable(field.data_type)
-                if not is_composite_type(dt) and not is_void_type(dt):
+                if not is_user_defined_type(dt) and not is_void_type(dt):
                     continue
                 if label == field.name:
                     return True
@@ -1457,6 +1387,77 @@ class TagRef(object):
         return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
 
 
+class Alias(Composite):
+    """
+    NOTE: The categorization of aliases as a composite type is arbitrary.
+    It fit here better than as a primitive or user-defined type.
+    """
+
+    def __init__(self, name, namespace, token):
+        """
+        When this is instantiated, the type is treated as a forward reference.
+        Only when :meth:`set_attributes` is called is the type considered to
+        be fully defined.
+
+        :param str name: Name of type.
+        :param babelapi.api.Namespace namespace: The namespace this type is
+            defined in.
+        :param token: Raw type definition from the parser.
+        :type token: babelapi.babel.parser.BabelTypeDef
+        """
+        self._name = name
+        self.namespace = namespace
+        self._token = token
+
+        # Populated by :meth:`set_attributes`
+        self.raw_doc = None
+        self.doc = None
+        self.data_type = None
+
+    def set_attributes(self, doc, data_type):
+        """
+        :param Optional[str] doc: Documentation string of alias.
+        :param data_type: The source data type referenced by the alias.
+        """
+        self.raw_doc = doc
+        self.doc = doc_unwrap(doc)
+        self.data_type = data_type
+
+        # Make sure we don't have a cyclic reference.
+        # Since attributes are set one data type at a time, only the last data
+        # type to be populated in a cycle will be able to detect the cycle.
+        # Before that, the cycle will be broken by an alias with no populated
+        # source.
+        cur_data_type = data_type
+        while is_alias(cur_data_type):
+            cur_data_type = cur_data_type.data_type
+            if cur_data_type == self:
+                raise InvalidSpec(
+                    "Alias '%s' is part of a cycle." % self.name,
+                    self._token.lineno, self._token.path)
+
+    @property
+    def name(self):
+        return self._name
+
+    def check(self, val):
+        return self.data_type.check(val)
+
+    def check_example(self, ex_field):
+        # TODO: Assert that this isn't a user-defined type.
+        return self.data_type.check_example(ex_field)
+
+    def _has_example(self, label):
+        # TODO: Assert that this is a user-defined type
+        return self.data_type._has_example(label)
+
+    def _compute_example(self, label):
+        return self.data_type._compute_example(label)
+
+    def __repr__(self):
+        return 'Alias(%r, %r)' % (self.name, self.data_type)
+
+
 def unwrap_nullable(data_type):
     """
     Convenience method to unwrap Nullable from around a DataType.
@@ -1505,11 +1506,11 @@ def is_bytes_type(data_type):
 def is_boolean_type(data_type):
     return isinstance(data_type, Boolean)
 def is_composite_type(data_type):
-    return isinstance(data_type, CompositeType)
-def is_integer_type(data_type):
-    return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
+    return isinstance(data_type, Composite)
 def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
+def is_integer_type(data_type):
+    return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
 def is_list_type(data_type):
     return isinstance(data_type, List)
 def is_nullable_type(data_type):
@@ -1517,7 +1518,7 @@ def is_nullable_type(data_type):
 def is_numeric_type(data_type):
     return is_integer_type(data_type) or is_float_type(data_type)
 def is_primitive_type(data_type):
-    return isinstance(data_type, PrimitiveType)
+    return isinstance(data_type, Primitive)
 def is_string_type(data_type):
     return isinstance(data_type, String)
 def is_struct_type(data_type):
@@ -1528,5 +1529,7 @@ def is_timestamp_type(data_type):
     return isinstance(data_type, Timestamp)
 def is_union_type(data_type):
     return isinstance(data_type, Union)
+def is_user_defined_type(data_type):
+    return isinstance(data_type, UserDefined)
 def is_void_type(data_type):
     return isinstance(data_type, Void)

@@ -13,7 +13,6 @@ from babelapi.data_type import (
     is_alias,
     is_boolean_type,
     is_bytes_type,
-    is_composite_type,
     is_float_type,
     is_integer_type,
     is_list_type,
@@ -24,6 +23,7 @@ from babelapi.data_type import (
     is_tag_ref,
     is_timestamp_type,
     is_union_type,
+    is_user_defined_type,
     is_void_type,
     unwrap_aliases,
 )
@@ -147,7 +147,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.process_doc(alias.doc, self._docf), prefix='# ')
         self.emit('{}_validator = {}'.format(alias.name, v))
         unwrapped_dt, _ = unwrap_aliases(alias)
-        if is_composite_type(unwrapped_dt):
+        if is_user_defined_type(unwrapped_dt):
             # If the alias is to a composite type, we want to alias the
             # generated class as well.
             self.emit('{} = {}'.format(
@@ -201,7 +201,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             return 'datetime.datetime'
         elif is_alias(data_type):
             return self._python_type_mapping(ns, data_type.data_type)
-        elif is_composite_type(data_type):
+        elif is_user_defined_type(data_type):
             class_name = self._class_name_for_data_type(data_type)
             if data_type.namespace.name != ns.name:
                 return '%s.%s_validator' % (
@@ -227,7 +227,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         not match, then a namespace prefix is added to the returned name.
         For example, ``foreign_ns.TypeName``.
         """
-        assert is_composite_type(data_type) or is_alias(data_type), \
+        assert is_user_defined_type(data_type) or is_alias(data_type), \
             'Expected composite type, got %r' % type(data_type)
         name = self.lang.format_class(data_type.name)
         if ns and data_type.namespace != ns:
@@ -236,7 +236,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         return name
 
     def _class_declaration_for_type(self, ns, data_type):
-        assert is_composite_type(data_type), \
+        assert is_user_defined_type(data_type), \
             'Expected struct, got %r' % type(data_type)
         if data_type.parent_type:
             extends = self._class_name_for_data_type(data_type.parent_type, ns)
@@ -601,7 +601,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     with self.indent():
                         self.emit('del self.{}'.format(field_name_reserved_check))
                         self.emit('return')
-                if is_composite_type(field_dt):
+                if is_user_defined_type(field_dt):
                     self.emit('self._%s_validator.validate_type_only(val)' %
                               field_name)
                 else:
@@ -722,7 +722,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     ivar_doc = ':ivar {}: {}'.format(
                         self.lang.format_variable(field.name),
                         self.process_doc(field.doc, self._docf))
-                elif is_composite_type(field.data_type):
+                elif is_user_defined_type(field.data_type):
                     ivar_doc = ':ivar {} {}: {}'.format(
                         self.lang.format_class(field.data_type.name),
                         self.lang.format_variable(field.name),
