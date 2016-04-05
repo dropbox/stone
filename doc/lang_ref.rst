@@ -67,8 +67,6 @@ Choosing a Filename
 All specifications must have a ``.babel`` extension. We recommend that the
 name of the file be the same as the `namespace <#ns>`_ defined in the spec.
 
-`Headers <#include>`_ must use the ``.babelh`` extension.
-
 Comments
 ========
 
