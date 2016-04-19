@@ -527,7 +527,13 @@ available::
 
 There is also an ``unwrap_nullable(data_type)`` function that takes a
 ``Nullable`` object and returns the type that it wraps. If the argument is not
-a ``Nullable``, then it's returned unmodified.
+a ``Nullable``, then it's returned unmodified. Similarly,
+``unwrap_aliases(data_type)`` takes an ``Alias`` object and returns the type
+that it wraps. There might be multiple levels of aliases wrapping the type.
+
+The ``unwrap(data_type)`` function will return the underlying type once all
+wrapping ``Nullable`` and ``Alias`` objects have been removed. Note that an
+``Alias`` can wrap a ``Nullable`` and a ``Nullable`` can wrap an ``Alias``.
 
 Union Tag Reference
 ===================

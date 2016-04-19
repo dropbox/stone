@@ -15,7 +15,6 @@ import math
 import numbers
 import re
 import six
-import warnings
 
 from .babel.exception import InvalidSpec
 from .babel.parser import (
@@ -1493,10 +1492,29 @@ def unwrap_aliases(data_type):
     return data_type, unwrapped_alias
 
 
-def get_underlying_type(data_type):
-    warnings.warn("get_underlying_type is deprecated. Use unwrap_nullable().",
-                  DeprecationWarning)
-    return unwrap_nullable(data_type)
+def unwrap(data_type):
+    """
+    Convenience method to unwrap all Aliases and Nullables from around a
+    DataType. This checks for nullable wrapping aliases, as well as aliases
+    wrapping nullables.
+
+    Args:
+        data_type (DataType): The target to unwrap.
+
+    Return:
+        Tuple[DataType, bool, bool]: The underlying data type; a bool that is
+            set if a nullable was present; a bool that is set if an alias was
+            present.
+    """
+    unwrapped_nullable = False
+    unwrapped_alias = False
+    while is_alias(data_type) or is_nullable_type(data_type):
+        if is_nullable_type(data_type):
+            unwrapped_nullable = True
+        if is_alias(data_type):
+            unwrapped_alias = True
+        data_type = data_type.data_type
+    return data_type, unwrapped_nullable, unwrapped_alias
 
 
 def is_alias(data_type):

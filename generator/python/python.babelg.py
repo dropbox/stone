@@ -9,7 +9,6 @@ import os
 import re
 import shutil
 from babelapi.data_type import (
-    get_underlying_type,
     is_alias,
     is_boolean_type,
     is_bytes_type,
@@ -26,6 +25,7 @@ from babelapi.data_type import (
     is_user_defined_type,
     is_void_type,
     unwrap_aliases,
+    unwrap_nullable,
 )
 from babelapi.generator import CodeGeneratorMonolingual
 from babelapi.lang.python import PythonTargetLanguage
@@ -306,7 +306,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         Given a Babel data type, returns a string that can be used to construct
         the appropriate validation object in Python.
         """
-        dt, nullable_dt = get_underlying_type(data_type)
+        dt, nullable_dt = unwrap_nullable(data_type)
         if is_list_type(dt):
             v = self._generate_func_call(
                 'bv.List',
