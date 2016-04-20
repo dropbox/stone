@@ -16,6 +16,7 @@ import traceback
 
 from .babel.exception import InvalidSpec
 from .babel.tower import TowerOfBabel
+from .cli_helpers import parse_route_attr_filter
 from .compiler import Compiler, GeneratorException
 
 # The parser for command line arguments
@@ -28,18 +29,18 @@ _cmdline_parser.add_argument(
 )
 _cmdline_parser.add_argument(
     'generator',
-    type=str,
+    type=six.text_type,
     help='Specify the path to a generator. It must have a .babelg.py extension.',
 )
 _cmdline_parser.add_argument(
     'output',
-    type=str,
+    type=six.text_type,
     help='The folder to save generated files to.',
 )
 _cmdline_parser.add_argument(
     'spec',
     nargs='*',
-    type=str,
+    type=six.text_type,
     help=('Path to API specifications. Each must have a .babel extension. '
           'If omitted or set to "-", the spec is read from stdin. Multiple '
           'namespaces can be provided over stdin by concatenating multiple '
@@ -49,6 +50,18 @@ _cmdline_parser.add_argument(
     '--clean-build',
     action='store_true',
     help='The path to the template SDK for the target language.',
+)
+_cmdline_parser.add_argument(
+    '-f',
+    '--filter-by-route-attr',
+    type=six.text_type,
+    help=('Removes routes that do not match the expression. The expression '
+          'must specify a route attribute on the left-hand side and a value '
+          'on the right-hand side. Use quotes for strings and bytes. The only '
+          'supported operators are "=" and "!=". For example, if "hide" is a '
+          'route attribute, we can use this filter: "hide!=true". You can '
+          'combine multiple expressions with "and"/"or" and use parentheses '
+          'to enforce precedence.'),
 )
 _filter_ns_group = _cmdline_parser.add_mutually_exclusive_group()
 _filter_ns_group.add_argument(
@@ -67,6 +80,7 @@ _filter_ns_group.add_argument(
     default=[],
     help='If set, generators will not see any routes for the specified namespaces.',
 )
+
 
 def main():
     """The entry point for the program."""
@@ -150,6 +164,18 @@ def main():
                     specs.append(('stdin.%s' % (len(specs) + 1),
                                   'namespace%s' % parts.pop(0)))
 
+        if args.filter_by_route_attr:
+            route_filter, route_filter_errors = parse_route_attr_filter(
+                args.filter_by_route_attr, debug)
+            if route_filter_errors:
+                print('Error(s) in route filter:', file=sys.stderr)
+                for err in route_filter_errors:
+                    print(err, file=sys.stderr)
+                sys.exit(1)
+
+        else:
+            route_filter = None
+
         # TODO: Needs version
         tower = TowerOfBabel(specs, debug=debug)
 
@@ -175,6 +201,7 @@ def main():
             for namespace in api.namespaces.values():
                 if namespace.name not in args.whitelist_namespace_routes:
                     namespace.routes = []
+                    namespace.route_by_name = {}
 
         if args.blacklist_namespace_routes:
             for namespace_name in args.blacklist_namespace_routes:
@@ -184,6 +211,17 @@ def main():
                     sys.exit(1)
                 else:
                     api.namespaces[namespace_name].routes = []
+                    api.namespaces[namespace_name].route_by_name = {}
+
+        if route_filter:
+            for namespace in api.namespaces.values():
+                filtered_routes = []
+                for route in namespace.routes:
+                    if route_filter.eval(route):
+                        filtered_routes.append(route)
+                    else:
+                        del namespace.route_by_name[route.name]
+                namespace.routes = filtered_routes
 
     if not os.path.exists(args.generator):
         print("error: Generator '%s' cannot be found." % args.generator,
@@ -224,6 +262,7 @@ def main():
         # If we aren't running from an entry_point, then return api to make it
         # easier to do debugging.
         return api
+
 
 if __name__ == '__main__':
     # Assign api variable for easy debugging from a Python console
