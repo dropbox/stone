@@ -338,6 +338,9 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_decode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'),
                                      json.dumps(now.strftime(f))),
                          now)
+        # Try decoding timestamp with bad type
+        self.assertRaises(bv.ValidationError,
+                          lambda: json_decode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), '1'))
         b = b'\xff' * 5
         self.assertEqual(json_decode(bv.Bytes(),
                                      json.dumps(base64.b64encode(b).decode('ascii'))),
