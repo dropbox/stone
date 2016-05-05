@@ -537,11 +537,14 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit('pass')
             self.emit()
 
-    def _generate_python_value(self, value):
+    def _generate_python_value(self, ns, value):
         if is_tag_ref(value):
-            return '{}.{}'.format(
+            ref = '{}.{}'.format(
                 self._class_name_for_data_type(value.union_data_type),
                 self.lang.format_variable(value.tag_name))
+            if ns != value.union_data_type.namespace:
+                ref = '%s.%s' % (value.union_data_type.namespace.name, ref)
+            return ref
         else:
             return self.lang.format_obj(value)
 
@@ -584,7 +587,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                         self.emit('return None')
                     elif field.has_default:
                         self.emit('return {}'.format(
-                            self._generate_python_value(field.default)))
+                            self._generate_python_value(ns, field.default)))
                     else:
                         self.emit(
                             "raise AttributeError(\"missing required field '%s'\")"

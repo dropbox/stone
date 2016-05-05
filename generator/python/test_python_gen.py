@@ -619,6 +619,9 @@ alias AliasedString = String(max_length=10)
 
 struct ContainsAlias
     s AliasedString
+
+struct S3
+    u ns2.BaseU = z
 """
 
 test_ns2_spec = """\
@@ -1209,3 +1212,7 @@ class TestGeneratedPython(unittest.TestCase):
                 ca,
                 alias_validators=aliased_validators)
         self.assertEqual("s: No spaces allowed", str(cm.exception))
+
+    def test_struct_union_default(self):
+        s = self.ns.S3()
+        assert s.u == self.ns2.BaseU.z
