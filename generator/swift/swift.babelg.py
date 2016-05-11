@@ -122,7 +122,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                                               self.lang.format_class(namespace.name)))
 
             my_props = [('accessToken', 'DropboxAccessToken')]
-            super_props = [('manager', 'Manager'), ('baseHosts', '[String : String]')]
+            super_props = [('manager', 'Manager'), ('backgroundManager', 'Manager'), ('baseHosts', '[String : String]')]
 
             for var, typ in namespace_fields:
                 self.emit('/// Routes within the {} namespace.'

@@ -8,14 +8,16 @@ public class Box<T> {
 
 public class BabelClient {
     var manager : Manager
+    var backgroundManager : Manager
     var baseHosts : [String : String]
     
     func additionalHeaders(noauth: Bool) -> [String: String] {
         return [:]
     }
     
-    init(manager: Manager, baseHosts : [String : String]) {
+    init(manager: Manager, backgroundManager: Manager, baseHosts : [String : String]) {
         self.manager = manager
+        self.backgroundManager = backgroundManager
         self.baseHosts = baseHosts
     }
 }
@@ -174,11 +176,12 @@ public class BabelRpcRequest<RType : JSONSerializer, EType : JSONSerializer> : B
             headers[header] = val
         }
         
-        let request = client.manager.request(.POST, url, parameters: ["": ""], headers: headers, encoding: ParameterEncoding.Custom {(convertible, _) in
+        let request = client.backgroundManager.request(.POST, url, parameters: [:], headers: headers,
+                                                       encoding: ParameterEncoding.Custom {(convertible, _) in
                 let mutableRequest = convertible.URLRequest.copy() as! NSMutableURLRequest
                 mutableRequest.HTTPBody = dumpJSON(params)
                 return (mutableRequest, nil)
-            })
+        })
         super.init(request: request,
             responseSerializer: responseSerializer,
             errorSerializer: errorSerializer)
@@ -237,7 +240,7 @@ public class BabelUploadRequest<RType : JSONSerializer, EType : JSONSerializer> 
             case let .Data(data):
                 request = client.manager.upload(.POST, url, headers: headers, data: data)
             case let .File(file):
-                request = client.manager.upload(.POST, url, headers: headers, file: file)
+                request = client.backgroundManager.upload(.POST, url, headers: headers, file: file)
             case let .Stream(stream):
                 request = client.manager.upload(.POST, url, headers: headers, stream: stream)
             }
@@ -327,7 +330,7 @@ public class BabelDownloadRequest<RType : JSONSerializer, EType : JSONSerializer
             return finalUrl
         }
         
-        let request = client.manager.download(.POST, url, headers: headers, destination: dest)
+        let request = client.backgroundManager.download(.POST, url, headers: headers, destination: dest)
 
         super.init(request: request, responseSerializer: responseSerializer, errorSerializer: errorSerializer)
         _self = self
