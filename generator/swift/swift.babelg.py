@@ -46,7 +46,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
         elif tag == 'field':
             if '.' in val:
                 cls, field = val.split('.')
-                return '{} in {}'.format(self.lang.format_variable(field), self.lang.format_class(cls))
+                return ('{} in {}'.format(self.lang.format_variable(field),
+                        self.lang.format_class(cls)))
             else:
                 return self.lang.format_variable(val)
         elif tag in ('type', 'val', 'link'):
@@ -103,36 +104,39 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     #
     # So this code makes deep assumptions about the layout of concrete syntax
     # and the general structure of handwritten code in the Dropbox-specific
-    # swift SDK. Eventually we should work on separating out the generated code more cleanly from the rest of the SDK.
+    # swift SDK. Eventually we should work on separating out the generated code
+    # more cleanly from the rest of the SDK.
     def _generate_bound_client(self, api, raw_client):
 
         self.emit_raw(base)
         self.emit('import Alamofire')
 
-        self.emit('/// The client for the API. Call routes using the namespaces inside this object.')
+        self.emit('/// The client for the API. Call routes using'
+                   'the namespaces inside this object.')
         with self.block('public class DropboxClient : BabelClient'):
             self.emit_raw(raw_client.read())
             namespace_fields = []
             for namespace in api.namespaces.values():
                 if len(namespace.routes) > 0:
-                    namespace_fields.append( (namespace.name,
+                    namespace_fields.append((namespace.name,
                                               self.lang.format_class(namespace.name)))
 
             my_props = [('accessToken', 'DropboxAccessToken')]
             super_props = [('manager', 'Manager'), ('baseHosts', '[String : String]')]
 
             for var, typ in namespace_fields:
-                self.emit('/// Routes within the {} namespace. See {}Routes for details.'.format(var, typ))
+                self.emit('/// Routes within the {} namespace.'
+                          'See {}Routes for details.'.format(var, typ))
                 self.emit('public var {} : {}Routes!'.format(var, typ))
 
             with self.function_block('public init', self._func_args(my_props + super_props)):
                 for var, typ in my_props:
                     self.emit('self.{} = {}'.format(var, var))
-                self.emit('super.init({})'.format(self._func_args((name,name) for name, _ in super_props)))
+                self.emit('super.init({})'.format(self._func_args((name,name)
+                                                                  for name, _ in super_props)))
 
                 for var, typ in namespace_fields:
                     self.emit('self.{} = {}Routes(client: self)'.format(var, typ))
-
 
     def _generate_base_namespace_module(self, namespace):
         self.emit_raw(base)
@@ -146,9 +150,6 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     self._generate_struct_class(namespace, data_type)
                 elif is_union_type(data_type):
                     self._generate_union_type(namespace, data_type)
-#            else:
-#                raise TypeError('Cannot handle type %r' % type(data_type))
-        #self._generate_routes(namespace)
 
     # generation helper methods
 
@@ -339,7 +340,7 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(pat)),
+                    ("pattern", '"{}"'.format(pat) if pat else None),
                 ])
             )
         else:
@@ -522,7 +523,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 
         class_type = self.class_data_type(data_type)
         with self.block('public enum {}: CustomStringConvertible'.format(class_type)):
-            for field in data_type.fields:
+            all_fields = self._populate_all_fields(data_type)
+            for field in all_fields:
                 typ = self._format_tag_type(namespace, field.data_type)
                 if field.doc:
                     self.emit('/**')
@@ -548,7 +550,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     def _generate_union_serializer(self, data_type):
         with self.serializer_block(data_type):
             with self.serializer_func(data_type), self.block('switch value'):
-                for field in data_type.fields:
+                all_fields = self._populate_all_fields(data_type)
+                for field in all_fields:
                     field_type = field.data_type
                     case = '.{}{}'.format(self.lang.format_class(field.name),
                                          '' if is_void_type(field_type) else '(let arg)')
@@ -557,7 +560,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     with self.indent():
                         if is_void_type(field_type):
                             self.emit('var d = [String : JSON]()')
-                        elif is_struct_type(field_type) and not field_type.has_enumerated_subtypes():
+                        elif (is_struct_type(field_type) and
+                                not field_type.has_enumerated_subtypes()):
                             self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
                                 self._serializer_obj(field_type)))
                         else:
@@ -572,7 +576,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     with self.indent():
                         self.emit('let tag = Serialization.getTag(d)')
                         with self.block('switch tag'):
-                            for field in data_type.fields:
+                            all_fields = self._populate_all_fields(data_type)
+                            for field in all_fields:
                                 field_type = field.data_type
                                 self.emit('case "{}":'.format(field.name))
 
@@ -581,7 +586,8 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                                     if is_void_type(field_type):
                                         self.emit('return {}'.format(tag_type))
                                     else:
-                                        if is_struct_type(field_type) and not field_type.has_enumerated_subtypes():
+                                        if (is_struct_type(field_type) and
+                                                not field_type.has_enumerated_subtypes()):
                                             subdict = 'json'
                                         else:
                                             subdict = 'd["{}"] ?? .Null'.format(field.name)
@@ -602,6 +608,23 @@ class SwiftGenerator(CodeGeneratorMonolingual):
                     with self.indent():
 
                         self.emit('fatalError("Failed to deserialize")')
+
+    def _populate_all_fields(self, data_type):
+        result = []
+        curr = data_type
+
+        # loops until top-most parent is reached -- each
+        # generation's attributes are recorded
+        while curr.parent_type:
+            # add types to `result` in the correct order,
+            # i.e. grandparent attr -> parent attr -> child attr
+            result = curr.parent_type.all_fields + result
+            curr = curr.parent_type
+
+        result += data_type.fields
+
+        return result
+
     def _generate_routes(self, namespace):
         ns_class = self.lang.format_class(namespace.name)
         self.emit('/// Routes for the {} namespace'.format(namespace.name))
@@ -653,8 +676,9 @@ class SwiftGenerator(CodeGeneratorMonolingual):
 <<<<<<< HEAD
 =======
         self.emit()
-        self.emit_wrapped_text(' - returns: Through the response callback, the caller will receive '+
-                               'a `{}` object on success or a `{}` object on failure.'.format(
+        self.emit_wrapped_text(' - returns: Through the response callback, the caller will ' +
+                               'receive a `{}` object on success or a `{}` object on ' +
+                               'failure.'.format(
                                    self._swift_type_mapping(route.result_data_type),
                                    self._swift_type_mapping(route.error_data_type)),
                               prefix='    ', width=120)
@@ -706,11 +730,18 @@ class SwiftGenerator(CodeGeneratorMonolingual):
     def _generate_download_route_bindings(self, namespace, route):
         extra_args = [(
             'destination', '(NSURL, NSHTTPURLResponse) -> NSURL', 'destination',
+        ), (
+            'overwrite', 'Bool = false', 'overwrite',
         )]
         extra_docs = [(
             'destination',
             'A closure used to compute the destination, '
             + 'given the temporary file location and the response'
+        ), (
+            'overwrite',
+            'A boolean to set behavior in the event of a naming conflict. `True` will '
+            + 'overwrite conflicting file at destination. `False` will take no action (but '
+            + 'if left unhandled in destination closure, an NSError will be thrown).'
         )]
 
         self._emit_route(namespace, route, extra_args, extra_docs)
