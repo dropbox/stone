@@ -380,20 +380,29 @@ class CodeGenerator(Generator):
                 is ignored. For more details about indent styles see
                 http://en.wikipedia.org/wiki/Indent_style
         """
-        assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
-            isinstance(delim[1], six.text_type), 'delim must be a tuple of two unicode strings.'
+        assert len(delim) == 2, 'delim must be a tuple of length 2'
+        assert (isinstance(delim[0], (six.text_type, type(None))) and
+                isinstance(delim[1], (six.text_type, type(None)))), (
+            'delim must be a tuple of two optional strings.')
 
         if before and not allman:
-            self.emit('{} {}'.format(before, delim[0]))
+            if delim[0] is not None:
+                self.emit('{} {}'.format(before, delim[0]))
+            else:
+                self.emit(before)
         else:
             if before:
                 self.emit(before)
-            self.emit(delim[0])
+            if delim[0] is not None:
+                self.emit(delim[0])
 
         with self.indent(dent):
             yield
 
-        self.emit(delim[1] + after)
+        if delim[1] is not None:
+            self.emit(delim[1] + after)
+        else:
+            self.emit(after)
 
 
 class CodeGeneratorMonolingual(CodeGenerator):

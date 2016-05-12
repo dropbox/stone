@@ -31,3 +31,24 @@ class Union(object):
             validator.validate(value)
         self._tag = tag
         self._value = value
+
+
+class Route(object):
+
+    def __init__(self, name, deprecated, arg_type, result_type, error_type, attrs):
+        self.name = name
+        self.deprecated = deprecated
+        self.arg_type = arg_type
+        self.result_type = result_type
+        self.error_type = error_type
+        assert isinstance(attrs, dict), 'Expected dict, got %r' % attrs
+        self.attrs = attrs
+
+    def __repr__(self):
+        return 'Route({!r}, {!r}, {!r}, {!r}, {!r}, {!r})'.format(
+            self.name,
+            self.deprecated,
+            self.arg_type,
+            self.result_type,
+            self.error_type,
+            self.attrs)

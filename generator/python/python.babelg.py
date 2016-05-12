@@ -55,6 +55,14 @@ _cmdline_parser.add_argument(
           '{route} for the route name. This is used to translate Babel doc '
           'references to routes to references in Python docstrings.'),
 )
+_cmdline_parser.add_argument(
+    '-a',
+    '--attribute',
+    action='append',
+    type=str,
+    default=[],
+    help='Route attribute to include in the generated code.',
+)
 
 class PythonGenerator(CodeGeneratorMonolingual):
     """Generates Python modules to represent the input Babel spec."""
@@ -144,6 +152,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self._generate_union_class_reflection_attributes(
                     namespace, data_type)
                 self._generate_union_class_symbol_creators(data_type)
+
+        self._generate_routes(namespace)
 
     def _generate_alias_definition(self, namespace, alias):
         v = self._generate_validator_constructor(namespace, alias.data_type)
@@ -908,3 +918,30 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self.emit("{0}.{1} = {0}('{1}')".format(class_name, field_name))
         if lineno != self.lineno:
             self.emit()
+
+    def _generate_routes(self, namespace):
+
+        for route in namespace.routes:
+            var_name = self.lang.format_method(route.name)
+            data_types = [route.arg_data_type, route.result_data_type,
+                          route.error_data_type]
+            with self.block('%s = bb.Route(' % var_name, delim=(None, None), after=')'):
+                self.emit("'%s'," % route.name)
+                self.emit("%r," % (route.deprecated is not None))
+                for data_type in data_types:
+                    self.emit(
+                        self._generate_validator_constructor(namespace, data_type) + ',')
+                attrs = []
+                for attr_key in self.args.attribute:
+                    attrs.append("'%s': %r" % (attr_key, route.attrs.get(attr_key)))
+                self.generate_multiline_list(
+                    attrs, delim=('{', '}'), after=',', compact=True)
+
+        if namespace.routes:
+            self.emit()
+
+        with self.block('ROUTES =', delim=('{', '}')):
+            for route in namespace.routes:
+                var_name = self.lang.format_method(route.name)
+                self.emit("'{}': {},".format(route.name, var_name))
+        self.emit()
