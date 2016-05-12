@@ -34,10 +34,12 @@ from babelapi.lang.python import PythonTargetLanguage
 validators_import = """\
 try:
     from . import babel_validators as bv
+    from . import babel_base as bb
 except (SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
     import babel_validators as bv
+    import babel_base as bb
 
 """
 
@@ -78,6 +80,9 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     self.target_folder_path)
         self.logger.info('Copying babel_serializers.py to output folder')
         shutil.copy(os.path.join(cur_folder, 'babel_serializers.py'),
+                    self.target_folder_path)
+        self.logger.info('Copying babel_base.py to output folder')
+        shutil.copy(os.path.join(cur_folder, 'babel_base.py'),
                     self.target_folder_path)
         for namespace in api.namespaces.values():
             with self.output_to_relative_path('{}.py'.format(namespace.name)):
@@ -241,7 +246,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
         if data_type.parent_type:
             extends = self._class_name_for_data_type(data_type.parent_type, ns)
         else:
-            extends = 'object'
+            if is_union_type(data_type):
+                # Use a handwritten base class
+                extends = 'bb.Union'
+            else:
+                extends = 'object'
         return 'class {}({}):'.format(
             self._class_name_for_data_type(data_type), extends)
 
@@ -738,26 +747,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self.emit('"""')
             self.emit()
 
-            self._generate_union_class_slots()
             self._generate_union_class_vars(data_type)
-            self._generate_union_class_init(data_type)
             self._generate_union_class_variant_creators(ns, data_type)
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_get_helpers(ns, data_type)
             self._generate_union_class_repr(data_type)
-
-    def _generate_union_class_slots(self):
-        """Creates a slots declaration for union classes.
-
-        Slots are an optimization in Python that reduce the memory footprint
-        of instances since attributes cannot be added after declaration.
-
-        Unions only ever have two attributes: _tag and _value.
-        """
-        # TODO(kelkabany): Possible optimization is to remove _value if a
-        # union is composed of only symbols.
-        self.emit("__slots__ = ['_tag', '_value']")
-        self.emit()
 
     def _generate_union_class_vars(self, data_type):
         """
@@ -808,30 +802,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 self._class_name_for_data_type(data_type.parent_type, ns)))
 
         self.emit()
-
-    def _generate_union_class_init(self, data_type):
-        """
-        Generates the __init__ method for the class. The tag should be
-        specified as a string, and the value will be validated with respect
-        to the tag.
-        """
-        self.emit('def __init__(self, tag, value=None):')
-        with self.indent():
-            self.emit("assert tag in self._tagmap, 'Invalid tag %r.' % tag")
-            self.emit('validator = self._tagmap[tag]')
-            self.emit('if isinstance(validator, bv.Void):')
-            with self.indent():
-                self.emit(
-                    "assert value is None, 'Void type union member must have None value.'")
-            self.emit('elif isinstance(validator, (bv.Struct, bv.Union)):')
-            with self.indent():
-                self.emit('validator.validate_type_only(value)')
-            self.emit('else:')
-            with self.indent():
-                self.emit('validator.validate(value)')
-            self.emit('self._tag = tag')
-            self.emit('self._value = value')
-            self.emit()
 
     def _generate_union_class_variant_creators(self, ns, data_type):
         """

@@ -8,8 +8,6 @@ format.
 This module should be dropped into a project that requires the use of Babel. In
 the future, this could be imported from a pre-installed Python package, rather
 than being added to a project.
-
-EDITING THIS FILE? Please modify the version in the babelapi repo,
 """
 
 from abc import ABCMeta, abstractmethod

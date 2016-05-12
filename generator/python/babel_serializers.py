@@ -1,14 +1,13 @@
 """
-Serializers that marshal Babel data types into wire formats.
+Serializers for Babel data types.
 
-Currently, only JSON is supported. If possible, serializers should be kept
-separate from the RPC format.
+Currently, only JSON is officially supported, but there's an experimental
+msgpack integration. If possible, serializers should be kept separate from the
+RPC format.
 
 This module should be dropped into a project that requires the use of Babel. In
 the future, this could be imported from a pre-installed Python package, rather
 than being added to a project.
-
-EDITING THIS FILE? Please modify the version in the babelapi repo,
 """
 
 import base64
