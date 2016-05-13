@@ -294,6 +294,15 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self._generate_struct_class_init(data_type)
             self._generate_struct_class_properties(ns, data_type)
             self._generate_struct_class_repr(data_type)
+        if data_type.has_enumerated_subtypes():
+            validator = 'StructTree'
+        else:
+            validator = 'Struct'
+        self.emit('{0}_validator = bv.{1}({0})'.format(
+            self._class_name_for_data_type(data_type),
+            validator,
+        ))
+        self.emit()
 
     def _func_args_from_dict(self, d):
         """Given a Python dictionary, creates a string representing arguments
@@ -358,26 +367,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 'bv.Timestamp',
                 args=[repr(dt.format)],
             )
-        elif is_struct_type(dt):
-            if dt.has_enumerated_subtypes():
-                validator_name = 'bv.StructTree'
-            else:
-                validator_name = 'bv.Struct'
-            name = self.lang.format_class(dt.name)
+        elif is_user_defined_type(dt):
+            v = self.lang.format_class(dt.name) + '_validator'
             if ns.name != dt.namespace.name:
-                name = '{}.{}'.format(dt.namespace.name, name)
-            v = self._generate_func_call(
-                validator_name,
-                args=[name],
-            )
-        elif is_union_type(dt):
-            name = self.lang.format_class(dt.name)
-            if ns.name != dt.namespace.name:
-                name = '{}.{}'.format(dt.namespace.name, name)
-            v = self._generate_func_call(
-                'bv.Union',
-                args=[name],
-            )
+                v = '{}.{}'.format(dt.namespace.name, v)
         elif is_alias(dt):
             # Assume that the alias has already been declared elsewhere.
             name = self.lang.format_class(dt.name) + '_validator'
@@ -762,6 +755,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_get_helpers(ns, data_type)
             self._generate_union_class_repr(data_type)
+        self.emit('{0}_validator = bv.Union({0})'.format(
+            self._class_name_for_data_type(data_type)
+        ))
+        self.emit()
 
     def _generate_union_class_vars(self, data_type):
         """
