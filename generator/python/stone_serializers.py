@@ -1,11 +1,11 @@
 """
-Serializers for Babel data types.
+Serializers for Stone data types.
 
 Currently, only JSON is officially supported, but there's an experimental
 msgpack integration. If possible, serializers should be kept separate from the
 RPC format.
 
-This module should be dropped into a project that requires the use of Babel. In
+This module should be dropped into a project that requires the use of Stone. In
 the future, this could be imported from a pre-installed Python package, rather
 than being added to a project.
 """
@@ -18,11 +18,11 @@ import json
 import six
 
 try:
-    from . import babel_validators as bv
+    from . import stone_validators as bv
 except (SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
-    import babel_validators as bv
+    import stone_validators as bv
 
 
 # --------------------------------------------------------------
@@ -334,7 +334,7 @@ def json_decode(
         strict (bool): If strict, then unknown struct fields will raise an
             error, and unknown union variants will raise an error even if a
             catch all field is specified. strict should only be used by a
-            recipient of serialized JSON if it's guaranteed that its Babel
+            recipient of serialized JSON if it's guaranteed that its Stone
             specs are at least as recent as the senders it receives messages
             from.
 
@@ -378,7 +378,7 @@ def json_compat_obj_decode(
         See json_decode().
     """
     if isinstance(data_type, bv.Primitive):
-        return _make_babel_friendly(
+        return _make_stone_friendly(
             data_type, obj, alias_validators, strict, True, for_msgpack)
     else:
         return _json_compat_obj_decode_helper(
@@ -412,7 +412,7 @@ def _json_compat_obj_decode_helper(
     elif isinstance(data_type, bv.Primitive):
         # Set validate to false because validation will be done by the
         # containing struct or union when the field is assigned.
-        return _make_babel_friendly(
+        return _make_stone_friendly(
             data_type, obj, alias_validators, strict, False, for_msgpack)
     else:
         raise AssertionError('Cannot handle type %r.' % data_type)
@@ -706,7 +706,7 @@ def _decode_nullable(
         return None
 
 
-def _make_babel_friendly(
+def _make_stone_friendly(
         data_type, val, alias_validators, strict, validate, for_msgpack):
     """
     Convert a Python object to a type that will pass validation by its

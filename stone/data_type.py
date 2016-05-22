@@ -1,5 +1,5 @@
 """
-Defines data types for Babel.
+Defines data types for Stone.
 
 The goal of this module is to define all data types that are common to the
 languages and serialization formats we want to support.
@@ -16,10 +16,10 @@ import numbers
 import re
 import six
 
-from .babel.exception import InvalidSpec
-from .babel.parser import (
-    BabelExampleField,
-    BabelExampleRef,
+from .stone.exception import InvalidSpec
+from .stone.parser import (
+    StoneExampleField,
+    StoneExampleRef,
 )
 
 
@@ -33,7 +33,7 @@ def generic_type_name(v):
     Return a descriptive type name that isn't Python specific. For example, an
     int type will return 'integer' rather than 'int'.
     """
-    if isinstance(v, BabelExampleRef):
+    if isinstance(v, StoneExampleRef):
         return "reference"
     elif isinstance(v, numbers.Integral):
         # Must come before real numbers check since integrals are reals too
@@ -89,7 +89,7 @@ class DataType(object):
         can raise an exception.
 
         Args:
-            ex_field (BabelExampleField)
+            ex_field (StoneExampleField)
 
         Raises:
             InvalidSpec
@@ -420,7 +420,7 @@ class List(Composite):
         try:
             self._check_list_container(ex_field.value)
             for item in ex_field.value:
-                new_ex_field = BabelExampleField(ex_field.path,
+                new_ex_field = StoneExampleField(ex_field.path,
                                                  ex_field.lineno,
                                                  ex_field.lexpos,
                                                  ex_field.name,
@@ -481,7 +481,7 @@ class Field(object):
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
         :param token: Raw field definition from the parser.
-        :type token: babelapi.babel.parser.BabelField
+        :type token: stone.stone.parser.StoneField
         """
         self.name = name
         self.data_type = data_type
@@ -512,7 +512,7 @@ class StructField(Field):
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
         :param token: Raw field definition from the parser.
-        :type token: babelapi.babel.parser.BabelField
+        :type token: stone.stone.parser.StoneField
         :param bool deprecated: Whether the field is deprecated.
         """
         super(StructField, self).__init__(name, data_type, doc, token)
@@ -570,10 +570,10 @@ class UserDefined(Composite):
         be fully defined.
 
         :param str name: Name of type.
-        :param babelapi.api.Namespace namespace: The namespace this type is
+        :param stone.api.Namespace namespace: The namespace this type is
             defined in.
         :param token: Raw type definition from the parser.
-        :type token: babelapi.babel.parser.BabelTypeDef
+        :type token: stone.stone.parser.StoneTypeDef
         """
         self._name = name
         self.namespace = namespace
@@ -749,7 +749,7 @@ class Struct(UserDefined):
         raise NotImplementedError
 
     def check_example(self, ex_field):
-        if not isinstance(ex_field.value, BabelExampleRef):
+        if not isinstance(ex_field.value, StoneExampleRef):
             raise InvalidSpec(
                 "example must reference label of '%s'" % self.name,
                 ex_field.lineno, ex_field.path)
@@ -988,7 +988,7 @@ class Struct(UserDefined):
         :meth:`_compute_examples` is called.
 
         Args:
-            example (babelapi.babel.parser.BabelExample): An example of this
+            example (stone.stone.parser.StoneExample): An example of this
                 type.
         """
         if self.has_enumerated_subtypes():
@@ -1008,7 +1008,7 @@ class Struct(UserDefined):
         example_field = list(example.fields.values())[0]
         tag = example_field.name
         val = example_field.value
-        if not isinstance(val, BabelExampleRef):
+        if not isinstance(val, StoneExampleRef):
             raise InvalidSpec(
                 "Example of struct with enumerated subtypes must be a "
                 "reference to a subtype's example.",
@@ -1101,7 +1101,7 @@ class Struct(UserDefined):
         ex_val = OrderedDict()
 
         def get_json_val(dt, val):
-            if isinstance(val, BabelExampleRef):
+            if isinstance(val, StoneExampleRef):
                 # Embed references to other examples directly.
                 return deref_example_ref(dt, val)
             elif isinstance(val, TagRef):
@@ -1194,7 +1194,7 @@ class Union(UserDefined):
                 "invalid reference to unknown tag '%s'" % val.tag_name)
 
     def check_example(self, ex_field):
-        if not isinstance(ex_field.value, BabelExampleRef):
+        if not isinstance(ex_field.value, StoneExampleRef):
             raise InvalidSpec(
                 "example must reference label of '%s'" % self.name,
                 ex_field.lineno, ex_field.path)
@@ -1221,7 +1221,7 @@ class Union(UserDefined):
         :meth:`_compute_examples` is called.
 
         Args:
-            example (babelapi.babel.parser.BabelExample): An example of this
+            example (stone.stone.parser.StoneExample): An example of this
                 type.
         """
         if len(example.fields) != 1:
@@ -1309,7 +1309,7 @@ class Union(UserDefined):
                 return dt._compute_example(val.label).value
 
             def get_json_val(dt, val):
-                if isinstance(val, BabelExampleRef):
+                if isinstance(val, StoneExampleRef):
                     # Embed references to other examples directly.
                     return deref_example_ref(dt, val)
                 elif isinstance(val, list):
@@ -1374,7 +1374,7 @@ class Union(UserDefined):
 
 class TagRef(object):
     """
-    Used when an ID in Babel refers to a tag of a union.
+    Used when an ID in Stone refers to a tag of a union.
     TODO(kelkabany): Support tag values.
     """
 
@@ -1399,10 +1399,10 @@ class Alias(Composite):
         be fully defined.
 
         :param str name: Name of type.
-        :param babelapi.api.Namespace namespace: The namespace this type is
+        :param stone.api.Namespace namespace: The namespace this type is
             defined in.
         :param token: Raw type definition from the parser.
-        :type token: babelapi.babel.parser.BabelTypeDef
+        :type token: stone.stone.parser.StoneTypeDef
         """
         self._name = name
         self.namespace = namespace

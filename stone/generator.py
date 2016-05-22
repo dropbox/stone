@@ -8,8 +8,8 @@ import os
 import six
 import textwrap
 
-from babelapi.babel.tower import doc_ref_re
-from babelapi.data_type import (
+from stone.stone.tower import doc_ref_re
+from stone.data_type import (
     is_alias,
 )
 
@@ -86,7 +86,7 @@ class Generator(six.with_metaclass(ABCMeta)):
     # Can be overridden with an argparse.ArgumentParser object.
     cmdline_parser = None
 
-    # Can be overridden by a subclass. If true, babelapi.data_type.Alias
+    # Can be overridden by a subclass. If true, stone.data_type.Alias
     # objects will be present in the API object. If false, aliases are masked
     # by replacing them with duplicate type definitions as the source type.
     # For backwards compatibility with existing generators defaults to false.
@@ -122,7 +122,7 @@ class Generator(six.with_metaclass(ABCMeta)):
         invoked by the rest of the toolchain.
 
         Args:
-            api (babelapi.api.Api): The API specification.
+            api (stone.api.Api): The API specification.
         """
         raise NotImplementedError
 
@@ -248,11 +248,11 @@ class Generator(six.with_metaclass(ABCMeta)):
     @classmethod
     def process_doc(cls, doc, handler):
         """
-        Helper for parsing documentation references in Babel docstrings and
+        Helper for parsing documentation references in Stone docstrings and
         replacing them with more suitable annotations for the generated output.
 
         Args:
-            doc (str): A Babel docstring.
+            doc (str): A Stone docstring.
             handler: A function with the following signature:
                 `(tag: str, value: str) -> str`. It will be called for every
                 reference found in the docstring with the tag and value parsed
@@ -410,7 +410,7 @@ class CodeGeneratorMonolingual(CodeGenerator):
     exists. You can set this to a TargetLanguage object for easy access to
     language-specific convenience functions."""
 
-    # An instance of a :class:`babelapi.lang.lang.TargetLanguage` object.
+    # An instance of a :class:`stone.lang.lang.TargetLanguage` object.
     lang = None
 
     def __init__(self, target_folder_path, generator_args):

@@ -1,5 +1,5 @@
 """
-A command-line interface for BabelAPI.
+A command-line interface for StoneAPI.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -14,13 +14,13 @@ import six
 import sys
 import traceback
 
-from .babel.exception import InvalidSpec
-from .babel.tower import TowerOfBabel
+from .stone.exception import InvalidSpec
+from .stone.tower import TowerOfStone
 from .cli_helpers import parse_route_attr_filter
 from .compiler import Compiler, GeneratorException
 
 # The parser for command line arguments
-_cmdline_parser = argparse.ArgumentParser(description='BabelAPI')
+_cmdline_parser = argparse.ArgumentParser(description='StoneAPI')
 _cmdline_parser.add_argument(
     '-v',
     '--verbose',
@@ -30,7 +30,7 @@ _cmdline_parser.add_argument(
 _cmdline_parser.add_argument(
     'generator',
     type=six.text_type,
-    help='Specify the path to a generator. It must have a .babelg.py extension.',
+    help='Specify the path to a generator. It must have a .stoneg.py extension.',
 )
 _cmdline_parser.add_argument(
     'output',
@@ -41,7 +41,7 @@ _cmdline_parser.add_argument(
     'spec',
     nargs='*',
     type=six.text_type,
-    help=('Path to API specifications. Each must have a .babel extension. '
+    help=('Path to API specifications. Each must have a .stone extension. '
           'If omitted or set to "-", the spec is read from stdin. Multiple '
           'namespaces can be provided over stdin by concatenating multiple '
           'specs together.'),
@@ -109,9 +109,9 @@ def main():
 
     if args.spec and args.spec[0].startswith('+') and args.spec[0].endswith('.py'):
         # Hack: Special case for defining a spec in Python for testing purposes
-        # Use this if you want to define a Babel spec using a Python module.
+        # Use this if you want to define a Stone spec using a Python module.
         # The module should should contain an api variable that references a
-        # :class:`babelapi.api.Api` object.
+        # :class:`stone.api.Api` object.
         try:
             api = imp.load_source('api', args.api[0]).api
         except ImportError as e:
@@ -125,8 +125,8 @@ def main():
             for spec_path in args.spec:
                 if spec_path == '-':
                     read_from_stdin = True
-                elif not spec_path.endswith('.babel'):
-                    print("error: Specification '%s' must have a .babel extension."
+                elif not spec_path.endswith('.stone'):
+                    print("error: Specification '%s' must have a .stone extension."
                           % spec_path,
                           file=sys.stderr)
                     sys.exit(1)
@@ -177,7 +177,7 @@ def main():
             route_filter = None
 
         # TODO: Needs version
-        tower = TowerOfBabel(specs, debug=debug)
+        tower = TowerOfStone(specs, debug=debug)
 
         try:
             api = tower.parse()
@@ -185,7 +185,7 @@ def main():
             print('%s:%s: error: %s' % (e.path, e.lineno, e.msg), file=sys.stderr)
             if debug:
                 print('A traceback is included below in case this is a bug in '
-                      'Babel.\n', traceback.format_exc(), file=sys.stderr)
+                      'Stone.\n', traceback.format_exc(), file=sys.stderr)
             sys.exit(1)
         if api is None:
             print('You must fix the above parsing errors for generation to '
@@ -231,15 +231,15 @@ def main():
         print("error: Generator '%s' must be a file." % args.generator,
               file=sys.stderr)
         sys.exit(1)
-    elif not Compiler.is_babel_generator(args.generator):
-        print("%s: error: Generator '%s' must have a .babelg.py extension." %
+    elif not Compiler.is_stone_generator(args.generator):
+        print("error: Generator '%s' must have a .stoneg.py extension." %
               args.generator, file=sys.stderr)
         sys.exit(1)
     else:
         try:
             generator_module = imp.load_source('user_generator', args.generator)
         except:
-            print('%s: error: Importing generator module raised an exception:' %
+            print("error: Importing generator '%s' module raised an exception:" %
                   args.generator, file=sys.stderr)
             raise
 
@@ -258,7 +258,7 @@ def main():
               file=sys.stderr)
         sys.exit(1)
 
-    if not sys.argv[0].endswith('babelapi'):
+    if not sys.argv[0].endswith('stone'):
         # If we aren't running from an entry_point, then return api to make it
         # easier to do debugging.
         return api

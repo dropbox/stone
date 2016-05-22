@@ -1,17 +1,17 @@
 """
-Helpers for representing Babel data types in Python.
+Helpers for representing Stone data types in Python.
 
-This module should be dropped into a project that requires the use of Babel. In
+This module should be dropped into a project that requires the use of Stone. In
 the future, this could be imported from a pre-installed Python package, rather
 than being added to a project.
 """
 
 try:
-    from . import babel_validators as bv
+    from . import stone_validators as bv
 except (SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
-    import babel_validators as bv
+    import stone_validators as bv
 
 
 class Union(object):

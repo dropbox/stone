@@ -5,8 +5,8 @@
   "skip_undocumented": true,
   "hide_documentation_coverage": true,
   "excluded_files": [
-    "Source/BabelSerializers.swift",
-    "Source/BabelValidators.swift",
+    "Source/StoneSerializers.swift",
+    "Source/StoneValidators.swift",
     "Source/Client.swift"
   ],
   "swift_version": 2,

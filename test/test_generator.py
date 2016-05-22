@@ -3,18 +3,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import argparse
 import unittest
 
-from babelapi.api import (
+from stone.api import (
     ApiNamespace,
     ApiRoute,
 )
-from babelapi.data_type import (
+from stone.data_type import (
     List,
     Boolean,
     String,
     Struct,
     StructField,
 )
-from babelapi.generator import CodeGenerator
+from stone.generator import CodeGenerator
 
 class Tester(CodeGenerator):
     """A no-op generator used to test helper methods."""

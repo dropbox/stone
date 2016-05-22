@@ -1,11 +1,11 @@
 """
-Defines classes to represent each Babel type in Python. These classes should
+Defines classes to represent each Stone type in Python. These classes should
 be used to validate Python objects and normalize them for a given type.
 
 The data types defined here should not be specific to an RPC or serialization
 format.
 
-This module should be dropped into a project that requires the use of Babel. In
+This module should be dropped into a project that requires the use of Stone. In
 the future, this could be imported from a pre-installed Python package, rather
 than being added to a project.
 """
@@ -102,7 +102,7 @@ class Validator(object):
 
 
 class Primitive(Validator):
-    """A basic type that is defined by Babel."""
+    """A basic type that is defined by Stone."""
     pass
 
 
@@ -404,7 +404,7 @@ class Struct(Composite):
     def __init__(self, definition):
         """
         Args:
-            definition (class): A generated class representing a Babel struct
+            definition (class): A generated class representing a Stone struct
                 from a spec. Must have a _fields_ attribute with the following
                 structure:
 
@@ -477,7 +477,7 @@ class Union(Composite):
     def __init__(self, definition):
         """
         Args:
-            definition (class): A generated class representing a Babel union
+            definition (class): A generated class representing a Stone union
                 from a spec. Must have a _tagmap attribute with the following
                 structure:
 

@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 
-from babelapi.cli_helpers import parse_route_attr_filter
+from stone.cli_helpers import parse_route_attr_filter
 
 
 class MockRoute():

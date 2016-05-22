@@ -3,39 +3,39 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import textwrap
 import unittest
 
-from babelapi.babel.parser import (
-    BabelNamespace,
-    BabelAlias,
-    BabelParser,
-    BabelVoidField,
-    BabelTagRef,
+from stone.stone.parser import (
+    StoneNamespace,
+    StoneAlias,
+    StoneParser,
+    StoneVoidField,
+    StoneTagRef,
 )
-from babelapi.babel.tower import (
+from stone.stone.tower import (
     InvalidSpec,
     TagRef,
-    TowerOfBabel,
+    TowerOfStone,
 )
-from babelapi.data_type import (
+from stone.data_type import (
     Alias,
     Nullable,
     String,
 )
 
 
-class TestBabel(unittest.TestCase):
+class TestStone(unittest.TestCase):
     """
-    Tests the Babel format.
+    Tests the Stone format.
     """
 
     def setUp(self):
-        self.parser = BabelParser(debug=False)
+        self.parser = StoneParser(debug=False)
 
     def test_namespace_decl(self):
         text = textwrap.dedent("""\
             namespace files
             """)
         out = self.parser.parse(text)
-        self.assertIsInstance(out[0], BabelNamespace)
+        self.assertIsInstance(out[0], StoneNamespace)
         self.assertEqual(out[0].name, 'files')
 
         # test starting with newlines
@@ -45,7 +45,7 @@ class TestBabel(unittest.TestCase):
             namespace files
             """)
         out = self.parser.parse(text)
-        self.assertIsInstance(out[0], BabelNamespace)
+        self.assertIsInstance(out[0], StoneNamespace)
         self.assertEqual(out[0].name, 'files')
 
     def test_comments(self):
@@ -69,8 +69,8 @@ class TestBabel(unittest.TestCase):
             # footer comment
             """)
         out = self.parser.parse(text)
-        self.assertIsInstance(out[0], BabelNamespace)
-        self.assertIsInstance(out[1], BabelAlias)
+        self.assertIsInstance(out[0], StoneNamespace)
+        self.assertIsInstance(out[1], StoneAlias)
         self.assertEqual(out[2].name, 'S')
         self.assertEqual(out[3].name, 'S2')
 
@@ -83,17 +83,17 @@ class TestBabel(unittest.TestCase):
             alias Numbers = List(UInt64)
             """)
         out = self.parser.parse(text)
-        self.assertIsInstance(out[1], BabelAlias)
+        self.assertIsInstance(out[1], StoneAlias)
         self.assertEqual(out[1].name, 'T')
         self.assertEqual(out[1].type_ref.name, 'String')
         self.assertEqual(out[1].type_ref.args[1]['min_length'], 3)
 
-        self.assertIsInstance(out[2], BabelAlias)
+        self.assertIsInstance(out[2], StoneAlias)
         self.assertEqual(out[2].name, 'F')
         self.assertEqual(out[2].type_ref.name, 'Float64')
         self.assertEqual(out[2].type_ref.args[1]['max_value'], 3.2e1)
 
-        self.assertIsInstance(out[3], BabelAlias)
+        self.assertIsInstance(out[3], StoneAlias)
         self.assertEqual(out[3].name, 'Numbers')
         self.assertEqual(out[3].type_ref.name, 'List')
         self.assertEqual(out[3].type_ref.args[0][0].name, 'UInt64')
@@ -238,7 +238,7 @@ class TestBabel(unittest.TestCase):
             struct S2 extends S?
                 f2 String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual("Reference cannot be nullable.", cm.exception.msg)
@@ -262,11 +262,11 @@ class TestBabel(unittest.TestCase):
         out = self.parser.parse(text)
         self.assertEqual(out[1].name, 'Role')
         self.assertEqual(out[1].doc, 'The role a user may have in a shared folder.')
-        self.assertIsInstance(out[1].fields[0], BabelVoidField)
+        self.assertIsInstance(out[1].fields[0], StoneVoidField)
         self.assertEqual(out[1].fields[0].name, 'owner')
-        self.assertIsInstance(out[1].fields[1], BabelVoidField)
+        self.assertIsInstance(out[1].fields[1], StoneVoidField)
         self.assertEqual(out[1].fields[1].name, 'viewer')
-        self.assertIsInstance(out[1].fields[2], BabelVoidField)
+        self.assertIsInstance(out[1].fields[2], StoneVoidField)
         self.assertEqual(out[1].fields[2].name, 'editor')
 
         # TODO: Test a union that includes a struct.
@@ -313,7 +313,7 @@ class TestBabel(unittest.TestCase):
             """)
         out = self.parser.parse(text)
         self.assertEqual(out[2].name, 'Upload')
-        self.assertIsInstance(out[2].fields[1].default, BabelTagRef)
+        self.assertIsInstance(out[2].fields[1].default, StoneTagRef)
         self.assertEqual(out[2].fields[1].default.tag, 'add')
 
     def test_route_decl(self):
@@ -365,7 +365,7 @@ class TestBabel(unittest.TestCase):
 
             route old_route (Void, Void, Void) deprecated
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         r = t.api.namespaces['test'].route_by_name['old_route']
         self.assertIsNotNone(r.deprecated)
@@ -378,7 +378,7 @@ class TestBabel(unittest.TestCase):
             route old_route (Void, Void, Void) deprecated by new_route
             route new_route (Void, Void, Void)
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         r_old = t.api.namespaces['test'].route_by_name['old_route']
         r_new = t.api.namespaces['test'].route_by_name['new_route']
@@ -392,7 +392,7 @@ class TestBabel(unittest.TestCase):
             route test/old_route (Void, Void, Void) deprecated by test/new_route
             route test/new_route (Void, Void, Void)
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         r_old = t.api.namespaces['test'].route_by_name['test/old_route']
         r_new = t.api.namespaces['test'].route_by_name['test/new_route']
@@ -405,7 +405,7 @@ class TestBabel(unittest.TestCase):
 
             route old_route (Void, Void, Void) deprecated by unk_route
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual("Undefined route 'unk_route'.", cm.exception.msg)
@@ -420,7 +420,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual("'S' must be a route.", cm.exception.msg)
@@ -443,7 +443,7 @@ class TestBabel(unittest.TestCase):
                     float_val = 1.2
                     union_val = U.a
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         r = t.api.namespaces['test'].route_by_name['r']
         self.assertEqual(r.attrs['null_val'], None)
@@ -467,7 +467,7 @@ class TestBabel(unittest.TestCase):
                 attrs
                     union_val = U.z
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual("'U' has no tag 'z'.", cm.exception.msg)
@@ -484,7 +484,7 @@ class TestBabel(unittest.TestCase):
                 attrs
                     union_val = U.b
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -508,7 +508,7 @@ class TestBabel(unittest.TestCase):
                 attrs
                     union_val = shared.U.a
             """)
-        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         t.parse()
         r = t.api.namespaces['test'].route_by_name['r']
         self.assertEqual(r.attrs['union_val'].tag_name, 'a')
@@ -540,7 +540,7 @@ class TestBabel(unittest.TestCase):
 
             route d (Void, Void, Void)
             """)
-        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         t.parse()
         assert ['ns_a', 'ns_b'] == list(t.api.namespaces.keys())
         ns_b = t.api.namespaces['ns_b']
@@ -578,7 +578,7 @@ class TestBabel(unittest.TestCase):
                 # Indent below is only 3 spaces
                f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("Indent is not divisible by 4.", cm.exception.msg)
@@ -601,7 +601,7 @@ class TestBabel(unittest.TestCase):
 
             route test_route(Blah, Blah, Blah)
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
@@ -634,7 +634,7 @@ class TestBabel(unittest.TestCase):
             struct W extends T
                 g String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         E_dt = t.api.namespaces['test'].data_type_by_name['E']
@@ -672,7 +672,7 @@ class TestBabel(unittest.TestCase):
                 "This is a test
                 of docstrings"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         test_ns = t.api.namespaces['test']
         self.assertIsInstance(test_ns.aliases[0], Alias)
@@ -687,7 +687,7 @@ class TestBabel(unittest.TestCase):
 
             alias R = String(min_length=1)?
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         test_ns = t.api.namespaces['test']
         self.assertIsInstance(test_ns.aliases[0], Alias)
@@ -702,7 +702,7 @@ class TestBabel(unittest.TestCase):
             alias T = String
             alias R = T
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         test_ns = t.api.namespaces['test']
         self.assertIsInstance(test_ns.alias_by_name['T'], Alias)
@@ -717,7 +717,7 @@ class TestBabel(unittest.TestCase):
             alias R = T
             alias T = String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         # Try re-definition
@@ -727,10 +727,10 @@ class TestBabel(unittest.TestCase):
             alias A = String
             alias A = UInt64
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
-        self.assertIn("Symbol 'A' already defined (test.babel:3).",
+        self.assertIn("Symbol 'A' already defined (test.stone:3).",
                       cm.exception.msg)
 
         # Try cyclical reference
@@ -741,7 +741,7 @@ class TestBabel(unittest.TestCase):
             alias B = C
             alias C = A
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("Alias 'C' is part of a cycle.",
@@ -754,7 +754,7 @@ class TestBabel(unittest.TestCase):
             alias T = String(min_length=1)
             alias R = T(min_length=1)
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('Attributes cannot be specified for instantiated type',
@@ -768,7 +768,7 @@ class TestBabel(unittest.TestCase):
                 f String
             alias R = S?
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         test_ns = t.api.namespaces['test']
         S_dt = test_ns.data_type_by_name['S']
@@ -784,7 +784,7 @@ class TestBabel(unittest.TestCase):
 
             alias R = S(min_length=1)
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('Attributes cannot be specified for instantiated type',
@@ -804,7 +804,7 @@ class TestBabel(unittest.TestCase):
 
             alias S = test1.S
             """)
-        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         t.parse()
         test1_ns = t.api.namespaces['test1']
         S_dt = test1_ns.data_type_by_name['S']
@@ -823,7 +823,7 @@ class TestBabel(unittest.TestCase):
             struct T extends Z
                 f2 String
             """)
-        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('A struct cannot extend an alias. Use the canonical name instead.',
@@ -842,7 +842,7 @@ class TestBabel(unittest.TestCase):
             union T extends Z
                 f2 String
             """)
-        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn(
@@ -858,7 +858,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 option_a
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual("Struct field 'option_a' cannot have a Void type.",
@@ -872,7 +872,7 @@ class TestBabel(unittest.TestCase):
                 a UInt64
                 a String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined', cm.exception.msg)
@@ -890,7 +890,7 @@ class TestBabel(unittest.TestCase):
             struct C extends B
                 a String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined in parent', cm.exception.msg)
@@ -905,7 +905,7 @@ class TestBabel(unittest.TestCase):
             struct B extends A
                 b UInt64
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('struct can only extend another struct', cm.exception.msg)
@@ -919,7 +919,7 @@ class TestBabel(unittest.TestCase):
                 a UInt64
                 a String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined', cm.exception.msg)
@@ -937,7 +937,7 @@ class TestBabel(unittest.TestCase):
             union C extends B
                 a String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already defined in parent', cm.exception.msg)
@@ -950,7 +950,7 @@ class TestBabel(unittest.TestCase):
                 a*
                 b
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         A_dt = t.api.namespaces['test'].data_type_by_name['A']
         # Test both ways catch-all is exposed
@@ -965,7 +965,7 @@ class TestBabel(unittest.TestCase):
                 a*
                 b*
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('Only one catch-all tag', cm.exception.msg)
@@ -980,7 +980,7 @@ class TestBabel(unittest.TestCase):
             union B extends A
                 b*
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('already declared a catch-all tag', cm.exception.msg)
@@ -995,7 +995,7 @@ class TestBabel(unittest.TestCase):
             union B extends A
                 b UInt64
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('union can only extend another union', cm.exception.msg)
@@ -1017,7 +1017,7 @@ class TestBabel(unittest.TestCase):
             struct Folder extends Resource
                 icon String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         # Test reference to non-struct
@@ -1028,7 +1028,7 @@ class TestBabel(unittest.TestCase):
                 union
                     file String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('must be a struct', cm.exception.msg)
@@ -1041,7 +1041,7 @@ class TestBabel(unittest.TestCase):
                 union
                     file File
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('Undefined', cm.exception.msg)
@@ -1057,7 +1057,7 @@ class TestBabel(unittest.TestCase):
             struct File
                 size UInt64
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('not a subtype of', cm.exception.msg)
@@ -1074,7 +1074,7 @@ class TestBabel(unittest.TestCase):
             struct File extends Resource
                 size UInt64
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('only be specified once', cm.exception.msg)
@@ -1093,7 +1093,7 @@ class TestBabel(unittest.TestCase):
             struct Folder extends Resource
                 icon String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("missing 'Folder'", cm.exception.msg)
@@ -1110,7 +1110,7 @@ class TestBabel(unittest.TestCase):
             struct File extends Resource
                 size UInt64
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("already defined on", cm.exception.msg)
@@ -1131,13 +1131,13 @@ class TestBabel(unittest.TestCase):
             struct C extends B
                 "No enumerated subtypes."
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("cannot be extended", cm.exception.msg)
 
     def unused_enumerated_subtypes_tests(self):
-        # Currently, Babel does not allow for a struct that enumerates subtypes
+        # Currently, Stone does not allow for a struct that enumerates subtypes
         # to inherit from another struct that does. These tests only apply if
         # this restriction is removed.
 
@@ -1157,7 +1157,7 @@ class TestBabel(unittest.TestCase):
             struct C extends B
                 d String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("already defined in parent", cm.exception.msg)
@@ -1178,7 +1178,7 @@ class TestBabel(unittest.TestCase):
             struct C extends B
                 d String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("already defined in parent", cm.exception.msg)
@@ -1202,7 +1202,7 @@ class TestBabel(unittest.TestCase):
             struct D extends C
                 e String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn("cannot enumerate subtypes if parent", cm.exception.msg)
@@ -1215,7 +1215,7 @@ class TestBabel(unittest.TestCase):
             alias A = String?
             alias B = A?
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1231,7 +1231,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 f A?
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1248,7 +1248,7 @@ class TestBabel(unittest.TestCase):
             struct T extends S?
                 g String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1265,7 +1265,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         # Test extending after...
@@ -1278,7 +1278,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         # Test field ref to later-defined struct
@@ -1293,7 +1293,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         # Test self-reference
@@ -1303,7 +1303,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 s S?
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         # Test forward union ref
@@ -1316,7 +1316,7 @@ class TestBabel(unittest.TestCase):
             union U
                 a
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         self.assertTrue(t.api.namespaces['test'].data_types[0].fields[0].has_default)
         self.assertEqual(
@@ -1341,7 +1341,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         t.parse()
 
         # Test incorrectly importing the current namespace
@@ -1349,7 +1349,7 @@ class TestBabel(unittest.TestCase):
             namespace test
             import test
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1361,7 +1361,7 @@ class TestBabel(unittest.TestCase):
             namespace test
             import missingns
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1383,7 +1383,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 g String
             """)
-        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         t.parse()
 
         # Test extending aliased struct from another namespace
@@ -1403,7 +1403,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 g String
             """)
-        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1425,7 +1425,7 @@ class TestBabel(unittest.TestCase):
             union U
                 a
             """)
-        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         t.parse()
 
         # Try circular import
@@ -1445,7 +1445,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 s ns1.S
             """)
-        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn(
@@ -1462,7 +1462,7 @@ class TestBabel(unittest.TestCase):
                 a
                 b
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         # Test union field doc referencing other field
@@ -1474,7 +1474,7 @@ class TestBabel(unittest.TestCase):
                     ":field:`b`"
                 b
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
     def test_namespace(self):
@@ -1497,7 +1497,7 @@ class TestBabel(unittest.TestCase):
             struct S2
                 f String
             """)
-        t = TowerOfBabel([('ns1.babel', ns1_text), ('ns2.babel', ns2_text)])
+        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         t.parse()
         self.assertEqual(
             t.api.namespaces['ns1'].doc,
@@ -1515,7 +1515,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_types[0]
         self.assertTrue(s_dt.get_examples()['default'], {'f': 'A'})
@@ -1530,7 +1530,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = 5
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1548,7 +1548,7 @@ class TestBabel(unittest.TestCase):
                 example true
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             # This raises an unexpected token error.
             t.parse()
@@ -1565,7 +1565,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "ZZZZZZ4"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1583,7 +1583,7 @@ class TestBabel(unittest.TestCase):
                     f = "ZZZZZZ3"
                     f = "ZZZZZZ4"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1599,7 +1599,7 @@ class TestBabel(unittest.TestCase):
                 example default
                 example other
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_types[0]
         self.assertIn('default', s_dt.get_examples())
@@ -1615,7 +1615,7 @@ class TestBabel(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1634,7 +1634,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1651,7 +1651,7 @@ class TestBabel(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_types[0]
         # Example should have no keys
@@ -1666,7 +1666,7 @@ class TestBabel(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_types[0]
         # Example should have no keys
@@ -1682,7 +1682,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = null
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_types[0]
         # Example should have no keys
@@ -1698,7 +1698,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = null
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1721,7 +1721,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -1743,7 +1743,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -1765,7 +1765,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -1802,7 +1802,7 @@ class TestBabel(unittest.TestCase):
                 example other
                     g = "C"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -1821,7 +1821,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1841,7 +1841,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1862,7 +1862,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1883,7 +1883,7 @@ class TestBabel(unittest.TestCase):
                     f = "A"
                     s = null
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value, {'f': 'A'})
@@ -1906,7 +1906,7 @@ class TestBabel(unittest.TestCase):
                     b = "B"
                     c = "C"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
 
         text = textwrap.dedent("""\
@@ -1925,7 +1925,7 @@ class TestBabel(unittest.TestCase):
                     b = "B"
                     c = "C"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1942,7 +1942,7 @@ class TestBabel(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1961,7 +1961,7 @@ class TestBabel(unittest.TestCase):
                     a = "A"
                     b = "B"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1978,7 +1978,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     z = "Z"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -1995,7 +1995,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2012,7 +2012,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = null
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2029,7 +2029,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = null
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value, {'.tag': 'a'})
@@ -2047,7 +2047,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     b = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
@@ -2069,7 +2069,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         v_dt = t.api.namespaces['test'].data_type_by_name['V']
         self.assertEqual(v_dt.get_examples()['default'].value,
@@ -2098,7 +2098,7 @@ class TestBabel(unittest.TestCase):
                 example other
                     f = "O"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
@@ -2122,7 +2122,7 @@ class TestBabel(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2143,7 +2143,7 @@ class TestBabel(unittest.TestCase):
                 a
                 b
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2174,7 +2174,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "F"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2193,7 +2193,7 @@ class TestBabel(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2214,7 +2214,7 @@ class TestBabel(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2234,7 +2234,7 @@ class TestBabel(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2251,7 +2251,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = false
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2271,7 +2271,7 @@ class TestBabel(unittest.TestCase):
                     And I guess it's kind of long."
                     a = "Hello, World."
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         example = s_dt.get_examples()['default']
@@ -2292,7 +2292,7 @@ class TestBabel(unittest.TestCase):
                     And I guess it's kind of long."
                     b = "Hi, World."
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         example = u_dt.get_examples()['default']
@@ -2313,7 +2313,7 @@ class TestBabel(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2340,7 +2340,7 @@ class TestBabel(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2367,7 +2367,7 @@ class TestBabel(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2395,7 +2395,7 @@ class TestBabel(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2426,7 +2426,7 @@ class TestBabel(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         r_dt = t.api.namespaces['test'].data_type_by_name['R']
         self.assertEqual(r_dt.get_examples()['default'].value,
@@ -2453,7 +2453,7 @@ class TestBabel(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2472,7 +2472,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     l = "a"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2489,7 +2489,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     l = ["a", "b", "c"]
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2507,7 +2507,7 @@ class TestBabel(unittest.TestCase):
                     l = ["a", "b", "c"]
                     l2 = null
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2523,7 +2523,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     l = ["a", null, "c"]
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2545,7 +2545,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2572,7 +2572,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2595,7 +2595,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2611,7 +2611,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     l = [["a", "b"], [], ["z"]]
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2627,7 +2627,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     l = [["a", "b"], [], ["z"]]
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2644,7 +2644,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = "hi"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2661,7 +2661,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = ["hello", "world"]
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2687,7 +2687,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         s_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(s_dt.get_examples()['default'].value,
@@ -2711,7 +2711,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
@@ -2727,7 +2727,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = [["hello", "world"]]
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
@@ -2743,7 +2743,7 @@ class TestBabel(unittest.TestCase):
                 example default
                     a = 42
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
@@ -2769,7 +2769,7 @@ class TestBabel(unittest.TestCase):
                 example special
                     a = 100
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
@@ -2795,7 +2795,7 @@ class TestBabel(unittest.TestCase):
                 example special
                     y = 100
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         t.parse()
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(
@@ -2813,11 +2813,11 @@ class TestBabel(unittest.TestCase):
             struct S
                 g String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
-            "Symbol 'S' already defined (test.babel:3).",
+            "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
@@ -2830,11 +2830,11 @@ class TestBabel(unittest.TestCase):
 
             route S (Void, Void, Void)
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
-            "Symbol 'S' already defined (test.babel:3).",
+            "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
@@ -2848,11 +2848,11 @@ class TestBabel(unittest.TestCase):
             union S
                 g String
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
-            "Symbol 'S' already defined (test.babel:3).",
+            "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
@@ -2865,11 +2865,11 @@ class TestBabel(unittest.TestCase):
 
             alias S = UInt64
             """)
-        t = TowerOfBabel([('test.babel', text)])
+        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
-            "Symbol 'S' already defined (test.babel:3).",
+            "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
@@ -2887,11 +2887,11 @@ class TestBabel(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfBabel([('test1.babel', text1), ('test2.babel', text2)])
+        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertEqual(
-            "Symbol 'S' already defined (test1.babel:3).",
+            "Symbol 'S' already defined (test1.stone:3).",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 4)
 
@@ -2916,7 +2916,7 @@ class TestBabel(unittest.TestCase):
                     f4 = "2015-05-12T15:50:38Z"
             route r1(ns1.S1, ns1.S2, S3)
             """)
-        t = TowerOfBabel([('ns1.babel', text1), ('ns2.babel', text2)])
+        t = TowerOfStone([('ns1.stone', text1), ('ns2.stone', text2)])
         t.parse()
         self.assertEqual(t.api.namespaces['ns2'].get_imported_namespaces(),
                          [t.api.namespaces['ns1']])
@@ -2949,7 +2949,7 @@ class TestBabel(unittest.TestCase):
             alias A = S2
             route r(S1, List(S4?)?, A)
             """)
-        t = TowerOfBabel([('ns1.babel', text)])
+        t = TowerOfStone([('ns1.stone', text)])
         t.parse()
         ns1 = t.api.namespaces['ns1']
 

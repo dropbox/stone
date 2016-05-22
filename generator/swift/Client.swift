@@ -6,7 +6,7 @@ public class Box<T> {
 	init (_ v : T) { self.unboxed = v }
 }
 
-public class BabelClient {
+public class StoneClient {
     var manager : Manager
     var backgroundManager : Manager
     var baseHosts : [String : String]
@@ -104,12 +104,12 @@ func asciiEscape(s: String) -> String {
 }
 
 
-/// Represents a Babel request
+/// Represents a Stone request
 ///
 /// These objects are constructed by the SDK; users of the SDK do not need to create them manually.
 ///
 /// Pass in a closure to the `response` method to handle a response or error.
-public class BabelRequest<RType : JSONSerializer, EType : JSONSerializer> {
+public class StoneRequest<RType : JSONSerializer, EType : JSONSerializer> {
     let errorSerializer : EType
     let responseSerializer : RType
     let request : Alamofire.Request
@@ -169,8 +169,8 @@ public class BabelRequest<RType : JSONSerializer, EType : JSONSerializer> {
 }
 
 /// An "rpc-style" request
-public class BabelRpcRequest<RType : JSONSerializer, EType : JSONSerializer> : BabelRequest<RType, EType> {
-    init(client: BabelClient, host: String, route: String, params: JSON, responseSerializer: RType, errorSerializer: EType) {
+public class StoneRpcRequest<RType : JSONSerializer, EType : JSONSerializer> : StoneRequest<RType, EType> {
+    init(client: StoneClient, host: String, route: String, params: JSON, responseSerializer: RType, errorSerializer: EType) {
         let url = "\(client.baseHosts[host]!)\(route)"
         var headers = ["Content-Type": "application/json"]
         let noauth = (host == "notify")
@@ -207,21 +207,21 @@ public class BabelRpcRequest<RType : JSONSerializer, EType : JSONSerializer> : B
     }
 }
 
-public enum BabelUploadBody {
+public enum StoneUploadBody {
     case Data(NSData)
     case File(NSURL)
     case Stream(NSInputStream)
 }
 
-public class BabelUploadRequest<RType : JSONSerializer, EType : JSONSerializer> : BabelRequest<RType, EType> {
+public class StoneUploadRequest<RType : JSONSerializer, EType : JSONSerializer> : StoneRequest<RType, EType> {
 
     init(
-        client: BabelClient,
+        client: StoneClient,
         host: String,
         route: String,
         params: JSON, 
         responseSerializer: RType, errorSerializer: EType,
-        body: BabelUploadBody) {
+        body: StoneUploadBody) {
             let url = "\(client.baseHosts[host]!)\(route)"
             var headers = [
                 "Content-Type": "application/octet-stream",
@@ -283,10 +283,10 @@ public class BabelUploadRequest<RType : JSONSerializer, EType : JSONSerializer> 
 
 }
 
-public class BabelDownloadRequest<RType : JSONSerializer, EType : JSONSerializer> : BabelRequest<RType, EType> {
+public class StoneDownloadRequest<RType : JSONSerializer, EType : JSONSerializer> : StoneRequest<RType, EType> {
     var urlPath : NSURL?
     var errorMessage : NSData
-    init(client: BabelClient, host: String, route: String, params: JSON, responseSerializer: RType, errorSerializer: EType, destination: (NSURL, NSHTTPURLResponse) -> NSURL, overwrite: Bool = false) {
+    init(client: StoneClient, host: String, route: String, params: JSON, responseSerializer: RType, errorSerializer: EType, destination: (NSURL, NSHTTPURLResponse) -> NSURL, overwrite: Bool = false) {
         let url = "\(client.baseHosts[host]!)\(route)"
         var headers = [String : String]()
         urlPath = nil
@@ -302,7 +302,7 @@ public class BabelDownloadRequest<RType : JSONSerializer, EType : JSONSerializer
             headers[header] = val
         }
 
-        weak var _self : BabelDownloadRequest<RType, EType>!
+        weak var _self : StoneDownloadRequest<RType, EType>!
         
         let dest : (NSURL, NSHTTPURLResponse) -> NSURL = { url, resp in
             var finalUrl = destination(url, resp)

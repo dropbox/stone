@@ -38,22 +38,22 @@ from ..data_type import (
 
 from .exception import InvalidSpec
 from .parser import (
-    BabelAlias,
-    BabelImport,
-    BabelNamespace,
-    BabelParser,
-    BabelRouteDef,
-    BabelStructDef,
-    BabelTagRef,
-    BabelTypeDef,
-    BabelTypeRef,
-    BabelUnionDef,
-    BabelVoidField,
+    StoneAlias,
+    StoneImport,
+    StoneNamespace,
+    StoneParser,
+    StoneRouteDef,
+    StoneStructDef,
+    StoneTagRef,
+    StoneTypeDef,
+    StoneTypeRef,
+    StoneUnionDef,
+    StoneVoidField,
 )
 
 def quote(s):
     assert s.replace('_', '').replace('.', '').replace('/', '').isalnum(), \
-        'Only use quote() with names or IDs in Babel.'
+        'Only use quote() with names or IDs in Stone.'
     return "'%s'" % s
 
 # Patterns for references in documentation
@@ -67,7 +67,7 @@ class Environment(dict):
     # of a specific namespace, a name should be set.
     namespace_name = None
 
-class TowerOfBabel(object):
+class TowerOfStone(object):
 
     data_types = [
         Bytes,
@@ -89,21 +89,21 @@ class TowerOfBabel(object):
 
     # FIXME: Version should not have a default.
     def __init__(self, specs, version='0.1b1', debug=False):
-        """Creates a new tower of babel.
+        """Creates a new tower of stone.
 
         :type specs: List[Tuple[path: str, text: str]]
         :param specs: `path` is never accessed and is only used to report the
             location of a bad spec to the user. `spec` is the text contents of
-            a spec (.babel) file.
+            a spec (.stone) file.
         """
 
         self._specs = specs
         self._debug = debug
-        self._logger = logging.getLogger('babelapi.idl')
+        self._logger = logging.getLogger('stone.idl')
 
         self.api = Api(version=version)
 
-        self.parser = BabelParser(debug=debug)
+        self.parser = StoneParser(debug=debug)
         # Map of namespace name (str) -> environment (dict)
         self._env_by_namespace = {}
         # Used to check for circular references.
@@ -142,7 +142,7 @@ class TowerOfBabel(object):
         return self.api
 
     def parse_spec(self, spec, path=None):
-        """Parses a single Babel file."""
+        """Parses a single Stone file."""
         if self._debug:
             self.parser.test_lexing(spec)
 
@@ -154,20 +154,20 @@ class TowerOfBabel(object):
         one namespace is declared.
 
         Args:
-            desc (List[babelapi.babel.parser._Element]): All tokens in a spec
+            desc (List[stone.stone.parser._Element]): All tokens in a spec
                 file in the order they were defined.
 
         Return:
-            babelapi.babel.parser.BabelNamespace: The namespace token.
+            stone.stone.parser.StoneNamespace: The namespace token.
         """
-        if len(desc) == 0 or not isinstance(desc[0], BabelNamespace):
+        if len(desc) == 0 or not isinstance(desc[0], StoneNamespace):
             if self._debug:
                 self._logger.info('Description: %r' % desc)
-            raise InvalidSpec('First declaration in a babel must be '
+            raise InvalidSpec('First declaration in a stone must be '
                               'a namespace. Possibly caused by preceding '
                               'errors.', desc[0].lineno, desc[0].path)
         for item in desc[1:]:
-            if isinstance(item, BabelNamespace):
+            if isinstance(item, StoneNamespace):
                 raise InvalidSpec('Only one namespace declaration per file.',
                                   item[0].lineno, item[0].path)
         return desc.pop(0)
@@ -178,8 +178,8 @@ class TowerOfBabel(object):
         user-defined type (struct, union, route, and alias).
 
         Args:
-            namespace (babelapi.api.Namespace): Namespace for definitions.
-            desc (List[babelapi.babel.parser._Element]): All tokens in a spec
+            namespace (stone.api.Namespace): Namespace for definitions.
+            desc (List[stone.stone.parser._Element]): All tokens in a spec
                 file in the order they were defined. Should not include a
                 namespace declaration.
         """
@@ -187,20 +187,20 @@ class TowerOfBabel(object):
         env = self._get_or_create_env(namespace.name)
 
         for item in desc:
-            if isinstance(item, BabelTypeDef):
+            if isinstance(item, StoneTypeDef):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
-            elif isinstance(item, BabelRouteDef):
+            elif isinstance(item, StoneRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
-            elif isinstance(item, BabelImport):
+            elif isinstance(item, StoneImport):
                 # Handle imports later.
                 pass
-            elif isinstance(item, BabelAlias):
+            elif isinstance(item, StoneAlias):
                 alias = self._create_alias(env, item)
                 namespace.add_alias(alias)
             else:
-                raise AssertionError('Unknown Babel Declaration Type %r' %
+                raise AssertionError('Unknown Stone Declaration Type %r' %
                                      item.__class__.__name__)
 
     def _add_imports_to_env(self, raw_api):
@@ -210,12 +210,12 @@ class TowerOfBabel(object):
         environment.
 
         Args:
-            raw_api (Tuple[Namespace, List[babelapi.babel.parser._Element]]):
+            raw_api (Tuple[Namespace, List[stone.stone.parser._Element]]):
                 Namespace paired with raw parser output.
         """
         for namespace, desc in raw_api:
             for item in desc:
-                if isinstance(item, BabelImport):
+                if isinstance(item, StoneImport):
                     if namespace.name == item.target:
                         raise InvalidSpec('Cannot import current namespace.',
                                           item.lineno, item.path)
@@ -263,14 +263,14 @@ class TowerOfBabel(object):
                 (quote(item.name), existing_dt._token.path,
                  existing_dt._token.lineno), item.lineno, item.path)
         namespace = self.api.ensure_namespace(env.namespace_name)
-        if isinstance(item, BabelStructDef):
+        if isinstance(item, StoneStructDef):
             try:
                 api_type = Struct(name=item.name, namespace=namespace, token=item)
             except ParameterError as e:
                 raise InvalidSpec(
                     'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
                     item.lineno, item.path)
-        elif isinstance(item, BabelUnionDef):
+        elif isinstance(item, StoneUnionDef):
             api_type = Union(name=item.name, namespace=namespace, token=item)
         else:
             raise AssertionError('Unknown type definition %r' % type(item))
@@ -344,8 +344,8 @@ class TowerOfBabel(object):
                     '%s is not a struct.' % quote(parent_type.name),
                     data_type._token.lineno, data_type._token.path)
         api_type_fields = []
-        for babel_field in data_type._token.fields:
-            api_type_field = self._create_struct_field(env, babel_field)
+        for stone_field in data_type._token.fields:
+            api_type_field = self._create_struct_field(env, stone_field)
             api_type_fields.append(api_type_field)
         data_type.set_attributes(
             data_type._token.doc, api_type_fields, parent_type)
@@ -376,13 +376,13 @@ class TowerOfBabel(object):
                     data_type._token.lineno, data_type._token.path)
         api_type_fields = []
         catch_all_field = None
-        for babel_field in data_type._token.fields:
-            api_type_field = self._create_union_field(env, babel_field)
-            if (isinstance(babel_field, BabelVoidField) and
-                    babel_field.catch_all):
+        for stone_field in data_type._token.fields:
+            api_type_field = self._create_union_field(env, stone_field)
+            if (isinstance(stone_field, StoneVoidField) and
+                    stone_field.catch_all):
                 if catch_all_field is not None:
                     raise InvalidSpec('Only one catch-all tag per Union.',
-                                      babel_field.lineno)
+                                      stone_field.lineno)
 
                 # Verify that no subtype already has a catch-all tag.
                 # Do this here so that we still have access to line nums.
@@ -392,7 +392,7 @@ class TowerOfBabel(object):
                         raise InvalidSpec(
                             'Subtype %s already declared a catch-all tag.' %
                             quote(cur_subtype.name),
-                            babel_field.lineno, babel_field.path)
+                            stone_field.lineno, stone_field.path)
                     cur_subtype = cur_subtype.parent_type
 
                 catch_all_field = api_type_field
@@ -416,7 +416,7 @@ class TowerOfBabel(object):
                     if not field._token.has_default:
                         continue
 
-                    if isinstance(field._token.default, BabelTagRef):
+                    if isinstance(field._token.default, StoneTagRef):
                         if field._token.default.union_name is not None:
                             raise InvalidSpec(
                                 'Field %s has a qualified default which is '
@@ -467,8 +467,8 @@ class TowerOfBabel(object):
 
         new_attrs = {}
         for k, v in route._token.attrs.items():
-            if isinstance(v, BabelTagRef):
-                type_ref = BabelTypeRef(
+            if isinstance(v, StoneTagRef):
+                type_ref = StoneTypeRef(
                     v.path, v.lineno, v.lexpos, v.union_name, args=((), {}),
                     nullable=False, ns=v.ns)
                 data_type = self._resolve_type(env, type_ref, True)
@@ -497,70 +497,70 @@ class TowerOfBabel(object):
             error_data_type=error_dt,
             attrs=new_attrs)
 
-    def _create_struct_field(self, env, babel_field):
+    def _create_struct_field(self, env, stone_field):
         """
         This function resolves symbols to objects that we've instantiated in
         the current environment. For example, a field with data type named
         "String" is pointed to a String() object.
 
-        The caller needs to ensure that this babel_field is for a Struct and not
+        The caller needs to ensure that this stone_field is for a Struct and not
         for a Union.
 
         Returns:
-            babelapi.data_type.StructField: A field of a struct.
+            stone.data_type.StructField: A field of a struct.
         """
-        if isinstance(babel_field, BabelVoidField):
+        if isinstance(stone_field, StoneVoidField):
             raise InvalidSpec(
                 'Struct field %s cannot have a Void type.' %
-                quote(babel_field.name),
-                babel_field.lineno, babel_field.path)
+                quote(stone_field.name),
+                stone_field.lineno, stone_field.path)
 
-        data_type = self._resolve_type(env, babel_field.type_ref)
+        data_type = self._resolve_type(env, stone_field.type_ref)
         if isinstance(data_type, Void):
             raise InvalidSpec(
                 'Struct field %s cannot have a Void type.' %
-                quote(babel_field.name),
-                babel_field.lineno, babel_field.path)
-        elif isinstance(data_type, Nullable) and babel_field.has_default:
+                quote(stone_field.name),
+                stone_field.lineno, stone_field.path)
+        elif isinstance(data_type, Nullable) and stone_field.has_default:
             raise InvalidSpec('Field %s cannot be a nullable '
                               'type and have a default specified.' %
-                              quote(babel_field.name),
-                              babel_field.lineno, babel_field.path)
+                              quote(stone_field.name),
+                              stone_field.lineno, stone_field.path)
         api_type_field = StructField(
-            name=babel_field.name,
+            name=stone_field.name,
             data_type=data_type,
-            doc=babel_field.doc,
-            token=babel_field,
-            deprecated=babel_field.deprecated,
+            doc=stone_field.doc,
+            token=stone_field,
+            deprecated=stone_field.deprecated,
         )
         return api_type_field
 
-    def _create_union_field(self, env, babel_field):
+    def _create_union_field(self, env, stone_field):
         """
         This function resolves symbols to objects that we've instantiated in
         the current environment. For example, a field with data type named
         "String" is pointed to a String() object.
 
-        The caller needs to ensure that this babel_field is for a Union and not
+        The caller needs to ensure that this stone_field is for a Union and not
         for a Struct.
 
         Returns:
-            babelapi.data_type.UnionField: A field of a union.
+            stone.data_type.UnionField: A field of a union.
         """
-        if isinstance(babel_field, BabelVoidField):
+        if isinstance(stone_field, StoneVoidField):
             api_type_field = UnionField(
-                name=babel_field.name, data_type=Void(), doc=babel_field.doc,
-                token=babel_field, catch_all=babel_field.catch_all)
+                name=stone_field.name, data_type=Void(), doc=stone_field.doc,
+                token=stone_field, catch_all=stone_field.catch_all)
         else:
-            data_type = self._resolve_type(env, babel_field.type_ref)
+            data_type = self._resolve_type(env, stone_field.type_ref)
             if isinstance(data_type, Void):
                 raise InvalidSpec('Union member %s cannot have Void '
                                   'type explicit, omit Void instead.' %
-                                  quote(babel_field.name),
-                                  babel_field.lineno, babel_field.path)
+                                  quote(stone_field.name),
+                                  stone_field.lineno, stone_field.path)
             api_type_field = UnionField(
-                name=babel_field.name, data_type=data_type,
-                doc=babel_field.doc, token=babel_field)
+                name=stone_field.name, data_type=data_type,
+                doc=stone_field.doc, token=stone_field)
         return api_type_field
 
     def _instantiate_data_type(self, data_type_class, data_type_args, loc):
@@ -575,10 +575,10 @@ class TowerOfBabel(object):
                 as keyword arguments.
 
         Returns:
-            babelapi.data_type.DataType: A parameterized instance.
+            stone.data_type.DataType: A parameterized instance.
         """
         assert issubclass(data_type_class, DataType), \
-            'Expected babelapi.data_type.DataType, got %r' % data_type_class
+            'Expected stone.data_type.DataType, got %r' % data_type_class
 
         argspec = inspect.getargspec(data_type_class.__init__)
         argspec.args.remove('self')
@@ -720,7 +720,7 @@ class TowerOfBabel(object):
         pos_args, kw_args = args
 
         def check_value(v):
-            if isinstance(v, BabelTypeRef):
+            if isinstance(v, StoneTypeRef):
                 return self._resolve_type(env, v)
             else:
                 return v
@@ -736,10 +736,10 @@ class TowerOfBabel(object):
         Args:
             env (dict): The environment of defined symbols. A new key is added
                 corresponding to the name of this new route.
-            item (BabelRouteDef): Raw route definition from the parser.
+            item (StoneRouteDef): Raw route definition from the parser.
 
         Returns:
-            babelapi.api.ApiRoute: A fully-defined route.
+            stone.api.ApiRoute: A fully-defined route.
         """
         if item.name in env:
             existing_dt = env[item.name]
@@ -870,7 +870,7 @@ class TowerOfBabel(object):
             env (dict): The environment of defined symbols.
             doc (str): The docstring to validate.
             lineno (int): The line number the docstring begins on in the spec.
-            type_context (babelapi.data_type.UserDefined): If the docstring
+            type_context (stone.data_type.UserDefined): If the docstring
                 belongs to a user-defined type (Struct or Union) or one of its
                 fields, set this to the type. This is needed for "field" doc
                 refs that don't name a type to be validated.

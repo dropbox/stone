@@ -5,7 +5,7 @@ Using Generated Code
 Using a generator, you can convert the structs, unions, and routes in your spec
 into objects in your programming language of choice.
 
-Currently, the only generator included with Babel is for `Python
+Currently, the only generator included with Stone is for `Python
 <#python-guide>`_. We intend to create generators for an assortment of
 languages including:
 
@@ -21,18 +21,18 @@ If you're looking to make your own generator, see
 Compile with the CLI
 ====================
 
-Compiling a spec and generating code is done using the ``babelapi``
+Compiling a spec and generating code is done using the ``stone``
 command-line interface (CLI)::
 
-    $ babelapi -h
-    usage: babelapi [-h] [-v] generator spec [spec ...] output
+    $ stone -h
+    usage: stone [-h] [-v] generator spec [spec ...] output
 
-    BabelAPI
+    Stone
 
     positional arguments:
-      generator      Specify the path to a generator. It must have a .babelg.py
+      generator      Specify the path to a generator. It must have a .stoneg.py
                      extension.
-      spec           Path to API specifications. Each must have a .babel
+      spec           Path to API specifications. Each must have a .stone
                      extension.
       output         The folder to save generated files to.
 
@@ -40,21 +40,15 @@ command-line interface (CLI)::
       -h, --help     show this help message and exit
       -v, --verbose  Print debugging statements.
 
-We'll compile the ``users.babel`` example from the
+We'll compile the ``users.stone`` example from the
 `Language Reference <lang_ref.rst>`_. The first argument is the path to the
-Python generator which can be found in the ``babelapi`` folder::
+Python generator which can be found in the ``stone`` folder::
 
-    $ babelapi generator/python/python.babelg.py users.babel .
-    INFO:babelapi.idl:Parsing spec users.babel
-    INFO:babelapi.compiler:Found generator at ...
-    INFO:babelapi.compiler:Running generator ...
-    INFO:bablesdk.generator.PythonGenerator:Copying babel_validators.py to output folder
-    INFO:bablesdk.generator.PythonGenerator:Copying babel_serializers.py to output folder
-    INFO:bablesdk.generator.PythonGenerator:Generating ./users.py
+    $ stone generator/python/python.stoneg.py users.stone .
 
-The first argument selects the included Python code generator. ``users.babel``
+The first argument selects the included Python code generator. ``users.stone``
 is the spec file to compile. If we had another spec file, we could list it
-right after ``users.babel``. The ``.`` says to save the output of the code
+right after ``users.stone``. The ``.`` says to save the output of the code
 generator to the current directory.
 
 Python Guide
@@ -65,17 +59,17 @@ with the Python classes that have been generated from a spec.
 
 From the above section, you can generate Python using::
 
-    $ babelapi generator/python/python.babelg.py users.babel .
+    $ stone generator/python/python.stoneg.py users.stone .
 
-This runs the Python generator on the ``users.babel`` spec. Its output
+This runs the Python generator on the ``users.stone`` spec. Its output
 target is ``.``, which is the current directory. A Python module is created for
 each declared namespace, so in this case only ``users.py`` is created.
 
 Two additional modules are copied into the target directory. The first,
-``babel_validators.py``, contains classes for validating Python values against
-their expected Babel types. You will not need to explicitly import this module,
+``stone_validators.py``, contains classes for validating Python values against
+their expected Stone types. You will not need to explicitly import this module,
 but the auto-generated Python modules depend on it. The second,
-``babel_serializers.py``, contains a ``json_encode()`` and ``json_decode()``
+``stone_serializers.py``, contains a ``json_encode()`` and ``json_decode()``
 function. You will need to import this module to serialize your objects.
 
 In the following sections, we'll interact with the classes generated in
@@ -90,7 +84,7 @@ Python package, and use Python's import facility.
 Primitive Types
 ---------------
 
-The following table shows the mapping between a Babel `primitive type
+The following table shows the mapping between a Stone `primitive type
 <lang_ref.rst#primitive-types>`_ and its corresponding type in Python.
 
 ========================== ============== =====================================
@@ -127,7 +121,7 @@ If you assign a value that fails validation, an exception is raised::
       File "users.py", line 149, in email
         val = self.__email_data_type.validate(val)
       ...
-    babel_data_types.ValidationError: '10' expected to be a string, got integer
+    stone_data_types.ValidationError: '10' expected to be a string, got integer
 
     >>> b.email = 'bob'
     Traceback (most recent call last):
@@ -135,9 +129,9 @@ If you assign a value that fails validation, an exception is raised::
       File "users.py", line 149, in email
         val = self.__email_data_type.validate(val)
         ...
-    babel_data_types.ValidationError: 'bob' did not match pattern '^[^@]+@[^@]+.[^@]+$'
+    stone_data_types.ValidationError: 'bob' did not match pattern '^[^@]+@[^@]+.[^@]+$'
 
-Inheritance in Babel also shows up as inheritance in Python::
+Inheritance in Stone also shows up as inheritance in Python::
 
     >>> issubclass(Account, BasicAccount)
     True
@@ -187,7 +181,7 @@ The value is also validated on creation::
       File "users.py", line 121, in inactive
         return cls('inactive', val)
       ...
-    babel_data_types.ValidationError: expected timestamp, got string
+    stone_data_types.ValidationError: expected timestamp, got string
 
 To write code that handles all the tags of a union, use the ``is_[tag]()``
 methods. We recommend you exhaustively check all tags, or include an else

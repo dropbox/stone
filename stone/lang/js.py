@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import json
 
-from babelapi.lang.lang import TargetLanguage
-from babelapi.data_type import (
+from stone.lang.lang import TargetLanguage
+from stone.data_type import (
     Boolean,
     Bytes,
     Float32,

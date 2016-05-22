@@ -6,7 +6,7 @@ To illustrate how to write a spec, we're going to dissect a spec that defines
 a hypothetical route that shows up in some form or another in most APIs for
 web services: querying the account information for a user.
 
-The spec should live in a file called ``users.babel``::
+The spec should live in a file called ``users.stone``::
 
     # We put this in the "users" namespace in anticipation that
     # there would be many user-account-related routes.
@@ -64,7 +64,7 @@ The spec should live in a file called ``users.babel``::
 Choosing a Filename
 ===================
 
-All specifications must have a ``.babel`` extension. We recommend that the
+All specifications must have a ``.stone`` extension. We recommend that the
 name of the file be the same as the `namespace <#ns>`_ defined in the spec.
 
 Comments
@@ -164,7 +164,7 @@ Here are some more examples::
 Mapping to a Target Language
 ----------------------------
 
-Code generators map the primitive types of Babel to types in a target language.
+Code generators map the primitive types of Stone to types in a target language.
 For more information, consult the appropriate guide in `Using Generated Code
 <using_generator.rst>`_.
 
@@ -407,7 +407,7 @@ Lists can be expressed with bracket notation::
 Union
 =====
 
-A union in Babel is a
+A union in Stone is a
 `tagged union <http://en.wikipedia.org/wiki/Tagged_union>`_. Think of it as a
 type that can store one of several different possibilities at a time. Each
 possibility has an identifier that is called a "tag". In our example, the union
@@ -642,7 +642,7 @@ You can refer to types and aliases in other namespaces by using the ``import``
 directive.
 
 For example, we can move the definition of ``AccountId`` and ``BasicAccount``
-into a file called ``common.babel``::
+into a file called ``common.stone``::
 
     namespace common
 
@@ -658,7 +658,7 @@ into a file called ``common.babel``::
         email String(pattern="^[^@]+@[^@]+\.[^@]+$")
             "The e-mail address of the user."
 
-Now in ``users.babel``, we add an ``import`` statement under the namespace
+Now in ``users.stone``, we add an ``import`` statement under the namespace
 directive as follows::
 
     namespace users
@@ -712,7 +712,7 @@ field
     value.
 link
     A hyperlink. The format of the value is ``<title...> <uri>``, e.g.
-    ``Babel Repo https://github.com/dropbox/babelapi``. Everything after the
+    ``Stone Repo https://github.com/dropbox/stone``. Everything after the
     last space is considered the URI. The rest is treated as the title. For
     this reason, you should ensure that your URIs are
     `percent encoded <http://en.wikipedia.org/wiki/Percent-encoding>`_.

@@ -18,22 +18,22 @@ install_reqs = ['ply>=3.4',
                 'six>=1.3.0']
 
 dist = setup(
-    name='babelapi',
+    name='stone',
     version='0.1',
-    description='BabelAPI',
+    description='Stone is an interface description language (IDL) for APIs.',
     author='Dropbox',
     author_email='dev-platform@dropbox.com',
     url='http://www.dropbox.com/developers',
     install_requires=install_reqs,
     license='LICENSE',
     zip_safe=False,
-    packages=['babelapi',
-              'babelapi.babel',
-              'babelapi.lang'],
+    packages=['stone',
+              'stone.stone',
+              'stone.lang'],
     long_description=open('README.rst').read(),
     platforms=['CPython 2.6', 'CPython 2.7'],
     entry_points={
-        'console_scripts': ['babelapi=babelapi.cli:main'],
+        'console_scripts': ['stone=stone.cli:main'],
     },
     classifiers=[
         'Development Status :: 3 - Alpha',

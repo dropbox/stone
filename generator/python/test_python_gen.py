@@ -10,9 +10,9 @@ import subprocess
 import sys
 import unittest
 
-import babel_validators as bv
+import stone_validators as bv
 
-from babel_serializers import (
+from stone_serializers import (
     json_compat_obj_encode,
     json_compat_obj_decode,
     json_encode,
@@ -22,7 +22,7 @@ from babel_serializers import (
 
 class TestDropInModules(unittest.TestCase):
     """
-    Tests the babel_serializers and babel_validators modules.
+    Tests the stone_serializers and stone_validators modules.
     """
 
     def mk_validator_testers(self, validator):
@@ -643,15 +643,15 @@ class TestGeneratedPython(unittest.TestCase):
 
     def setUp(self):
 
-        # Sanity check: babelapi must be importable for the compiler to work
-        __import__('babelapi')
+        # Sanity check: stone must be importable for the compiler to work
+        __import__('stone')
 
-        # Compile spec by calling out to babelapi
+        # Compile spec by calling out to stone
         p = subprocess.Popen(
             [sys.executable,
              '-m',
-             'babelapi.cli',
-             'python.babelg.py',
+             'stone.cli',
+             'python.stoneg.py',
              'output',
              '-'],
             stdin=subprocess.PIPE,
@@ -659,7 +659,7 @@ class TestGeneratedPython(unittest.TestCase):
         _, stderr = p.communicate(
             input=(test_spec + test_ns2_spec).encode('utf-8'))
         if p.wait() != 0:
-            raise AssertionError('Could not execute babelapi tool: %s' %
+            raise AssertionError('Could not execute stone tool: %s' %
                                  stderr.decode('utf-8'))
 
         # Load ns2 first since ns depends on it.
@@ -1135,7 +1135,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertRaises(AssertionError, s.get_default)
 
     def tearDown(self):
-        # Clear output of babelapi tool after all tests.
+        # Clear output of stone tool after all tests.
         shutil.rmtree('output')
 
     def test_msgpack(self):
@@ -1144,7 +1144,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # If the machine doesn't have msgpack, don't worry about these tests.
         try:
-            from babel_serializers import (
+            from stone_serializers import (
                 msgpack_encode,
                 msgpack_decode,
             )

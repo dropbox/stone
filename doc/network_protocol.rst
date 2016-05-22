@@ -2,9 +2,9 @@
 Network Protocol
 ****************
 
-While Babel does not standardize the network protocol used to send messages
+While Stone does not standardize the network protocol used to send messages
 between hosts, we do anticipate that HTTP will be a popular medium. This
-document describes how serialized Babel objects can be transmitted using
+document describes how serialized Stone objects can be transmitted using
 HTTP based on experiences from implementing the Dropbox v2 API.
 
 Remote Procedure Calls
@@ -15,7 +15,7 @@ non-browser clients. Clients tend to be one of the several SDKs that Dropbox
 maintains for popular programming languages.
 
 Because of this, it was convenient to use the body of the HTTP request and
-response to store JSON-serialized Babel objects. Both requests and responses
+response to store JSON-serialized Stone objects. Both requests and responses
 set the ``Content-Type`` header to ``application/json``.
 
 Based on the ``get_account`` route defined in the running example in the `Language

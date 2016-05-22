@@ -6,7 +6,7 @@ import os
 import shutil
 import traceback
 
-from babelapi.generator import (
+from stone.generator import (
     Generator,
     remove_aliases_from_api,
 )
@@ -30,7 +30,7 @@ class Compiler(object):
     API specification.
     """
 
-    generator_extension = '.babelg'
+    generator_extension = '.stoneg'
 
     def __init__(self,
                  api,
@@ -41,10 +41,10 @@ class Compiler(object):
         """
         Creates a Compiler.
 
-        :param babelapi.api.Api api: A Babel description of the API.
+        :param stone.api.Api api: A Stone description of the API.
         :param generator_module: Python module that contains at least one
             top-level class definition that descends from a
-            :class:`babelapi.generator.Generator`.
+            :class:`stone.generator.Generator`.
         :param list(str) generator_args: A list of command-line arguments to
             pass to the generator.
         :param str build_path: Location to save compiled sources to. If None,
@@ -52,7 +52,7 @@ class Compiler(object):
         :param bool clean_build: If True, the build_path is removed before
             source files are compiled into them.
         """
-        self._logger = logging.getLogger('babelapi.compiler')
+        self._logger = logging.getLogger('stone.compiler')
 
         self.api = api
         self.generator_module = generator_module
@@ -87,10 +87,10 @@ class Compiler(object):
                 raise
 
     @classmethod
-    def is_babel_generator(cls, path):
+    def is_stone_generator(cls, path):
         """
-        Returns True if the file name matches the format of a babel generator,
-        ie. its inner extension of "babelg". For example: xyz.babelg.py
+        Returns True if the file name matches the format of a stone generator,
+        ie. its inner extension of "stoneg". For example: xyz.stoneg.py
         """
         path_without_ext, first_ext = os.path.splitext(path)
         _, second_ext = os.path.splitext(path_without_ext)
@@ -119,7 +119,7 @@ class Compiler(object):
                     generator.generate(api)
                 except:
                     # Wrap this exception so that it isn't thought of as a bug
-                    # in the babel parser, but rather a bug in the generator.
+                    # in the stone parser, but rather a bug in the generator.
                     # Remove the last char of the traceback b/c it's a newline.
                     raise GeneratorException(attr_value.__name__,
                                              traceback.format_exc()[:-1])

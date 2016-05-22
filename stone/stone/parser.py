@@ -6,7 +6,7 @@ import six
 
 import ply.yacc as yacc
 
-from babelapi.babel.lexer import BabelLexer, BabelNull
+from stone.stone.lexer import StoneLexer, StoneNull
 
 class _Element(object):
 
@@ -22,7 +22,7 @@ class _Element(object):
         self.lineno = lineno
         self.lexpos = lexpos
 
-class BabelNamespace(_Element):
+class StoneNamespace(_Element):
 
     def __init__(self, path, lineno, lexpos, name, doc):
         """
@@ -30,7 +30,7 @@ class BabelNamespace(_Element):
             name (str): The namespace of the spec.
             doc (Optional[str]): The docstring for this namespace.
         """
-        super(BabelNamespace, self).__init__(path, lineno, lexpos)
+        super(StoneNamespace, self).__init__(path, lineno, lexpos)
         self.name = name
         self.doc = doc
 
@@ -38,42 +38,42 @@ class BabelNamespace(_Element):
         return self.__repr__()
 
     def __repr__(self):
-        return 'BabelNamespace({!r})'.format(self.name)
+        return 'StoneNamespace({!r})'.format(self.name)
 
-class BabelImport(_Element):
+class StoneImport(_Element):
 
     def __init__(self, path, lineno, lexpos, target):
         """
         Args:
             target (str): The name of the namespace to import.
         """
-        super(BabelImport, self).__init__(path, lineno, lexpos)
+        super(StoneImport, self).__init__(path, lineno, lexpos)
         self.target = target
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return 'BabelImport({!r})'.format(self.target)
+        return 'StoneImport({!r})'.format(self.target)
 
-class BabelAlias(_Element):
+class StoneAlias(_Element):
 
     def __init__(self, path, lineno, lexpos, name, type_ref, doc):
         """
         Args:
             name (str): The name of the alias.
-            type_ref (BabelTypeRef): The data type of the field.
+            type_ref (StoneTypeRef): The data type of the field.
             doc (Optional[str]): Documentation string for the alias.
         """
-        super(BabelAlias, self).__init__(path, lineno, lexpos)
+        super(StoneAlias, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
         self.doc = doc
 
     def __repr__(self):
-        return 'BabelAlias({!r}, {!r})'.format(self.name, self.type_ref)
+        return 'StoneAlias({!r}, {!r})'.format(self.name, self.type_ref)
 
-class BabelTypeDef(_Element):
+class StoneTypeDef(_Element):
 
     def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
                  examples):
@@ -82,16 +82,16 @@ class BabelTypeDef(_Element):
             name (str): Name assigned to the type.
             extends (Optional[str]); Name of the type this inherits from.
             doc (Optional[str]): Docstring for the type.
-            fields (List[BabelField]): Fields of a type, not including
+            fields (List[StoneField]): Fields of a type, not including
                 inherited ones.
-            examples (Optional[OrderedDict[str, BabelExample]]): Map from label
+            examples (Optional[OrderedDict[str, StoneExample]]): Map from label
                 to example.
         """
-        super(BabelTypeDef, self).__init__(path, lineno, lexpos)
+        super(StoneTypeDef, self).__init__(path, lineno, lexpos)
 
         assert isinstance(name, six.text_type), type(name)
         self.name = name
-        assert isinstance(extends, (BabelTypeRef, type(None))), type(extends)
+        assert isinstance(extends, (StoneTypeRef, type(None))), type(extends)
         self.extends = extends
         assert isinstance(doc, (six.text_type, type(None)))
         self.doc = doc
@@ -104,47 +104,47 @@ class BabelTypeDef(_Element):
         return self.__repr__()
 
     def __repr__(self):
-        return 'BabelTypeDef({!r}, {!r}, {!r})'.format(
+        return 'StoneTypeDef({!r}, {!r}, {!r})'.format(
             self.name,
             self.extends,
             self.fields,
         )
 
-class BabelStructDef(BabelTypeDef):
+class StoneStructDef(StoneTypeDef):
 
     def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
                  examples, subtypes=None):
         """
         Args:
-            subtypes (Tuple[List[BabelSubtypeField], bool]): Inner list
+            subtypes (Tuple[List[StoneSubtypeField], bool]): Inner list
                 enumerates subtypes. The bool indicates whether this struct
                 is a catch-all.
 
-        See BabelTypeDef for other constructor args.
+        See StoneTypeDef for other constructor args.
         """
 
-        super(BabelStructDef, self).__init__(
+        super(StoneStructDef, self).__init__(
             path, lineno, lexpos, name, extends, doc, fields, examples)
         assert isinstance(subtypes, (tuple, type(None))), type(subtypes)
         self.subtypes = subtypes
 
     def __repr__(self):
-        return 'BabelStructDef({!r}, {!r}, {!r})'.format(
+        return 'StoneStructDef({!r}, {!r}, {!r})'.format(
             self.name,
             self.extends,
             self.fields,
         )
 
-class BabelUnionDef(BabelTypeDef):
+class StoneUnionDef(StoneTypeDef):
 
     def __repr__(self):
-        return 'BabelUnionDef({!r}, {!r}, {!r})'.format(
+        return 'StoneUnionDef({!r}, {!r}, {!r})'.format(
             self.name,
             self.extends,
             self.fields,
         )
 
-class BabelTypeRef(_Element):
+class StoneTypeRef(_Element):
 
     def __init__(self, path, lineno, lexpos, name, args, nullable, ns):
         """
@@ -155,21 +155,21 @@ class BabelTypeRef(_Element):
             ns (Optional[str]): Namespace that referred type is a member of.
                 If none, then refers to the current namespace.
         """
-        super(BabelTypeRef, self).__init__(path, lineno, lexpos)
+        super(StoneTypeRef, self).__init__(path, lineno, lexpos)
         self.name = name
         self.args = args
         self.nullable = nullable
         self.ns = ns
 
     def __repr__(self):
-        return 'BabelTypeRef({!r}, {!r}, {!r}, {!r})'.format(
+        return 'StoneTypeRef({!r}, {!r}, {!r}, {!r})'.format(
             self.name,
             self.args,
             self.nullable,
             self.ns,
         )
 
-class BabelTagRef(_Element):
+class StoneTagRef(_Element):
 
     def __init__(self, path, lineno, lexpos, tag, union_name=None, ns=None):
         """
@@ -180,19 +180,19 @@ class BabelTagRef(_Element):
             ns (Optional[str]): Namespace that referred type is a member of.
                 If none, then refers to the current namespace.
         """
-        super(BabelTagRef, self).__init__(path, lineno, lexpos)
+        super(StoneTagRef, self).__init__(path, lineno, lexpos)
         self.tag = tag
         self.union_name = union_name
         self.ns = ns
 
     def __repr__(self):
-        return 'BabelTagRef({!r}, {!r}, {!r})'.format(
+        return 'StoneTagRef({!r}, {!r}, {!r})'.format(
             self.tag,
             self.union_name,
             self.ns,
         )
 
-class BabelField(_Element):
+class StoneField(_Element):
     """
     Represents both a field of a struct and a field of a union.
     TODO(kelkabany): Split this into two different classes.
@@ -202,10 +202,10 @@ class BabelField(_Element):
         """
         Args:
             name (str): The name of the field.
-            type_ref (BabelTypeRef): The data type of the field.
+            type_ref (StoneTypeRef): The data type of the field.
             deprecated (bool): Whether the field is deprecated.
         """
-        super(BabelField, self).__init__(path, lineno, lexpos)
+        super(StoneField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
         self.doc = None
@@ -221,15 +221,15 @@ class BabelField(_Element):
         self.default = default
 
     def __repr__(self):
-        return 'BabelField({!r}, {!r})'.format(
+        return 'StoneField({!r}, {!r})'.format(
             self.name,
             self.type_ref,
         )
 
-class BabelVoidField(_Element):
+class StoneVoidField(_Element):
 
     def __init__(self, path, lineno, lexpos, name, catch_all):
-        super(BabelVoidField, self).__init__(path, lineno, lexpos)
+        super(StoneVoidField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.catch_all = catch_all
         self.doc = None
@@ -238,29 +238,29 @@ class BabelVoidField(_Element):
     def __str__(self):
         return self.__repr__()
     def __repr__(self):
-        return 'BabelVoidField({!r}, {!r})'.format(
+        return 'StoneVoidField({!r}, {!r})'.format(
             self.name,
             self.catch_all,
         )
 
-class BabelSubtypeField(_Element):
+class StoneSubtypeField(_Element):
 
     def __init__(self, path, lineno, lexpos, name, type_ref):
-        super(BabelSubtypeField, self).__init__(path, lineno, lexpos)
+        super(StoneSubtypeField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
 
     def __repr__(self):
-        return 'BabelSubtypeField({!r}, {!r})'.format(
+        return 'StoneSubtypeField({!r}, {!r})'.format(
             self.name,
             self.type_ref,
         )
 
-class BabelRouteDef(_Element):
+class StoneRouteDef(_Element):
 
     def __init__(self, path, lineno, lexpos, name, deprecated,
                  arg_type_ref, result_type_ref, error_type_ref=None):
-        super(BabelRouteDef, self).__init__(path, lineno, lexpos)
+        super(StoneRouteDef, self).__init__(path, lineno, lexpos)
         self.name = name
         self.deprecated = deprecated
         self.arg_type_ref = arg_type_ref
@@ -275,44 +275,44 @@ class BabelRouteDef(_Element):
     def set_attrs(self, attrs):
         self.attrs = attrs
 
-class BabelExample(_Element):
+class StoneExample(_Element):
 
     def __init__(self, path, lineno, lexpos, label, text, fields):
-        super(BabelExample, self).__init__(path, lineno, lexpos)
+        super(StoneExample, self).__init__(path, lineno, lexpos)
         self.label = label
         self.text = text
         self.fields = fields
 
     def __repr__(self):
-        return 'BabelExample({!r}, {!r}, {!r})'.format(
+        return 'StoneExample({!r}, {!r}, {!r})'.format(
             self.label,
             self.text,
             self.fields,
         )
 
-class BabelExampleField(_Element):
+class StoneExampleField(_Element):
 
     def __init__(self, path, lineno, lexpos, name, value):
-        super(BabelExampleField, self).__init__(path, lineno, lexpos)
+        super(StoneExampleField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.value = value
 
     def __repr__(self):
-        return 'BabelExampleField({!r}, {!r})'.format(
+        return 'StoneExampleField({!r}, {!r})'.format(
             self.name,
             self.value,
         )
 
-class BabelExampleRef(_Element):
+class StoneExampleRef(_Element):
 
     def __init__(self, path, lineno, lexpos, label):
-        super(BabelExampleRef, self).__init__(path, lineno, lexpos)
+        super(StoneExampleRef, self).__init__(path, lineno, lexpos)
         self.label = label
 
     def __repr__(self):
-        return 'BabelExampleRef({!r})'.format(self.label)
+        return 'StoneExampleRef({!r})'.format(self.label)
 
-class BabelParser(object):
+class StoneParser(object):
     """
     Due to how ply.yacc works, the docstring of each parser method is a BNF
     rule. Comments that would normally be docstrings for each parser rule
@@ -320,7 +320,7 @@ class BabelParser(object):
     """
 
     # Ply parser requiment: Tokens must be re-specified in parser
-    tokens = BabelLexer.tokens
+    tokens = StoneLexer.tokens
 
     # Ply feature: Starting grammar rule
     start = str('spec')  # PLY wants a 'str' instance; this makes it work in Python 2 and 3
@@ -328,8 +328,8 @@ class BabelParser(object):
     def __init__(self, debug=False):
         self.debug = debug
         self.yacc = yacc.yacc(module=self, debug=self.debug, write_tables=self.debug)
-        self.lexer = BabelLexer()
-        self._logger = logging.getLogger('babelapi.babel.parser')
+        self.lexer = StoneLexer()
+        self._logger = logging.getLogger('stone.stone.parser')
         # [(token type, token value, line number), ...]
         self.errors = []
         # Path to file being parsed. This is added to each token for its
@@ -409,21 +409,21 @@ class BabelParser(object):
             doc = None
             if len(p) > 4:
                 doc = p[5]
-            p[0] = BabelNamespace(
+            p[0] = StoneNamespace(
                 self.path, p.lineno(1), p.lexpos(1), p[2], doc)
         else:
             raise ValueError('Expected namespace keyword')
 
     def p_import(self, p):
         'import : IMPORT ID NEWLINE'
-        p[0] = BabelImport(self.path, p.lineno(1), p.lexpos(1), p[2])
+        p[0] = StoneImport(self.path, p.lineno(1), p.lexpos(1), p[2])
 
     def p_alias(self, p):
         """alias : KEYWORD ID EQ type_ref NEWLINE
                  | KEYWORD ID EQ type_ref NEWLINE INDENT docsection DEDENT"""
         if p[1] == 'alias':
             doc = p[7] if len(p) > 6 else None
-            p[0] = BabelAlias(
+            p[0] = StoneAlias(
                 self.path, p.lineno(1), p.lexpos(1), p[2], p[4], doc)
         else:
             raise ValueError('Expected alias keyword')
@@ -513,7 +513,7 @@ class BabelParser(object):
 
     def p_type_ref(self, p):
         'type_ref : ID args nullable'
-        p[0] = BabelTypeRef(
+        p[0] = StoneTypeRef(
             path=self.path,
             lineno=p.lineno(1),
             lexpos=p.lexpos(1),
@@ -526,7 +526,7 @@ class BabelParser(object):
     # A reference to a type in another namespace.
     def p_foreign_type_ref(self, p):
         'type_ref : ID DOT ID args nullable'
-        p[0] = BabelTypeRef(
+        p[0] = StoneTypeRef(
             path=self.path,
             lineno=p.lineno(1),
             lexpos=p.lexpos(1),
@@ -571,7 +571,7 @@ class BabelParser(object):
     def p_struct(self, p):
         """struct : STRUCT ID inheritance NEWLINE \
                      INDENT docsection enumerated_subtypes field_list examples DEDENT"""
-        p[0] = BabelStructDef(
+        p[0] = StoneStructDef(
             path=self.path,
             lineno=p.lineno(2),
             lexpos=p.lexpos(2),
@@ -605,7 +605,7 @@ class BabelParser(object):
 
     def p_enumerated_subtype_field(self, p):
         'subtype_field : ID type_ref NEWLINE'
-        p[0] = BabelSubtypeField(
+        p[0] = StoneSubtypeField(
             self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
 
     # --------------------------------------------------------------
@@ -640,7 +640,7 @@ class BabelParser(object):
                           | EQ short_tag_ref
                           | empty"""
         if p[1]:
-            if isinstance(p[2], BabelTagRef):
+            if isinstance(p[2], StoneTagRef):
                 p[0] = p[2]
             else:
                 p[0] = p[2]
@@ -649,10 +649,10 @@ class BabelParser(object):
         """field : ID type_ref default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT
                  | ID type_ref default_option deprecation NEWLINE"""
         has_docstring = len(p) > 6
-        p[0] = BabelField(
+        p[0] = StoneField(
             self.path, p.lineno(1), p.lexpos(1), p[1], p[2], p[4])
         if p[3] is not None:
-            if p[3] is BabelNull:
+            if p[3] is StoneNull:
                 p[0].set_default(None)
             else:
                 p[0].set_default(p[3])
@@ -661,7 +661,7 @@ class BabelParser(object):
 
     def p_short_tag_ref(self, p):
         'short_tag_ref : ID'
-        p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
+        p[0] = StoneTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     # --------------------------------------------------------------
     # Unions
@@ -679,7 +679,7 @@ class BabelParser(object):
 
     def p_union(self, p):
         'union : UNION ID inheritance NEWLINE INDENT docsection field_list examples DEDENT'
-        p[0] = BabelUnionDef(
+        p[0] = StoneUnionDef(
             path=self.path,
             lineno=p.lineno(1),
             lexpos=p.lexpos(1),
@@ -697,7 +697,7 @@ class BabelParser(object):
     def p_field_void(self, p):
         """field : ID asterix_option NEWLINE
                  | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
-        p[0] = BabelVoidField(self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
+        p[0] = StoneVoidField(self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
         if len(p) > 4:
             p[0].set_doc(p[5])
 
@@ -718,7 +718,7 @@ class BabelParser(object):
         """route : ROUTE route_name route_io route_deprecation NEWLINE \
                         INDENT docsection attrssection DEDENT
                  | ROUTE route_name route_io route_deprecation NEWLINE"""
-        p[0] = BabelRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], *p[3])
+        p[0] = StoneRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], *p[3])
         if len(p) > 6:
             p[0].set_doc(p[7])
             if p[8]:
@@ -771,7 +771,7 @@ class BabelParser(object):
     def p_attr_field(self, p):
         """attr_field : ID EQ primitive NEWLINE
                       | ID EQ tag_ref NEWLINE"""
-        if p[3] is BabelNull:
+        if p[3] is StoneNull:
             p[0] = (p[1], None)
         else:
             p[0] = (p[1], p[3])
@@ -780,9 +780,9 @@ class BabelParser(object):
         """tag_ref : ID DOT ID DOT ID
                    | ID DOT ID"""
         if len(p) > 4:
-            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[5], p[3], p[1])
+            p[0] = StoneTagRef(self.path, p.lineno(1), p.lexpos(1), p[5], p[3], p[1])
         else:
-            p[0] = BabelTagRef(self.path, p.lineno(1), p.lexpos(1), p[3], p[1])
+            p[0] = StoneTagRef(self.path, p.lineno(1), p.lexpos(1), p[3], p[1])
 
     # --------------------------------------------------------------
     # Doc sections
@@ -854,11 +854,11 @@ class BabelParser(object):
                         "than once." % (p[2], example_field.name),
                         p.lineno(1), self.path))
                 seen_fields.add(example_field.name)
-            p[0] = BabelExample(
+            p[0] = StoneExample(
                 self.path, p.lineno(1), p.lexpos(1), p[2], p[5],
                 OrderedDict((f.name, f) for f in p[6]))
         else:
-            p[0] = BabelExample(
+            p[0] = StoneExample(
                 self.path, p.lineno(1), p.lexpos(1), p[2], None, OrderedDict())
 
     def p_example_fields_create(self, p):
@@ -873,17 +873,17 @@ class BabelParser(object):
     def p_example_field(self, p):
         """example_field : ID EQ primitive NEWLINE
                          | ID EQ ex_list NEWLINE"""
-        if p[3] is BabelNull:
-            p[0] = BabelExampleField(
+        if p[3] is StoneNull:
+            p[0] = StoneExampleField(
                 self.path, p.lineno(1), p.lexpos(1), p[1], None)
         else:
-            p[0] = BabelExampleField(
+            p[0] = StoneExampleField(
                 self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
 
     def p_example_field_ref(self, p):
         'example_field : ID EQ ID NEWLINE'
-        p[0] = BabelExampleField(self.path, p.lineno(1), p.lexpos(1),
-            p[1], BabelExampleRef(self.path, p.lineno(3), p.lexpos(3), p[3]))
+        p[0] = StoneExampleField(self.path, p.lineno(1), p.lexpos(1),
+            p[1], StoneExampleRef(self.path, p.lineno(3), p.lexpos(3), p[3]))
 
     # --------------------------------------------------------------
     # Example of list
@@ -898,14 +898,14 @@ class BabelParser(object):
 
     def p_ex_list_item_primitive(self, p):
         'ex_list_item : primitive'
-        if p[1] is BabelNull:
+        if p[1] is StoneNull:
             p[0] = None
         else:
             p[0] = p[1]
 
     def p_ex_list_item_id(self, p):
         'ex_list_item : ID'
-        p[0] = BabelExampleRef(self.path, p.lineno(1), p.lexpos(1), p[1])
+        p[0] = StoneExampleRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     def p_ex_list_item_list(self, p):
         'ex_list_item : ex_list'

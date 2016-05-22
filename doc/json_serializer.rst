@@ -3,14 +3,14 @@ JSON Serializer
 ***************
 
 Code generators include a JSON serializer which will convert a target
-language's representation of Babel data types into JSON. This document explores
-how Babel data types, regardless of language, are mapped to JSON.
+language's representation of Stone data types into JSON. This document explores
+how Stone data types, regardless of language, are mapped to JSON.
 
 Primitive Types
 ===============
 
 ========================== ====================================================
-Babel Primitive            JSON Representation
+Stone Primitive            JSON Representation
 ========================== ====================================================
 Boolean                    Boolean
 Bytes                      String: Base64-encoded

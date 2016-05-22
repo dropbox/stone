@@ -14,12 +14,12 @@ documentation.
 Generators are written as Python modules that satisfy the following
 conditions:
 
-1. The filename must have a ``.babelg.py`` extension. For example,
-   ``example.babelg.py``
+1. The filename must have a ``.stoneg.py`` extension. For example,
+   ``example.stoneg.py``
 
 2. At least one class must exist in the module that extends the
-   ``babelapi.generator.CodeGenerator`` class and implements the abstract
-   ``generate()`` method. BabelAPI automatically detects subclasses and calls
+   ``stone.generator.CodeGenerator`` class and implements the abstract
+   ``generate()`` method. Stone automatically detects subclasses and calls
    the ``generate()`` method. All such subclasses will be called in ASCII
    order.
 
@@ -28,31 +28,31 @@ Getting Started
 
 Here's a simple no-op generator::
 
-    from babelapi.generator import CodeGenerator
+    from stone.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self, api):
             pass
 
 Assuming that the generator is saved in your current directory as
-``example.babelg.py`` and that our running example spec ``users.babel`` from the
+``example.stoneg.py`` and that our running example spec ``users.stone`` from the
 `Language Reference <lang_ref.rst>`_ is also in the current directory. you can
 invoke the generator with the following command::
 
-    $ babelapi example.babelg.py users.babel .
+    $ stone example.stoneg.py users.stone .
 
 Generating Output Files
 =======================
 
 To create an output file, use the ``output_to_relative_path()`` method.
 Its only argument is the path relative to the output directory, which was
-specified as an argument to ``babelapi``, where the file should be created.
+specified as an argument to ``stone``, where the file should be created.
 
 Here's an example generator that creates an output file for each namespace.
 Each file is named after a respective namespace and have a ``.cpp`` extension.
 Each file contains a one line C++-style comment::
 
-    from babelapi.generator import CodeGenerator
+    from stone.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self, api):
@@ -64,7 +64,7 @@ Using the API Object
 ====================
 
 The ``generate`` method receives an ``api`` variable, which represents the API
-spec as a Python object. The object is an instance of the ``babelapi.api.Api``
+spec as a Python object. The object is an instance of the ``stone.api.Api``
 class. From this object, you can access all the defined namespaces, data types,
 and routes.
 
@@ -84,7 +84,7 @@ name
 doc
     The documentation string for the namespace. This is a concatenation of the
     docstrings for this namespace across all spec files in the order that they
-    were specified to `babelapi` on the command line. The string has no leading
+    were specified to `stone` on the command line. The string has no leading
     or trailing whitespace except for a newline at the end.
 
     If no documentation string exists, this is ``None``.
@@ -176,7 +176,7 @@ DataType
 name
     The name of the data type.
 
-See ``babelapi.data_type`` for all primitive type definitions and their
+See ``stone.data_type`` for all primitive type definitions and their
 attributes.
 
 Struct
@@ -418,10 +418,10 @@ serve a different purpose.
 Indentation
 ===========
 
-The ``babelapi.generator.CodeGenerator`` class provides a context
+The ``stone.generator.CodeGenerator`` class provides a context
 manager for adding incremental indentation. Here's an example::
 
-    from babelapi.generator import CodeGenerator
+    from stone.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self, api):
@@ -480,7 +480,7 @@ Helpers for Code Generation
 
 ``process_doc(doc, handler)``
     Helper for parsing documentation `references <lang_ref.rst#doc-refs>`_ in
-    Babel docstrings and replacing them with more suitable annotations for the
+    Stone docstrings and replacing them with more suitable annotations for the
     target language.
 
     ``doc`` is the docstring to scan for references. ``handler`` is a function
@@ -505,7 +505,7 @@ target_folder_path
 Data Type Classification Helpers
 ================================
 
-``babelapi.data_type`` includes functions for classifying data types. These are
+``stone.data_type`` includes functions for classifying data types. These are
 useful when generators need to discriminate between types. The following are
 available::
 
@@ -552,15 +552,15 @@ tag_name
     The name of the union member with void type that is the field default.
 
 To check for a default value that is a ``TagRef``, use ``is_tag_ref(val)``
-which can be imported from ``babelapi.data_type``.
+which can be imported from ``stone.data_type``.
 
 Command-Line Arguments
 ======================
 
 Generators can receive arguments from the command-line. A ``--`` is used to
-separate arguments to the ``babelapi`` program and the generator. For example::
+separate arguments to the ``stone`` program and the generator. For example::
 
-    $ babelapi generator/python/python.babelg spec.babel . -- -h
+    $ stone generator/python/python.stoneg spec.stone . -- -h
     usage: python-generator [-h] [-r ROUTE_METHOD]
 
     optional arguments:
@@ -569,7 +569,7 @@ separate arguments to the ``babelapi`` program and the generator. For example::
                             A string used to construct the location of a Python
                             method for a given route; use {ns} as a placeholder
                             for namespace name and {route} for the route name.
-                            This is used to translate Babel doc references to
+                            This is used to translate Stone doc references to
                             routes to references in Python docstrings.
 
 The above prints the help string specific to the included Python generator.
@@ -582,7 +582,7 @@ To define a command-line parser for a generator, assign an `Argument Parser
 <https://docs.python.org/2.7/library/argparse.html#argumentparser-objects>`_
 object to the ``cmdline_parser`` class variable of your generator. Set the
 ``prog`` keyword to the name of your generator, otherwise, the help string
-will claim to be for ``babelapi``.
+will claim to be for ``stone``.
 
 The ``generate`` method will have access to an ``args`` instance variable with
 an `argparse.Namespace object
@@ -592,7 +592,7 @@ holding the parsed command-line arguments.
 Here's a minimal example::
 
     import argparse
-    from babelapi.generator import CodeGenerator
+    from stone.generator import CodeGenerator
 
     _cmdline_parser = argparse.ArgumentParser(prog='example')
     _cmdline_parser.add_argument('-v', '--verbose', action='store_true',
@@ -609,16 +609,16 @@ Here's a minimal example::
 Examples
 ========
 
-The following examples can all be found in the ``babelapi/example/generator``
+The following examples can all be found in the ``stone/example/generator``
 folder.
 
 Example 1: List All Namespaces
 ------------------------------
 
-We'll create a generator ``ex1.babelg.py`` that generates a file called
+We'll create a generator ``ex1.stoneg.py`` that generates a file called
 ``ex1.out``. Each line in the file will be the name of a defined namespace::
 
-    from babelapi.generator import CodeGenerator
+    from stone.generator import CodeGenerator
 
     class ExampleGenerator(CodeGenerator):
         def generate(self, api):
@@ -630,10 +630,10 @@ We'll create a generator ``ex1.babelg.py`` that generates a file called
 We use ``output_to_relative_path()`` a member of ``CodeGenerator`` to specify
 where the output of our ``emit*()`` calls go (See more emit_methods_).
 
-Run the generator from the root of the BabelAPI folder using the example specs
+Run the generator from the root of the Stone folder using the example specs
 we've provided::
 
-    $ babelapi example/generator/ex1/ex1.babelg.py example/api/dbx-core/*.babel output/ex1
+    $ stone example/generator/ex1/ex1.stoneg.py example/api/dbx-core/*.stone output/ex1
 
 Now examine the contents of the output::
 
@@ -647,7 +647,7 @@ Example 2: A Python module for each Namespace
 Now we'll create a Python module for each namespace. Each module will define
 a ``noop()`` function::
 
-    from babelapi.generator import CodeGenerator
+    from stone.generator import CodeGenerator
 
     class ExamplePythonGenerator(CodeGenerator):
         def generate(self, api):
@@ -668,10 +668,10 @@ indentation level by a default 4 spaces. If you want to use tabs instead,
 set the ``tabs_for_indents`` class variable of your extended CodeGenerator
 class to ``True``.
 
-Run the generator from the root of the BabelAPI folder using the example specs
+Run the generator from the root of the Stone folder using the example specs
 we've provided::
 
-    $ babelapi example/generator/ex2/ex2.babelg.py example/api/dbx-core/*.babel output/ex2
+    $ stone example/generator/ex2/ex2.stoneg.py example/api/dbx-core/*.stone output/ex2
 
 Now examine the contents of the output::
 
@@ -690,9 +690,9 @@ for each struct in our specification. We'll extend from
 ``MonolingualCodeGenerator``, which enforces that a ``lang`` class variable is
 declared::
 
-    from babelapi.data_type import is_struct_type
-    from babelapi.generator import CodeGeneratorMonolingual
-    from babelapi.lang.python import PythonTargetLanguage
+    from stone.data_type import is_struct_type
+    from stone.generator import CodeGeneratorMonolingual
+    from stone.lang.python import PythonTargetLanguage
 
     class ExamplePythonGenerator(CodeGeneratorMonolingual):
 

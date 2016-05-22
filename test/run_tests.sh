@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# TODO(kelkabany): Ignore system-wide babelapi installations.
+# TODO(kelkabany): Ignore system-wide stone installations.
 
 # If a test suite returns an error, do not continue to the next one.
 set -e
@@ -13,11 +13,11 @@ then
     exit 1
 fi
 
-echo "Running tests for babelapi package"
+echo "Running tests for stone package"
 PYTHONPATH=.. python2.7 -m pytest
 
 echo
-echo "Running tests for babelapi package using Python 3"
+echo "Running tests for stone package using Python 3"
 PYTHONPATH=.. python3 -m pytest
 
 echo

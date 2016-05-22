@@ -1,4 +1,4 @@
-"""Example generator that outputs a Babel file equivalent to the input file.
+"""Example generator that outputs a Stone file equivalent to the input file.
 
 Current limitations:
 - Whitespace is not reproduced exactly (this may be a feature)
@@ -11,23 +11,23 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import six
 
-from babelapi.babel.parser import BabelTypeRef
-from babelapi.data_type import DataType, _BoundedInteger, _BoundedFloat
-from babelapi.data_type import List, String, Timestamp
-from babelapi.data_type import Struct, Symbol, Union
-from babelapi.generator import CodeGenerator
+from stone.stone.parser import StoneTypeRef
+from stone.data_type import DataType, _BoundedInteger, _BoundedFloat
+from stone.data_type import List, String, Timestamp
+from stone.data_type import Struct, Symbol, Union
+from stone.generator import CodeGenerator
 
 
-class UnbabelGenerator(CodeGenerator):
+class UnstoneGenerator(CodeGenerator):
     """Main class.
 
-    The Babel CLI finds this class through introspection."""
+    The Stone CLI finds this class through introspection."""
 
     def generate(self):
         """Main code generator entry point."""
         # Create a file for each namespace.
         for namespace in self.api.namespaces.values():
-            with self.output_to_relative_path('%s.babel' % namespace.name):
+            with self.output_to_relative_path('%s.stone' % namespace.name):
                 # Output a namespace header.
                 self.emit_line('namespace %s' % namespace.name)
                 # Output all data type (struct and union) definitions.
@@ -119,7 +119,7 @@ class UnbabelGenerator(CodeGenerator):
                 for key in key_list:
                     val = getattr(data_type, key)
                     if val is not None:
-                        if isinstance(val, BabelTypeRef):
+                        if isinstance(val, StoneTypeRef):
                             sval = val.name
                         elif isinstance(val, DataType):
                             sval = self.format_data_type(val)

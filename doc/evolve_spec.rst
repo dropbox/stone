@@ -2,7 +2,7 @@
 Evolving a Spec
 ***************
 
-APIs are constantly evolving. In designing Babel, we sought to codify what
+APIs are constantly evolving. In designing Stone, we sought to codify what
 changes are backwards incompatible, and added facilities to make maintaining
 compatibility easier.
 
@@ -144,6 +144,6 @@ suggest the following verbose approach:
 Future Work
 ===========
 
-Building in a lint checker into the ``babelapi`` command-line interface that
+Building in a lint checker into the ``stone`` command-line interface that
 warns if a spec change is backwards incompatible based on the revision history.
 This assumes that the spec file is in a version-tracking system like git or hg.

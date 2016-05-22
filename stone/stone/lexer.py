@@ -12,18 +12,18 @@ class MultiToken(object):
 
 # Represents a null value. We want to differentiate between the Python "None"
 # and null in several places.
-BabelNull = object()
+StoneNull = object()
 
-class BabelLexer(object):
+class StoneLexer(object):
     """
-    Lexer. Tokenizes babel files.
+    Lexer. Tokenizes stone files.
     """
 
     def __init__(self):
         self.lex = None
         self.tokens_queue = None
         self.cur_indent = None
-        self._logger = logging.getLogger('babelapi.babel.lexer')
+        self._logger = logging.getLogger('stone.stone.lexer')
         self.last_token = None
         # [(character, line number), ...]
         self.errors = []
@@ -184,7 +184,7 @@ class BabelLexer(object):
 
     def t_NULL(self, token):
         r'\bnull\b'
-        token.value = BabelNull
+        token.value = StoneNull
         return token
 
     # No leading digits

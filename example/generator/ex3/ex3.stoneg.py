@@ -1,6 +1,6 @@
-from babelapi.data_type import is_struct_type
-from babelapi.generator import CodeGeneratorMonolingual
-from babelapi.lang.python import PythonTargetLanguage
+from stone.data_type import is_struct_type
+from stone.generator import CodeGeneratorMonolingual
+from stone.lang.python import PythonTargetLanguage
 
 class ExamplePythonGenerator(CodeGeneratorMonolingual):
 

@@ -8,7 +8,7 @@ parsetab.py
 /build
 /dist
 /MANIFEST
-/babelapi.egg-info
+/stone.egg-info
 /setuptools-3.1-py2.7.egg
 /setuptools-3.1.zip
 /.cache

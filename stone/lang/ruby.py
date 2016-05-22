@@ -4,8 +4,8 @@ import pprint
 
 # language by language regex for finding what functions have already been defined
 
-from babelapi.lang.lang import TargetLanguage
-from babelapi.data_type import (
+from stone.lang.lang import TargetLanguage
+from stone.data_type import (
     Boolean,
     Float32,
     Float64,

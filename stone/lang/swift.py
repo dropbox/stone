@@ -5,7 +5,7 @@ import pprint
 # This file defines *stylistic* choices for Swift
 # (ie, that class names are UpperCamelCase and that variables are lowerCamelCase)
 
-from babelapi.lang.lang import TargetLanguage
+from stone.lang.lang import TargetLanguage
 
 class SwiftTargetLanguage(TargetLanguage):
 

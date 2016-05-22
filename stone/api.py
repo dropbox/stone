@@ -4,7 +4,7 @@ from collections import OrderedDict
 from distutils.version import StrictVersion
 import six
 
-from babelapi.data_type import (
+from stone.data_type import (
     doc_unwrap,
     is_alias,
     is_composite_type,
@@ -253,7 +253,7 @@ class ApiRoute(object):
         """
         :param str name: Designated name of the endpoint.
         :param token: Raw route definition from the parser.
-        :type token: babelapi.babel.parser.BabelRouteDef
+        :type token: stone.stone.parser.StoneRouteDef
         """
         self.name = name
         self._token = token
@@ -275,9 +275,9 @@ class ApiRoute(object):
 
         :param DeprecationInfo deprecated: Set if this route is deprecated.
         :param str doc: Description of the endpoint.
-        :type arg_data_type: :class:`babelapi.data_type.DataType`
-        :type result_data_type: :class:`babelapi.data_type.DataType`
-        :type error_data_type: :class:`babelapi.data_type.DataType`
+        :type arg_data_type: :class:`stone.data_type.DataType`
+        :type result_data_type: :class:`stone.data_type.DataType`
+        :type error_data_type: :class:`stone.data_type.DataType`
         :param dict attrs: Map of string keys to values that are either int,
             float, bool, str, or None. These are the route attributes assigned
             in the spec.

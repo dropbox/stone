@@ -1,4 +1,4 @@
-from babelapi.generator import CodeGenerator
+from stone.generator import CodeGenerator
 
 class ExampleGenerator(CodeGenerator):
     def generate(self, api):

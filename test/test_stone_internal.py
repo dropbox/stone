@@ -2,10 +2,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 
-from babelapi.api import (
+from stone.api import (
     ApiNamespace,
 )
-from babelapi.data_type import (
+from stone.data_type import (
     Boolean,
     Float32,
     Float64,
@@ -20,21 +20,21 @@ from babelapi.data_type import (
     UInt64,
     Void,
 )
-from babelapi.data_type import (
+from stone.data_type import (
     Struct,
     StructField,
     Union,
     UnionField,
 )
-from babelapi.babel.parser import (
-    BabelExample,
-    BabelExampleField,
-    BabelExampleRef,
+from stone.stone.parser import (
+    StoneExample,
+    StoneExampleField,
+    StoneExampleRef,
 )
 
-class TestBabelInternal(unittest.TestCase):
+class TestStoneInternal(unittest.TestCase):
     """
-    Tests the internal representation of a Babel.
+    Tests the internal representation of a Stone.
     """
 
     def test_check_example(self):
@@ -45,8 +45,8 @@ class TestBabelInternal(unittest.TestCase):
 
         s = String(min_length=1, max_length=5)
         s.check_example(
-            BabelExampleField(
-                path='test.babel',
+            StoneExampleField(
+                path='test.stone',
                 lineno=1,
                 lexpos=0,
                 name='v',
@@ -55,8 +55,8 @@ class TestBabelInternal(unittest.TestCase):
 
         with self.assertRaises(InvalidSpec) as cm:
             s.check_example(
-                BabelExampleField(
-                    path='test.babel',
+                StoneExampleField(
+                    path='test.stone',
                     lineno=1,
                     lexpos=0,
                     name='v',
@@ -71,8 +71,8 @@ class TestBabelInternal(unittest.TestCase):
         l = List(String(min_length=1), min_items=1, max_items=3)
 
         l.check_example(
-            BabelExampleField(
-                path='test.babel',
+            StoneExampleField(
+                path='test.stone',
                 lineno=1,
                 lexpos=0,
                 name='v',
@@ -81,8 +81,8 @@ class TestBabelInternal(unittest.TestCase):
 
         with self.assertRaises(InvalidSpec) as cm:
             l.check_example(
-                BabelExampleField(
-                    path='test.babel',
+                StoneExampleField(
+                    path='test.stone',
                     lineno=1,
                     lexpos=0,
                     name='v',
@@ -97,8 +97,8 @@ class TestBabelInternal(unittest.TestCase):
         l = List(List(String(min_length=1), min_items=1))
 
         l.check_example(
-            BabelExampleField(
-                path='test.babel',
+            StoneExampleField(
+                path='test.stone',
                 lineno=1,
                 lexpos=0,
                 name='v',
@@ -107,8 +107,8 @@ class TestBabelInternal(unittest.TestCase):
 
         with self.assertRaises(InvalidSpec) as cm:
             l.check_example(
-                BabelExampleField(
-                    path='test.babel',
+                StoneExampleField(
+                    path='test.stone',
                     lineno=1,
                     lexpos=0,
                     name='v',
@@ -126,22 +126,22 @@ class TestBabelInternal(unittest.TestCase):
         )
 
         s._add_example(
-            BabelExample(
-                'test.babel',
+            StoneExample(
+                'test.stone',
                 lineno=1,
                 lexpos=0,
                 label='default',
                 text='Default example',
                 fields={
-                    'a': BabelExampleField(
-                        path='test.babel',
+                    'a': StoneExampleField(
+                        path='test.stone',
                         lineno=2,
                         lexpos=0,
                         name='a',
                         value=132,
                     ),
-                    'b': BabelExampleField(
-                        path='test.babel',
+                    'b': StoneExampleField(
+                        path='test.stone',
                         lineno=2,
                         lexpos=0,
                         name='b',
@@ -311,12 +311,12 @@ class TestBabelInternal(unittest.TestCase):
         # add an example that doesn't fit the definition of a struct
         with self.assertRaises(InvalidSpec) as cm:
             quota_info._add_example(
-                BabelExample(path=None,
+                StoneExample(path=None,
                              lineno=None,
                              lexpos=None,
                              label='default',
                              text=None,
-                             fields={'bad_field': BabelExampleField(
+                             fields={'bad_field': StoneExampleField(
                                  None,
                                  None,
                                  None,
@@ -325,12 +325,12 @@ class TestBabelInternal(unittest.TestCase):
         self.assertIn('has unknown field', cm.exception.msg)
 
         quota_info._add_example(
-            BabelExample(path=None,
+            StoneExample(path=None,
                          lineno=None,
                          lexpos=None,
                          label='default',
                          text=None,
-                         fields={'quota': BabelExampleField(
+                         fields={'quota': StoneExampleField(
                              None,
                              None,
                              None,
@@ -340,12 +340,12 @@ class TestBabelInternal(unittest.TestCase):
         # set null for a required field
         with self.assertRaises(InvalidSpec) as cm:
             quota_info._add_example(
-                BabelExample(path=None,
+                StoneExample(path=None,
                              lineno=None,
                              lexpos=None,
                              label='null',
                              text=None,
-                             fields={'quota': BabelExampleField(
+                             fields={'quota': StoneExampleField(
                                  None,
                                  None,
                                  None,
@@ -374,24 +374,24 @@ class TestBabelInternal(unittest.TestCase):
         )
 
         account_info._add_example(
-            BabelExample(path=None,
+            StoneExample(path=None,
                          lineno=None,
                          lexpos=None,
                          label='default',
                          text=None,
                          fields={
-                             'account_id': BabelExampleField(
+                             'account_id': StoneExampleField(
                                  None,
                                  None,
                                  None,
                                  'account_id',
                                  'xyz123'),
-                             'quota_info': BabelExampleField(
+                             'quota_info': StoneExampleField(
                                  None,
                                  None,
                                  None,
                                  'quota_info',
-                                 BabelExampleRef(
+                                 StoneExampleRef(
                                      None,
                                      None,
                                      None,
@@ -419,12 +419,12 @@ class TestBabelInternal(unittest.TestCase):
             ],
         )
         update_parent_rev._add_example(
-            BabelExample(path=None,
+            StoneExample(path=None,
                          lineno=None,
                          lexpos=None,
                          label='default',
                          text=None,
-                         fields={'parent_rev': BabelExampleField(
+                         fields={'parent_rev': StoneExampleField(
                              None,
                              None,
                              None,
@@ -453,17 +453,17 @@ class TestBabelInternal(unittest.TestCase):
         )
 
         conflict._add_example(
-            BabelExample(path=None,
+            StoneExample(path=None,
                          lineno=None,
                          lexpos=None,
                          label='default',
                          text=None,
-                         fields={'update_if_matching_parent_rev': BabelExampleField(
+                         fields={'update_if_matching_parent_rev': StoneExampleField(
                              None,
                              None,
                              None,
                              'update_if_matching_parent_rev',
-                             BabelExampleRef(None, None, None, 'default'))}))
+                             StoneExampleRef(None, None, None, 'default'))}))
 
         conflict._compute_examples()
 
