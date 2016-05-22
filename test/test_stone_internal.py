@@ -26,11 +26,12 @@ from stone.data_type import (
     Union,
     UnionField,
 )
-from stone.stone.parser import (
+from stone.lang.parser import (
     StoneExample,
     StoneExampleField,
     StoneExampleRef,
 )
+
 
 class TestStoneInternal(unittest.TestCase):
     """

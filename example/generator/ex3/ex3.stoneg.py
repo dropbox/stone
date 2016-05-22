@@ -1,6 +1,9 @@
 from stone.data_type import is_struct_type
 from stone.generator import CodeGeneratorMonolingual
-from stone.lang.python import PythonTargetLanguage
+from stone.target.python import (
+    fmt_class,
+    fmt_var,
+)
 
 class ExamplePythonGenerator(CodeGeneratorMonolingual):
 
@@ -24,7 +27,7 @@ class ExamplePythonGenerator(CodeGeneratorMonolingual):
                 continue
 
             # Define a class for each struct
-            class_def = 'class {}(object):'.format(self.lang.format_class(data_type.name))
+            class_def = 'class {}(object):'.format(fmt_class(data_type.name))
             self.emit(class_def)
 
             with self.indent():
@@ -38,7 +41,7 @@ class ExamplePythonGenerator(CodeGeneratorMonolingual):
                 # Define constructor to take each field
                 args = ['self']
                 for field in data_type.fields:
-                    args.append(self.lang.format_variable(field.name))
+                    args.append(fmt_var(field.name))
                 self.generate_multiline_list(args, 'def __init__', ':')
 
                 with self.indent():
@@ -48,7 +51,7 @@ class ExamplePythonGenerator(CodeGeneratorMonolingual):
                         for field in data_type.fields:
                             if field.doc:
                                 self.emit_wrapped_text(field.doc, '# ', '# ')
-                            member_name = self.lang.format_variable(field.name)
+                            member_name = fmt_var(field.name)
                             self.emit('self.{0} = {0}'.format(member_name))
                     else:
                         self.emit('pass')

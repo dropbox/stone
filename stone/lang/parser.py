@@ -6,7 +6,7 @@ import six
 
 import ply.yacc as yacc
 
-from stone.stone.lexer import StoneLexer, StoneNull
+from .lexer import StoneLexer, StoneNull
 
 class _Element(object):
 

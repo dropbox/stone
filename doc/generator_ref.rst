@@ -686,13 +686,15 @@ Example 3: Define Python Classes for Structs
 --------------------------------------------
 
 As a more advanced example, we'll define a generator that makes a Python class
-for each struct in our specification. We'll extend from
-``MonolingualCodeGenerator``, which enforces that a ``lang`` class variable is
-declared::
+for each struct in our specification. We'll use some provided helpers from
+``stone.target.python``::
 
     from stone.data_type import is_struct_type
     from stone.generator import CodeGeneratorMonolingual
-    from stone.lang.python import PythonTargetLanguage
+    from stone.target.python import (
+        fmt_class,
+        fmt_var,
+    )
 
     class ExamplePythonGenerator(CodeGeneratorMonolingual):
 
@@ -716,7 +718,7 @@ declared::
                     continue
 
                 # Define a class for each struct
-                class_def = 'class {}(object):'.format(self.lang.format_class(data_type.name))
+                class_def = 'class {}(object):'.format(fmt_class(data_type.name))
                 self.emit(class_def)
 
                 with self.indent():
@@ -730,7 +732,7 @@ declared::
                     # Define constructor to take each field
                     args = ['self']
                     for field in data_type.fields:
-                        args.append(self.lang.format_variable(field.name))
+                        args.append(fmt_var(field.name))
                     self.generate_multiline_list(args, 'def __init__', ':')
 
                     with self.indent():
@@ -740,7 +742,7 @@ declared::
                             for field in data_type.fields:
                                 if field.doc:
                                     self.emit_wrapped_text(field.doc, '# ', '# ')
-                                member_name = self.lang.format_variable(field.name)
+                                member_name = fmt_var(field.name)
                                 self.emit('self.{0} = {0}'.format(member_name))
                         else:
                             self.emit('pass')

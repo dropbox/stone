@@ -16,8 +16,8 @@ import numbers
 import re
 import six
 
-from .stone.exception import InvalidSpec
-from .stone.parser import (
+from .lang.exception import InvalidSpec
+from .lang.parser import (
     StoneExampleField,
     StoneExampleRef,
 )

@@ -8,7 +8,7 @@ import os
 import six
 import textwrap
 
-from stone.stone.tower import doc_ref_re
+from stone.lang.tower import doc_ref_re
 from stone.data_type import (
     is_alias,
 )
@@ -403,17 +403,3 @@ class CodeGenerator(Generator):
             self.emit(delim[1] + after)
         else:
             self.emit(after)
-
-
-class CodeGeneratorMonolingual(CodeGenerator):
-    """Identical to CodeGenerator, except that an additional attribute `lang`
-    exists. You can set this to a TargetLanguage object for easy access to
-    language-specific convenience functions."""
-
-    # An instance of a :class:`stone.lang.lang.TargetLanguage` object.
-    lang = None
-
-    def __init__(self, target_folder_path, generator_args):
-        assert self.lang, 'Language must be specified'
-        super(CodeGeneratorMonolingual, self).__init__(
-            target_folder_path, generator_args)

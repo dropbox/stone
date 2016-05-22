@@ -27,8 +27,13 @@ from stone.data_type import (
     unwrap_aliases,
     unwrap_nullable,
 )
-from stone.generator import CodeGeneratorMonolingual
-from stone.lang.python import PythonTargetLanguage
+from stone.generator import CodeGenerator
+from stone.target.python import (
+    fmt_class,
+    fmt_func,
+    fmt_obj,
+    fmt_var,
+)
 
 # This will be at the top of every generated file.
 validators_import = """\
@@ -64,10 +69,10 @@ _cmdline_parser.add_argument(
     help='Route attribute to include in the generated code.',
 )
 
-class PythonGenerator(CodeGeneratorMonolingual):
+
+class PythonGenerator(CodeGenerator):
     """Generates Python modules to represent the input Stone spec."""
 
-    lang = PythonTargetLanguage()
     cmdline_parser = _cmdline_parser
 
     # Instance var of the current namespace being generated
@@ -244,7 +249,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """
         assert is_user_defined_type(data_type) or is_alias(data_type), \
             'Expected composite type, got %r' % type(data_type)
-        name = self.lang.format_class(data_type.name)
+        name = fmt_class(data_type.name)
         if ns and data_type.namespace != ns:
             # If from an imported namespace, add a namespace prefix.
             name = '{}.{}'.format(data_type.namespace.name, name)
@@ -283,7 +288,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     if not field.doc:
                         continue
                     self.emit_wrapped_text(':ivar {}: {}'.format(
-                        self.lang.format_variable(field.name),
+                        fmt_var(field.name),
                         self.process_doc(field.doc, self._docf)),
                         subsequent_prefix='    ')
                 self.emit('"""')
@@ -319,7 +324,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """
         with self.block('__slots__ =', delim=('[', ']')):
             for field in data_type.fields:
-                field_name = self.lang.format_variable(field.name)
+                field_name = fmt_var(field.name)
                 self.emit("'_%s_value'," % field_name)
                 self.emit("'_%s_present'," % field_name)
         self.emit()
@@ -368,12 +373,12 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 args=[repr(dt.format)],
             )
         elif is_user_defined_type(dt):
-            v = self.lang.format_class(dt.name) + '_validator'
+            v = fmt_class(dt.name) + '_validator'
             if ns.name != dt.namespace.name:
                 v = '{}.{}'.format(dt.namespace.name, v)
         elif is_alias(dt):
             # Assume that the alias has already been declared elsewhere.
-            name = self.lang.format_class(dt.name) + '_validator'
+            name = fmt_class(dt.name) + '_validator'
             if ns.name != dt.namespace.name:
                 name = '{}.{}'.format(dt.namespace.name, name)
             v = name
@@ -434,7 +439,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
             parent_type_class_name = None
 
         for field in data_type.fields:
-            field_name = self.lang.format_variable(field.name)
+            field_name = fmt_var(field.name)
             validator_name = self._generate_validator_constructor(ns, field.data_type)
             self.emit('{}._{}_validator = {}'.format(
                 class_name, field_name, validator_name))
@@ -474,7 +479,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         if data_type.is_member_of_enumerated_subtypes_tree():
             items = []
             for field in data_type.fields:
-                var_name = self.lang.format_variable(field.name)
+                var_name = fmt_var(field.name)
                 validator_name = '{}._{}_validator'.format(class_name,
                                                            var_name)
                 items.append("('{}', {})".format(var_name, validator_name))
@@ -499,7 +504,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 before = '{}._all_fields_ = '.format(class_name)
             items = []
             for field in data_type.fields:
-                var_name = self.lang.format_variable(field.name)
+                var_name = fmt_var(field.name)
                 validator_name = '{}._{}_validator'.format(
                     class_name, var_name)
                 items.append("('{}', {})".format(var_name, validator_name))
@@ -517,7 +522,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         args = ['self']
         for field in data_type.all_fields:
-            field_name_reserved_check = self.lang.format_variable(field.name, True)
+            field_name_reserved_check = fmt_var(field.name, True)
             args.append('%s=None' % field_name_reserved_check)
         self.generate_multiline_list(args, before='def __init__', after=':')
 
@@ -528,19 +533,19 @@ class PythonGenerator(CodeGeneratorMonolingual):
             if data_type.parent_type:
                 class_name = self._class_name_for_data_type(data_type)
                 self.generate_multiline_list(
-                    [self.lang.format_method(f.name, True)
+                    [fmt_func(f.name, True)
                      for f in data_type.parent_type.all_fields],
                     before='super({}, self).__init__'.format(class_name))
 
             # initialize each field
             for field in data_type.fields:
-                field_var_name = self.lang.format_variable(field.name)
+                field_var_name = fmt_var(field.name)
                 self.emit('self._{}_value = None'.format(field_var_name))
                 self.emit('self._{}_present = False'.format(field_var_name))
 
             # handle arguments that were set
             for field in data_type.fields:
-                field_var_name = self.lang.format_variable(field.name, True)
+                field_var_name = fmt_var(field.name, True)
                 self.emit('if {} is not None:'.format(field_var_name))
                 with self.indent():
                     self.emit('self.{0} = {0}'.format(field_var_name))
@@ -553,12 +558,12 @@ class PythonGenerator(CodeGeneratorMonolingual):
         if is_tag_ref(value):
             ref = '{}.{}'.format(
                 self._class_name_for_data_type(value.union_data_type),
-                self.lang.format_variable(value.tag_name))
+                fmt_var(value.tag_name))
             if ns != value.union_data_type.namespace:
                 ref = '%s.%s' % (value.union_data_type.namespace.name, ref)
             return ref
         else:
-            return self.lang.format_obj(value)
+            return fmt_obj(value)
 
     def _generate_struct_class_properties(self, ns, data_type):
         """
@@ -566,8 +571,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
         The setter validates the value being set.
         """
         for field in data_type.fields:
-            field_name = self.lang.format_method(field.name)
-            field_name_reserved_check = self.lang.format_method(field.name, True)
+            field_name = fmt_func(field.name)
+            field_name_reserved_check = fmt_func(field.name, True)
             if is_nullable_type(field.data_type):
                 field_dt = field.data_type.data_type
                 dt_nullable = True
@@ -648,7 +653,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         with self.indent():
             if data_type.all_fields:
                 constructor_kwargs_fmt = ', '.join(
-                    '{}={{!r}}'.format(self.lang.format_variable(f.name, True))
+                    '{}={{!r}}'.format(fmt_var(f.name, True))
                     for f in data_type.all_fields)
                 self.emit("return '{}({})'.format(".format(
                     self._class_name_for_data_type(data_type),
@@ -656,7 +661,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
                 ))
                 with self.indent():
                     for f in data_type.all_fields:
-                        self.emit("self._{}_value,".format(self.lang.format_variable(f.name)))
+                        self.emit("self._{}_value,".format(fmt_var(f.name)))
                 self.emit(")")
             else:
                 self.emit("return '%s()'"
@@ -693,7 +698,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         items = []
         for tag, subtype in data_type.get_all_subtypes_with_tags():
             items.append("{0}: ({1}, {2})".format(
-                self.lang.format_class(subtype.name),
+                fmt_class(subtype.name),
                 tag,
                 self._generate_validator_constructor(ns, subtype)))
         self.generate_multiline_list(
@@ -735,17 +740,17 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     continue
                 if is_void_type(field.data_type):
                     ivar_doc = ':ivar {}: {}'.format(
-                        self.lang.format_variable(field.name),
+                        fmt_var(field.name),
                         self.process_doc(field.doc, self._docf))
                 elif is_user_defined_type(field.data_type):
                     ivar_doc = ':ivar {} {}: {}'.format(
-                        self.lang.format_class(field.data_type.name),
-                        self.lang.format_variable(field.name),
+                        fmt_class(field.data_type.name),
+                        fmt_var(field.name),
                         self.process_doc(field.doc, self._docf))
                 else:
                     ivar_doc = ':ivar {} {}: {}'.format(
                         self._python_type_mapping(ns, field.data_type),
-                        self.lang.format_variable(field.name), field.doc)
+                        fmt_var(field.name), field.doc)
                 self.emit_wrapped_text(ivar_doc, subsequent_prefix='    ')
             self.emit('"""')
             self.emit()
@@ -775,7 +780,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         # easier time detecting their existence.
         for field in data_type.fields:
             if is_void_type(field.data_type):
-                field_name = self.lang.format_variable(field.name)
+                field_name = fmt_var(field.name)
                 self.emit('# Attribute is overwritten below the class definition')
                 self.emit('{} = None'.format(field_name))
 
@@ -787,10 +792,10 @@ class PythonGenerator(CodeGeneratorMonolingual):
         Adds a class attribute for each union member assigned to a validator.
         Also adds an attribute that is a map from tag names to validators.
         """
-        class_name = self.lang.format_class(data_type.name)
+        class_name = fmt_class(data_type.name)
 
         for field in data_type.fields:
-            field_name = self.lang.format_variable(field.name)
+            field_name = fmt_var(field.name)
             validator_name = self._generate_validator_constructor(
                 ns, field.data_type)
             self.emit('{}._{}_validator = {}'.format(
@@ -798,7 +803,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         with self.block('{}._tagmap ='.format(class_name)):
             for field in data_type.fields:
-                var_name = self.lang.format_variable(field.name)
+                var_name = fmt_var(field.name)
                 validator_name = '{}._{}_validator'.format(
                     class_name, var_name)
                 self.emit("'{}': {},".format(var_name, validator_name))
@@ -817,8 +822,8 @@ class PythonGenerator(CodeGeneratorMonolingual):
         """
         for field in data_type.fields:
             if not is_void_type(field.data_type):
-                field_name = self.lang.format_method(field.name)
-                field_name_reserved_check = self.lang.format_method(field.name, True)
+                field_name = fmt_func(field.name)
+                field_name_reserved_check = fmt_func(field.name, True)
                 if is_nullable_type(field.data_type):
                     field_dt = field.data_type.data_type
                 else:
@@ -834,14 +839,14 @@ class PythonGenerator(CodeGeneratorMonolingual):
                     self.emit(':param {} val:'.format(
                         self._python_type_mapping(ns, field_dt)))
                     self.emit(':rtype: {}'.format(
-                        self.lang.format_class(data_type.name)))
+                        fmt_class(data_type.name)))
                     self.emit('"""')
                     self.emit("return cls('{}', val)".format(field_name))
                 self.emit()
 
     def _generate_union_class_is_set(self, data_type):
         for field in data_type.fields:
-            field_name = self.lang.format_method(field.name)
+            field_name = fmt_func(field.name)
             self.emit('def is_{}(self):'.format(field_name))
             with self.indent():
                 self.emit('"""')
@@ -858,7 +863,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
         the tag has been switched on.
         """
         for field in data_type.fields:
-            field_name = self.lang.format_method(field.name)
+            field_name = fmt_func(field.name)
 
             if not is_void_type(field.data_type):
                 # generate getter for field
@@ -907,11 +912,11 @@ class PythonGenerator(CodeGeneratorMonolingual):
         Class attributes that represent a symbol are set after the union class
         definition.
         """
-        class_name = self.lang.format_class(data_type.name)
+        class_name = fmt_class(data_type.name)
         lineno = self.lineno
         for field in data_type.fields:
             if is_void_type(field.data_type):
-                field_name = self.lang.format_method(field.name)
+                field_name = fmt_func(field.name)
                 self.emit("{0}.{1} = {0}('{1}')".format(class_name, field_name))
         if lineno != self.lineno:
             self.emit()
@@ -919,7 +924,7 @@ class PythonGenerator(CodeGeneratorMonolingual):
     def _generate_routes(self, namespace):
 
         for route in namespace.routes:
-            var_name = self.lang.format_method(route.name)
+            var_name = fmt_func(route.name)
             data_types = [route.arg_data_type, route.result_data_type,
                           route.error_data_type]
             with self.block('%s = bb.Route(' % var_name, delim=(None, None), after=')'):
@@ -939,6 +944,6 @@ class PythonGenerator(CodeGeneratorMonolingual):
 
         with self.block('ROUTES =', delim=('{', '}')):
             for route in namespace.routes:
-                var_name = self.lang.format_method(route.name)
+                var_name = fmt_func(route.name)
                 self.emit("'{}': {},".format(route.name, var_name))
         self.emit()

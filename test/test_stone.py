@@ -3,14 +3,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import textwrap
 import unittest
 
-from stone.stone.parser import (
+from stone.lang.parser import (
     StoneNamespace,
     StoneAlias,
     StoneParser,
     StoneVoidField,
     StoneTagRef,
 )
-from stone.stone.tower import (
+from stone.lang.tower import (
     InvalidSpec,
     TagRef,
     TowerOfStone,

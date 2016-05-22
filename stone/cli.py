@@ -14,10 +14,10 @@ import six
 import sys
 import traceback
 
-from .stone.exception import InvalidSpec
-from .stone.tower import TowerOfStone
 from .cli_helpers import parse_route_attr_filter
 from .compiler import Compiler, GeneratorException
+from .lang.exception import InvalidSpec
+from .lang.tower import TowerOfStone
 
 # The parser for command line arguments
 _cmdline_parser = argparse.ArgumentParser(description='StoneAPI')
