@@ -3,12 +3,21 @@ Stone
 *****
 
 Define an API once in Stone. Use code generators to translate your
-specification into objects and functions in the programming languages
-of your choice.
+specification into objects and functions in the programming languages of your
+choice.
 
-Currently, only Python is supported as a generation target. Swift is being
-actively worked on, and the intention is to support
-`several other languages <doc/using_generator.rst>`_.
+Stone is made up of several components:
+
+    1. An interface-description language (IDL) for specifying APIs.
+    2. A command-line tool (``stone``) that takes an API specification and
+       generator module, and generates output.
+    3. A Python-interface for defining new generators.
+    4. A JSON-compatible serialization format.
+
+Stone is in active use for the `Dropbox v2 API
+<http://www.dropbox.com/developers>`_. Right now, the only available generator
+is for Python, but we're working on releasing the other ones we have
+internally: Swift, C#, Java, Go, JavaScript, and HTML documentation.
 
     * Introduction
         * Motivation_
@@ -23,7 +32,6 @@ actively worked on, and the intention is to support
         * `Union <doc/lang_ref.rst#union>`_
         * `Nullable Type <doc/lang_ref.rst#nullable-type>`_
         * `Route <doc/lang_ref.rst#route>`_
-        * `Include <doc/lang_ref.rst#include>`_
         * `Documentation <doc/lang_ref.rst#doc>`_
         * `Formal Grammar <doc/lang_ref.rst#formal-grammar>`_
     * `Using Generated Code <doc/using_generator.rst>`_
@@ -32,7 +40,6 @@ actively worked on, and the intention is to support
     * `Managing Specs <doc/managing_specs.rst>`_
         * `Using Namespaces <doc/managing_specs.rst#using-namespaces>`_
         * `Splitting a Namespace Across Files <doc/managing_specs.rst#splitting-a-namespace-across-files>`_
-        * `Using Header Files <doc/managing_specs.rst#using-header-files>`_
         * `Separating Public and Private Routes <doc/managing_specs.rst#separation-public-and-private-routes>`_
     * `Evolving a Spec <doc/evolve_spec.rst>`_
         * `Background <doc/evolve_spec.rst#background>`_
@@ -56,20 +63,41 @@ actively worked on, and the intention is to support
 Motivation
 ==========
 
-Being an API designer is tough. There are an innumerable number of protocols
-and serialization formats that two hosts can use to communicate. Today, JSON
-over HTTP is gaining popularity, but just a few years ago, XML was the
-standard. To compound the issue, developers need to support an increasing
-number of language-specific SDKs to gain wide adoption.
+Stone was birthed at Dropbox at a time when it was becoming clear that API
+development needed to be scaled beyond a single team. The company was
+undergoing a large expansion in the number of product groups, and it wasn't
+scalable for the API team, which traditionally dealt with core file operations,
+to learn the intricacies of each product and build corresponding APIs.
 
-Stone seeks to:
+Stone's chief goal is to decentralize API development and ownership at Dropbox.
+To be successful, it needed to do several things:
 
-    1. Define API endpoints in terms of input and output data types that can
-       be consistently implemented in different protocols and languages.
-    2. Offer structs (product types) and tagged unions (sum types) as fundamental
-       data types for modeling APIs flexibly, but strictly.
-    3. Improve the visibility developers have into their APIs by centralizing
-       specification and documentation.
+**Decouple APIs from SDKS**: Dropbox has first-party clients for our mobile
+apps, desktop client, and website. Each of these is implemented in a different
+language. Moreover, we wanted to continue providing SDKs to third-parties, over
+half of whom use our SDKs. It's untenable to ask product groups that build APIs
+to also implement these endpoints in a half-dozen different language-specific
+SDKs. Without decoupling, as was the case in our v1 API, the SDKs will
+inevitably fall behind. Our solution is to have our SDKs automatically
+generated.
+
+**Improve Visibility into our APIs**: These days, APIs aren't just in the
+domain of engineering. Product managers, product specialists, partnerships,
+sales, and services groups all need to have clear and accurate specifications
+of our APIs. After all, APIs define Dropbox's data models and functionlaity.
+Before Stone, API design documents obseleted by changes during implementation
+were the source of truth.
+
+**Consistency and Predictability**: Consistency ranging from documentation
+tense to API patterns are important for making an API predictable and therefore
+easier to use. We needed an easy way to make and enforce patterns.
+
+**JSON**: To make consumption easier for third parties, we wanted our data
+types to map to JSON. For cases where serialization efficiency
+(space and time) are important, you can try using msgpack (alpha support
+available in the Python generator). It's possible also to define your own
+serialization scheme, but at that point, you may consider using something like
+`Protobuf <https://github.com/google/protobuf>`_.
 
 Assumptions
 -----------
@@ -79,14 +107,13 @@ requests and return responses; its first use case is the Dropbox v2 API which
 operates over HTTP. Stone does not come with nor enforce any particular RPC
 framework.
 
-Stone makes some assumptions about the data types supported in the serialization
-format and target programming language. It's assumed that there is a capacity
-for representing dictionaries (unordered string keys -> value), lists, numeric
-types, and strings. The intention is for Stone to map to a multitude of
-serialization formats from JSON to more space-efficient representations.
+Stone makes some assumptions about the data types supported in target
+programming languages. It's assumed that there is a capacity for representing
+dictionaries (unordered string keys -> value), lists, numeric types, and
+strings.
 
-Stone assumes that a route (or API endpoint) can have its request and
-response types defined without relation to each other. In other words, the
+Stone assumes that a route (or API endpoint) can have its argument and
+result types defined without relation to each other. In other words, the
 type of response does not change based on the input to the endpoint. An
 exception to this rule is afforded for error responses.
 

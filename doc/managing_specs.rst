@@ -34,14 +34,6 @@ specs::
     $ stone python spec1.stone spec2.stone spec3.stone output/
     $ stone python *.stone output/
 
-Using Header Files
-==================
-
-If multiple spec files depend on the same user-defined type or alias, then you
-should move the common definition to a header file.
-
-See how to use `Include <doc/lang_ref.rst#include>`_.
-
 Separating Public and Private Routes
 ====================================
 

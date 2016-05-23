@@ -668,6 +668,9 @@ directive as follows::
 When referencing data types in ``common``, use the prefix ``common.``. For
 example, ``common.AccountId`` and ``common.BasicAccount``.
 
+Two namespaces cannot import each other. This is known as a circular import and
+is prohibited to make generating languages like Python possible.
+
 .. _doc:
 
 Documentation
