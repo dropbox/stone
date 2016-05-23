@@ -29,7 +29,8 @@ dist = setup(
     zip_safe=False,
     packages=['stone',
               'stone.lang',
-              'stone.target'],
+              'stone.target',
+              'stone.target.python_rsrc'],
     long_description=open('README.rst').read(),
     platforms=['CPython 2.6', 'CPython 2.7'],
     entry_points={

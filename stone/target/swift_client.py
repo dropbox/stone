@@ -29,7 +29,7 @@ from stone.data_type import (
     is_void_type,
 )
 from stone.generator import CodeGenerator
-from stone.target.swift import (
+from stone.target.swift_helpers import (
     fmt_class,
     fmt_func,
     fmt_obj,
@@ -63,20 +63,20 @@ class SwiftGenerator(CodeGenerator):
             return val
 
     def generate(self, api):
-        cur_folder = os.path.dirname(__file__)
+        rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
         self.logger.info('Copying StoneSerializers.swift to output folder')
-        shutil.copy(os.path.join(cur_folder, 'StoneSerializers.swift'),
+        shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
                     os.path.join(self.target_folder_path, 'Source'))
 
         self.logger.info('Copying StoneValidators.swift to output folder')
-        shutil.copy(os.path.join(cur_folder, 'StoneValidators.swift'),
+        shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
                     os.path.join(self.target_folder_path, 'Source'))
 
         self.logger.info('Copying Client.swift to output folder')
-        shutil.copy(os.path.join(cur_folder, 'Client.swift'),
+        shutil.copy(os.path.join(rsrc_folder, 'Client.swift'),
                     os.path.join(self.target_folder_path, 'Source'))
 
-        jazzy_cfg_path = os.path.join(cur_folder, 'jazzy.json')
+        jazzy_cfg_path = os.path.join(rsrc_folder, 'jazzy.json')
         with open(jazzy_cfg_path) as jazzy_file:
             jazzy_cfg = json.load(jazzy_file)
 
@@ -98,7 +98,7 @@ class SwiftGenerator(CodeGenerator):
             self.emit_raw(json.dumps(jazzy_cfg, indent=2)+'\n')
 
         client_path = os.path.join('Source', 'DropboxClient.swift')
-        dropbox_raw_path = os.path.join(cur_folder, 'DropboxClient-raw.swift')
+        dropbox_raw_path = os.path.join(rsrc_folder, 'DropboxClient-raw.swift')
 
         with open(dropbox_raw_path) as raw_client, self.output_to_relative_path(client_path):
             self._generate_bound_client(api, raw_client)

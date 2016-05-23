@@ -10,11 +10,9 @@ import subprocess
 import sys
 import unittest
 
-import stone_validators as bv
+import stone.target.python_rsrc.stone_validators as bv
 
-from stone_serializers import (
-    json_compat_obj_encode,
-    json_compat_obj_decode,
+from stone.target.python_rsrc.stone_serializers import (
     json_encode,
     json_decode,
 )
@@ -651,7 +649,7 @@ class TestGeneratedPython(unittest.TestCase):
             [sys.executable,
              '-m',
              'stone.cli',
-             'python.stoneg.py',
+             'python_types',
              'output',
              '-'],
             stdin=subprocess.PIPE,
@@ -662,14 +660,15 @@ class TestGeneratedPython(unittest.TestCase):
             raise AssertionError('Could not execute stone tool: %s' %
                                  stderr.decode('utf-8'))
 
-        # Load ns2 first since ns depends on it.
-        if six.PY2:
-            self.ns2 = imp.load_source('ns2', 'output/ns2.py')
-            self.ns = imp.load_source('ns', 'output/ns.py')
-        else:
-            sys.path.append('output')
-            self.ns2 = __import__('ns2')
-            self.ns = __import__('ns')
+        sys.path.append('output')
+        self.ns2 = __import__('ns2')
+        self.ns = __import__('ns')
+        self.sv = __import__('stone_validators')
+        self.ss = __import__('stone_serializers')
+        self.encode = self.ss.json_encode
+        self.compat_obj_encode = self.ss.json_compat_obj_encode
+        self.decode = self.ss.json_decode
+        self.compat_obj_decode = self.ss.json_compat_obj_decode
 
     def test_docstring(self):
         # Check that the docstrings from the spec have in some form made it
@@ -689,7 +688,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(self.ns.AliasedS2, self.ns.S2)
 
     def test_struct_decoding(self):
-        d = json_decode(bv.Struct(self.ns.D),
+        d = self.decode(self.sv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'b': 1, 'c': 'C', 'd': []}))
         self.assertIsInstance(d, self.ns.D)
         self.assertEqual(d.a, 'A')
@@ -698,7 +697,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.d, [])
 
         # Test with missing value for nullable field
-        d = json_decode(bv.Struct(self.ns.D),
+        d = self.decode(self.sv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'b': 1, 'd': []}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
@@ -706,7 +705,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.d, [])
 
         # Test with missing value for field with default
-        d = json_decode(bv.Struct(self.ns.D),
+        d = self.decode(self.sv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'c': 'C', 'd': [1]}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 10)
@@ -714,131 +713,131 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.d, [1])
 
         # Test with explicitly null value for nullable field
-        d = json_decode(bv.Struct(self.ns.D),
+        d = self.decode(self.sv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'c': None, 'd': [1, 2]}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [1, 2])
 
         # Test with None and numbers in list
-        d = json_decode(bv.Struct(self.ns.D),
+        d = self.decode(self.sv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'c': None, 'd': [None, 1]}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [None, 1])
 
         # Test with explicitly null value for field with default
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_decode(bv.Struct(self.ns.D),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(self.sv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'b': None}))
         self.assertEqual("b: expected integer, got null", str(cm.exception))
 
     def test_union_decoding_old(self):
-        v = json_decode(bv.Union(self.ns.V), json.dumps('t0'))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps('t0'))
         self.assertIsInstance(v, self.ns.V)
 
         # Test verbose representation of a void union member
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'t0': None}), old_style=True)
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'t0': None}), old_style=True)
         self.assertIsInstance(v, self.ns.V)
 
         # Test bad value for void union member
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_decode(bv.Union(self.ns.V), json.dumps({'t0': 10}), old_style=True)
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(self.sv.Union(self.ns.V), json.dumps({'t0': 10}), old_style=True)
         self.assertEqual("expected null, got integer", str(cm.exception))
 
         # Test compact representation of a nullable union member with missing value
-        v = json_decode(bv.Union(self.ns.V), json.dumps('t2'))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps('t2'))
         self.assertIsInstance(v, self.ns.V)
 
         # Test verbose representation of a nullable union member with missing value
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'t2': None}), old_style=True)
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'t2': None}), old_style=True)
         self.assertIsInstance(v, self.ns.V)
 
         # Test verbose representation of a nullable union member with bad value
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_decode(bv.Union(self.ns.V), json.dumps({'t2': 123}), old_style=True)
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(self.sv.Union(self.ns.V), json.dumps({'t2': 123}), old_style=True)
         self.assertEqual("'123' expected to be a string, got integer", str(cm.exception))
 
     def test_union_decoding(self):
-        v = json_decode(bv.Union(self.ns.V), json.dumps('t0'))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps('t0'))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
         # Test verbose representation of a void union member
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't0'}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
         # Test extra verbose representation of a void union member
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't0', 't0': None}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0', 't0': None}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
         # Test error: extra key
-        with self.assertRaises(bv.ValidationError) as cm:
-            v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't0', 'unk': 123}))
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0', 'unk': 123}))
         self.assertEqual("unexpected key 'unk'", str(cm.exception))
 
         # Test error: bad type
-        with self.assertRaises(bv.ValidationError) as cm:
-            v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 123}))
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 123}))
         self.assertEqual('tag must be string, got integer', str(cm.exception))
 
         # Test primitive union member
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't1', 't1': 'hello'}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't1', 't1': 'hello'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t1())
         self.assertEqual(v.get_t1(), 'hello')
 
         # Test catch-all
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'.tag': 'z', 'z': 'hello'}),
             strict=False)
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_other())
 
         # Test catch-all is reject if strict
-        with self.assertRaises(bv.ValidationError):
-            json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 'z'}))
+        with self.assertRaises(self.sv.ValidationError):
+            self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 'z'}))
 
         # Test explicitly using catch-all is reject if strict
-        with self.assertRaises(bv.ValidationError):
-            json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 'other'}))
+        with self.assertRaises(self.sv.ValidationError):
+            self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 'other'}))
 
         # Test nullable primitive union member with null value
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't2', 't2': None}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't2', 't2': None}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t2())
         self.assertEqual(v.get_t2(), None)
 
         # Test nullable primitive union member that is missing
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't2'}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't2'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t2())
         self.assertEqual(v.get_t2(), None)
 
         # Test error: extra key
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_decode(bv.Union(self.ns.V),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(self.sv.Union(self.ns.V),
                         json.dumps({'.tag': 't2', 't2': None, 'unk': 123}))
         self.assertEqual("unexpected key 'unk'", str(cm.exception))
 
         # Test composite union member
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't3', 'f': 'hello'}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't3', 'f': 'hello'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t3())
         self.assertIsInstance(v.get_t3(), self.ns.S)
         self.assertEqual(v.get_t3().f, 'hello')
 
         # Test error: extra key
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_decode(bv.Union(self.ns.V),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(self.sv.Union(self.ns.V),
                         json.dumps({'.tag': 't3', 'f': 'hello', 'g': 'blah'}))
         self.assertEqual("t3: unknown field 'g'", str(cm.exception))
 
         # Test composite union member with unknown key, but strict is False
-        v = json_decode(bv.Union(self.ns.V),
+        v = self.decode(self.sv.Union(self.ns.V),
                         json.dumps({'.tag': 't3', 'f': 'hello', 'g': 'blah'}),
                         strict=False)
         self.assertIsInstance(v, self.ns.V)
@@ -847,21 +846,21 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(v.get_t3().f, 'hello')
 
         # Test nullable composite union member
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't4', 'f': 'hello'}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't4', 'f': 'hello'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t4())
         self.assertIsInstance(v.get_t4(), self.ns.S)
         self.assertEqual(v.get_t4().f, 'hello')
 
         # Test nullable composite union member that's null
-        v = json_decode(bv.Union(self.ns.V), json.dumps({'.tag': 't4'}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't4'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t4())
         self.assertIsNone(v.get_t4())
 
         # Test stacked unions
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'.tag': 't5', 't5': {'.tag': 't1', 't1': 'hello'}}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t5(), None)
@@ -870,16 +869,16 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(u.get_t1(), 'hello')
 
         # Test stacked unions with null
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'.tag': 't6'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t6(), None)
         self.assertEqual(v.get_t6(), None)
 
         # Test member that enumerates subtypes
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'.tag': 't7', 't7': {'.tag': 'file', 'name': 'test', 'size': 1024}}))
         self.assertIsInstance(v, self.ns.V)
         self.assertIsInstance(v.get_t7(), self.ns.File)
@@ -888,30 +887,30 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(f.size, 1024)
 
         # Test member that enumerates subtypes with null
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'.tag': 't8'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertEqual(v.get_t8(), None)
 
         # Test member that is a list
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'.tag': 't9', 't9': ['a', 'b']}))
         self.assertIsInstance(v, self.ns.V)
         self.assertEqual(v.get_t9(), ['a', 'b'])
 
         # Test member that is a list of composites
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'.tag': 't10', 't10': [{'.tag': 't1', 't1': 'hello'}]}))
         self.assertIsInstance(v, self.ns.V)
         t10 = v.get_t10()
         self.assertEqual(t10[0].get_t1(), 'hello')
 
         # Test member that is a list of composites (old style)
-        v = json_decode(
-            bv.Union(self.ns.V),
+        v = self.decode(
+            self.sv.Union(self.ns.V),
             json.dumps({'t10': [{'t1': 'hello'}]}),
             old_style=True)
         self.assertIsInstance(v, self.ns.V)
@@ -922,8 +921,8 @@ class TestGeneratedPython(unittest.TestCase):
         # Simulate that U2 used to have a field b with no value, but it's since
         # been evolved to a field with an optional struct (only has optional
         # fields).
-        u2 = json_decode(
-            bv.Union(self.ns.U2),
+        u2 = self.decode(
+            self.sv.Union(self.ns.U2),
             json.dumps({'.tag': 'b'}))
         self.assertIsInstance(u2, self.ns.U2)
         b = u2.get_b()
@@ -932,16 +931,16 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(b.f2, 3)
 
     def test_struct_decoding_with_optional_struct(self):
-        opt_s = json_decode(
-            bv.Struct(self.ns.OptionalS),
+        opt_s = self.decode(
+            self.sv.Struct(self.ns.OptionalS),
             json.dumps(None))
         self.assertEqual(opt_s.f1, 'hello')
         self.assertEqual(opt_s.f2, 3)
 
         # Simulate that S2 used to have no fields, but now it has a new field
         # that is an optional struct (only has optional fields).
-        s2 = json_decode(
-            bv.Struct(self.ns.S2),
+        s2 = self.decode(
+            self.sv.Struct(self.ns.S2),
             json.dumps({}))
         self.assertIsInstance(s2, self.ns.S2)
         self.assertIsInstance(s2.f1, self.ns.OptionalS)
@@ -951,85 +950,85 @@ class TestGeneratedPython(unittest.TestCase):
     def test_union_encoding(self):
         # Test void union member
         v_t0 = self.ns.V.t0
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t0),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t0),
                          {'.tag': 't0'})
 
         # Test that the .tag key comes first
-        v = json_compat_obj_encode(bv.Union(self.ns.V), v_t0)
+        v = self.compat_obj_encode(self.sv.Union(self.ns.V), v_t0)
         self.assertEqual(list(v.keys())[0], '.tag')
 
         # Test primitive union member
         v_t1 = self.ns.V.t1('hello')
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t1),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t1),
                          {'.tag': 't1', 't1': 'hello'})
 
         # Test nullable primitive union member
         v_t2 = self.ns.V.t2('hello')
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t2),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t2),
                          {'.tag': 't2', 't2': 'hello'})
 
         # Test nullable primitive union member that's null
         v_t2 = self.ns.V.t2(None)
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t2),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t2),
                          {'.tag': 't2'})
 
         # Test composite union member
         s = self.ns.S(f='hello')
         v_t3 = self.ns.V.t3(s)
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t3),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t3),
                          {'.tag': 't3', 'f': 'hello'})
 
         # Test nullable composite union member
         s = self.ns.S(f='hello')
         v_t4 = self.ns.V.t4(s)
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t4),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t4),
                          {'.tag': 't4', 'f': 'hello'})
 
         # Test nullable composite union member that's null
         v_t4 = self.ns.V.t4(None)
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t4),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t4),
                          {'.tag': 't4'})
 
         # Test stacked unions
         v_t5 = self.ns.V.t5(self.ns.U.t1('hello'))
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t5),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t5),
                          {'.tag': 't5', 't5': {'.tag': 't1', 't1': 'hello'}})
 
         # Test stacked unions with null
         v_t6 = self.ns.V.t6(None)
-        self.assertEqual(json_compat_obj_encode(bv.Union(self.ns.V), v_t6),
+        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t6),
                          {'.tag': 't6'})
 
         # Test member that enumerates subtypes
         v_t7 = self.ns.V.t7(self.ns.File(name='test', size=1024))
         self.assertEqual(
-            json_compat_obj_encode(bv.Union(self.ns.V), v_t7),
+            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t7),
             {'.tag': 't7', 't7': {'.tag': 'file', 'name': 'test', 'size': 1024}})
 
         # Test member that enumerates subtypes but is null
         v_t8 = self.ns.V.t8(None)
         self.assertEqual(
-            json_compat_obj_encode(bv.Union(self.ns.V), v_t8),
+            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t8),
             {'.tag': 't8'})
 
         # Test member that is a list
         v_t9 = self.ns.V.t9(['a', 'b'])
         self.assertEqual(
-            json_compat_obj_encode(bv.Union(self.ns.V), v_t9),
+            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t9),
             {'.tag': 't9', 't9': ['a', 'b']})
 
     def test_list_coding(self):
         # Test decoding list of composites
-        v = json_decode(
-            bv.List(bv.Struct(self.ns.S)),
+        v = self.decode(
+            self.sv.List(self.sv.Struct(self.ns.S)),
             json.dumps([{'f': 'Test'}]))
         self.assertIsInstance(v, list)
         self.assertIsInstance(v[0], self.ns.S)
         self.assertEqual(v[0].f, 'Test')
 
         # Test encoding list of composites
-        v = json_encode(
-            bv.List(bv.Struct(self.ns.S)),
+        v = self.encode(
+            self.sv.List(self.sv.Struct(self.ns.S)),
             [self.ns.S('Test')])
         self.assertEqual(v, json.dumps([{'f': 'Test'}]))
 
@@ -1052,51 +1051,51 @@ class TestGeneratedPython(unittest.TestCase):
         # Test serializing a leaf struct from  the root struct
         fi = self.ns.File(name='test.doc', size=100)
         self.assertEqual(
-            json_compat_obj_encode(bv.StructTree(self.ns.Resource), fi),
+            self.compat_obj_encode(self.sv.StructTree(self.ns.Resource), fi),
             {'.tag': 'file', 'name': 'test.doc', 'size': 100})
 
         # Test that the .tag key comes first
-        v = json_compat_obj_encode(bv.StructTree(self.ns.Resource), fi)
+        v = self.compat_obj_encode(self.sv.StructTree(self.ns.Resource), fi)
         self.assertEqual(list(v.keys())[0], '.tag')
 
         # Test serializing a leaf struct as the base and target
         self.assertEqual(
-            json_compat_obj_encode(bv.Struct(self.ns.File), fi),
+            self.compat_obj_encode(self.sv.Struct(self.ns.File), fi),
             {'name': 'test.doc', 'size': 100})
 
     def test_struct_enumerated_subtypes_decoding(self):
         # Test deserializing a leaf struct from  the root struct
-        fi = json_compat_obj_decode(
-            bv.StructTree(self.ns.Resource),
+        fi = self.compat_obj_decode(
+            self.sv.StructTree(self.ns.Resource),
             {'.tag': 'file', 'name': 'test.doc', 'size': 100})
         self.assertIsInstance(fi, self.ns.File)
         self.assertEqual(fi.name, 'test.doc')
         self.assertEqual(fi.size, 100)
 
         # Test deserializing leaf struct with unknown type tag
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_decode(
-                bv.StructTree(self.ns.Resource),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_decode(
+                self.sv.StructTree(self.ns.Resource),
                 {'.tag': 'unk', 'name': 'test.doc'})
         self.assertEqual("unknown subtype 'unk'", str(cm.exception))
 
         # Test deserializing leaf struct with bad JSON type for type tag
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_decode(
-                bv.StructTree(self.ns.Resource),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_decode(
+                self.sv.StructTree(self.ns.Resource),
                 {'.tag': 123, 'name': 'test.doc'})
         self.assertEqual(".tag: expected string, got integer", str(cm.exception))
 
         # Test deserializing an unknown leaf in strict mode
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_decode(
-                bv.StructTree(self.ns.Resource),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_decode(
+                self.sv.StructTree(self.ns.Resource),
                 {'.tag': 'symlink', 'name': 'test'})
         self.assertEqual("unknown subtype 'symlink'", str(cm.exception))
 
         # Test deserializing an unknown leaf in non-strict mode
-        r = json_compat_obj_decode(
-            bv.StructTree(self.ns.ResourceLax),
+        r = self.compat_obj_decode(
+            self.sv.StructTree(self.ns.ResourceLax),
             {'.tag': 'symlink', 'name': 'test'},
             strict=False)
         self.assertIsInstance(r, self.ns.ResourceLax)
@@ -1104,9 +1103,9 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test deserializing an unknown leaf in non-strict mode, but with no
         # catch-all
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_decode(
-                bv.StructTree(self.ns.Resource),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_decode(
+                self.sv.StructTree(self.ns.Resource),
                 {'.tag': 'symlink', 'name': 'test'},
                 strict=False)
         self.assertEqual(
@@ -1115,22 +1114,22 @@ class TestGeneratedPython(unittest.TestCase):
 
     def test_defaults(self):
         # Test void type
-        v = bv.Void()
+        v = self.sv.Void()
         self.assertTrue(v.has_default())
         self.assertEqual(v.get_default(), None)
 
         # Test nullable type
-        n = bv.Nullable(bv.Struct(self.ns.D))
+        n = self.sv.Nullable(self.sv.Struct(self.ns.D))
         self.assertTrue(n.has_default())
         self.assertEqual(n.get_default(), None)
 
         # Test struct where all fields have defaults
-        s = bv.Struct(self.ns.E)
+        s = self.sv.Struct(self.ns.E)
         self.assertTrue(s.has_default())
         s.get_default()
 
         # Test struct where not all fields have defaults
-        s = bv.Struct(self.ns.D)
+        s = self.sv.Struct(self.ns.D)
         self.assertFalse(s.has_default())
         self.assertRaises(AssertionError, s.get_default)
 
@@ -1152,27 +1151,27 @@ class TestGeneratedPython(unittest.TestCase):
             return
 
         b = self.ns.B(a='hi', b=32, c=b'\x00\x01')
-        s = msgpack_encode(bv.Struct(self.ns.B), b)
-        b2 = msgpack_decode(bv.Struct(self.ns.B), s)
+        s = msgpack_encode(self.sv.Struct(self.ns.B), b)
+        b2 = msgpack_decode(self.sv.Struct(self.ns.B), s)
         self.assertEqual(b.a, b2.a)
         self.assertEqual(b.b, b2.b)
         self.assertEqual(b.c, b2.c)
 
         bs = b'\x00\x01'
-        s = msgpack_encode(bv.Bytes(), bs)
-        bs2 = msgpack_decode(bv.Bytes(), s)
+        s = msgpack_encode(self.sv.Bytes(), bs)
+        bs2 = msgpack_decode(self.sv.Bytes(), s)
         self.assertEqual(bs, bs2)
 
         u = u'\u2650'
-        s = msgpack_encode(bv.String(), u)
-        u2 = msgpack_decode(bv.String(), s)
+        s = msgpack_encode(self.sv.String(), u)
+        u2 = msgpack_decode(self.sv.String(), s)
         self.assertEqual(u, u2)
 
     def test_alias_validators(self):
 
         def aliased_string_validator(val):
             if ' ' in val:
-                raise bv.ValidationError('No spaces allowed')
+                raise self.sv.ValidationError('No spaces allowed')
         aliased_validators = {
             self.ns.AliasedString_validator: aliased_string_validator}
 
@@ -1180,16 +1179,16 @@ class TestGeneratedPython(unittest.TestCase):
         # Test decoding
         #
 
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_decode(
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_decode(
                 self.ns.AliasedString_validator,
                 'hi there',
                 alias_validators=aliased_validators)
         self.assertEqual("No spaces allowed", str(cm.exception))
 
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_decode(
-                bv.Struct(self.ns.ContainsAlias),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_decode(
+                self.sv.Struct(self.ns.ContainsAlias),
                 {'s': 'hi there'},
                 alias_validators=aliased_validators)
         self.assertEqual("s: No spaces allowed", str(cm.exception))
@@ -1198,17 +1197,17 @@ class TestGeneratedPython(unittest.TestCase):
         # Test encoding
         #
 
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_encode(
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(
                 self.ns.AliasedString_validator,
                 'hi there',
                 alias_validators=aliased_validators)
         self.assertEqual("No spaces allowed", str(cm.exception))
 
         ca = self.ns.ContainsAlias(s='hi there')
-        with self.assertRaises(bv.ValidationError) as cm:
-            json_compat_obj_encode(
-                bv.Struct(self.ns.ContainsAlias),
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(
+                self.sv.Struct(self.ns.ContainsAlias),
                 ca,
                 alias_validators=aliased_validators)
         self.assertEqual("s: No spaces allowed", str(cm.exception))

@@ -19,6 +19,13 @@ from .compiler import Compiler, GeneratorException
 from .lang.exception import InvalidSpec
 from .lang.tower import TowerOfStone
 
+# These generators come by default
+_builtin_generators = (
+    'python_types',
+    'python_client',
+    'swift_client',
+)
+
 # The parser for command line arguments
 _cmdline_parser = argparse.ArgumentParser(description='StoneAPI')
 _cmdline_parser.add_argument(
@@ -27,10 +34,14 @@ _cmdline_parser.add_argument(
     action='count',
     help='Print debugging statements.',
 )
+_generator_help = (
+    'Either the name of a built-in generator or the path to a generator '
+    'module. Paths to generator modules must end with a .stoneg.py extension. '
+    'The following generators are built-in: ' + ', '.join(_builtin_generators))
 _cmdline_parser.add_argument(
     'generator',
     type=six.text_type,
-    help='Specify the path to a generator. It must have a .stoneg.py extension.',
+    help=_generator_help,
 )
 _cmdline_parser.add_argument(
     'output',
@@ -223,7 +234,10 @@ def main():
                         del namespace.route_by_name[route.name]
                 namespace.routes = filtered_routes
 
-    if not os.path.exists(args.generator):
+    if args.generator in _builtin_generators:
+        generator_module = __import__(
+            'stone.target.%s' % args.generator, fromlist=[''])
+    elif not os.path.exists(args.generator):
         print("error: Generator '%s' cannot be found." % args.generator,
               file=sys.stderr)
         sys.exit(1)

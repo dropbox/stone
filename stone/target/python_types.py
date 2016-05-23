@@ -28,7 +28,7 @@ from stone.data_type import (
     unwrap_nullable,
 )
 from stone.generator import CodeGenerator
-from stone.target.python import (
+from stone.target.python_helpers import (
     fmt_class,
     fmt_func,
     fmt_obj,
@@ -87,15 +87,15 @@ class PythonGenerator(CodeGenerator):
         Each namespace will have Python classes to represent data types and
         routes in the Stone spec.
         """
-        cur_folder = os.path.dirname(__file__)
+        rsrc_folder = os.path.join(os.path.dirname(__file__), 'python_rsrc')
         self.logger.info('Copying stone_validators.py to output folder')
-        shutil.copy(os.path.join(cur_folder, 'stone_validators.py'),
+        shutil.copy(os.path.join(rsrc_folder, 'stone_validators.py'),
                     self.target_folder_path)
         self.logger.info('Copying stone_serializers.py to output folder')
-        shutil.copy(os.path.join(cur_folder, 'stone_serializers.py'),
+        shutil.copy(os.path.join(rsrc_folder, 'stone_serializers.py'),
                     self.target_folder_path)
         self.logger.info('Copying stone_base.py to output folder')
-        shutil.copy(os.path.join(cur_folder, 'stone_base.py'),
+        shutil.copy(os.path.join(rsrc_folder, 'stone_base.py'),
                     self.target_folder_path)
         for namespace in api.namespaces.values():
             with self.output_to_relative_path('{}.py'.format(namespace.name)):
