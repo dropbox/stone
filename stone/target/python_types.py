@@ -51,7 +51,7 @@ except (SystemError, ValueError):
 # Matches format of Stone doc tags
 doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>.*?)`')
 
-_cmdline_parser = argparse.ArgumentParser(prog='python-generator')
+_cmdline_parser = argparse.ArgumentParser(prog='python-types-generator')
 _cmdline_parser.add_argument(
     '-r',
     '--route-method',
@@ -70,7 +70,7 @@ _cmdline_parser.add_argument(
 )
 
 
-class PythonGenerator(CodeGenerator):
+class PythonTypesGenerator(CodeGenerator):
     """Generates Python modules to represent the input Stone spec."""
 
     cmdline_parser = _cmdline_parser
@@ -161,7 +161,7 @@ class PythonGenerator(CodeGenerator):
         self._generate_routes(namespace)
 
     def _generate_alias_definition(self, namespace, alias):
-        v = self._generate_validator_constructor(namespace, alias.data_type)
+        v = generate_validator_constructor(namespace, alias.data_type)
         if alias.doc:
             self.emit_wrapped_text(
                 self.process_doc(alias.doc, self._docf), prefix='# ')
@@ -172,7 +172,7 @@ class PythonGenerator(CodeGenerator):
             # generated class as well.
             self.emit('{} = {}'.format(
                 alias.name,
-                self._class_name_for_data_type(alias.data_type, namespace)))
+                class_name_for_data_type(alias.data_type, namespace)))
 
     def _docf(self, tag, val):
         """
@@ -222,7 +222,7 @@ class PythonGenerator(CodeGenerator):
         elif is_alias(data_type):
             return self._python_type_mapping(ns, data_type.data_type)
         elif is_user_defined_type(data_type):
-            class_name = self._class_name_for_data_type(data_type)
+            class_name = class_name_for_data_type(data_type)
             if data_type.namespace.name != ns.name:
                 return '%s.%s_validator' % (
                     data_type.namespace.name, class_name)
@@ -238,28 +238,11 @@ class PythonGenerator(CodeGenerator):
         else:
             raise TypeError('Unknown data type %r' % data_type)
 
-    def _class_name_for_data_type(self, data_type, ns=None):
-        """
-        Returns the name of the Python class that maps to a user-defined type.
-        The name is identical to the name in the spec.
-
-        If ``ns`` is set to a Namespace and the namespace of `data_type` does
-        not match, then a namespace prefix is added to the returned name.
-        For example, ``foreign_ns.TypeName``.
-        """
-        assert is_user_defined_type(data_type) or is_alias(data_type), \
-            'Expected composite type, got %r' % type(data_type)
-        name = fmt_class(data_type.name)
-        if ns and data_type.namespace != ns:
-            # If from an imported namespace, add a namespace prefix.
-            name = '{}.{}'.format(data_type.namespace.name, name)
-        return name
-
     def _class_declaration_for_type(self, ns, data_type):
         assert is_user_defined_type(data_type), \
             'Expected struct, got %r' % type(data_type)
         if data_type.parent_type:
-            extends = self._class_name_for_data_type(data_type.parent_type, ns)
+            extends = class_name_for_data_type(data_type.parent_type, ns)
         else:
             if is_union_type(data_type):
                 # Use a handwritten base class
@@ -267,7 +250,7 @@ class PythonGenerator(CodeGenerator):
             else:
                 extends = 'object'
         return 'class {}({}):'.format(
-            self._class_name_for_data_type(data_type), extends)
+            class_name_for_data_type(data_type), extends)
 
     #
     # Struct Types
@@ -304,7 +287,7 @@ class PythonGenerator(CodeGenerator):
         else:
             validator = 'Struct'
         self.emit('{0}_validator = bv.{1}({0})'.format(
-            self._class_name_for_data_type(data_type),
+            class_name_for_data_type(data_type),
             validator,
         ))
         self.emit()
@@ -334,87 +317,6 @@ class PythonGenerator(CodeGenerator):
         self.emit('_has_required_fields = %r' % has_required_fields)
         self.emit()
 
-    def _generate_validator_constructor(self, ns, data_type):
-        """
-        Given a Stone data type, returns a string that can be used to construct
-        the appropriate validation object in Python.
-        """
-        dt, nullable_dt = unwrap_nullable(data_type)
-        if is_list_type(dt):
-            v = self._generate_func_call(
-                'bv.List',
-                args=[
-                    self._generate_validator_constructor(ns, dt.data_type)],
-                kwargs=[
-                    ('min_items', dt.min_items),
-                    ('max_items', dt.max_items)],
-            )
-        elif is_numeric_type(dt):
-            v = self._generate_func_call(
-                'bv.{}'.format(dt.name),
-                kwargs=[
-                    ('min_value', dt.min_value),
-                    ('max_value', dt.max_value)],
-            )
-        elif is_string_type(dt):
-            pattern = None
-            if dt.pattern is not None:
-                pattern = repr(dt.pattern)
-            v = self._generate_func_call(
-                'bv.String',
-                kwargs=[
-                    ('min_length', dt.min_length),
-                    ('max_length', dt.max_length),
-                    ('pattern', pattern)],
-            )
-        elif is_timestamp_type(dt):
-            v = self._generate_func_call(
-                'bv.Timestamp',
-                args=[repr(dt.format)],
-            )
-        elif is_user_defined_type(dt):
-            v = fmt_class(dt.name) + '_validator'
-            if ns.name != dt.namespace.name:
-                v = '{}.{}'.format(dt.namespace.name, v)
-        elif is_alias(dt):
-            # Assume that the alias has already been declared elsewhere.
-            name = fmt_class(dt.name) + '_validator'
-            if ns.name != dt.namespace.name:
-                name = '{}.{}'.format(dt.namespace.name, name)
-            v = name
-        elif is_boolean_type(dt) or is_bytes_type(dt) or is_void_type(dt):
-            v = self._generate_func_call('bv.{}'.format(dt.name))
-        else:
-            raise AssertionError('Unsupported data type: %r' % dt)
-
-        if nullable_dt:
-            return self._generate_func_call('bv.Nullable', args=[v])
-        else:
-            return v
-
-    @classmethod
-    def _generate_func_call(cls, name, args=None, kwargs=None):
-        """
-        Generates code to call a function.
-
-        Args:
-            name (str): The function name.
-            args (list[str]): Each positional argument.
-            kwargs (list[tuple]): Each tuple is (arg: str, value: str). If
-                value is None, then the keyword argument is omitted. Otherwise,
-                if the value is not a string, then str() is called on it.
-
-        Returns:
-            str: Code to call a function.
-        """
-        all_args = []
-        if args:
-            all_args.extend(args)
-        if kwargs:
-            all_args.extend('{}={}'.format(k, v)
-                            for k, v in kwargs if v is not None)
-        return '{}({})'.format(name, ', '.join(all_args))
-
     def _generate_struct_class_reflection_attributes(self, ns, data_type):
         """
         Generates two class attributes:
@@ -431,16 +333,16 @@ class PythonGenerator(CodeGenerator):
         requires knowing the fields defined in each level of the hierarchy.
         """
 
-        class_name = self._class_name_for_data_type(data_type)
+        class_name = class_name_for_data_type(data_type)
         if data_type.parent_type:
-            parent_type_class_name = self._class_name_for_data_type(
+            parent_type_class_name = class_name_for_data_type(
                 data_type.parent_type, ns)
         else:
             parent_type_class_name = None
 
         for field in data_type.fields:
             field_name = fmt_var(field.name)
-            validator_name = self._generate_validator_constructor(ns, field.data_type)
+            validator_name = generate_validator_constructor(ns, field.data_type)
             self.emit('{}._{}_validator = {}'.format(
                 class_name, field_name, validator_name))
 
@@ -531,7 +433,7 @@ class PythonGenerator(CodeGenerator):
 
             # Call the parent constructor if a super type exists
             if data_type.parent_type:
-                class_name = self._class_name_for_data_type(data_type)
+                class_name = class_name_for_data_type(data_type)
                 self.generate_multiline_list(
                     [fmt_func(f.name, True)
                      for f in data_type.parent_type.all_fields],
@@ -557,7 +459,7 @@ class PythonGenerator(CodeGenerator):
     def _generate_python_value(self, ns, value):
         if is_tag_ref(value):
             ref = '{}.{}'.format(
-                self._class_name_for_data_type(value.union_data_type),
+                class_name_for_data_type(value.union_data_type),
                 fmt_var(value.tag_name))
             if ns != value.union_data_type.namespace:
                 ref = '%s.%s' % (value.union_data_type.namespace.name, ref)
@@ -656,7 +558,7 @@ class PythonGenerator(CodeGenerator):
                     '{}={{!r}}'.format(fmt_var(f.name, True))
                     for f in data_type.all_fields)
                 self.emit("return '{}({})'.format(".format(
-                    self._class_name_for_data_type(data_type),
+                    class_name_for_data_type(data_type),
                     constructor_kwargs_fmt,
                 ))
                 with self.indent():
@@ -664,8 +566,8 @@ class PythonGenerator(CodeGenerator):
                         self.emit("self._{}_value,".format(fmt_var(f.name)))
                 self.emit(")")
             else:
-                self.emit("return '%s()'"
-                               % self._class_name_for_data_type(data_type))
+                self.emit("return '%s()'" %
+                          class_name_for_data_type(data_type))
         self.emit()
 
     def _generate_enumerated_subtypes_tag_mapping(self, ns, data_type):
@@ -683,7 +585,7 @@ class PythonGenerator(CodeGenerator):
         for tags, subtype in data_type.get_all_subtypes_with_tags():
             tag_to_subtype_items.append("{}: {}".format(
                 tags,
-                self._generate_validator_constructor(ns, subtype)))
+                generate_validator_constructor(ns, subtype)))
 
         self.generate_multiline_list(
             tag_to_subtype_items,
@@ -700,7 +602,7 @@ class PythonGenerator(CodeGenerator):
             items.append("{0}: ({1}, {2})".format(
                 fmt_class(subtype.name),
                 tag,
-                self._generate_validator_constructor(ns, subtype)))
+                generate_validator_constructor(ns, subtype)))
         self.generate_multiline_list(
             items,
             before='{}._pytype_to_tag_and_subtype_ = '.format(data_type.name),
@@ -761,7 +663,7 @@ class PythonGenerator(CodeGenerator):
             self._generate_union_class_get_helpers(ns, data_type)
             self._generate_union_class_repr(data_type)
         self.emit('{0}_validator = bv.Union({0})'.format(
-            self._class_name_for_data_type(data_type)
+            class_name_for_data_type(data_type)
         ))
         self.emit()
 
@@ -796,7 +698,7 @@ class PythonGenerator(CodeGenerator):
 
         for field in data_type.fields:
             field_name = fmt_var(field.name)
-            validator_name = self._generate_validator_constructor(
+            validator_name = generate_validator_constructor(
                 ns, field.data_type)
             self.emit('{}._{}_validator = {}'.format(
                 class_name, field_name, validator_name))
@@ -811,7 +713,7 @@ class PythonGenerator(CodeGenerator):
         if data_type.parent_type:
             self.emit('{0}._tagmap.update({1}._tagmap)'.format(
                 class_name,
-                self._class_name_for_data_type(data_type.parent_type, ns)))
+                class_name_for_data_type(data_type.parent_type, ns)))
 
         self.emit()
 
@@ -903,7 +805,7 @@ class PythonGenerator(CodeGenerator):
         self.emit('def __repr__(self):')
         with self.indent():
             self.emit("return '{}(%r, %r)' % (self._tag, self._value)".format(
-                self._class_name_for_data_type(data_type),
+                class_name_for_data_type(data_type),
             ))
         self.emit()
 
@@ -932,7 +834,7 @@ class PythonGenerator(CodeGenerator):
                 self.emit("%r," % (route.deprecated is not None))
                 for data_type in data_types:
                     self.emit(
-                        self._generate_validator_constructor(namespace, data_type) + ',')
+                        generate_validator_constructor(namespace, data_type) + ',')
                 attrs = []
                 for attr_key in self.args.attribute:
                     attrs.append("'%s': %r" % (attr_key, route.attrs.get(attr_key)))
@@ -947,3 +849,103 @@ class PythonGenerator(CodeGenerator):
                 var_name = fmt_func(route.name)
                 self.emit("'{}': {},".format(route.name, var_name))
         self.emit()
+
+
+def generate_validator_constructor(ns, data_type):
+    """
+    Given a Stone data type, returns a string that can be used to construct
+    the appropriate validation object in Python.
+    """
+    dt, nullable_dt = unwrap_nullable(data_type)
+    if is_list_type(dt):
+        v = generate_func_call(
+            'bv.List',
+            args=[
+                generate_validator_constructor(ns, dt.data_type)],
+            kwargs=[
+                ('min_items', dt.min_items),
+                ('max_items', dt.max_items)],
+        )
+    elif is_numeric_type(dt):
+        v = generate_func_call(
+            'bv.{}'.format(dt.name),
+            kwargs=[
+                ('min_value', dt.min_value),
+                ('max_value', dt.max_value)],
+        )
+    elif is_string_type(dt):
+        pattern = None
+        if dt.pattern is not None:
+            pattern = repr(dt.pattern)
+        v = generate_func_call(
+            'bv.String',
+            kwargs=[
+                ('min_length', dt.min_length),
+                ('max_length', dt.max_length),
+                ('pattern', pattern)],
+        )
+    elif is_timestamp_type(dt):
+        v = generate_func_call(
+            'bv.Timestamp',
+            args=[repr(dt.format)],
+        )
+    elif is_user_defined_type(dt):
+        v = fmt_class(dt.name) + '_validator'
+        if ns.name != dt.namespace.name:
+            v = '{}.{}'.format(dt.namespace.name, v)
+    elif is_alias(dt):
+        # Assume that the alias has already been declared elsewhere.
+        name = fmt_class(dt.name) + '_validator'
+        if ns.name != dt.namespace.name:
+            name = '{}.{}'.format(dt.namespace.name, name)
+        v = name
+    elif is_boolean_type(dt) or is_bytes_type(dt) or is_void_type(dt):
+        v = generate_func_call('bv.{}'.format(dt.name))
+    else:
+        raise AssertionError('Unsupported data type: %r' % dt)
+
+    if nullable_dt:
+        return generate_func_call('bv.Nullable', args=[v])
+    else:
+        return v
+
+
+def generate_func_call(name, args=None, kwargs=None):
+    """
+    Generates code to call a function.
+
+    Args:
+        name (str): The function name.
+        args (list[str]): Each positional argument.
+        kwargs (list[tuple]): Each tuple is (arg: str, value: str). If
+            value is None, then the keyword argument is omitted. Otherwise,
+            if the value is not a string, then str() is called on it.
+
+    Returns:
+        str: Code to call a function.
+    """
+    all_args = []
+    if args:
+        all_args.extend(args)
+    if kwargs:
+        all_args.extend('{}={}'.format(k, v)
+                        for k, v in kwargs if v is not None)
+    return '{}({})'.format(name, ', '.join(all_args))
+
+
+def class_name_for_data_type(data_type, ns=None):
+    """
+    Returns the name of the Python class that maps to a user-defined type.
+    The name is identical to the name in the spec.
+
+    If ``ns`` is set to a Namespace and the namespace of `data_type` does
+    not match, then a namespace prefix is added to the returned name.
+    For example, ``foreign_ns.TypeName``.
+    """
+    assert is_user_defined_type(data_type) or is_alias(data_type), \
+        'Expected composite type, got %r' % type(data_type)
+    name = fmt_class(data_type.name)
+    if ns and data_type.namespace != ns:
+        # If from an imported namespace, add a namespace prefix.
+        name = '{}.{}'.format(data_type.namespace.name, name)
+    return name
