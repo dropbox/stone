@@ -2,6 +2,8 @@
 Stone
 *****
 
+*Warning: The documentation is undergoing a rewrite.*
+
 Define an API once in Stone. Use code generators to translate your
 specification into objects and functions in the programming languages of your
 choice.
