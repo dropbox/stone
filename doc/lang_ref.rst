@@ -180,6 +180,35 @@ User-defined types can be composed of other user-defined types::
         pescetarian
         carnivore
 
+Nested Definitions
+------------------
+
+If you're composing a type that won't be used anywhere else, you can define the
+type inline::
+
+    struct Person
+        "Describes a member of society."
+
+        name Name
+            struct
+                "Separates a name into components."
+                given_name
+                    "Also known as first name."
+                surname
+                    "Also known as family name."
+        age UInt64
+            "The number of years, rounded down."
+        food_pref FoodPreference
+            union
+                anything
+                vegetarian
+                vegan
+                pescetarian
+                carnivore
+
+The inline definition is identical to a top-level definition, except that the
+name is omitted as its already specified as the type for the field.
+
 Defaults
 --------
 

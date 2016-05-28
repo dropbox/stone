@@ -257,7 +257,6 @@ class TowerOfStone(object):
 
     def _create_type(self, env, item):
         """Create a forward reference for a union or struct."""
-
         if item.name in env:
             existing_dt = env[item.name]
             raise InvalidSpec(

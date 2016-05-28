@@ -3245,3 +3245,76 @@ class TestStone(unittest.TestCase):
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
         self.assertEqual(cm.exception.path, 'test.stone')
+
+    def test_inline_type_def(self):
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct Photo
+
+                dimensions Dimensions
+                    "Dimensions for a photo."
+                    struct
+                        height UInt64
+                            "Height of the photo."
+                        width UInt64
+                            "Width of the photo."
+
+                        example default
+                            height = 5
+                            width = 10
+
+                location GpsCoordinates?
+                    struct
+                        latitude Float64
+                        longitude Float64
+
+                        example default
+                            latitude = 37.23
+                            longitude = 122.2
+
+                time_taken Int64
+                    "The timestamp when the photo was taken."
+
+                example default
+                    "A typical photo"
+                    dimensions = default
+                    location = default
+                    time_taken = 100
+
+
+            union E
+                e1
+                e2 E2
+                    "Test E2."
+                    union
+                        a
+                        b
+
+            route r(Void, Photo, E)
+            """)
+        t = TowerOfStone([('ns1.stone', text)])
+        t.parse()
+
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct T
+                g Int64
+
+            struct S
+                f T
+                    "Dimensions for a photo or video."
+                    struct
+                        a String
+                        b Int64
+            """)
+        t = TowerOfStone([('ns1.stone', text)])
+
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Symbol 'T' already defined (ns1.stone:3).",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 9)
+        self.assertEqual(cm.exception.path, 'ns1.stone')

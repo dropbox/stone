@@ -89,7 +89,6 @@ class StoneTypeDef(_Element):
         """
         super(StoneTypeDef, self).__init__(path, lineno, lexpos)
 
-        assert isinstance(name, six.text_type), type(name)
         self.name = name
         assert isinstance(extends, (StoneTypeRef, type(None))), type(extends)
         self.extends = extends
@@ -344,6 +343,7 @@ class StoneParser(object):
         # utility in error reporting. But the path is never accessed, so this
         # is optional.
         self.path = None
+        self.anony_defs = []
 
     def parse(self, data, path=None):
         """
@@ -359,7 +359,9 @@ class StoneParser(object):
         # error max right now, it's best to show the lexing one.
         for err_msg, lineno in self.lexer.errors[::-1]:
             self.errors.insert(0, (err_msg, lineno, self.path))
+        parsed_data.extend(self.anony_defs)
         self.path = None
+        self.anony_defs = []
         return parsed_data
 
     def test_lexing(self, data):
@@ -591,10 +593,18 @@ class StoneParser(object):
     def p_struct(self, p):
         """struct : STRUCT ID inheritance NL \
                      INDENT docsection enumerated_subtypes field_list examples DEDENT"""
+        self.make_struct(p)
+
+    def p_anony_struct(self, p):
+        """anony_def : STRUCT empty inheritance NL \
+                INDENT docsection enumerated_subtypes field_list examples DEDENT"""
+        self.make_struct(p)
+
+    def make_struct(self, p):
         p[0] = StoneStructDef(
             path=self.path,
-            lineno=p.lineno(2),
-            lexpos=p.lexpos(2),
+            lineno=p.lineno(1),
+            lexpos=p.lexpos(1),
             name=p[2],
             extends=p[3],
             doc=p[6],
@@ -666,9 +676,11 @@ class StoneParser(object):
                 p[0] = p[2]
 
     def p_field(self, p):
-        """field : ID type_ref default_option deprecation NL INDENT docstring NL DEDENT
+        """field : ID type_ref default_option deprecation NL \
+                    INDENT docsection anony_def_option DEDENT
                  | ID type_ref default_option deprecation NL"""
-        has_docstring = len(p) > 6
+        has_docstring = len(p) > 6 and p[7] is not None
+        has_anony_def = len(p) > 6 and p[8] is not None
         p[0] = StoneField(
             self.path, p.lineno(1), p.lexpos(1), p[1], p[2], p[4])
         if p[3] is not None:
@@ -678,6 +690,14 @@ class StoneParser(object):
                 p[0].set_default(p[3])
         if has_docstring:
             p[0].set_doc(p[7])
+        if has_anony_def:
+            p[8].name = p[2].name
+            self.anony_defs.append(p[8])
+
+    def p_anony_def_option(self, p):
+        """anony_def_option : anony_def
+                            | empty"""
+        p[0] = p[1]
 
     def p_tag_ref(self, p):
         'tag_ref : ID'
@@ -698,7 +718,16 @@ class StoneParser(object):
     # void_field demonstrates the notation for a catch all variant.
 
     def p_union(self, p):
-        'union : UNION ID inheritance NL INDENT docsection field_list examples DEDENT'
+        """union : UNION ID inheritance NL \
+                        INDENT docsection field_list examples DEDENT"""
+        self.make_union(p)
+
+    def p_anony_union(self, p):
+        """anony_def : UNION empty inheritance NL \
+                        INDENT docsection field_list examples DEDENT"""
+        self.make_union(p)
+
+    def make_union(self, p):
         p[0] = StoneUnionDef(
             path=self.path,
             lineno=p.lineno(1),
