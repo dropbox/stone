@@ -2977,3 +2977,60 @@ class TestStone(unittest.TestCase):
         self.assertNotIn(s3, route_data_types)
         # Check that type that is wrapped by a list and/or nullable is present
         self.assertIn(s4, route_data_types)
+
+    def test_whitespace(self):
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                f String
+            ++++
+                g Int64
+            ++++
+                example default
+                    f = "hi"
+            ++++++++
+                    g = 3
+
+            route r(Void, S, Void)
+            """).replace('+', ' ')
+        t = TowerOfStone([('ns1.stone', text)])
+        t.parse()
+
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                f String
+            ++++
+                g Int64
+            ++++
+                example default
+                    f = "hi"
+            ++++
+            ++++++
+                    g = 3
+
+            route r(Void, S, Void)
+            """).replace('+', ' ')
+        t = TowerOfStone([('ns1.stone', text)])
+        t.parse()
+
+        text = textwrap.dedent("""\
+            namespace test
+
+                # weirdly indented comment
+            struct S
+               # weirdly indented comment
+                f String
+                g Int64
+
+                example default
+                    f = "hi"
+                       # weirdly indented comment
+                    g = 3
+
+            route r(Void, S, Void)
+            """)
+        t = TowerOfStone([('ns1.stone', text)])
+        t.parse()

@@ -346,9 +346,11 @@ class StoneParser(object):
         """
         self.path = path
         parsed_data = self.yacc.parse(data, lexer=self.lexer, debug=self.debug)
-        for char, lineno in self.lexer.errors:
-            self.errors.append(
-                ("Illegal character '%s'" % char, lineno, self.path))
+        # It generally makes sense for lexer errors to come first, because
+        # those can be the root of parser errors. Also, since we only show one
+        # error max right now, it's best to show the lexing one.
+        for err_msg, lineno in self.lexer.errors[::-1]:
+            self.errors.insert(0, (err_msg, lineno, self.path))
         self.path = None
         return parsed_data
 
@@ -372,7 +374,7 @@ class StoneParser(object):
     # Spec := Namespace Import* Definition*
 
     def p_spec_init(self, p):
-        """spec : NEWLINE
+        """spec : NL
                 | empty"""
         p[0] = []
 
@@ -390,9 +392,9 @@ class StoneParser(object):
         p[0].append(p[2])
 
     # This covers the case where we have garbage characters in a file that
-    # splits a NEWLINE token into two separate tokens.
+    # splits a NL token into two separate tokens.
     def p_spec_ignore_newline(self, p):
-        'spec : spec NEWLINE'
+        'spec : spec NL'
         p[0] = p[1]
 
     def p_definition(self, p):
@@ -403,8 +405,8 @@ class StoneParser(object):
         p[0] = p[1]
 
     def p_namespace(self, p):
-        """namespace : KEYWORD ID NEWLINE
-                     | KEYWORD ID NEWLINE INDENT docsection DEDENT"""
+        """namespace : KEYWORD ID NL
+                     | KEYWORD ID NL INDENT docsection DEDENT"""
         if p[1] == 'namespace':
             doc = None
             if len(p) > 4:
@@ -415,18 +417,28 @@ class StoneParser(object):
             raise ValueError('Expected namespace keyword')
 
     def p_import(self, p):
-        'import : IMPORT ID NEWLINE'
+        'import : IMPORT ID NL'
         p[0] = StoneImport(self.path, p.lineno(1), p.lexpos(1), p[2])
 
     def p_alias(self, p):
-        """alias : KEYWORD ID EQ type_ref NEWLINE
-                 | KEYWORD ID EQ type_ref NEWLINE INDENT docsection DEDENT"""
+        """alias : KEYWORD ID EQ type_ref NL
+                 | KEYWORD ID EQ type_ref NL INDENT docsection DEDENT"""
         if p[1] == 'alias':
             doc = p[7] if len(p) > 6 else None
             p[0] = StoneAlias(
                 self.path, p.lineno(1), p.lexpos(1), p[2], p[4], doc)
         else:
             raise ValueError('Expected alias keyword')
+
+    def p_nl(self, p):
+        'NL : NEWLINE'
+        p[0] = p[1]
+
+    # Sometimes we'll have multiple consecutive newlines that the lexer has
+    # trouble combining, so we do it in the parser.
+    def p_nl_combine(self, p):
+        'NL : NL NEWLINE'
+        p[0] = p[1]
 
     # --------------------------------------------------------------
     # Primitive Types
@@ -563,13 +575,13 @@ class StoneParser(object):
     #
 
     def p_enumerated_subtypes(self, p):
-        """enumerated_subtypes : UNION asterix_option NEWLINE INDENT subtypes_list DEDENT
+        """enumerated_subtypes : UNION asterix_option NL INDENT subtypes_list DEDENT
                                | empty"""
         if len(p) > 2:
             p[0] = (p[5], p[2])
 
     def p_struct(self, p):
-        """struct : STRUCT ID inheritance NEWLINE \
+        """struct : STRUCT ID inheritance NL \
                      INDENT docsection enumerated_subtypes field_list examples DEDENT"""
         p[0] = StoneStructDef(
             path=self.path,
@@ -604,7 +616,7 @@ class StoneParser(object):
         p[0].append(p[2])
 
     def p_enumerated_subtype_field(self, p):
-        'subtype_field : ID type_ref NEWLINE'
+        'subtype_field : ID type_ref NL'
         p[0] = StoneSubtypeField(
             self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
 
@@ -646,8 +658,8 @@ class StoneParser(object):
                 p[0] = p[2]
 
     def p_field(self, p):
-        """field : ID type_ref default_option deprecation NEWLINE INDENT docstring NEWLINE DEDENT
-                 | ID type_ref default_option deprecation NEWLINE"""
+        """field : ID type_ref default_option deprecation NL INDENT docstring NL DEDENT
+                 | ID type_ref default_option deprecation NL"""
         has_docstring = len(p) > 6
         p[0] = StoneField(
             self.path, p.lineno(1), p.lexpos(1), p[1], p[2], p[4])
@@ -678,7 +690,7 @@ class StoneParser(object):
     # void_field demonstrates the notation for a catch all variant.
 
     def p_union(self, p):
-        'union : UNION ID inheritance NEWLINE INDENT docsection field_list examples DEDENT'
+        'union : UNION ID inheritance NL INDENT docsection field_list examples DEDENT'
         p[0] = StoneUnionDef(
             path=self.path,
             lineno=p.lineno(1),
@@ -695,8 +707,8 @@ class StoneParser(object):
         p[0] = (p[1] is not None)
 
     def p_field_void(self, p):
-        """field : ID asterix_option NEWLINE
-                 | ID asterix_option NEWLINE INDENT docstring NEWLINE DEDENT"""
+        """field : ID asterix_option NL
+                 | ID asterix_option NL INDENT docstring NL DEDENT"""
         p[0] = StoneVoidField(self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
         if len(p) > 4:
             p[0].set_doc(p[5])
@@ -715,9 +727,9 @@ class StoneParser(object):
     # The error type is optional.
 
     def p_route(self, p):
-        """route : ROUTE route_name route_io route_deprecation NEWLINE \
+        """route : ROUTE route_name route_io route_deprecation NL \
                         INDENT docsection attrssection DEDENT
-                 | ROUTE route_name route_io route_deprecation NEWLINE"""
+                 | ROUTE route_name route_io route_deprecation NL"""
         p[0] = StoneRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], *p[3])
         if len(p) > 6:
             p[0].set_doc(p[7])
@@ -754,7 +766,7 @@ class StoneParser(object):
             p[0] = (True, None)
 
     def p_attrs_section(self, p):
-        """attrssection : ATTRS NEWLINE INDENT attr_fields DEDENT
+        """attrssection : ATTRS NL INDENT attr_fields DEDENT
                         | empty"""
         if p[1]:
             p[0] = p[4]
@@ -769,8 +781,8 @@ class StoneParser(object):
         p[0].append(p[2])
 
     def p_attr_field(self, p):
-        """attr_field : ID EQ primitive NEWLINE
-                      | ID EQ tag_ref NEWLINE"""
+        """attr_field : ID EQ primitive NL
+                      | ID EQ tag_ref NL"""
         if p[3] is StoneNull:
             p[0] = (p[1], None)
         else:
@@ -801,7 +813,7 @@ class StoneParser(object):
     #         "This is a docstring for this field"
 
     def p_docsection(self, p):
-        """docsection : docstring NEWLINE
+        """docsection : docstring NL
                       | empty"""
         if p[1] is not None:
             p[0] = p[1]
@@ -843,8 +855,8 @@ class StoneParser(object):
 
     # It's possible for no example fields to be specified.
     def p_example(self, p):
-        """example : KEYWORD ID NEWLINE INDENT docsection example_fields DEDENT
-                   | KEYWORD ID NEWLINE"""
+        """example : KEYWORD ID NL INDENT docsection example_fields DEDENT
+                   | KEYWORD ID NL"""
         if len(p) > 4:
             seen_fields = set()
             for example_field in p[6]:
@@ -871,8 +883,8 @@ class StoneParser(object):
         p[0].append(p[2])
 
     def p_example_field(self, p):
-        """example_field : ID EQ primitive NEWLINE
-                         | ID EQ ex_list NEWLINE"""
+        """example_field : ID EQ primitive NL
+                         | ID EQ ex_list NL"""
         if p[3] is StoneNull:
             p[0] = StoneExampleField(
                 self.path, p.lineno(1), p.lexpos(1), p[1], None)
@@ -881,7 +893,7 @@ class StoneParser(object):
                 self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
 
     def p_example_field_ref(self, p):
-        'example_field : ID EQ ID NEWLINE'
+        'example_field : ID EQ ID NL'
         p[0] = StoneExampleField(self.path, p.lineno(1), p.lexpos(1),
             p[1], StoneExampleRef(self.path, p.lineno(3), p.lexpos(3), p[3]))
 

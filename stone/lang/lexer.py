@@ -1,6 +1,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import logging
+import os
+
 import ply.lex as lex
 
 class MultiToken(object):
@@ -294,11 +296,19 @@ class StoneLexer(object):
             # Reached end of file
             return None
 
-        line = newline_token.lexer.lexdata[next_line_pos:].splitlines()[0]
+        line = newline_token.lexer.lexdata[next_line_pos:].split(os.linesep, 1)[0]
         if not line:
             return None
+        lstripped_line = line.lstrip()
+        lstripped_line_length = len(lstripped_line)
+        if lstripped_line_length == 0:
+            # If the next line is composed of only spaces, ignore indentation.
+            return None
+        if lstripped_line[0] == '#':
+            # If it's a comment line, ignore indentation.
+            return None
 
-        indent = len(line) - len(line.lstrip())
+        indent = len(line) - lstripped_line_length
         indent_spaces = indent - self.cur_indent
         if indent_spaces % 4 > 0:
             self.errors.append(
