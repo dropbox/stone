@@ -27,39 +27,11 @@ internally: Swift, C#, Java, Go, JavaScript, and HTML documentation.
     * Introduction
         * Motivation_
         * Installation_
-    * `Language Reference (.stone) <doc/lang_ref.rst>`_
-        * `Choosing a Filename <doc/lang_ref.rst#choosing-a-filename>`_
-        * `Comments <doc/lang_ref.rst#comments>`_
-        * `Namespace <doc/lang_ref.rst#ns>`_
-        * `Primitive Types <doc/lang_ref.rst#primitive-types>`_
-        * `Alias <doc/lang_ref.rst#alias>`_
-        * `Struct <doc/lang_ref.rst#struct>`_
-        * `Union <doc/lang_ref.rst#union>`_
-        * `Nullable Type <doc/lang_ref.rst#nullable-type>`_
-        * `Route <doc/lang_ref.rst#route>`_
-        * `Documentation <doc/lang_ref.rst#doc>`_
-        * `Formal Grammar <doc/lang_ref.rst#formal-grammar>`_
+    * `Language Reference <doc/lang_ref.rst>`_
     * `Using Generated Code <doc/using_generator.rst>`_
-        * `Compile with the CLI <doc/using_generator.rst#compile-with-the-cli>`_
-        * `Python Guide <doc/using_generator.rst#python-guide>`_
     * `Managing Specs <doc/managing_specs.rst>`_
-        * `Using Namespaces <doc/managing_specs.rst#using-namespaces>`_
-        * `Splitting a Namespace Across Files <doc/managing_specs.rst#splitting-a-namespace-across-files>`_
-        * `Separating Public and Private Routes <doc/managing_specs.rst#separation-public-and-private-routes>`_
     * `Evolving a Spec <doc/evolve_spec.rst>`_
-        * `Background <doc/evolve_spec.rst#background>`_
-        * `Sender-Recipient <doc/evolve_spec.rst#sender-recipient>`_
-        * `Backwards Incompatible Changes <doc/evolve_spec.rst#backwards-incompatible-changes>`_
-        * `Backwards Compatible Changes <doc/evolve_spec.rst#backwards-compatible-changes>`_
-        * `Planning for Backwards Compatibility <doc/evolve_spec.rst#planning-for-backwards-compatibility>`_
-        * `Leader-Clients <doc/evolve_spec.rst#leader-clients>`_
-        * `Route Versioning <doc/evolve_spec.rst#route-versioning>`_
-    * `Writing a Generator (.stoneg.py) <doc/generator_ref.rst>`_
-        * `Using the API Object <doc/generator_ref.rst#using-the-api-object>`_
-        * `Creating an Output File <doc/generator_ref.rst#creating-an-output-file>`_
-        * `Emit Methods <doc/generator_ref.rst#emit-methods>`_
-        * `Indentation <doc/generator_ref.rst#indentation>`_
-        * `Examples <doc/generator_ref.rst#examples>`_
+    * `Writing a Generator <doc/generator_ref.rst>`_
     * `JSON Serializer <doc/json_serializer.rst>`_
     * `Network Protocol <doc/network_protocol.rst>`_
 
@@ -89,7 +61,7 @@ generated.
 **Improve Visibility into our APIs**: These days, APIs aren't just in the
 domain of engineering. Product managers, product specialists, partnerships,
 sales, and services groups all need to have clear and accurate specifications
-of our APIs. After all, APIs define Dropbox's data models and functionlaity.
+of our APIs. After all, APIs define Dropbox's data models and functionality.
 Before Stone, API design documents obseleted by changes during implementation
 were the source of truth.
 
@@ -127,7 +99,7 @@ exception to this rule is afforded for error responses.
 Installation
 ============
 
-Download or clone StoneAPI, and run the following in its root directory::
+Download or clone Stone, and run the following in its root directory::
 
     $ sudo python setup.py install
 

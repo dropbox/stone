@@ -2,80 +2,27 @@
 Language Reference
 ******************
 
-To illustrate how to write a spec, we're going to dissect a spec that defines
-a hypothetical route that shows up in some form or another in most APIs for
-web services: querying the account information for a user.
-
-The spec should live in a file called ``users.stone``::
-
-    # We put this in the "users" namespace in anticipation that
-    # there would be many user-account-related routes.
-    namespace users
-
-    # We define an AccountId as being a 10-character string
-    # once here to avoid declaring it each time.
-    alias AccountId = String(min_length=10, max_length=10)
-
-    struct BasicAccount
-        "Basic information about a user's account."
-
-        account_id AccountId
-            "A unique identifier for the user's account."
-        email String(pattern="^[^@]+@[^@]+\.[^@]+$")
-            "The e-mail address of the user."
-
-    union Status
-        active
-            "The account is active."
-        inactive Timestamp("%a, %d %b %Y %H:%M:%S")
-            "The account is inactive. The value is when the account was
-            deactivated."
-
-    struct Account extends BasicAccount
-        "Information about a user's account."
-
-        name String(min_length=1)?
-            "The user's full name. :val:`null` if no name was provided."
-        status Status
-            "The status of the account."
-
-        example default
-            "A regular user"
-            account_id="id-48sa2f0"
-            email="alex@example.org"
-            name="Alexander the Great"
-            status=active
-
-    # This struct represents the input data to the route.
-    struct GetAccountReq
-        account_id AccountId
-
-    # This union represents the possible errors that might be returned.
-    union GetAccountErr
-        no_account
-            "No account with the requested id could be found."
-        perm_denied
-            "Insufficient privileges to query account information."
-        unknown*
-
-    route get_account (GetAccountReq, Account, GetAccountErr)
-        "Get information about a specified user's account."
+Your API is described by specification files written in the Stone language.
+Here we'll cover the various capabilities at your disposal for expressing the
+intricacies of your API.
 
 Choosing a Filename
 ===================
 
-All specifications must have a ``.stone`` extension. We recommend that the
-name of the file be the same as the `namespace <#ns>`_ defined in the spec.
+All specification files must have a ``.stone`` extension. We recommend that the
+name of the file be the same as the `namespace <#ns>`_ defined in the spec. If
+multiple files are part of the same namespace, we recommend that they all share
+the same prefix: the namespace name followed by an underscore.
 
 Comments
 ========
 
 Any text between a hash ``#`` and a newline is considered a comment. Comments
-can take up an entire line, or they can be added to the end of a line.
+can occupy an entire line or be added after non-comments on a line.
 
 Use comments to explain a section of the spec to a reader of the spec. Unlike
-`documentation <#documentation>`_ strings, comments are not accessible to
-generators as they are ignored by the parser.
+`documentation strings <#documentation>`_, comments are not accessible to
+generators and will not appear in generated output.
 
 .. _ns:
 
@@ -84,10 +31,10 @@ Namespace
 
 Specs must begin with a namespace declaration as is the case here::
 
-   namespace users
+   namespace example
 
 This logically groups all of the routes and data types in the spec file into
-the ``users`` namespace. A spec file must declare exactly one namespace, but
+the ``example`` namespace. A spec file must declare exactly one namespace, but
 multiple spec files may contribute to the same namespace.
 
 Namespaces are useful for grouping related functionality together. For example,
@@ -129,40 +76,25 @@ Void                    --
 Positional arguments (bold in the above table) are always required and appear
 at the beginning of an argument list::
 
-    struct ShoppingList
-        items List(String)
+    List(Int64)
 
 Keyword arguments are optional and are preceded by the argument name and an
 ``=``::
 
-    struct Person
-        age UInt64(max_value=130)
+    Int64(max_value=130)
+
+If both are needed, positional come before keyword arguments::
+
+    List(Int64, max_items=5)
 
 If no arguments are needed, the parentheses can be omitted::
 
-    struct Example
-        number Int64
-        string String
+    UInt64
 
-Here are some more examples::
+We'll put these to use in the user-defined types section.
 
-    struct Coordinate
-        x Int64
-        y Int64
-
-    struct Example
-        f1 Bytes
-        f2 Boolean
-        f3 Float64(min_value=0)
-        # List of primitive types
-        f4 List(Int64)
-        # List of user-defined types
-        f5 List(Coordinate, max_items=10)
-        f6 String(pattern="^[A-z]+$")
-        f7 Timestamp("%a, %d %b %Y %H:%M:%S +0000")
-
-Mapping to a Target Language
-----------------------------
+Mapping to Target Languages
+---------------------------
 
 Code generators map the primitive types of Stone to types in a target language.
 For more information, consult the appropriate guide in `Using Generated Code
@@ -174,22 +106,11 @@ Alias
 Aliases let you parameterize a type once with a name and optional documentation
 string, and then use that name elsewhere::
 
-    alias AccountId = String(min_length=10, max_length=10)
-        "A unique identifier for the user's account."
+    alias Age = UInt64(max_value=120)
+        "The age of a human."
 
-In our example, declaring an ``AccountId`` alias makes future references to it
-clearer since the name provides an extra semantic hint::
-
-    struct BasicAccount
-        "Basic information about a user's account."
-
-        account_id AccountId
-
-    struct GetAccountReq
-        account_id AccountId
-
-Aliases make refactoring easier. We only need to change the definition of the
-``AccountId`` alias to change it everywhere.
+Aliases reduce repetition, improve readability of specs, and make refactoring
+easier since there's a single source of truth.
 
 Aliases can reference user-defined types and other aliases, and can make a type
 nullable.
@@ -197,61 +118,67 @@ nullable.
 Struct
 ======
 
-A struct is a user-defined type made up of fields that have their own types::
+A struct is a user-defined composite type made up of fields::
 
-    struct BasicAccount
-        "Basic information about a user's account.
+    struct Person
+        "Describes a member of society."
 
-        This can be multi-line."
-
-        account_id AccountId
-            "A unique identifier for the user's account."
-        email String(pattern="^[^@]+@[^@]+\.[^@]+$")
-            "The e-mail address of the user."
+        name String
+            "Given name followed by surname."
+        age UInt64
+            "The number of years, rounded down."
 
 A struct can be documented by specifying a string immediately following the
 struct declaration. The string can be multiple lines, as long as each
 subsequent line is at least at the indentation of the starting quote.
 Refer to `Documentation`_ for more.
 
-After the documentation is a list of fields. Fields are formatted with the field
-name first followed by the field type. To provide documentation for a field,
-specify a string on a new indented line following the field declaration.
+Following the documentation is a list of fields. Fields are formatted with the
+field name first followed by the field type. Documentation for a field is
+specified on a new indented line.
 
 Inheritance
 -----------
 
-Using the ``extends`` keyword, a struct can declare itself a subtype of another
-struct, known as the supertype. The subtype inherit all the fields of the
-supertype::
+Using the ``extends`` keyword, a struct can declare a parent type. The sub type
+inherits all of the fields of the parent::
 
-    struct Account extends BasicAccount
+    struct ModernPerson extends Person
+        email String(pattern="^[^@]+@[^@]+\.[^@]+$")?
+            "Set if this person has an e-mail address."
 
-``Account`` inherits ``account_id`` and ``email`` from ``BasicAccount``.
+``ModernPerson`` inherits ``name`` and ``age`` from ``Person``.
 
-A feature common to object-oriented programming, a subtype may be used in place
-of a supertype.
+Unless explicitly mentioned, generators will translate this relationship into
+their target language.
 
 Composition
 -----------
 
-User-defined types can be composed of other user-defined types, either
-structs or unions::
+User-defined types can be composed of other user-defined types::
 
-    union Status
-        active
-            "The account is active."
-        inactive Timestamp("%a, %d %b %Y %H:%M:%S")
-            "The account is inactive. The value is when the account was
-            deactivated."
+    struct Person
+        "Describes a member of society."
 
-    struct Account extends BasicAccount
-        "Information about a user's account."
+        name Name
+        age UInt64
+            "The number of years, rounded down."
+        food_pref FoodPreference
 
-        name String(min_length=1)?
-            "The user's full name. :val:`null` if no name was provided."
-        status Status
-            "The status of the account."
+    struct Name
+        "Separates a name into components."
+
+        given_name
+            "Also known as first name."
+        surname
+            "Also known as family name."
+
+    union FoodPreference
+        anything
+        vegetarian
+        vegan
+        pescetarian
+        carnivore
 
 Defaults
 --------
@@ -259,30 +186,25 @@ Defaults
 A field with a primitive type can have a default set with a ``=`` followed by
 a value at the end of the field declaration::
 
-    struct Example
-        number UInt64 = 1024
-        string String = "hello, world."
+    struct Person
+        name String = "John Doe"
 
-Setting a default means that a field is optional. If it is not specified in a
-message, the receiver should not error, but instead return the default when
-the field is queried. The receiver should, however, track the fact that the
-field was unspecified, so that if the message is re-serialized the default is
-not present in the message.
+Setting a default means that the field is optional. If it isn't specified, then
+the field assumes the value of the default.
 
 A default cannot be set for a nullable type. Nullable types implicitly have a
 default of ``null``.
 
 A default can be set for a field with a union data type, but only to a union
-member with a void type. Using the example of ``Account``, the ``status`` can
-be set to ``active`` by default::
+member with a void type::
 
-    struct Account extends BasicAccount
-        "Information about a user's account."
+    struct Person
+        "Describes a member of society."
 
-        name String(min_length=1)?
-            "The user's full name. :val:`null` if no name was provided."
-        status Status = active
-            "The status of the account."
+        name Name
+        age UInt64
+            "The number of years, rounded down."
+        food_pref FoodPreference = anything
 
 In practice, defaults are useful when `evolving a spec <evolve_spec.rst>`_.
 
@@ -300,140 +222,84 @@ An example is declared by using the ``example`` keyword followed by a label.
 By convention, "default" should be used as the label name for an example that
 can be considered a good representation of the general case for the type::
 
-    struct Account extends BasicAccount
-        "Information about a user's account."
+    struct Person
+        "Describes a member of society."
 
-        name String(min_length=1)?
-            "The user's full name. :val:`null` if no name was provided."
-        status Status
-            "The status of the account."
+        name Name
+        age UInt64
+            "The number of years, rounded down."
+        food_pref FoodPreference = anything
 
-        example default
-            "A regular user"
-            account_id = "id-48sa2f0"
-            email = "alex@example.org"
-            name = "Alexander the Great"
-            status = active
+        example boy
+            name = male_name
+            age = 13
 
-        example unnamed
-            "An anonymous user"
-            account_id = "id-29sk2p1"
-            email = "anony@example.org"
-            name = null
-            status = active
+        example grandpa
+            "A grandpa who has gone vegetarian."
+            name = male_name
+            age = 93
+            food_pref = vegetarian
 
-Every required field (not nullable and no default) must be specified, otherwise
-an error will be returned. ``null`` can be used to mark that a nullable type
-is not present.
+    struct Name
+        "Separates a name into components."
+
+        given_name
+            "Also known as first name."
+        surname
+            "Also known as family name."
+
+        example male_name
+            given_name = "Greg"
+            surname = "Kurtz"
+
+Every required field (not nullable and no default) must be specified. ``null``
+can be used to mark that a nullable type is not present.
 
 An optional multi-line documentation string can be specified after the line
 declaring the example and before the example fields.
 
-When you have a set of nested types, each type defines examples for its fields
-with primitive types. For fields with composite types, the value of the example
-must be a label of an example in the target composite type. Here's an example
-where ``Name`` is now its own struct::
+Note that when you have a set of nested types, each type defines examples for
+its fields with primitive types. For fields with user-defined types, the value
+of the example must be a label of an example in the target type.
 
-    struct Account extends BasicAccount
+Lists can be expressed with brackets::
 
-        name Name
-
-        example default
-            account_id = "id-48sa2f0"
-            email = "alex@example.org"
-            name = default
-            status = active
-
-        example anonymous
-            account_id = "id-29sk2p1"
-            email = "anony@example.org"
-            name = anonymous
-            status = active
-
-    struct Name
-        first_name String?
+    struct ShoppingList
+        items List(String)
 
         example default
-            first_name = "Alexander the Great"
-
-        example anonymous
-            first_name = null
-
-As you can see, the ``anonymous`` example for ``Account`` explicitly references
-the ``anonymous`` example for ``Name``.
-
-Examples for unions must only specify one field, since only one union member
-can be selected at a time. For example::
-
-    union Owner
-        nobody
-        account Account
-        organization String
-
-        example default
-            nobody = null
-
-        example person
-            account = default
-
-        example group
-            organization = "Dropbox"
-
-In the ``default`` example, notice that void tags are specified with a value of
-``null``. In the ``person`` example, the ``default`` example for the
-``Account`` type is referenced.
-
-Lists can be expressed with bracket notation::
-
-    struct S
-        l1 List(String)
-        l2 List(T)
-        l3 List(List(T))
-
-        example default
-            l1 = ["hello", "world"]
-            l2 = [start, end]
-            l3 = [[start], []]
-
-    struct T
-        i UInt64
-
-        example start
-            i = 0
-
-        example end
-            i = 42
+            items = ["bananas", "yogurt", "cheerios"]
 
 Union
 =====
 
-A union in Stone is a
-`tagged union <http://en.wikipedia.org/wiki/Tagged_union>`_. Think of it as a
-type that can store one of several different possibilities at a time. Each
-possibility has an identifier that is called a "tag". In our example, the union
-``Status`` has tags ``active`` and ``inactive``::
+Stone's unions are `tagged unions <http://en.wikipedia.org/wiki/Tagged_union>`_.
+Think of them as a type that can store one of several different possibilities
+at a time. Each possibility has an identifier that is called a "tag".
 
-    union Status
-        "The status of a user's account."
+Each tag is associated with a type (``inactive`` stores a ``Timestamp``). If
+the type is omitted as in the case of ``active``, the type is implicitly
+``Void``.
 
-        active
-            "The account is active."
-        inactive Timestamp("%a, %d %b %Y %H:%M:%S")
-            "The account is inactive. The value is when the account was
-            deactivated."
+In this example, the union ``Shape`` has tags ``point``, ``square``, and
+``circle``::
 
-A tag is associated with a type (``inactive`` stores a ``Timestamp``). If the
-type is omitted as in the case of ``active``, the type is implicitly ``Void``.
+    union Shape
+        point
+        square Float64
+            "The value is the length of a side."
+        circle Float64
+            "The value is the radius."
 
 The primary advantage of a union is its logical expressiveness. You'll often
 encounter types that are best described as choosing between a set of options.
 Avoid the common anti-pattern of using a struct with a nullable field for each
 option, and relying on your application logic to enforce that only one is set.
 
-Another advantage is that for languages that support tagged unions, the
-compiler can check that your application code handles all possible cases and
-that accesses are safe. Generators will take advantage of such features when
-they are available in the target language.
+Another advantage is that for languages that support tagged unions (Swift is
+a recent adopter), the compiler can check that the application code handles all
+possible cases and that accesses are safe. Generators will take advantage of
+such features when they are available in the target language.
 
 Like a struct, a documentation string can follow the union declaration and/or
 follow each tag definition.
@@ -475,27 +341,41 @@ appropriately as long as they handle the catch-all tag.
 Inheritance
 -----------
 
-Using the ``extends`` keyword, a union can declare itself as a supertype of
-another union, known as the subtype. The supertype will have all the tags of
-the subtype::
+Using the ``extends`` keyword, a union can declare a parent type. The new union
+inherits all of the options of the parent type.
 
-    union DeleteAccountError extends GetAccountError
+However, this relationship is not expected to be translated by generators into
+most target languages. The reason for this is that unlike struct inheritance,
+union inheritance allows the parent type to substitute the child type rather
+than the reverse. That's because the selected tag will always be known by the
+child type, but a child's tag won't necessarily be known by the parent. In most
+languages, this relationship cannot be natively modeled.
 
-``DeleteAccount`` inherits the tags ``no_account``, ``perm_denied``, and
-``unknown`` from ``GetAccountError``. Since ``GetAccountError`` has already
-defined a catch-all tag, ``DeleteAccountError`` or any other supertype cannot
-declare another catch-all.
+Examples
+--------
 
-Note that the supertype/subtype relationship created by ``extends`` between two
-unions is the opposite of an ``extends`` between two structs. It's stated this
-way to maintain the invariant that a subtype may be used in place of a
-supertype. Specifically, a ``GetAccountError`` can be used in place of
-``DeleteAccountError`` because a handler will be prepared for all possibilities
-of ``GetAccountError`` since they are a subset of ``DeleteAccountError``.
+Examples for unions must only specify one field, since only one union member
+can be selected at a time. For example::
 
+    union Shape
+        point
+        square Float64
+            "The value is the length of a side."
+        circle Float64
+            "The value is the radius."
 
-Struct With Enumerated Subtypes
-===============================
+        example default
+            point = null
+
+        example big_circle
+            circle = 1024.0
+
+In the ``default`` example, note that tags with void types are specified with
+a value of ``null``. In the ``big circle`` example, the ``circle`` tag has an
+associated float value.
+
+Struct Polymorphism
+===================
 
 If a struct enumerates its subtypes, an instance of any subtype will satisfy
 the type constraint. This is useful when wanting to discriminate amongst types
@@ -509,18 +389,16 @@ as the "type tag") is present in the serialized format to distinguish between
 subtypes. For example::
 
     struct Resource
-        "Sample doc."
-
         union
             file File
             folder Folder
 
         path String
 
-    struct File extends Resource:
+    struct File extends Resource
         ...
 
-    struct Folder extends Resource:
+    struct Folder extends Resource
         ...
 
 Anywhere ``Resource`` is referenced, an instance of ``File`` or ``Folder``
@@ -560,32 +438,50 @@ Nullable Type
 
 When a type is followed by a ``?``, the type is nullable::
 
-    name String(min_length=1)?
+    String?
 
 Nullable means that the type can be unspecified, ie. ``null``. Code generators
 should use a language's native facilities for null,
-`boxed types <http://en.wikipedia.org/wiki/Object_type_(object-oriented_programming)#Boxing>`_,
+`boxed types
+<http://en.wikipedia.org/wiki/Object_type_(object-oriented_programming)#Boxing>`_,
 and `option types <http://en.wikipedia.org/wiki/Option_type>`_ if possible. For
 languages that do not support these features, a separate function to check for
 the presence of a type is the preferred method.
 
-A nullable type is considered optional. If it is not specified in a message,
-the receiver should not error, but instead treat it as absent.
+A nullable type is considered optional. If it is not specified, it assumes the
+value of null.
 
 Route
 =====
 
-Routes correspond to your API endpoints::
+Routes correspond to your API endpoints. Each route is defined by a signature
+of three data types formatted as ``(Arg, Result, Error)``. Here's an example::
 
-    route get_account (GetAccountReq, Account, GetAccountErr)
-        "Get information about a specified user's account."
+    namespace calc
 
-The route is named ``get_account``. ``GetAccountReq`` is the data type of
-the request to the route. ``Account`` is the data type of a response from the
-route. ``GetAccountErr`` is the data type of an error response.
+    route binary_op(BinaryOpArg, Result, BinaryOpError)
+        "Performs the requested binary operation calculation."
 
-Similar to structs and unions, a documentation string may follow the route
-signature.
+    struct BinaryOpArg
+        op Operator
+        left Int64
+        right Int64
+
+    union Operator
+        add
+        sub
+
+    struct Result
+        answer Int64
+
+    union BinaryOpError
+        overflow
+
+The route is named ``binary_op``. ``BinaryOpsArg`` is the argument to the route.
+``Result`` is returned on success. ``BinaryOpError`` is returned on failure.
+
+As is the case with structs and unions, a documentation string may follow the
+route signature.
 
 Attributes
 ----------
@@ -647,14 +543,17 @@ Deprecation
 
 You can mark a route as deprecated as follows::
 
-    route old_route (Arg, Void, Void) deprecated
+    route binary_op(Arg, Void, Void) deprecated
 
 If the route is deprecated in favor of a newer route, use ``deprecated by``
 followed by the new route's name::
 
-    route old_route (Arg, Void, Void) deprecated by new_route
+    route binary_op(BinaryOpArg, Result, BinaryOpError) deprecated by binary_op_v2
 
-    route new_route (NewArg, NewResult, Void)
+    route binary_op_v2((BinaryOpArg, ResultV2, BinaryOpError))
+
+The new route ``binary_op_v2`` happens to use the same argument and error
+types, but its result type has changed.
 
 Import
 ======
@@ -662,29 +561,34 @@ Import
 You can refer to types and aliases in other namespaces by using the ``import``
 directive.
 
-For example, we can move the definition of ``AccountId`` and ``BasicAccount``
-into a file called ``common.stone``::
+For example, we can define all of of our calculator types in a ``common``
+namespace in ``common.stone``::
 
     namespace common
 
-    # We define an AccountId as being a 10-character string
-    # once here to avoid declaring it each time.
-    alias AccountId = String(min_length=10, max_length=10)
+    struct BinaryOpArg
+        op Operator
+        left Int64
+        right Int64
 
-    struct BasicAccount
-        "Basic information about a user's account."
+    union Operator
+        add
+        sub
 
-        account_id AccountId
-            "A unique identifier for the user's account."
-        email String(pattern="^[^@]+@[^@]+\.[^@]+$")
-            "The e-mail address of the user."
+    struct Result
+        answer Int64
 
-Now in ``users.stone``, we add an ``import`` statement under the namespace
-directive as follows::
+    union BinaryOpError
+        overflow
 
-    namespace users
+Now in ``calc.stone``, we can import all of these types and define the route::
+
+    namespace calc
 
     import common
+
+    route binary_op(common.BinaryOpArg, common.Result, common.BinaryOpError)
+        "Performs the requested binary operation calculation."
 
 When referencing data types in ``common``, use the prefix ``common.``. For
 example, ``common.AccountId`` and ``common.BasicAccount``.
