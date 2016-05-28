@@ -74,6 +74,8 @@ Api
 namespaces
     A map from namespace name to Namespace object.
 
+route_schema
+    A Struct object that defines the schema for route attributes.
 
 Namespace
 ---------

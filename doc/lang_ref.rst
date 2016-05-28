@@ -591,35 +591,56 @@ Attributes
 ----------
 
 A full description of an API route tends to require vocabulary that is specific
-to a service. For example, the Dropbox API needs a way to specify some routes
-as including a binary body (uploads) for requests. Another example is specifying
-which routes can be used without authentication credentials.
+to a service. For example, the Dropbox API needs a way to specify different
+hostnames that routes map to, and a way to indicate which routes need
+authentication.
 
-To cover this open-ended use case, routes can have an ``attrs`` section declared
-followed by an arbitrary set of ``key=value`` pairs::
+To cover this open-ended use case, routes can have a set of custom attributes
+(``key = value`` pairs) like follows::
 
-    route ping (Void, Void, Void)
+    route r(Void, Void, Void)
 
         attrs
             key1 = "value1"
             key2 = 1234
-            key3 = 3.14
-            key4 = false
-            key5 = null
+            key3 = false
+
+These attributes are defined and typed in a special struct named ``Route`` that
+must be defined in the ``stone_cfg`` namespace. This is a special namespace
+that isn't exposed to generators::
+
+    namespace stone_cfg
+
+    struct Route
+        key1 String
+        key2 Int64
+        key3 Boolean
+        key4 String = "hello"
+
+As you can see, ``key4`` can be omitted from the attrs of route ``r`` because
+it has a default.
 
 A value can reference a union tag with void type::
 
-    route ping (Void, Void, Void)
+    namespace sample
+
+    route r(Void, Void, Void)
 
         attrs
-            key = Letters.a
+            key = a
 
-    union Letters
+    union U
         a
         b
-        c
 
-Code generators will populate a route object with these attributes.
+Route schema::
+
+    namespace stone_cfg
+
+    import sample
+
+    struct Route
+        key sample.U
 
 Deprecation
 -----------

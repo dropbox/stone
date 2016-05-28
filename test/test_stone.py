@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import datetime
 import textwrap
 import unittest
 
@@ -425,95 +426,6 @@ class TestStone(unittest.TestCase):
             t.parse()
         self.assertEqual("'S' must be a route.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
-
-    def test_route_attrs(self):
-        # Test basic attrs
-        text = textwrap.dedent("""\
-            namespace test
-
-            union U
-                a
-                b
-
-            route r (Void, Void, Void)
-                attrs
-                    null_val = null
-                    str_val = "r"
-                    int_val = 3
-                    float_val = 1.2
-                    union_val = U.a
-            """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        r = t.api.namespaces['test'].route_by_name['r']
-        self.assertEqual(r.attrs['null_val'], None)
-        self.assertEqual(r.attrs['str_val'], 'r')
-        self.assertEqual(r.attrs['int_val'], 3)
-        self.assertEqual(r.attrs['float_val'], 1.2)
-        self.assertIsInstance(r.attrs['union_val'], TagRef)
-        self.assertEqual(r.attrs['union_val'].tag_name, 'a')
-        self.assertEqual(r.attrs['union_val'].union_data_type,
-                         t.api.namespaces['test'].data_type_by_name['U'])
-
-        # Try unknown tag
-        text = textwrap.dedent("""\
-            namespace test
-
-            union U
-                a
-                b
-
-            route r (Void, Void, Void)
-                attrs
-                    union_val = U.z
-            """)
-        t = TowerOfStone([('test.stone', text)])
-        with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
-        self.assertEqual("'U' has no tag 'z'.", cm.exception.msg)
-
-        # Try non-void tag
-        text = textwrap.dedent("""\
-            namespace test
-
-            union U
-                a
-                b String
-
-            route r (Void, Void, Void)
-                attrs
-                    union_val = U.b
-            """)
-        t = TowerOfStone([('test.stone', text)])
-        with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
-        self.assertEqual(
-            "Tag 'U.b' referenced by route attribute must be void.",
-            cm.exception.msg)
-
-        # Test imported union as attr
-        text1 = textwrap.dedent("""\
-            namespace shared
-
-            union U
-                a
-                b
-            """)
-        text2 = textwrap.dedent("""\
-            namespace test
-
-            import shared
-
-            route r (Void, Void, Void)
-                attrs
-                    union_val = shared.U.a
-            """)
-        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
-        t.parse()
-        r = t.api.namespaces['test'].route_by_name['r']
-        self.assertEqual(r.attrs['union_val'].tag_name, 'a')
-        self.assertEqual(r.attrs['union_val'].union_data_type,
-                         t.api.namespaces['shared'].data_type_by_name['U'])
 
     def test_alphabetizing(self):
         text1 = textwrap.dedent("""\
@@ -3034,3 +2946,302 @@ class TestStone(unittest.TestCase):
             """)
         t = TowerOfStone([('ns1.stone', text)])
         t.parse()
+
+    def test_route_attrs_schema(self):
+
+        # Try to define route in stone_cfg
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            struct Route
+                f1 String
+
+            route r(Void, Void, Void)
+            """)
+        t = TowerOfStone([('stone_cfg.stone', stone_cfg_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'No routes can be defined in the stone_cfg namespace.',
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+        self.assertEqual(cm.exception.path, 'stone_cfg.stone')
+
+        # Try to set bad type for schema
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            struct Route
+                f1 String
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+            route r1(Void, Void, Void)
+                attrs
+                    f1 = 3
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            'integer is not a valid string',
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 4)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Try missing attribute for route
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            struct Route
+                f1 String
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+            route r1(Void, Void, Void)
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Route does not define attr key 'f1'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 2)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Test missing attribute for route attribute with default
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            struct Route
+                f1 String = "yay"
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+            route r1(Void, Void, Void)
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        t.parse()
+        ns1 = t.api.namespaces['test']
+        self.assertEquals(ns1.route_by_name['r1'].attrs['f1'], 'yay')
+
+        # Test missing attribute for route attribute with optional
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            struct Route
+                f1 String?
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+            route r1(Void, Void, Void)
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        t.parse()
+        test = t.api.namespaces['test']
+        self.assertEquals(test.route_by_name['r1'].attrs['f1'], None)
+
+        # Test unknown route attributes
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            struct Route
+                f1 String?
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+            route r1(Void, Void, Void)
+                attrs
+                    f2 = 3
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Route attribute 'f2' is not defined in 'stone_cfg.Route'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 4)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Test no route attributes defined at all
+        test_text = textwrap.dedent("""\
+            namespace test
+            route r1(Void, Void, Void)
+                attrs
+                    f1 = 3
+            """)
+        t = TowerOfStone([('test.stone', test_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Route attribute 'f1' is not defined in 'stone_cfg.Route'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 4)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            struct Route
+                f1 Boolean
+                f2 Bytes
+                f3 Float64
+                f4 Int64
+                f5 String
+                f6 Timestamp("%Y-%m-%dT%H:%M:%SZ")
+                f7 S
+                f8 T
+                f9 S?
+                f10 T
+                f11 S?
+
+            alias S = String
+            alias T = String?
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+            route r1(Void, Void, Void)
+                attrs
+                    f1 = true
+                    f2 = "asdf"
+                    f3 = 3.2
+                    f4 = 10
+                    f5 = "Hello"
+                    f6 = "2015-05-12T15:50:38Z"
+                    f7 = "World"
+                    f8 = "World"
+                    f9 = "World"
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        t.parse()
+        test = t.api.namespaces['test']
+        attrs = test.route_by_name['r1'].attrs
+        self.assertEquals(attrs['f1'], True)
+        self.assertEquals(attrs['f2'], b'asdf')
+        self.assertEquals(attrs['f3'], 3.2)
+        self.assertEquals(attrs['f4'], 10)
+        self.assertEquals(attrs['f5'], 'Hello')
+        self.assertEquals(
+            attrs['f6'], datetime.datetime(2015, 5, 12, 15, 50, 38))
+        self.assertEquals(attrs['f7'], 'World')
+        self.assertEquals(attrs['f8'], 'World')
+        self.assertEquals(attrs['f9'], 'World')
+        self.assertEquals(attrs['f10'], None)
+        self.assertEquals(attrs['f11'], None)
+
+        # Try defining an attribute twice.
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            import test
+
+            struct Route
+                f1 String
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+
+            route r1(Void, Void, Void)
+                attrs
+                    f1 = "1"
+                    f1 = "2"
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Attribute 'f1' defined more than once.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Test union type
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            import test
+
+            struct Route
+                f1 test.U
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+                b
+
+            route r1(Void, Void, Void)
+                attrs
+                    f1 = a
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        t.parse()
+
+        # Try union type with bad attribute
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            import test
+
+            struct Route
+                f1 test.U
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+                b
+
+            route r1(Void, Void, Void)
+                attrs
+                    f1 = 3
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "Expected union tag as value.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 9)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Try union type attribute with non-void tag set
+        stone_cfg_text = textwrap.dedent("""\
+            namespace stone_cfg
+
+            import test
+
+            struct Route
+                f1 test.U
+            """)
+        test_text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+                b String
+
+            route r1(Void, Void, Void)
+                attrs
+                    f1 = b
+            """)
+        t = TowerOfStone([
+            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual(
+            "invalid reference to non-void option 'b'",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 9)
+        self.assertEqual(cm.exception.path, 'test.stone')

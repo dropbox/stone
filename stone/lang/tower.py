@@ -7,6 +7,7 @@ import re
 
 from ..api import (
     Api,
+    ApiNamespace,
     ApiRoute,
     DeprecationInfo,
 )
@@ -134,6 +135,7 @@ class TowerOfStone(object):
         self._populate_type_attributes()
         self._populate_field_defaults()
         self._populate_enumerated_subtypes()
+        self._populate_route_attributes()
         self._populate_examples()
         self._validate_doc_refs()
 
@@ -304,15 +306,6 @@ class TowerOfStone(object):
                                          type(data_type))
                 self._resolution_in_progress.remove(data_type)
 
-        # Since nothing depends on routes, do them last.
-        for namespace in self.api.namespaces.values():
-            env = self._get_or_create_env(namespace.name)
-            for route in namespace.routes:
-                self._populate_route_attributes(env, route)
-
-        # TODO(kelkabany): Infer the type of each route attr and ensure that
-        # the type is consistent across all routes.
-
         assert len(self._resolution_in_progress) == 0
 
     def _populate_struct_type_attributes(self, env, data_type):
@@ -417,13 +410,6 @@ class TowerOfStone(object):
                         continue
 
                     if isinstance(field._token.default, StoneTagRef):
-                        if field._token.default.union_name is not None:
-                            raise InvalidSpec(
-                                'Field %s has a qualified default which is '
-                                'unnecessary since the type %s is known' %
-                                (quote(field._token.name),
-                                 quote(field._token.default.union_name)),
-                                field._token.lineno, field._token.path)
                         default_value = TagRef(field.data_type, field._token.default.tag)
                     else:
                         default_value = field._token.default
@@ -438,9 +424,20 @@ class TowerOfStone(object):
                                 field._token.lineno, field._token.path)
                     field.set_default(default_value)
 
-    def _populate_route_attributes(self, env, route):
+    def _populate_route_attributes(self):
         """
-        Converts a forward reference of a route into a complete definition.
+        Converts all routes from forward references to complete definitions.
+        """
+        route_schema = self._validate_stone_cfg()
+        self.api.add_route_schema(route_schema)
+        for namespace in self.api.namespaces.values():
+            env = self._get_or_create_env(namespace.name)
+            for route in namespace.routes:
+                self._populate_route_attributes_helper(env, route, route_schema)
+
+    def _populate_route_attributes_helper(self, env, route, schema):
+        """
+        Converts a single forward reference of a route into a complete definition.
         """
         arg_dt = self._resolve_type(env, route._token.arg_type_ref)
         result_dt = self._resolve_type(env, route._token.result_type_ref)
@@ -465,29 +462,16 @@ class TowerOfStone(object):
         else:
             deprecated = None
 
-        new_attrs = {}
-        for k, v in route._token.attrs.items():
-            if isinstance(v, StoneTagRef):
-                type_ref = StoneTypeRef(
-                    v.path, v.lineno, v.lexpos, v.union_name, args=((), {}),
-                    nullable=False, ns=v.ns)
-                data_type = self._resolve_type(env, type_ref, True)
-                for field in data_type.fields:
-                    if v.tag == field.name:
-                        if not isinstance(field.data_type, Void):
-                            raise InvalidSpec(
-                                'Tag %s referenced by route attribute must be '
-                                'void.' % quote('%s.%s' % (data_type.name, v.tag)),
-                                v.lineno, v.path)
-                        break
-                else:
-                    raise InvalidSpec(
-                        '%s has no tag %s.' %
-                        (quote(data_type.name), quote(v.tag)),
-                        v.lineno, v.path)
-                new_attrs[k] = TagRef(data_type, v.tag)
-            else:
-                new_attrs[k] = v
+        attr_by_name = {}
+        for attr in route._token.attrs:
+            attr_by_name[attr.name] = attr
+
+        try:
+            validated_attrs = schema.check_attr_repr(attr_by_name)
+        except KeyError as e:
+            raise InvalidSpec(
+                "Route does not define attr key '%s'." % e.args[0],
+                route._token.lineno, route._token.path)
 
         route.set_attributes(
             deprecated=deprecated,
@@ -495,7 +479,7 @@ class TowerOfStone(object):
             arg_data_type=arg_dt,
             result_data_type=result_dt,
             error_data_type=error_dt,
-            attrs=new_attrs)
+            attrs=validated_attrs)
 
     def _create_struct_field(self, env, stone_field):
         """
@@ -960,3 +944,40 @@ class TowerOfStone(object):
                 raise InvalidSpec(
                     'Unknown doc reference tag %s.' % quote(tag),
                     *loc)
+
+    def _validate_stone_cfg(self):
+        """
+        Returns:
+             Struct: A schema for route attributes.
+        """
+        def mk_route_schema():
+            s = Struct('Route', ApiNamespace('stone_cfg'), None)
+            s.set_attributes(None, [], None)
+            return s
+
+        try:
+            stone_cfg = self.api.namespaces.pop('stone_cfg')
+        except KeyError:
+            return mk_route_schema()
+
+        if stone_cfg.routes:
+            route = stone_cfg.routes[0]
+            raise InvalidSpec(
+                'No routes can be defined in the stone_cfg namespace.',
+                route._token.lineno,
+                route._token.path,
+            )
+
+        if not stone_cfg.data_types:
+            return mk_route_schema()
+
+        for data_type in stone_cfg.data_types:
+            if data_type.name != 'Route':
+                raise InvalidSpec(
+                    "Only a struct named 'Route' can be defined in the "
+                    "stone_cfg namespace.",
+                    data_type._token.lineno,
+                    data_type._token.path,
+                )
+
+        return data_type

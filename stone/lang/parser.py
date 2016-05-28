@@ -171,25 +171,17 @@ class StoneTypeRef(_Element):
 
 class StoneTagRef(_Element):
 
-    def __init__(self, path, lineno, lexpos, tag, union_name=None, ns=None):
+    def __init__(self, path, lineno, lexpos, tag):
         """
         Args:
             tag (str): Name of the referenced type.
-            union_name (Optional[str]): The name of the union the tag belongs
-                to.
-            ns (Optional[str]): Namespace that referred type is a member of.
-                If none, then refers to the current namespace.
         """
         super(StoneTagRef, self).__init__(path, lineno, lexpos)
         self.tag = tag
-        self.union_name = union_name
-        self.ns = ns
 
     def __repr__(self):
-        return 'StoneTagRef({!r}, {!r}, {!r})'.format(
+        return 'StoneTagRef({!r})'.format(
             self.tag,
-            self.union_name,
-            self.ns,
         )
 
 class StoneField(_Element):
@@ -233,10 +225,13 @@ class StoneVoidField(_Element):
         self.name = name
         self.catch_all = catch_all
         self.doc = None
+
     def set_doc(self, docstring):
         self.doc = docstring
+
     def __str__(self):
         return self.__repr__()
+
     def __repr__(self):
         return 'StoneVoidField({!r}, {!r})'.format(
             self.name,
@@ -274,6 +269,19 @@ class StoneRouteDef(_Element):
 
     def set_attrs(self, attrs):
         self.attrs = attrs
+
+class StoneAttrField(_Element):
+
+    def __init__(self, path, lineno, lexpos, name, value):
+        super(StoneAttrField, self).__init__(path, lineno, lexpos)
+        self.name = name
+        self.value = value
+
+    def __repr__(self):
+        return 'StoneAttrField({!r}, {!r})'.format(
+            self.name,
+            self.value,
+        )
 
 class StoneExample(_Element):
 
@@ -649,7 +657,7 @@ class StoneParser(object):
 
     def p_default_option(self, p):
         """default_option : EQ primitive
-                          | EQ short_tag_ref
+                          | EQ tag_ref
                           | empty"""
         if p[1]:
             if isinstance(p[2], StoneTagRef):
@@ -671,8 +679,8 @@ class StoneParser(object):
         if has_docstring:
             p[0].set_doc(p[7])
 
-    def p_short_tag_ref(self, p):
-        'short_tag_ref : ID'
+    def p_tag_ref(self, p):
+        'tag_ref : ID'
         p[0] = StoneTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     # --------------------------------------------------------------
@@ -734,7 +742,13 @@ class StoneParser(object):
         if len(p) > 6:
             p[0].set_doc(p[7])
             if p[8]:
-                p[0].set_attrs(dict(p[8]))
+                keys = set()
+                for attr in p[8]:
+                    if attr.name in keys:
+                        msg = "Attribute '%s' defined more than once." % attr.name
+                        self.errors.append((msg, attr.lineno, attr.path))
+                    keys.add(attr.name)
+                p[0].set_attrs(p[8])
 
     def p_route_name(self, p):
         'route_name : ID route_path'
@@ -784,17 +798,11 @@ class StoneParser(object):
         """attr_field : ID EQ primitive NL
                       | ID EQ tag_ref NL"""
         if p[3] is StoneNull:
-            p[0] = (p[1], None)
+            p[0] = StoneAttrField(
+                self.path, p.lineno(1), p.lexpos(1), p[1], None)
         else:
-            p[0] = (p[1], p[3])
-
-    def p_tag_ref(self, p):
-        """tag_ref : ID DOT ID DOT ID
-                   | ID DOT ID"""
-        if len(p) > 4:
-            p[0] = StoneTagRef(self.path, p.lineno(1), p.lexpos(1), p[5], p[3], p[1])
-        else:
-            p[0] = StoneTagRef(self.path, p.lineno(1), p.lexpos(1), p[3], p[1])
+            p[0] = StoneAttrField(
+                self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
 
     # --------------------------------------------------------------
     # Doc sections

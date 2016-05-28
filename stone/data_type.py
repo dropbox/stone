@@ -20,6 +20,7 @@ from .lang.exception import InvalidSpec
 from .lang.parser import (
     StoneExampleField,
     StoneExampleRef,
+    StoneTagRef,
 )
 
 
@@ -101,7 +102,13 @@ class DataType(object):
 
 
 class Primitive(DataType):
-    pass
+
+    def check_attr_repr(self, attr_field):
+        try:
+            self.check(attr_field.value)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], attr_field.lineno, attr_field.path)
+        return attr_field.value
 
 
 class Composite(DataType):
@@ -125,6 +132,12 @@ class Nullable(Composite):
         if ex_field.value is not None:
             return self.data_type.check_example(ex_field)
 
+    def check_attr_repr(self, attr_field):
+        if attr_field.value is None:
+            return None
+        else:
+            return self.data_type.check_attr_repr(attr_field)
+
 
 class Void(Primitive):
 
@@ -137,18 +150,30 @@ class Void(Primitive):
             raise InvalidSpec('example of void type must be null',
                               ex_field.lineno, ex_field.path)
 
+    def check_attr_repr(self, attr_field):
+        raise NotImplementedError
 
 class Bytes(Primitive):
 
     def check(self, val):
-        if not isinstance(val, str):
+        if not isinstance(val, (bytes, six.text_type)):
             raise ValueError('%r is not valid bytes' % val)
 
     def check_example(self, ex_field):
-        if not isinstance(ex_field.value, bytes):
+        if not isinstance(ex_field.value, (bytes, six.text_type)):
             raise InvalidSpec("'%s' is not valid bytes",
                               ex_field.lineno, ex_field.path)
 
+    def check_attr_repr(self, attr_field):
+        try:
+            self.check(attr_field.value)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], attr_field.lineno, attr_field.path)
+        v = attr_field.value
+        if isinstance(v, six.text_type):
+            return v.encode('utf-8')
+        else:
+            return v
 
 class _BoundedInteger(Primitive):
     """
@@ -323,7 +348,6 @@ class Boolean(Primitive):
         except ValueError as e:
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
-
 class String(Primitive):
 
     def __init__(self, min_length=None, max_length=None, pattern=None):
@@ -376,7 +400,6 @@ class String(Primitive):
         except ValueError as e:
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
-
 class Timestamp(Primitive):
 
     def __init__(self, format):
@@ -397,6 +420,16 @@ class Timestamp(Primitive):
         except ValueError as e:
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
+    def check_attr_repr(self, attr_field):
+        try:
+            self.check(attr_field.value)
+        except ValueError as e:
+            msg = e.args[0]
+            if isinstance(msg, six.binary_type):
+                # For Python 2 compatibility.
+                msg = msg.decode('utf-8')
+            raise InvalidSpec(msg, attr_field.lineno, attr_field.path)
+        return datetime.datetime.strptime(attr_field.value, self.format)
 
 class List(Composite):
 
@@ -530,6 +563,19 @@ class StructField(Field):
             raise Exception('Type has no default')
         else:
             return self._default
+
+    def check_attr_repr(self, attr):
+        if attr is not None:
+            attr = self.data_type.check_attr_repr(attr)
+        if attr is None:
+            if self.has_default:
+                return self.default
+            _, unwrapped_nullable, _ = unwrap(self.data_type)
+            if unwrapped_nullable:
+                return None
+            else:
+                raise KeyError(self.name)
+        return attr
 
     def __repr__(self):
         return 'StructField(%r, %r)' % (self.name,
@@ -753,6 +799,20 @@ class Struct(UserDefined):
             raise InvalidSpec(
                 "example must reference label of '%s'" % self.name,
                 ex_field.lineno, ex_field.path)
+
+    def check_attr_repr(self, attrs):
+        # Since we mutate it, let's make a copy to avoid mutating the argument.
+        attrs = attrs.copy()
+        validated_attrs = {}
+        for field in self.all_fields:
+            attr = field.check_attr_repr(attrs.pop(field.name, None))
+            validated_attrs[field.name] = attr
+        if attrs:
+            attr_name, attr_field = attrs.popitem()
+            raise InvalidSpec(
+                "Route attribute '%s' is not defined in 'stone_cfg.Route'."
+                % attr_name, attr_field.lineno, attr_field.path)
+        return validated_attrs
 
     @property
     def all_fields(self):
@@ -1199,6 +1259,18 @@ class Union(UserDefined):
                 "example must reference label of '%s'" % self.name,
                 ex_field.lineno, ex_field.path)
 
+    def check_attr_repr(self, attr_field):
+        if not isinstance(attr_field.value, StoneTagRef):
+            raise InvalidSpec(
+                'Expected union tag as value.',
+                attr_field.lineno, attr_field.path)
+        tag_ref = TagRef(self, attr_field.value.tag)
+        try:
+            self.check(tag_ref)
+        except ValueError as e:
+            raise InvalidSpec(e.args[0], attr_field.lineno, attr_field.path)
+        return tag_ref
+
     @property
     def all_fields(self):
         """
@@ -1452,6 +1524,9 @@ class Alias(Composite):
 
     def _compute_example(self, label):
         return self.data_type._compute_example(label)
+
+    def check_attr_repr(self, attr_field):
+        return self.data_type.check_attr_repr(attr_field)
 
     def __repr__(self):
         return 'Alias(%r, %r)' % (self.name, self.data_type)

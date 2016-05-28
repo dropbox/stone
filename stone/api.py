@@ -20,6 +20,7 @@ class Api(object):
     def __init__(self, version):
         self.version = StrictVersion(version)
         self.namespaces = OrderedDict()
+        self.route_schema = None
 
     def ensure_namespace(self, name):
         """
@@ -47,6 +48,9 @@ class Api(object):
         for namespace in self.namespaces.values():
             namespace.normalize()
 
+    def add_route_schema(self, route_schema):
+        assert self.route_schema is None
+        self.route_schema = route_schema
 
 class _ImportReason(object):
     """
