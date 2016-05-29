@@ -28,7 +28,7 @@ internally: Swift, C#, Java, Go, JavaScript, and HTML documentation.
         * Motivation_
         * Installation_
     * `Language Reference <doc/lang_ref.rst>`_
-    * `Using Generated Code <doc/using_generator.rst>`_
+    * `Builtin Generators <doc/builtin_generators.rst>`_
     * `Managing Specs <doc/managing_specs.rst>`_
     * `Evolving a Spec <doc/evolve_spec.rst>`_
     * `Writing a Generator <doc/generator_ref.rst>`_

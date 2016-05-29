@@ -28,7 +28,7 @@ _builtin_generators = (
 )
 
 # The parser for command line arguments
-_cmdline_parser = argparse.ArgumentParser(description='StoneAPI')
+_cmdline_parser = argparse.ArgumentParser(description='Stone')
 _cmdline_parser.add_argument(
     '-v',
     '--verbose',

@@ -97,8 +97,8 @@ Mapping to Target Languages
 ---------------------------
 
 Code generators map the primitive types of Stone to types in a target language.
-For more information, consult the appropriate guide in `Using Generated Code
-<using_generator.rst>`_.
+For more information, consult the appropriate guide in `Builtin Generators
+<builtin_generators.rst>`_.
 
 Alias
 =====
