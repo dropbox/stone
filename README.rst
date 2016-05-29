@@ -4,6 +4,9 @@ Stone
 
 *Warning: The documentation is undergoing a rewrite.*
 
+.. image:: https://travis-ci.org/dropbox/stone.svg?branch=master
+    :target: https://travis-ci.org/dropbox/stone
+
 Define an API once in Stone. Use code generators to translate your
 specification into objects and functions in the programming languages of your
 choice.
