@@ -75,6 +75,18 @@ _cmdline_parser.add_argument(
           'combine multiple expressions with "and"/"or" and use parentheses '
           'to enforce precedence.'),
 )
+_cmdline_parser.add_argument(
+    '-a',
+    '--attribute',
+    action='append',
+    type=str,
+    default=[],
+    help=('Route attributes that the generator will have access to and '
+          'presumably expose in generated code. Use ":all" to select all '
+          'attributes defined in stone_cfg.Route. Note that you can filter '
+          '(-f) by attributes that are not listed here.'),
+)
+
 _filter_ns_group = _cmdline_parser.add_mutually_exclusive_group()
 _filter_ns_group.add_argument(
     '-w',
@@ -234,6 +246,34 @@ def main():
                     else:
                         del namespace.route_by_name[route.name]
                 namespace.routes = filtered_routes
+
+        if args.attribute:
+            attrs = set(args.attribute)
+            if ':all' in attrs:
+                attrs = {field.name for field in api.route_schema.fields}
+        else:
+            attrs = set()
+
+        for namespace in api.namespaces.values():
+            for route in namespace.routes:
+                for k in list(route.attrs.keys()):
+                    if k not in attrs:
+                        del route.attrs[k]
+
+        # Remove attrs that weren't specified from the route schema
+        for field in api.route_schema.fields[:]:
+            if field.name not in attrs:
+                api.route_schema.fields.remove(field)
+                del api.route_schema._fields_by_name[field.name]
+            else:
+                attrs.remove(field.name)
+
+        # Error if specified attr isn't even a field in the route schema
+        if attrs:
+            attr = attrs.pop()
+            print('error: Attribute not defined in stone_cfg.Route: %s' %
+                  attr, file=sys.stderr)
+            sys.exit(1)
 
     if args.generator in _builtin_generators:
         generator_module = __import__(

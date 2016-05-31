@@ -60,15 +60,6 @@ _cmdline_parser.add_argument(
           '{route} for the route name. This is used to translate Stone doc '
           'references to routes to references in Python docstrings.'),
 )
-_cmdline_parser.add_argument(
-    '-a',
-    '--attribute',
-    action='append',
-    type=str,
-    default=[],
-    help='Route attribute to include in the generated code.',
-)
-
 
 class PythonTypesGenerator(CodeGenerator):
     """Generates Python modules to represent the input Stone spec."""
@@ -99,9 +90,9 @@ class PythonTypesGenerator(CodeGenerator):
                     self.target_folder_path)
         for namespace in api.namespaces.values():
             with self.output_to_relative_path('{}.py'.format(namespace.name)):
-                self._generate_base_namespace_module(namespace)
+                self._generate_base_namespace_module(api, namespace)
 
-    def _generate_base_namespace_module(self, namespace):
+    def _generate_base_namespace_module(self, api, namespace):
         """Creates a module for the namespace. All data types and routes are
         represented as Python classes."""
 
@@ -158,7 +149,7 @@ class PythonTypesGenerator(CodeGenerator):
                     namespace, data_type)
                 self._generate_union_class_symbol_creators(data_type)
 
-        self._generate_routes(namespace)
+        self._generate_routes(api.route_schema, namespace)
 
     def _generate_alias_definition(self, namespace, alias):
         v = generate_validator_constructor(namespace, alias.data_type)
@@ -823,7 +814,7 @@ class PythonTypesGenerator(CodeGenerator):
         if lineno != self.lineno:
             self.emit()
 
-    def _generate_routes(self, namespace):
+    def _generate_routes(self, route_schema, namespace):
 
         for route in namespace.routes:
             var_name = fmt_func(route.name)
@@ -836,7 +827,8 @@ class PythonTypesGenerator(CodeGenerator):
                     self.emit(
                         generate_validator_constructor(namespace, data_type) + ',')
                 attrs = []
-                for attr_key in self.args.attribute:
+                for field in route_schema.fields:
+                    attr_key = field.name
                     attrs.append("'%s': %r" % (attr_key, route.attrs.get(attr_key)))
                 self.generate_multiline_list(
                     attrs, delim=('{', '}'), after=',', compact=True)
