@@ -15,3 +15,7 @@ public class Route {
         self.attrs = attrs
     }
 }
+
+public class TransportClient {
+    // placeholder for implementation-specific transport client
+}

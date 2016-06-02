@@ -24,8 +24,6 @@ base = """\
 import Foundation
 """.format(auto_generated_warning)
 
-team_namespaces = ['team']
-
 _cmdline_parser = argparse.ArgumentParser(
     prog='swift-client-generator',
     description=(
@@ -38,7 +36,7 @@ _cmdline_parser.add_argument(
     '--module-name',
     required=True,
     type=str,
-    help=('The name of the Python module to generate. Please exclude the .py '
+    help=('The name of the Swift module to generate. Please exclude the .swift '
           'file extension.'),
 )
 _cmdline_parser.add_argument(
@@ -46,7 +44,7 @@ _cmdline_parser.add_argument(
     '--class-name',
     required=True,
     type=str,
-    help='The name of the Python class that contains each route as a method.',
+    help='The name of the Swift class that contains each route as a method.',
 )
 
 class SwiftGenerator(SwiftBaseGenerator):
@@ -63,28 +61,22 @@ class SwiftGenerator(SwiftBaseGenerator):
                 with self.output_to_relative_path('{}Routes.swift'.format(ns_class)):
                     self._generate_routes(namespace)
 
-        user_client_path = os.path.join('DropboxClient.swift')
-        team_client_path = os.path.join('DropboxTeamClient.swift')
+        with self.output_to_relative_path('{}.swift'.format(self.args.module_name)):
+            self._generate_client(api)
 
-        with self.output_to_relative_path(user_client_path):
-            self._generate_user_client(api)
 
-        with self.output_to_relative_path(team_client_path):
-            self._generate_team_client(api)
 
-    def _generate_user_client(self, api):
+    def _generate_client(self, api):
         self.emit_raw(base)
         self.emit('import Alamofire')
 
         self.emit('')
-        with self.block('public class DropboxClient: DropboxTransportClient'):
+        with self.block('public class {}'.format(self.args.class_name)):
             # self.emit('/// Shared instance for convenience')
             # self.emit('public static var sharedClient: DropboxClient!')
 
             namespace_fields = []
             for namespace in api.namespaces.values():
-                if namespace.name in team_namespaces:
-                    continue
                 if namespace.routes:
                     namespace_fields.append((namespace.name,
                                               fmt_class(namespace.name)))
@@ -94,53 +86,9 @@ class SwiftGenerator(SwiftBaseGenerator):
                 self.emit('public var {}: {}Routes!'.format(var, typ))
 
             self.emit('')
-            args = [('accessToken', 'DropboxAccessToken'),
-                    ('selectUser', 'String? = nil'),
-                    ('baseHosts', '[String: String]? = nil'),
-                    ('userAgent', 'String? = nil')]
-            with self.function_block('public override init', self._func_args(args)):
-                self.emit('super.init({})'.format(self._func_args((var, var) for var, _ in args)))
+            with self.function_block('public init', args=self._func_args([('client', 'TransportClient')])):
                 for var, typ in namespace_fields:
-                    self.emit('self.{} = {}Routes(client: self)'.format(var, typ))
-
-    def _generate_team_client(self, api):
-        self.emit_raw(base)
-        self.emit('import Alamofire')
-
-        self.emit('/// The client for the API. Call routes using '
-                   'the namespaces inside this object.')
-        with self.block('public class DropboxTeamClient: DropboxTransportClient'):
-            # self.emit('/// Shared instance for convenience')
-            # self.emit('public static var sharedClient: DropboxTeamClient!')
-
-            namespace_fields = []
-            for namespace in api.namespaces.values():
-                if namespace.name not in team_namespaces:
-                    continue
-                if namespace.routes:
-                    namespace_fields.append((namespace.name,
-                                              fmt_class(namespace.name)))
-            for var, typ in namespace_fields:
-                self.emit('/// Routes within the {} namespace. '
-                          'See {}Routes for details.'.format(var, typ))
-                self.emit('public var {}: {}Routes!'.format(var, typ))
-
-            self.emit('')
-            init_args = [('accessToken', 'DropboxAccessToken'),
-                    ('selectUser', 'String? = nil'),
-                    ('baseHosts', '[String: String]? = nil'),
-                    ('userAgent', 'String? = nil')]
-            as_member_args = [('accessToken', 'self.accessToken'),
-                              ('selectUser', 'memberId')]
-            with self.function_block('public override init', self._func_args(init_args)):
-                self.emit('super.init({})'.format(self._func_args((var, var)
-                                                  for var, _ in init_args)))
-                for var, typ in namespace_fields:
-                    self.emit('self.{} = {}Routes(client: self)'.format(var, typ))
-            self.emit('')
-            with self.function_block('public func asMember',
-                                     self._func_args([('memberId', 'String')]), 'DropboxClient'):
-                self.emit('return DropboxClient({})'.format(self._func_args(as_member_args)))
+                    self.emit('self.{} = {}Routes(client: client)'.format(var, typ))
 
     def _generate_routes(self, namespace):
         ns_class = fmt_class(namespace.name)
@@ -149,8 +97,8 @@ class SwiftGenerator(SwiftBaseGenerator):
         self.emit()
         self.emit('/// Routes for the {} namespace'.format(namespace.name))
         with self.block('public class {}Routes'.format(ns_class)):
-            self.emit('public let client: DropboxTransportClient')
-            args = [('client', 'DropboxTransportClient')]
+            self.emit('public let client: TransportClient')
+            args = [('client', 'TransportClient')]
             with self.function_block('init', self._func_args(args)):
                 self.emit('self.client = client')
 
