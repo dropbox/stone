@@ -59,7 +59,7 @@ class JavascriptGenerator(CodeGenerator):
                     self._generate_route(namespace, route)
 
             self.emit()
-            self.emit('module.exports = routes;')
+            self.emit('module.exports = routes')
 
     def _generate_route(self, namespace, route):
         function_name = fmt_func(namespace.name + '_' + route.name)
@@ -88,19 +88,19 @@ class JavascriptGenerator(CodeGenerator):
         self.emit(' * @returns {%s}' % fmt_type(route.result_data_type))
         self.emit(' */')
         self.emit('routes.%s = function (arg) {' % function_name)
-        with self.indent(dent=2):
+        with self.indent():
             url = '{}/{}'.format(namespace.name, route.name)
             if self.args.route_attribute:
                 additional_args = []
                 for attr in self.args.route_attribute:
                     additional_args.append(fmt_obj(route.attrs.get(attr)))
                 self.emit(
-                    "return this.request('{}', arg, {});".format(
+                    'return this.request("{}", arg, {});'.format(
                         url, ', '.join(additional_args)))
             else:
                 self.emit(
                     'return this.request("%s", arg);' % url)
-        self.emit('};')
+        self.emit('}')
 
     def _docf(self, tag, val):
         """

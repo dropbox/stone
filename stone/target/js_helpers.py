@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import json
-import six
 
 from stone.data_type import (
     Boolean,
@@ -38,11 +37,7 @@ _type_table = {
 
 
 def fmt_obj(o):
-    if isinstance(o, six.text_type):
-        # Prioritize single-quoted strings per JS style guides.
-        return repr(o).lstrip('u')
-    else:
-        return json.dumps(o, indent=2)
+    return json.dumps(o, indent=2)
 
 
 def fmt_type(data_type):

@@ -2,11 +2,39 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import pprint
 
+from stone.data_type import (
+    Boolean,
+    Bytes,
+    Float32,
+    Float64,
+    Int32,
+    Int64,
+    List,
+    String,
+    Timestamp,
+    UInt32,
+    UInt64,
+    Void,
+)
 from .helpers import split_words
 
 # This file defines *stylistic* choices for Swift
 # (ie, that class names are UpperCamelCase and that variables are lowerCamelCase)
 
+
+_type_table = {
+    Boolean: 'Bool',
+    Bytes: 'NSData',
+    Float32: 'Float',
+    Float64: 'Double',
+    Int32: 'Int32',
+    Int64: 'Int64',
+    String: 'String',
+    Timestamp: 'NSDate',
+    UInt32: 'UInt32',
+    UInt64: 'UInt64',
+    Void: 'Void',
+}
 
 _reserved_words = {
     'description'
@@ -37,10 +65,11 @@ def _format_camelcase(name, lower_first=True):
 def fmt_class(name):
     return _format_camelcase(name, lower_first=False)
 
-
 def fmt_func(name):
     return _format_camelcase(name)
 
+def fmt_type(data_type):
+    return _type_table.get(data_type.__class__, fmt_class(data_type.name))
 
 def fmt_var(name):
     return _format_camelcase(name)
