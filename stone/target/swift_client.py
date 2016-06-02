@@ -78,8 +78,8 @@ class SwiftGenerator(SwiftBaseGenerator):
 
         self.emit('')
         with self.block('public class DropboxClient: DropboxTransportClient'):
-            self.emit('/// Shared instance for convenience')
-            self.emit('public static var sharedClient: DropboxClient!')
+            # self.emit('/// Shared instance for convenience')
+            # self.emit('public static var sharedClient: DropboxClient!')
 
             namespace_fields = []
             for namespace in api.namespaces.values():
@@ -110,8 +110,8 @@ class SwiftGenerator(SwiftBaseGenerator):
         self.emit('/// The client for the API. Call routes using '
                    'the namespaces inside this object.')
         with self.block('public class DropboxTeamClient: DropboxTransportClient'):
-            self.emit('/// Shared instance for convenience')
-            self.emit('public static var sharedClient: DropboxTeamClient!')
+            # self.emit('/// Shared instance for convenience')
+            # self.emit('public static var sharedClient: DropboxTeamClient!')
 
             namespace_fields = []
             for namespace in api.namespaces.values():

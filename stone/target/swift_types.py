@@ -153,7 +153,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             for field in data_type.fields:
                 fdoc = self.process_doc(field.doc, self._docf) if field.doc else 'Undocumented'
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('public let {} : {}'.format(
+                self.emit('public let {}: {}'.format(
                     fmt_var(field.name),
                     self.fmt_complex_type(field.data_type),
                 ))
@@ -161,7 +161,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
 
             decl = 'public var' if not data_type.parent_type else 'public override var'
 
-            with self.block('{} description : String'.format(decl)):
+            with self.block('{} description: String'.format(decl)):
                 cls = fmt_class(data_type.name)+'Serializer'
                 self.emit('return "\(SerializeUtil.prepareJSONForSerialization' +
                           '({}().serialize(self)))"'.format(cls))
@@ -241,7 +241,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
         with self.serializer_block(data_type):
             with self.serializer_func(data_type):
                 if not data_type.all_fields:
-                    self.emit('let output = [String : JSON]()')
+                    self.emit('let output = [String: JSON]()')
                 else:
                     intro = 'var' if data_type.has_enumerated_subtypes() else 'let'
                     self.emit("{} output = [ ".format(intro))
@@ -294,7 +294,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                     self.emit('*/')
                 self.emit('case {}{}'.format(fmt_class(field.name),
                                                   typ))
-            with self.block('public var description : String'):
+            with self.block('public var description: String'):
                 cls = class_type+'Serializer'
                 self.emit('return "\(SerializeUtil.prepareJSONForSerialization' +
                           '({}().serialize(self)))"'.format(cls))
@@ -318,7 +318,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
 
                     with self.indent():
                         if is_void_type(field_type):
-                            self.emit('var d = [String : JSON]()')
+                            self.emit('var d = [String: JSON]()')
                         elif (is_struct_type(field_type) and
                                 not field_type.has_enumerated_subtypes()):
                             self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
