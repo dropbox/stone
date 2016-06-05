@@ -15,6 +15,9 @@ from stone.data_type import (
     UInt32,
     UInt64,
     Void,
+    is_list_type,
+    is_nullable_type,
+    is_user_defined_type,
 )
 from .helpers import split_words
 
@@ -29,6 +32,7 @@ _type_table = {
     Float64: 'Double',
     Int32: 'Int32',
     Int64: 'Int64',
+    List: 'Array<{}>',
     String: 'String',
     Timestamp: 'NSDate',
     UInt32: 'UInt32',
@@ -51,7 +55,6 @@ def fmt_obj(o):
         return 'nil'
     return pprint.pformat(o, width=1)
 
-
 def _format_camelcase(name, lower_first=True):
     words = [word.capitalize() for word in split_words(name)]
     if lower_first:
@@ -61,7 +64,6 @@ def _format_camelcase(name, lower_first=True):
         ret += '_'
     return ret
 
-
 def fmt_class(name):
     return _format_camelcase(name, lower_first=False)
 
@@ -69,8 +71,22 @@ def fmt_func(name):
     return _format_camelcase(name)
 
 def fmt_type(data_type):
-    return _type_table.get(data_type.__class__, fmt_class(data_type.name))
+    nullable = False
+
+    if is_nullable_type(data_type):
+        data_type = data_type.data_type
+        nullable = True
+
+    if is_user_defined_type(data_type):
+        result = '{}.{}'.format(fmt_class(data_type.namespace.name),
+                                fmt_class(data_type.name))
+    else:
+        result = _type_table.get(data_type.__class__, fmt_class(data_type.name))
+        
+        if is_list_type(data_type):
+            result = result.format(fmt_type(data_type.data_type))            
+    
+    return result if not nullable else result + '?'
 
 def fmt_var(name):
     return _format_camelcase(name)
-

@@ -20,6 +20,7 @@ from stone.target.swift_helpers import (
     fmt_class,
     fmt_func,
     fmt_var,
+    fmt_type,
 )
 from stone.target.swift import SwiftBaseGenerator
 
@@ -52,6 +53,7 @@ _cmdline_parser.add_argument(
 class SwiftTypesGenerator(SwiftBaseGenerator):
     """Generates Swift modules to represent the input Stone spec."""
     cmdline_parser = _cmdline_parser
+    ns_qual_blacklist = []
     def generate(self, api):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
         self.logger.info('Copying StoneValidators.swift to output folder')
@@ -155,7 +157,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
                 self.emit('public let {}: {}'.format(
                     fmt_var(field.name),
-                    self.fmt_complex_type(field.data_type),
+                    fmt_type(field.data_type),
                 ))
             self._generate_struct_init(namespace, data_type)
 
@@ -194,12 +196,12 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 tagvar = fmt_var(tag)
                 self.emit('case let {} as {}:'.format(
                     tagvar,
-                    self.fmt_complex_type(subtype)
+                    fmt_type(subtype)
                 ))
 
                 with self.indent():
                     with self.block('for (k,v) in Serialization.getFields({}.serialize({}))'.format(
-                        self._serializer_obj(subtype), tagvar
+                        self.fmt_serial_type(subtype), tagvar
                     )):
                         self.emit('output[k] = v')
                     self.emit('output[".tag"] = .Str("{}")'.format(tag))
@@ -211,7 +213,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 var = fmt_var(field.name)
                 self.emit('let {} = {}.deserialize(dict["{}"] ?? .Null)'.format(
                     var,
-                    self._serializer_obj(field.data_type),
+                    self.fmt_serial_type(field.data_type),
                     field.name,
                 ))
 
@@ -229,7 +231,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 tag = tags[0]
                 self.emit('case "{}":'.format(tag))
                 with self.indent():
-                    self.emit('return {}.deserialize(json)'.format(self._serializer_obj(subtype)))
+                    self.emit('return {}.deserialize(json)'.format(self.fmt_serial_type(subtype)))
             self.emit('default:')
             with self.indent():
                 if data_type.is_catch_all():
@@ -248,7 +250,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                     for field in data_type.all_fields:
                         self.emit('"{}": {}.serialize(value.{}),'.format(
                             field.name,
-                            self._serializer_obj(field.data_type),
+                            self.fmt_serial_type(field.data_type),
                             fmt_var(field.name)
                         ))
                     self.emit(']')
@@ -272,7 +274,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
         if is_void_type(data_type):
             return ''
         else:
-            return '({})'.format(self.fmt_complex_type(data_type))
+            return '({})'.format(fmt_type(data_type))
 
     def _generate_union_type(self, namespace, data_type):
         self.emit('/**')
@@ -322,11 +324,11 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                         elif (is_struct_type(field_type) and
                                 not field_type.has_enumerated_subtypes()):
                             self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
-                                self._serializer_obj(field_type)))
+                                self.fmt_serial_type(field_type)))
                         else:
                             self.emit('var d = ["{}": {}.serialize(arg)]'.format(
                                 field.name,
-                                self._serializer_obj(field_type)))
+                                self.fmt_serial_type(field_type)))
                         self.emit('d[".tag"] = .Str("{}")'.format(field.name))
                         self.emit('return .Dictionary(d)')
             with self.deserializer_func(data_type):
@@ -351,7 +353,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                                             subdict = 'd["{}"] ?? .Null'.format(field.name)
 
                                         self.emit('let v = {}.deserialize({})'.format(
-                                            self._serializer_obj(field_type), subdict
+                                            self.fmt_serial_type(field_type), subdict
                                         ))
                                         self.emit('return {}(v)'.format(tag_type))
                             self.emit('default:')
@@ -379,6 +381,9 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 self.emit('namespace: \"{}\",'.format(namespace.name))
                 self.emit('deprecated: {},'.format('true' if route.deprecated
                                                    is not None else 'false'))
+                self.emit('argSerializer: {},'.format(self.fmt_serial_type(route.arg_data_type)))
+                self.emit('responseSerializer: {},'.format(self.fmt_serial_type(route.result_data_type)))
+                self.emit('errorSerializer: {},'.format(self.fmt_serial_type(route.error_data_type)))
                 attrs = []
                 for attr_key in self.args.attribute:
                     attr_val = ("\"{}\"".format(route.attrs.get(attr_key))
