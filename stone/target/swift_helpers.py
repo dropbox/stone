@@ -32,7 +32,7 @@ _type_table = {
     Float64: 'Double',
     Int32: 'Int32',
     Int64: 'Int64',
-    List: 'Array<{}>',
+    List: 'Array',
     String: 'String',
     Timestamp: 'NSDate',
     UInt32: 'UInt32',
@@ -84,7 +84,7 @@ def fmt_type(data_type):
         result = _type_table.get(data_type.__class__, fmt_class(data_type.name))
         
         if is_list_type(data_type):
-            result = result.format(fmt_type(data_type.data_type))            
+            result = result + '<{}>'.format(fmt_type(data_type.data_type))            
     
     return result if not nullable else result + '?'
 

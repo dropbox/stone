@@ -53,7 +53,6 @@ _cmdline_parser.add_argument(
 class SwiftTypesGenerator(SwiftBaseGenerator):
     """Generates Swift modules to represent the input Stone spec."""
     cmdline_parser = _cmdline_parser
-    ns_qual_blacklist = []
     def generate(self, api):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
         self.logger.info('Copying StoneValidators.swift to output folder')
@@ -96,48 +95,6 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                     self._generate_union_type(namespace, data_type)
             if namespace.routes:
                 self._generate_route_objects(namespace)
-
-    def _determine_validator_type(self, data_type):
-        if is_nullable_type(data_type):
-            data_type = data_type.data_type
-            nullable = True
-        else:
-            nullable = False
-        if is_list_type(data_type):
-            item_validator = self._determine_validator_type(data_type.data_type)
-            if item_validator:
-                v = "arrayValidator({})".format(
-                    self._func_args([
-                        ("minItems", data_type.min_items),
-                        ("maxItems", data_type.max_items),
-                        ("itemValidator", item_validator),
-                    ])
-                )
-            else:
-                return None
-        elif is_numeric_type(data_type):
-            v = "comparableValidator({})".format(
-                self._func_args([
-                    ("minValue", data_type.min_value),
-                    ("maxValue", data_type.max_value),
-                ])
-            )
-        elif is_string_type(data_type):
-            pat = data_type.pattern if data_type.pattern else None
-            pat = pat.encode('unicode_escape').replace("\"", "\\\"") if pat else pat                
-            v = "stringValidator({})".format(
-                self._func_args([
-                    ("minLength", data_type.min_length),
-                    ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(pat) if pat else None),
-                ])
-            )
-        else:
-            return None
-
-        if nullable:
-            v = "nullableValidator({})".format(v)
-        return v
 
     def _generate_struct_class(self, namespace, data_type):
         self.emit('/**')
@@ -188,6 +145,48 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                              for f in data_type.parent_type.all_fields]
                 self.emit('super.init({})'.format(self._func_args(func_args)))
 
+    def _determine_validator_type(self, data_type):
+        if is_nullable_type(data_type):
+            data_type = data_type.data_type
+            nullable = True
+        else:
+            nullable = False
+        if is_list_type(data_type):
+            item_validator = self._determine_validator_type(data_type.data_type)
+            if item_validator:
+                v = "arrayValidator({})".format(
+                    self._func_args([
+                        ("minItems", data_type.min_items),
+                        ("maxItems", data_type.max_items),
+                        ("itemValidator", item_validator),
+                    ])
+                )
+            else:
+                return None
+        elif is_numeric_type(data_type):
+            v = "comparableValidator({})".format(
+                self._func_args([
+                    ("minValue", data_type.min_value),
+                    ("maxValue", data_type.max_value),
+                ])
+            )
+        elif is_string_type(data_type):
+            pat = data_type.pattern if data_type.pattern else None
+            pat = pat.encode('unicode_escape').replace("\"", "\\\"") if pat else pat                
+            v = "stringValidator({})".format(
+                self._func_args([
+                    ("minLength", data_type.min_length),
+                    ("maxLength", data_type.max_length),
+                    ("pattern", '"{}"'.format(pat) if pat else None),
+                ])
+            )
+        else:
+            return None
+
+        if nullable:
+            v = "nullableValidator({})".format(v)
+        return v
+
     def _generate_enumerated_subtype_serializer(self, namespace, data_type):
         with self.block('switch value'):
             for tags, subtype in data_type.get_all_subtypes_with_tags():
@@ -201,7 +200,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
 
                 with self.indent():
                     with self.block('for (k,v) in Serialization.getFields({}.serialize({}))'.format(
-                        self.fmt_serial_type(subtype), tagvar
+                        self.fmt_serial_obj(subtype), tagvar
                     )):
                         self.emit('output[k] = v')
                     self.emit('output[".tag"] = .Str("{}")'.format(tag))
@@ -213,7 +212,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 var = fmt_var(field.name)
                 self.emit('let {} = {}.deserialize(dict["{}"] ?? .Null)'.format(
                     var,
-                    self.fmt_serial_type(field.data_type),
+                    self.fmt_serial_obj(field.data_type),
                     field.name,
                 ))
 
@@ -231,7 +230,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 tag = tags[0]
                 self.emit('case "{}":'.format(tag))
                 with self.indent():
-                    self.emit('return {}.deserialize(json)'.format(self.fmt_serial_type(subtype)))
+                    self.emit('return {}.deserialize(json)'.format(self.fmt_serial_obj(subtype)))
             self.emit('default:')
             with self.indent():
                 if data_type.is_catch_all():
@@ -250,7 +249,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                     for field in data_type.all_fields:
                         self.emit('"{}": {}.serialize(value.{}),'.format(
                             field.name,
-                            self.fmt_serial_type(field.data_type),
+                            self.fmt_serial_obj(field.data_type),
                             fmt_var(field.name)
                         ))
                     self.emit(']')
@@ -324,11 +323,11 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                         elif (is_struct_type(field_type) and
                                 not field_type.has_enumerated_subtypes()):
                             self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
-                                self.fmt_serial_type(field_type)))
+                                self.fmt_serial_obj(field_type)))
                         else:
                             self.emit('var d = ["{}": {}.serialize(arg)]'.format(
                                 field.name,
-                                self.fmt_serial_type(field_type)))
+                                self.fmt_serial_obj(field_type)))
                         self.emit('d[".tag"] = .Str("{}")'.format(field.name))
                         self.emit('return .Dictionary(d)')
             with self.deserializer_func(data_type):
@@ -353,7 +352,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                                             subdict = 'd["{}"] ?? .Null'.format(field.name)
 
                                         self.emit('let v = {}.deserialize({})'.format(
-                                            self.fmt_serial_type(field_type), subdict
+                                            self.fmt_serial_obj(field_type), subdict
                                         ))
                                         self.emit('return {}(v)'.format(tag_type))
                             self.emit('default:')
@@ -368,30 +367,6 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                     with self.indent():
 
                         self.emit('fatalError("Failed to deserialize")')
-
-    def _generate_route_objects(self, namespace):
-        self.emit()
-        self.emit('// Stone Route Objects')
-        self.emit()
-        for route in namespace.routes:
-            var_name = fmt_func(route.name)
-            with self.block('static let {} = Route('.format(var_name),
-                            delim=(None, None), after=')'):
-                self.emit('name: \"{}\",'.format(route.name))
-                self.emit('namespace: \"{}\",'.format(namespace.name))
-                self.emit('deprecated: {},'.format('true' if route.deprecated
-                                                   is not None else 'false'))
-                self.emit('argSerializer: {},'.format(self.fmt_serial_type(route.arg_data_type)))
-                self.emit('responseSerializer: {},'.format(self.fmt_serial_type(route.result_data_type)))
-                self.emit('errorSerializer: {},'.format(self.fmt_serial_type(route.error_data_type)))
-                attrs = []
-                for attr_key in self.args.attribute:
-                    attr_val = ("\"{}\"".format(route.attrs.get(attr_key))
-                            if route.attrs.get(attr_key) else 'nil')
-                    attrs.append('\"{}\": {}'.format(attr_key, attr_val))
-
-                self.generate_multiline_list(
-                    attrs, delim=('attrs: [', ']'), compact=True)
 
     @contextmanager
     def serializer_block(self, data_type):
@@ -413,3 +388,27 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                                  args=self._func_args([('json', 'JSON')]),
                                  return_type=fmt_class(data_type.name)):
             yield
+
+    def _generate_route_objects(self, namespace):
+        self.emit()
+        self.emit('// Stone Route Objects')
+        self.emit()
+        for route in namespace.routes:
+            var_name = fmt_func(route.name)
+            with self.block('static let {} = Route('.format(var_name),
+                            delim=(None, None), after=')'):
+                self.emit('name: \"{}\",'.format(route.name))
+                self.emit('namespace: \"{}\",'.format(namespace.name))
+                self.emit('deprecated: {},'.format('true' if route.deprecated
+                                                   is not None else 'false'))
+                self.emit('argSerializer: {},'.format(self.fmt_serial_obj(route.arg_data_type)))
+                self.emit('responseSerializer: {},'.format(self.fmt_serial_obj(route.result_data_type)))
+                self.emit('errorSerializer: {},'.format(self.fmt_serial_obj(route.error_data_type)))
+                attrs = []
+                for attr_key in self.args.attribute:
+                    attr_val = ("\"{}\"".format(route.attrs.get(attr_key))
+                            if route.attrs.get(attr_key) else 'nil')
+                    attrs.append('\"{}\": {}'.format(attr_key, attr_val))
+
+                self.generate_multiline_list(
+                    attrs, delim=('attrs: [', ']'), compact=True)

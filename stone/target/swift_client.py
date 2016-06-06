@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 from stone.data_type import (
     is_struct_type,
+    is_union_type,
     is_void_type,
 )
 from stone.target.swift import SwiftBaseGenerator
@@ -57,21 +58,26 @@ _cmdline_parser.add_argument(
     '--transport-client-name',
     required=True,
     type=str,
-    help='The name of the Swift class that managers network API calls.',
+    help='The name of the Swift class that manages network API calls.',
 )
 _cmdline_parser.add_argument(
     '-x',
     '--client-args-class-name',
-    required=True,
     type=str,
-    help='The name of the Swift class that contains each route as a method.',
+    help='The name of the Swift wrapper class that contains client-side arguments.',
 )
 _cmdline_parser.add_argument(
     '-y',
+    '--client-args-class',
+    type=str,
+    help='The instance variables of the Swift wrapper class that contains client-side arguments.',
+)
+_cmdline_parser.add_argument(
+    '-z',
     '--client-args',
     required=True,
     type=str,
-    help='The name of the Swift class that contains each route as a method.',
+    help='The client-side route arguments to append to each route by style type.',
 )
 
 
@@ -80,9 +86,10 @@ class SwiftGenerator(SwiftBaseGenerator):
     cmdline_parser = _cmdline_parser
 
     def generate(self, api):
-        client_args = json.loads(self.args.client_args)
-        with self.output_to_relative_path('{}.swift'.format(self.args.client_args_class_name)):
-            self._generate_client_args(client_args)
+        if self.args.client_args_class and self.args.client_args_class_name:
+            client_args = json.loads(self.args.client_args_class)
+            with self.output_to_relative_path('{}.swift'.format(self.args.client_args_class_name)):
+                self._generate_client_args(client_args)
 
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
         for namespace in api.namespaces.values():
@@ -97,20 +104,20 @@ class SwiftGenerator(SwiftBaseGenerator):
     def _generate_client(self, api):
         self.emit_raw(base)
         self.emit('import Alamofire')
+        self.emit()
 
-        self.emit('')
         with self.block('public class {}'.format(self.args.class_name)):
             namespace_fields = []
             for namespace in api.namespaces.values():
                 if namespace.routes:
                     namespace_fields.append((namespace.name,
-                                              fmt_class(namespace.name)))
+                                            fmt_class(namespace.name)))
             for var, typ in namespace_fields:
                 self.emit('/// Routes within the {} namespace. '
                           'See {}Routes for details.'.format(var, typ))
                 self.emit('public var {}: {}Routes!'.format(var, typ))
+            self.emit()
 
-            self.emit('')
             with self.function_block('public init', args=self._func_args([('client', '{}'.format(self.args.transport_client_name))])):
                 for var, typ in namespace_fields:
                     self.emit('self.{} = {}Routes(client: client)'.format(var, typ))
@@ -121,9 +128,11 @@ class SwiftGenerator(SwiftBaseGenerator):
         self.emit(auto_generated_warning)
         self.emit()
         self.emit('/// Routes for the {} namespace'.format(namespace.name))
+
         with self.block('public class {}Routes'.format(ns_class)):
             self.emit('public let client: {}'.format(self.args.transport_client_name))
             args = [('client', '{}'.format(self.args.transport_client_name))]
+            
             with self.function_block('init', self._func_args(args)):
                 self.emit('self.client = client')
 
@@ -168,8 +177,8 @@ class SwiftGenerator(SwiftBaseGenerator):
         self.emit_wrapped_text(output, prefix='    ', width=120)
         self.emit('*/')
 
-        rtype = self.fmt_serial_type(route.result_data_type, is_obj=False)
-        etype = self.fmt_serial_type(route.error_data_type, is_obj=False)
+        rtype = self.fmt_serial_type(route.result_data_type)
+        etype = self.fmt_serial_type(route.error_data_type)
         func_args = [
             ('route', '{}.{}'.format(fmt_class(namespace.name), func_name)),
         ]
@@ -191,43 +200,61 @@ class SwiftGenerator(SwiftBaseGenerator):
                 args = [(name, name) for name, _ in self._struct_init_args(route.arg_data_type)]
                 func_args += [('serverArgs', '{}({})'.format(arg_type, self._func_args(args)))]
                 self.emit('let serverArgs = {}({})'.format(arg_type, self._func_args(args)))
-            elif is_void_type(route.arg_data_type):
-                func_args += [('serverArgs', '{}'.format('nil'))]
-                self.emit('let serverArgs = {}'.format('nil'))
+            elif is_union_type(route.arg_data_type):
+                self.emit('let serverArgs = {}'.format('request'))
 
-            func_args += [('clientArgs', '{}ClientArgs()'.format(style))]
-            self.emit('let clientArgs = {}ClientArgs({})'.format(style, self._func_args(client_args)))
-            self.emit('return client.request(route, serverArgs: serverArgs, clientArgs: clientArgs)')
+            return_args = [('', 'route')]
+
+            if is_void_type(route.arg_data_type):
+                return_args += [('serverArgs', 'nil')]
+            else:
+                return_args += [('serverArgs', 'serverArgs')]
+
+            if client_args:
+                return_args += [('clientArgs', 'clientArgs')]
+                self.emit('let clientArgs = {}ClientArgs({})'.format(style, self._func_args(client_args)))
+            else:
+                return_args += [('clientArgs', 'nil')]
+
+            self.emit('return client.request({})'.format(self._func_args(return_args, not_init=True)))
+
+    # def _maybe_generate_deprecation_warning(self, route):
+    #     if route.deprecated:
+    #         msg = '{} is deprecated.'.format(route.name)
+    #         if route.deprecated.by:
+    #             msg += ' Use {}.'.format(route.deprecated.by.name)
+    #         args = ["'{}'".format(msg), 'DeprecationWarning']
+    #         self.generate_multiline_list(args, before='warnings.warn', delim=('(', ')'), compact=False)
 
     def _generate_route(self, namespace, route):
         route_type = route.attrs.get('style')
         client_args = json.loads(self.args.client_args)
-        route_args = client_args[route_type]['route']
+        route_args = client_args[route_type]
 
-        for a, v in route_args.iteritems():
-            extra_args = []
-            for a, data in v.iteritems():
-                extra_args.append(tuple(data))
-            self._emit_route(namespace, route, extra_args, [])
-
+        if not route_args:
+            self._emit_route(namespace, route)
+        else:
+            for extra_args_set in route_args:
+                extra_args = [tuple(arg_set) for arg_set in extra_args_set]
+                self._emit_route(namespace, route, extra_args, [])
 
     def _generate_client_args(self, client_args):
         self.emit_raw(base)
 
-        for route_style, struct_map in client_args.iteritems():
-            self.emit('')
+        for route_style, class_data in client_args.iteritems():
+            self.emit()
 
             init_args = []
             with self.block('public class {}ClientArgs'.format(fmt_class(route_style))):
-                for _, type_data in struct_map['class'].iteritems():
-                    data = tuple(type_data)
+                for instance_var_data in class_data:
+                    data = tuple(instance_var_data)
                     init_args.append(data)
                     var, typ = data
                     stripped_typ = re.search('(.*) =', typ)
                     stripped_typ = typ if not stripped_typ else stripped_typ.group(1)
                     self.emit('public let {}: {}'.format(var, stripped_typ))
 
-                self.emit('')
+                self.emit()
 
                 with self.function_block('public init', args=self._func_args(init_args)):
                     for var, typ in init_args:

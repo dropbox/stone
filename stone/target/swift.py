@@ -42,18 +42,18 @@ from stone.target.swift_helpers import (
 
 
 _serial_type_table = {
-    Boolean: 'Serialization._BoolSerializer',
-    Bytes: 'Serialization._NSDataSerializer',
-    Float32: 'Serialization._FloatSerializer',
-    Float64: 'Serialization._DoubleSerializer',
-    Int32: 'Serialization._Int32Serializer',
-    Int64: 'Serialization._Int64Serializer',
-    List: 'ArraySerializer({})',
-    String: 'Serialization._StringSerializer',
-    Timestamp: 'NSDateSerializer("{}")',
-    UInt32: 'Serialization._UInt32Serializer',
-    UInt64: 'Serialization._UInt64Serializer',
-    Void: 'Serialization._VoidSerializer',
+    Boolean: 'BoolSerializer',
+    Bytes: 'NSDataSerializer',
+    Float32: 'FloatSerializer',
+    Float64: 'DoubleSerializer',
+    Int32: 'Int32Serializer',
+    Int64: 'Int64Serializer',
+    List: 'ArraySerializer',
+    String: 'StringSerializer',
+    Timestamp: 'NSDateSerializer',
+    UInt32: 'UInt32Serializer',
+    UInt64: 'UInt64Serializer',
+    Void: 'VoidSerializer',
 }
 
 
@@ -126,23 +126,43 @@ class SwiftBaseGenerator(CodeGenerator):
             args.append(arg)
         return args
 
-    def fmt_serial_type(self, data_type, is_obj=True):
+    def fmt_serial_type(self, data_type):
         nullable = False
         if is_nullable_type(data_type):
             data_type = data_type.data_type
             nullable = True
 
         if is_user_defined_type(data_type):
-            result = '{}.{}Serializer()' if is_obj else '{}.{}Serializer'
+            result = '{}.{}Serializer'
             result = result.format(fmt_class(data_type.namespace.name),
                                     fmt_class(data_type.name))
         else:
             result = _serial_type_table.get(data_type.__class__, fmt_class(data_type.name))
             
             if is_list_type(data_type):
-                result = result.format(self.fmt_serial_type(data_type.data_type))
+                result = result + '<{}>'.format(self.fmt_serial_type(data_type.data_type))        
+
+        return result if not nullable else 'NullableSerializer'
+
+    def fmt_serial_obj(self, data_type):
+        nullable = False
+        if is_nullable_type(data_type):
+            data_type = data_type.data_type
+            nullable = True
+
+        if is_user_defined_type(data_type):
+            result = '{}.{}Serializer()'
+            result = result.format(fmt_class(data_type.namespace.name),
+                                    fmt_class(data_type.name))
+        else:
+            result = _serial_type_table.get(data_type.__class__, fmt_class(data_type.name))
+
+            if is_list_type(data_type):
+                result = result + '({})'.format(self.fmt_serial_obj(data_type.data_type))
             elif is_timestamp_type(data_type):
-                result = result.format(data_type.format)           
+                result = result + '("{}")'.format(data_type.format)
+            else:
+                result = 'Serialization._{}'.format(result)
 
         return result if not nullable else 'NullableSerializer({})'.format(result)
 
