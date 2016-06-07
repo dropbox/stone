@@ -243,18 +243,14 @@ class PythonClientGenerator(CodeGenerator):
             for field in arg_data_type.all_fields:
                 if is_nullable_type(field.data_type):
                     args.append('{}=None'.format(field.name))
-                elif field.has_default:
+                elif is_struct_type(arg_data_type) and field.has_default:
                     # TODO(kelkabany): Decide whether we really want to set the
                     # default in the argument list. This will send the default
                     # over the wire even if it isn't overridden. The benefit is
                     # it locks in a default even if it is changed server-side.
-                    if is_user_defined_type(field.data_type):
-                        ns = field.data_type.namespace
-                    else:
-                        ns = None
                     arg = '{}={}'.format(
                         field.name,
-                        self._generate_python_value(ns, field.default))
+                        self._generate_python_value(namespace, field.default))
                     args.append(arg)
                 else:
                     args.append(field.name)
