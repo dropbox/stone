@@ -13,11 +13,12 @@ choice.
 
 Stone is made up of several components:
 
-    1. An interface-description language (IDL) for specifying APIs.
+    1. An language for specifying APIs.
     2. A command-line tool (``stone``) that takes an API specification and
        generator module, and generates output.
-    3. A Python-interface for defining new generators.
-    4. A JSON-compatible serialization format.
+    3. Builtin generators: Python, Swift (more coming soon)
+    4. A Python interface for defining new generators.
+    5. A JSON-compatible serialization format.
 
 Stone is in active use for the `Dropbox v2 API
 <http://www.dropbox.com/developers>`_. Right now, the only available generator
