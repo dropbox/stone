@@ -62,7 +62,7 @@ class ValidationError(Exception):
 
     def __repr__(self):
         # Not a perfect repr, but includes the error location information.
-        return 'ValidationError(%r)' % str(self)
+        return 'ValidationError(%r)' % six.text_type(self)
 
 
 def generic_type_name(v):
