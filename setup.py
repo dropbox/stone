@@ -17,33 +17,40 @@ from setuptools import setup
 install_reqs = ['ply>=3.4',
                 'six>=1.3.0']
 
+with open('LICENSE') as f:
+    license = f.read()
+
 dist = setup(
     name='stone',
     version='0.1',
     description='Stone is an interface description language (IDL) for APIs.',
-    author='Dropbox',
-    author_email='dev-platform@dropbox.com',
-    url='http://www.dropbox.com/developers',
+    author='Ken Elkabany',
+    author_email='kelkabany@dropbox.com',
+    maintainer='Dropbox',
+    maintainer_email='dev-platform@dropbox.com',
+    url='https://github.com/dropbox/stone',
     install_requires=install_reqs,
-    license='LICENSE',
+    license=license,
     zip_safe=False,
     packages=['stone',
               'stone.lang',
               'stone.target',
               'stone.target.python_rsrc'],
     long_description=open('README.rst').read(),
-    platforms=['CPython 2.6', 'CPython 2.7'],
+    platforms=['CPython 2.7', 'CPython 3.4', 'CPython 3.5'],
     entry_points={
         'console_scripts': ['stone=stone.cli:main'],
     },
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Operating System :: POSIX',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: MacOS :: MacOS X',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Topic :: Software Development :: Code Generators',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 )
