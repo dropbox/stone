@@ -28,7 +28,14 @@ _builtin_generators = (
 )
 
 # The parser for command line arguments
-_cmdline_parser = argparse.ArgumentParser(description='Stone')
+_cmdline_description = (
+    'Write your APIs in Stone. Use generators to translate your specification '
+    'into a target language or format. The following describes arguments to '
+    'the Stone CLI. To specify arguments that are specific to a generator, '
+    'add "--" followed by arguments. For example, "stone python_client . '
+    'example.spec -- -h".'
+)
+_cmdline_parser = argparse.ArgumentParser(description=_cmdline_description)
 _cmdline_parser.add_argument(
     '-v',
     '--verbose',
