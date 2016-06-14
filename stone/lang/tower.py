@@ -110,6 +110,8 @@ class TowerOfStone(object):
         # Used to check for circular references.
         self._resolution_in_progress = set()  # Set[DataType]
 
+        self._item_by_canonical_name = {}
+
     def parse(self):
         """Parses the text of each spec and returns an API description. Returns
         None if an error was encountered during parsing."""
@@ -124,6 +126,8 @@ class TowerOfStone(object):
             elif res:
                 namespace_token = self._extract_namespace_token(res)
                 namespace = self.api.ensure_namespace(namespace_token.name)
+                base_name = self._get_base_name(namespace.name, namespace.name)
+                self._item_by_canonical_name[base_name] = namespace_token
                 if namespace_token.doc is not None:
                     namespace.add_doc(namespace_token.doc)
                 raw_api.append((namespace, res))
@@ -192,18 +196,55 @@ class TowerOfStone(object):
             if isinstance(item, StoneTypeDef):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
+                self._check_canonical_name_available(item, namespace.name)
             elif isinstance(item, StoneRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
+                self._check_canonical_name_available(item, namespace.name)
             elif isinstance(item, StoneImport):
                 # Handle imports later.
                 pass
             elif isinstance(item, StoneAlias):
                 alias = self._create_alias(env, item)
                 namespace.add_alias(alias)
+                self._check_canonical_name_available(item, namespace.name)
             else:
                 raise AssertionError('Unknown Stone Declaration Type %r' %
                                      item.__class__.__name__)
+
+    def _check_canonical_name_available(self, item, namespace_name):
+        base_name = self._get_base_name(item.name, namespace_name)
+
+        if base_name not in self._item_by_canonical_name.keys():
+            self._item_by_canonical_name[base_name] = item
+        else:
+            stored_item = self._item_by_canonical_name[base_name]
+            msg = ("Name of %s '%s' conflicts with name of "
+                   "%s '%s' (%s:%s).") % (
+                self._get_user_friendly_item_type_as_string(item),
+                item.name,
+                self._get_user_friendly_item_type_as_string(stored_item),
+                stored_item.name,
+                stored_item.path, stored_item.lineno)
+
+            raise InvalidSpec(msg, item.lineno, item.path)
+
+    @classmethod
+    def _get_user_friendly_item_type_as_string(cls, item):
+        if isinstance(item, StoneTypeDef):
+            return 'user-defined type'
+        elif isinstance(item, StoneRouteDef):
+            return 'route'
+        elif isinstance(item, StoneAlias):
+            return 'alias'
+        elif isinstance(item, StoneNamespace):
+            return 'namespace'
+        else:
+            raise AssertionError('unhandled type %r' % item)
+
+    def _get_base_name(self, input_str, namespace_name):
+        return (input_str.replace('_', '').replace('/', '').lower() +
+                namespace_name.replace('_', '').lower())
 
     def _add_imports_to_env(self, raw_api):
         """
