@@ -14,3 +14,4 @@ parsetab.py
 /setuptools-3.1.zip
 /.cache
 .DS_Store
+.arcconfig

@@ -518,6 +518,73 @@ class TestStone(unittest.TestCase):
             t.parse()
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
 
+    def test_name_clash(self):
+        # namespace / type clash
+        text = textwrap.dedent("""\
+            namespace test_namespace_test
+
+            struct TestNamespaceTest
+                str String
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Name of user-defined type 'TestNamespaceTest' conflicts "
+            "with name of namespace 'test_namespace_test'", cm.exception.msg)
+
+        # namespace / route clash
+        text = textwrap.dedent("""\
+            namespace test_namespace_test
+
+            route test_namespace_test(Void, Void, Void)
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Name of route 'test_namespace_test' conflicts "
+            "with name of namespace 'test_namespace_test'", cm.exception.msg)
+
+        # namespace / alias clash
+        text = textwrap.dedent("""\
+            namespace test_namespace_test
+
+            alias TestNamespaceTest = String
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Name of alias 'TestNamespaceTest' conflicts "
+            "with name of namespace 'test_namespace_test'", cm.exception.msg)
+
+        # route / type clash
+        text = textwrap.dedent("""\
+            namespace test_namespace
+
+            struct TestStructTest
+                str String
+
+            route test_struct_test(Void, Void, Void)
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Name of route 'test_struct_test' conflicts "
+            "with name of user-defined type 'TestStructTest'", cm.exception.msg)
+
+        # alias / route clash
+        text = textwrap.dedent("""\
+            namespace test_namespace
+
+            alias TestAliasTest = String
+
+            route test_alias_test(Void, Void, Void)
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertIn("Name of route 'test_alias_test' conflicts "
+            "with name of alias 'TestAliasTest'", cm.exception.msg)
+
     def test_docstrings(self):
         text = textwrap.dedent("""\
             namespace test
