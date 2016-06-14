@@ -110,6 +110,8 @@ class TowerOfStone(object):
         # Used to check for circular references.
         self._resolution_in_progress = set()  # Set[DataType]
 
+        self.base_name_to_item = {}
+
     def parse(self):
         """Parses the text of each spec and returns an API description. Returns
         None if an error was encountered during parsing."""
@@ -124,6 +126,8 @@ class TowerOfStone(object):
             elif res:
                 namespace_token = self._extract_namespace_token(res)
                 namespace = self.api.ensure_namespace(namespace_token.name)
+                base_name = self._get_base_name(namespace.name, namespace.name)
+                self.base_name_to_item[base_name] = namespace_token
                 if namespace_token.doc is not None:
                     namespace.add_doc(namespace_token.doc)
                 raw_api.append((namespace, res))
@@ -192,18 +196,53 @@ class TowerOfStone(object):
             if isinstance(item, StoneTypeDef):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
+                self._check_and_store_base_name(item, namespace.name)
             elif isinstance(item, StoneRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
+                self._check_and_store_base_name(item, namespace.name)
             elif isinstance(item, StoneImport):
                 # Handle imports later.
                 pass
             elif isinstance(item, StoneAlias):
                 alias = self._create_alias(env, item)
                 namespace.add_alias(alias)
+                self._check_and_store_base_name(item, namespace.name)
             else:
                 raise AssertionError('Unknown Stone Declaration Type %r' %
                                      item.__class__.__name__)
+
+    def _check_and_store_base_name(self, item, namespace_name):
+        base_name = self._get_base_name(item.name, namespace_name)
+
+        if base_name not in self.base_name_to_item.viewkeys():
+            self.base_name_to_item[base_name] = item
+        else:
+            stored_item = self.base_name_to_item[base_name]
+            msg = ("Name of %s '%s' conflicts with name of "
+                "%s '%s' (%s:%s)." % (self._get_item_type(item), item.name,
+                self._get_item_type(stored_item), stored_item.name,
+                stored_item.path, stored_item.lineno))
+
+            raise InvalidSpec(msg, item.lineno, item.path)
+
+    def _get_item_type(self, item):
+        if isinstance(item, StoneTypeDef):
+            typ = 'user-defined type'
+        elif isinstance(item, StoneRouteDef):
+            typ = 'route'
+        elif isinstance(item, StoneAlias):
+            typ = 'alias'
+        elif isinstance(item, StoneNamespace):
+            typ = 'namespace'
+        else:
+            raise AssertionError('unhandled type %r' % item)
+        
+        return typ
+
+    def _get_base_name(self, input_str, namespace_name):
+        return (input_str.replace('_', '').replace('/', '').lower() +
+                namespace_name.replace('_', '').lower())
 
     def _add_imports_to_env(self, raw_api):
         """
