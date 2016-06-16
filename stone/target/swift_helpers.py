@@ -9,7 +9,39 @@ from .helpers import split_words
 
 
 _reserved_words = {
-    'description'
+    'description',
+    'bool',
+    'nsdata'
+    'float',
+    'double',
+    'int32',
+    'int64',
+    'list',
+    'string',
+    'timestamp',
+    'uint32',
+    'uint64',
+    'void',
+    'associatedtype',
+    'class',
+    'deinit',
+    'enum',
+    'extension',
+    'func',
+    'import',
+    'init',
+    'inout',
+    'internal',
+    'let',
+    'operator',
+    'private',
+    'protocol',
+    'public',
+    'static',
+    'struct',
+    'subscript',
+    'typealias',
+    'var',
 }
 
 
@@ -29,7 +61,7 @@ def _format_camelcase(name, lower_first=True):
     if lower_first:
         words[0] = words[0].lower()
     ret = ''.join(words)
-    if ret in _reserved_words:
+    if ret.lower() in _reserved_words:
         ret += '_'
     return ret
 
