@@ -24,6 +24,7 @@ _builtin_generators = (
     'js_client',
     'python_types',
     'python_client',
+    'swift_types',
     'swift_client',
 )
 
