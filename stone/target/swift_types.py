@@ -348,6 +348,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                     self.emit('*/')
                 self.emit('case {}{}'.format(fmt_class(field.name),
                                                   typ))
+            self.emit()
             with self.block('public var description: String'):
                 cls = class_type+'Serializer'
                 self.emit('return "\(SerializeUtil.prepareJSONForSerialization' +

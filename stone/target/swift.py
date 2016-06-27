@@ -26,6 +26,7 @@ from stone.data_type import (
     is_struct_type,
     is_timestamp_type,
     is_union_type,
+    is_nullable_type,
     is_numeric_type,
     is_user_defined_type,
     is_void_type,

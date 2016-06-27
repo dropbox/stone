@@ -170,13 +170,20 @@ class SwiftGenerator(SwiftBaseGenerator):
                 self._generate_route(namespace, route)
 
     def _get_route_args(self, namespace, route):
-        arg_type = fmt_type(route.arg_data_type)
-        if is_struct_type(route.arg_data_type):
-            arg_list = self._struct_init_args(route.arg_data_type, namespace=namespace)
+        data_type = route.arg_data_type
+        arg_type = fmt_type(data_type)
+        if is_struct_type(data_type):
+            arg_list = self._struct_init_args(data_type, namespace=namespace)
             doc_list = [(fmt_var(f.name), self.process_doc(f.doc, self._docf))
-                        for f in route.arg_data_type.fields if f.doc]
+                        for f in data_type.fields if f.doc]
+        elif is_union_type(data_type):
+            arg_list = [(fmt_var(data_type.name), '{}.{}'.format(
+                fmt_class(namespace.name), fmt_class(data_type.name)))]
+            doc_list = [(fmt_var(data_type.name),
+                self.process_doc(data_type.doc, self._docf)
+                if data_type.doc else 'The {} union'.format(fmt_class(data_type.name)))]
         else:
-            arg_list = [] if is_void_type(route.arg_data_type) else [('request', arg_type)]
+            arg_list = [] if is_void_type(data_type) else [('request', arg_type)]
             doc_list = []
         return arg_list, doc_list
 
@@ -232,7 +239,7 @@ class SwiftGenerator(SwiftBaseGenerator):
                 func_args += [('serverArgs', '{}({})'.format(arg_type, self._func_args(args)))]
                 self.emit('let serverArgs = {}({})'.format(arg_type, self._func_args(args)))
             elif is_union_type(route.arg_data_type):
-                self.emit('let serverArgs = {}'.format('request'))
+                self.emit('let serverArgs = {}'.format(fmt_var(route.arg_data_type.name)))
 
             if not is_void_type(route.arg_data_type):
                 return_args += [('serverArgs', 'serverArgs')]
