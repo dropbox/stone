@@ -26,6 +26,7 @@ from stone.target.swift import (
     base,
     fmt_serial_obj,
     SwiftBaseGenerator,
+    undocumented,
 )
 
 
@@ -136,33 +137,34 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
     def _generate_base_namespace_module(self, api, namespace):
         self.emit_raw(base)
 
-        self.emit('/**')
-        self.emit('    Datatypes and serializers for the {} namespace'.format(namespace.name))
-        self.emit('*/')
+        routes_base = 'Datatypes and serializers for the {} namespace'.format(namespace.name)
+        self.emit_wrapped_text(routes_base, prefix='/// ', width=120)
+
         with self.block('public class {}'.format(fmt_class(namespace.name))):
             for data_type in namespace.linearize_data_types():
                 if is_struct_type(data_type):
                     self._generate_struct_class(namespace, data_type)
+                    self.emit()
                 elif is_union_type(data_type):
                     self._generate_union_type(namespace, data_type)
+                    self.emit()
             if namespace.routes:
                 self._generate_route_objects(api.route_schema, namespace)
 
     def _generate_struct_class(self, namespace, data_type):
-        self.emit('/**')
         if data_type.doc:
             doc = self.process_doc(data_type.doc, self._docf)
         else:
             doc = 'The {} struct'.format(fmt_class(data_type.name))
-        self.emit_wrapped_text(doc, prefix='    ', width=120)
-        self.emit('*/')
+        self.emit_wrapped_text(doc, prefix='/// ', width=120)
         protocols = []
         if not data_type.parent_type:
             protocols.append('CustomStringConvertible')
 
         with self.class_block(data_type, protocols=protocols):
             for field in data_type.fields:
-                fdoc = self.process_doc(field.doc, self._docf) if field.doc else 'Undocumented'
+                fdoc = self.process_doc(field.doc,
+                    self._docf) if field.doc else undocumented
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
                 self.emit('public let {}: {}'.format(
                     fmt_var(field.name),
@@ -324,23 +326,20 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             return '({})'.format(fmt_type(data_type))
 
     def _generate_union_type(self, namespace, data_type):
-        self.emit('/**')
         if data_type.doc:
             doc = self.process_doc(data_type.doc, self._docf)
         else:
             doc = 'The {} union'.format(fmt_class(data_type.name))
-        self.emit_wrapped_text(doc, prefix='    ', width=120)
-        self.emit('*/')
+        self.emit_wrapped_text(doc, prefix='/// ', width=120)
 
         class_type = fmt_class(data_type.name)
         with self.block('public enum {}: CustomStringConvertible'.format(class_type)):
             for field in data_type.all_fields:
                 typ = self._format_tag_type(namespace, field.data_type)
-                if field.doc:
-                    self.emit('/**')
-                    self.emit_wrapped_text(self.process_doc(field.doc, self._docf),
-                                           prefix='    ', width=120)
-                    self.emit('*/')
+
+                fdoc = self.process_doc(field.doc,
+                    self._docf) if field.doc else undocumented
+                self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
                 self.emit('case {}{}'.format(fmt_class(field.name),
                                                   typ))
             self.emit()

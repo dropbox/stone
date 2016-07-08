@@ -73,6 +73,9 @@ import Foundation
 """.format(stone_warning)
 
 
+undocumented = '(undocumented)'
+
+
 class SwiftBaseGenerator(CodeGenerator):
     """Wrapper class over Stone generator for Swift logic."""
 

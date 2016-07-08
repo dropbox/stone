@@ -17,6 +17,7 @@ from stone.target.swift import (
     fmt_serial_type,
     stone_warning,
     SwiftBaseGenerator,
+    undocumented,
 )
 from stone.target.swift_helpers import (
     fmt_class,
@@ -157,6 +158,8 @@ class SwiftGenerator(SwiftBaseGenerator):
             with self.function_block('init', self._func_args(args)):
                 self.emit('self.client = client')
 
+            self.emit()
+
             for route in namespace.routes:
                 self._generate_route(namespace, route)
 
@@ -165,8 +168,9 @@ class SwiftGenerator(SwiftBaseGenerator):
         arg_type = fmt_type(data_type)
         if is_struct_type(data_type):
             arg_list = self._struct_init_args(data_type, namespace=namespace)
-            doc_list = [(fmt_var(f.name), self.process_doc(f.doc, self._docf))
-                        for f in data_type.fields if f.doc]
+
+            doc_list = [(fmt_var(f.name), self.process_doc(f.doc, self._docf)
+                if f.doc else undocumented) for f in data_type.fields if f.doc]
         elif is_union_type(data_type):
             arg_list = [(fmt_var(data_type.name), '{}.{}'.format(
                 fmt_class(namespace.name), fmt_class(data_type.name)))]
@@ -186,24 +190,22 @@ class SwiftGenerator(SwiftBaseGenerator):
         arg_type = fmt_type(route.arg_data_type)
         func_name = fmt_func(route.name)
 
-        self.emit('/**')
         if route.doc:
             route_doc = self.process_doc(route.doc, self._docf)
         else:
             route_doc = 'The {} route'.format(func_name)
-        self.emit_wrapped_text(route_doc, prefix='    ', width=120)
-        self.emit()
+        self.emit_wrapped_text(route_doc, prefix='/// ', width=120)
+        self.emit('///')
+
         for name, doc in doc_list + extra_docs:
-            if not doc:
-                doc = 'Undocumented'
-            self.emit_wrapped_text('- parameter {}: {}'.format(name, doc), prefix='    ', width=120)
-        self.emit()
+            param_doc = '- parameter {}: {}'.format(name, doc if doc is not None else undocumented)
+            self.emit_wrapped_text(param_doc, prefix='/// ', width=120)
+        self.emit('///')
         output = (' - returns: Through the response callback, the caller will ' +
                          'receive a `{}` object on success or a `{}` object on failure.')
         output = output.format(fmt_type(route.result_data_type),
                                fmt_type(route.error_data_type))
-        self.emit_wrapped_text(output, prefix='    ', width=120)
-        self.emit('*/')
+        self.emit_wrapped_text(output, prefix='/// ', width=120)
 
         func_args = [
             ('route', '{}.{}'.format(fmt_class(namespace.name), func_name)),
@@ -238,6 +240,7 @@ class SwiftGenerator(SwiftBaseGenerator):
             return_args += client_args
 
             self.emit('return client.request({})'.format(self._func_args(return_args, not_init=True)))
+        self.emit()
 
     def _maybe_generate_deprecation_warning(self, route):
         if route.deprecated:

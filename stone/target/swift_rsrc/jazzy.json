@@ -7,9 +7,9 @@
   "excluded_files": [
     "Source/StoneSerializers.swift",
     "Source/StoneValidators.swift",
-    "Source/Client.swift"
+    "Source/DropboxTransportClient.swift"
   ],
-  "swift_version": 2,
+  "swift_version": 2.2,
   "custom_categories": [
     {
       "name": "Routes",
@@ -32,7 +32,8 @@
       "name": "Client Classes",
       "children": [
         "Dropbox",
-        "DropboxClient"
+        "DropboxClient",
+        "DropboxTeamClient"
       ]
     }
   ]
