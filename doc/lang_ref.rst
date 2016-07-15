@@ -2,6 +2,8 @@
 Language Reference
 ******************
 
+.. contents:: Table of Contents
+
 Your API is described by specification files written in the Stone language.
 Here we'll cover the various capabilities at your disposal for expressing the
 intricacies of your API.
