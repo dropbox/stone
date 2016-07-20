@@ -6,6 +6,8 @@ This document explains how to write your own generator. If you're simply
 looking to use an included generator, please see `Using Generated Code
 <using_generator.rst>`_.
 
+.. contents:: **Table of Contents**
+
 Generators convert a spec into some other markup or code. Most commonly, a
 generator will target a programming language and convert a spec into classes
 and functions. But, generators can also create markup for things like API
