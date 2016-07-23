@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import argparse
 import json
+import six
 import sys
 
 from stone.data_type import (
@@ -37,8 +38,10 @@ _cmdline_parser.add_argument(
     type=str,
     default=[],
     help=("Additional argument to add to a route function's docstring based "
-          "on if the route has a certain attribute set. Format: "
-          "[route_attr]=[attr_json_value_to_match]:[arg name]:[arg type]."),
+          "on if the route has a certain attribute set. Format (JSON): "
+          '{"match": ["ROUTE_ATTR", ROUTE_VALUE_TO_MATCH], '
+          '"arg_name": "ARG_NAME", "arg_type": "ARG_TYPE", '
+          '"arg_docstring": "ARG_DOCSTRING"}'),
 )
 
 _header = """\
@@ -76,23 +79,42 @@ class JavascriptGenerator(CodeGenerator):
         extra_args = {}
 
         for extra_arg_raw in extra_args_raw:
-            def exit():
-                print('Invalid --extra-arg: %s' % extra_arg_raw, file=sys.stderr)
+            def exit(m):
+                print('Invalid --extra-arg:%s: %s' % (m, extra_arg_raw),
+                      file=sys.stderr)
                 sys.exit(1)
+
             try:
-                rest, arg_type = extra_arg_raw.rsplit(':', 1)
-                if not arg_type:
-                    exit()
-                rest, arg_name = rest.rsplit(':', 1)
-                if not arg_name:
-                    exit()
-                attr_key, attr_json_val = rest.split('=', 1)
-                if not attr_key or not attr_json_val:
-                    exit()
-                attr_val = json.loads(attr_json_val)
-            except ValueError:
-                exit()
-            extra_args.setdefault(attr_key, {})[attr_val] = (arg_name, arg_type)
+                extra_arg = json.loads(extra_arg_raw)
+            except ValueError as e:
+                exit(str(e))
+
+            # Validate extra_arg JSON blob
+            if 'match' not in extra_arg:
+                exit('No match key')
+            elif (not isinstance(extra_arg['match'], list) or
+                      len(extra_arg['match']) != 2):
+                exit('match key is not a list of two strings')
+            elif (not isinstance(extra_arg['match'][0], six.text_type) or
+                      not isinstance(extra_arg['match'][1], six.text_type)):
+                print(type(extra_arg['match'][0]))
+                exit('match values are not strings')
+            elif 'arg_name' not in extra_arg:
+                exit('No arg_name key')
+            elif not isinstance(extra_arg['arg_name'], six.text_type):
+                exit('arg_name is not a string')
+            elif 'arg_type' not in extra_arg:
+                exit('No arg_type key')
+            elif not isinstance(extra_arg['arg_type'], six.text_type):
+                exit('arg_type is not a string')
+            elif ('arg_docstring' in extra_arg and
+                      not isinstance(extra_arg['arg_docstring'], six.text_type)):
+                exit('arg_docstring is not a string')
+
+            attr_key, attr_val = extra_arg['match'][0], extra_arg['match'][1]
+            extra_args.setdefault(attr_key, {})[attr_val] = \
+                (extra_arg['arg_name'], extra_arg['arg_type'],
+                 extra_arg.get('arg_docstring'))
 
         return extra_args
 
@@ -116,10 +138,11 @@ class JavascriptGenerator(CodeGenerator):
                     continue
                 attr_val = route.attrs[attr_key]
                 if attr_val in extra_args[attr_key]:
-                    arg_name, arg_type = extra_args[attr_key][attr_val]
-                    self.emit_wrapped_text(
-                        '@arg {%s} arg.%s' % (arg_type, arg_name),
-                        prefix=' * ')
+                    arg_name, arg_type, arg_docstring = extra_args[attr_key][attr_val]
+                    field_docstring = '@arg {%s} arg.%s' % (arg_type, arg_name)
+                    if arg_docstring:
+                        field_docstring += ' - %s' % arg_docstring
+                    self.emit_wrapped_text(field_docstring, prefix=' * ')
 
             for field in route.arg_data_type.all_fields:
                 field_doc = ' - ' + field.doc if field.doc else ''
