@@ -545,7 +545,7 @@ struct DocTest
     t String
         "References :type:`D`."
 
-union U
+union_closed U
     "Sample union doc."
     t0
         "Sample field doc."
@@ -563,13 +563,12 @@ union V
     t8 Resource?
     t9 List(String)
     t10 List(U)
-    other*
 
 struct S
     f String
 
 struct Resource
-    union
+    union_closed
         file File
         folder Folder
 
@@ -583,7 +582,7 @@ struct Folder extends Resource
 
 # Differs from Resource because it's a catch-all
 struct ResourceLax
-    union*
+    union
         file File2
         folder Folder2
 
@@ -598,10 +597,10 @@ struct Folder2 extends ResourceLax
 struct ImportTestS extends ns2.BaseS
     a String
 
-union ImportTestU extends ns2.BaseU
+union_closed ImportTestU extends ns2.BaseU
     a UInt64
 
-union U2
+union_closed U2
     a
     b OptionalS
 
@@ -629,7 +628,7 @@ struct BaseS
     "This is a test \u2650"
     z Int64
 
-union BaseU
+union_closed BaseU
     z
     x String
 

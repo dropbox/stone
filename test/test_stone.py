@@ -280,10 +280,8 @@ class TestStone(unittest.TestCase):
                     "Variant A"
                 B
                     "Variant B"
-                UNK*
             """)
-        out = self.parser.parse(text)
-        self.assertTrue(out[1].fields[2].catch_all)
+        self.parser.parse(text)
 
         # test with inheritance
         text = textwrap.dedent("""\
@@ -894,7 +892,7 @@ class TestStone(unittest.TestCase):
         text = textwrap.dedent("""\
             namespace test
 
-            union A
+            union_closed A
                 a UInt64
                 a String
             """)
@@ -907,13 +905,13 @@ class TestStone(unittest.TestCase):
         text = textwrap.dedent("""\
             namespace test
 
-            union A
+            union_closed A
                 a UInt64
 
-            union B extends A
+            union_closed B extends A
                 b String
 
-            union C extends B
+            union_closed C extends B
                 a String
             """)
         t = TowerOfStone([('test.stone', text)])
@@ -926,43 +924,49 @@ class TestStone(unittest.TestCase):
             namespace test
 
             union A
-                a*
+                a
                 b
             """)
         t = TowerOfStone([('test.stone', text)])
         t.parse()
         A_dt = t.api.namespaces['test'].data_type_by_name['A']
         # Test both ways catch-all is exposed
-        self.assertEqual(A_dt.catch_all_field, A_dt.fields[0])
-        self.assertTrue(A_dt.fields[0].catch_all)
+        self.assertEqual(A_dt.catch_all_field, A_dt._fields_by_name['other'])
+        self.assertTrue(A_dt._fields_by_name['other'].catch_all)
 
-        # Test two catch-alls
+        # Try defining a child type as closed if its parent is open
         text = textwrap.dedent("""\
             namespace test
 
             union A
-                a*
-                b*
+                a
+
+            union_closed B extends A
+                b
             """)
         t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
-        self.assertIn('Only one catch-all tag', cm.exception.msg)
+        self.assertEqual(
+            "Union cannot be closed since parent type 'A' is open.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
 
-        # Test existing catch-all in parent type
+        # Try explicitly naming field "other"
         text = textwrap.dedent("""\
             namespace test
 
             union A
-                a*
-
-            union B extends A
-                b*
+                other
             """)
         t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
-        self.assertIn('already declared a catch-all tag', cm.exception.msg)
+        self.assertEqual(
+            "Union cannot define an 'other' field because it is reserved as "
+            "the catch-all field for open unions.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 4)
 
         # Test extending from wrong type
         text = textwrap.dedent("""\
@@ -2065,8 +2069,8 @@ class TestStone(unittest.TestCase):
                 example default
                     s = default
 
-                example other
-                    s = other
+                example opt
+                    s = opt
 
             struct S
                 f String
@@ -2074,7 +2078,7 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "F"
 
-                example other
+                example opt
                     f = "O"
             """)
         t = TowerOfStone([('test.stone', text)])
@@ -2082,7 +2086,7 @@ class TestStone(unittest.TestCase):
         u_dt = t.api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
                          {'.tag': 's', 'f': 'F'})
-        self.assertEqual(u_dt.get_examples()['other'].value,
+        self.assertEqual(u_dt.get_examples()['opt'].value,
                          {'.tag': 's', 'f': 'O'})
         self.assertEqual(list(u_dt.get_examples()['default'].value.keys())[0],
                          '.tag')

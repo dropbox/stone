@@ -335,39 +335,30 @@ such features when they are available in the target language.
 Like a struct, a documentation string can follow the union declaration and/or
 follow each tag definition.
 
-Catch-all Tag
+Closed Unions
 -------------
 
-By default, we consider unions to be closed. That is, for the sake of backwards
-compatibility, a recipient of a message should never encounter a tag that it
-isn't aware of. A recipient can therefore confidently handle the case where a
-user is ``active`` or ``inactive`` and trust that no other value will ever be
-encountered.
+By default, unions are open. That is, for the sake of backwards compatibility,
+a recipient of a message should be prepared to handle a tag that wasn't defined
+in the version of the API specification known to it. Stone exposes a virtual
+tag called ``other`` of void type to generators that is known as the
+"catch-all" tag for this purpose. If a recipient receives a tag that it isn't
+aware of, it will default the union to the ``other`` tag.
 
-Because we anticipate that this will be constricting for APIs undergoing
-evolution, we've introduced the notion of a catch-all tag. If a recipient
-receives a tag that it isn't aware of, it will default the union to the
-catch-all tag.
+If you don't need this flexibility, and can promise that no additional tags
+will be added in the future, you can "close" the union. To do so, use the
+``union_closed`` keyword::
 
-The notation is simply an ``*`` that follows a tag with an omitted type, ie.
-its type is Void::
+    union_closed Resource
+        file
+        folder
 
-    union GetAccountErr
-        no_account
-            "No account with the requested id could be found."
-        perm_denied
-            "Insufficient privileges to query account information."
-        unknown*
+With the above specification, a recipient can confidently handle the "file" and
+"folder" tags and trust that no other value will ever be encountered.
 
-In the example above, a recipient should have written code to handle
-``no_account``, ``perm_denied``, and ``unknown``. If a tag that was not
-previously known is received (e.g. ``bad_account``), the union will default
-to the ``unknown`` tag.
-
-We expect this to be especially useful for unions that represent the possible
-errors a route might return. Recipients in the wild may have been generated
-with only a subset of the current errors, but they'll continue to function
-appropriately as long as they handle the catch-all tag.
+Note: We defaulted unions to being open because it's preferable for a
+specification writer to forget to close a union than forget to open one. The
+latter case is backwards-incompatible change for clients.
 
 Inheritance
 -----------
@@ -438,16 +429,16 @@ satisfies the type constraint.
 A struct that enumerates subtypes cannot inherit from any other struct. Also,
 type tags cannot match any field names.
 
-Catch-all
----------
+Open vs. Closed
+---------------
 
-Similar to a union, a struct with enumerated types can be labeled as a
-catch-all. This is done by appending an asterix, ``*``, to the ``union``::
+Similar to a union, a struct with enumerated types defaults to open but can
+be explicitly marked as closed::
 
     struct Resource
         "Sample doc."
 
-        union*
+        union_closed
             file File
             folder Folder
 
@@ -460,9 +451,9 @@ catch-all. This is done by appending an asterix, ``*``, to the ``union``::
         ...
 
 If recipient receives a tag for a subtype that it is unaware of, it will
-substitute the base struct in its place if it's a catch-all. In the example
-above, if the subtype is a ``Symlink`` (not shown), then the recipient will
-return a ``Resource`` in its place.
+substitute the base struct in its place. In the example above, if the subtype
+is a ``Symlink`` (not shown), then the recipient will return a ``Resource`` in
+its place.
 
 Nullable Type
 =============

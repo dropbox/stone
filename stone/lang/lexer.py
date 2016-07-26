@@ -133,7 +133,6 @@ class StoneLexer(object):
     )
 
     tokens += (
-        'ASTERIX',
         'Q',
     )
 
@@ -145,7 +144,6 @@ class StoneLexer(object):
     t_RBRACKET = r'\]'
     t_EQ = r'='
     t_COMMA = r','
-    t_ASTERIX = r'\*'
     t_Q = r'\?'
 
     # TODO(kelkabany): Use scoped/conditional lexing to restrict where keywords
@@ -164,6 +162,7 @@ class StoneLexer(object):
         'route',
         'struct',
         'union',
+        'union_closed',
     ]
 
     RESERVED = {
@@ -175,6 +174,7 @@ class StoneLexer(object):
         'route': 'ROUTE',
         'struct': 'STRUCT',
         'union': 'UNION',
+        'union_closed': 'UNION_CLOSED',
     }
 
     tokens += tuple(RESERVED.values())

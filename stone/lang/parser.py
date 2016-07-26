@@ -136,11 +136,24 @@ class StoneStructDef(StoneTypeDef):
 
 class StoneUnionDef(StoneTypeDef):
 
+    def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
+                 examples, closed=False):
+        """
+        Args:
+            closed (bool): Set if this is a closed union.
+
+        See StoneTypeDef for other constructor args.
+        """
+        super(StoneUnionDef, self).__init__(
+            path, lineno, lexpos, name, extends, doc, fields, examples)
+        self.closed = closed
+
     def __repr__(self):
-        return 'StoneUnionDef({!r}, {!r}, {!r})'.format(
+        return 'StoneUnionDef({!r}, {!r}, {!r}, {!r})'.format(
             self.name,
             self.extends,
             self.fields,
+            self.closed,
         )
 
 class StoneTypeRef(_Element):
@@ -219,10 +232,9 @@ class StoneField(_Element):
 
 class StoneVoidField(_Element):
 
-    def __init__(self, path, lineno, lexpos, name, catch_all):
+    def __init__(self, path, lineno, lexpos, name):
         super(StoneVoidField, self).__init__(path, lineno, lexpos)
         self.name = name
-        self.catch_all = catch_all
         self.doc = None
 
     def set_doc(self, docstring):
@@ -232,9 +244,8 @@ class StoneVoidField(_Element):
         return self.__repr__()
 
     def __repr__(self):
-        return 'StoneVoidField({!r}, {!r})'.format(
+        return 'StoneVoidField({!r})'.format(
             self.name,
-            self.catch_all,
         )
 
 class StoneSubtypeField(_Element):
@@ -585,10 +596,10 @@ class StoneParser(object):
     #
 
     def p_enumerated_subtypes(self, p):
-        """enumerated_subtypes : UNION asterix_option NL INDENT subtypes_list DEDENT
+        """enumerated_subtypes : uniont NL INDENT subtypes_list DEDENT
                                | empty"""
         if len(p) > 2:
-            p[0] = (p[5], p[2])
+            p[0] = (p[4], p[1][0] == 'union')
 
     def p_struct(self, p):
         """struct : STRUCT ID inheritance NL \
@@ -718,37 +729,38 @@ class StoneParser(object):
     # void_field demonstrates the notation for a catch all variant.
 
     def p_union(self, p):
-        """union : UNION ID inheritance NL \
+        """union : uniont ID inheritance NL \
                         INDENT docsection field_list examples DEDENT"""
         self.make_union(p)
 
     def p_anony_union(self, p):
-        """anony_def : UNION empty inheritance NL \
+        """anony_def : uniont empty inheritance NL \
                         INDENT docsection field_list examples DEDENT"""
         self.make_union(p)
 
     def make_union(self, p):
         p[0] = StoneUnionDef(
             path=self.path,
-            lineno=p.lineno(1),
-            lexpos=p.lexpos(1),
+            lineno=p[1][1],
+            lexpos=p[1][2],
             name=p[2],
             extends=p[3],
             doc=p[6],
             fields=p[7],
-            examples=p[8])
+            examples=p[8],
+            closed=p[1][0] == 'union_closed')
 
-    def p_asterix_option(self, p):
-        """asterix_option : ASTERIX
-                          | empty"""
-        p[0] = (p[1] is not None)
+    def p_uniont(self, p):
+        """uniont : UNION
+                  | UNION_CLOSED"""
+        p[0] = (p[1], p.lineno(1), p.lexpos(1))
 
     def p_field_void(self, p):
-        """field : ID asterix_option NL
-                 | ID asterix_option NL INDENT docstring NL DEDENT"""
-        p[0] = StoneVoidField(self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
+        """field : ID NL
+                 | ID NL INDENT docstring NL DEDENT"""
+        p[0] = StoneVoidField(self.path, p.lineno(1), p.lexpos(1), p[1])
         if len(p) > 4:
-            p[0].set_doc(p[5])
+            p[0].set_doc(p[4])
 
     # --------------------------------------------------------------
     # Routes

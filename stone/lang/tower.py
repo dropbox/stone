@@ -313,7 +313,8 @@ class TowerOfStone(object):
                     'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
                     item.lineno, item.path)
         elif isinstance(item, StoneUnionDef):
-            api_type = Union(name=item.name, namespace=namespace, token=item)
+            api_type = Union(
+                name=item.name, namespace=namespace, token=item, closed=item.closed)
         else:
             raise AssertionError('Unknown type definition %r' % type(item))
 
@@ -407,29 +408,35 @@ class TowerOfStone(object):
                     'A union can only extend another union: '
                     '%s is not a union.' % quote(parent_type.name),
                     data_type._token.lineno, data_type._token.path)
+
         api_type_fields = []
-        catch_all_field = None
         for stone_field in data_type._token.fields:
-            api_type_field = self._create_union_field(env, stone_field)
-            if (isinstance(stone_field, StoneVoidField) and
-                    stone_field.catch_all):
-                if catch_all_field is not None:
-                    raise InvalidSpec('Only one catch-all tag per Union.',
-                                      stone_field.lineno)
+            if stone_field.name == 'other':
+                raise InvalidSpec(
+                    "Union cannot define an 'other' field because it is "
+                    "reserved as the catch-all field for open unions.",
+                    stone_field.lineno, stone_field.path)
+            api_type_fields.append(self._create_union_field(env, stone_field))
 
-                # Verify that no subtype already has a catch-all tag.
-                # Do this here so that we still have access to line nums.
-                cur_subtype = parent_type
-                while cur_subtype:
-                    if cur_subtype.catch_all_field:
-                        raise InvalidSpec(
-                            'Subtype %s already declared a catch-all tag.' %
-                            quote(cur_subtype.name),
-                            stone_field.lineno, stone_field.path)
-                    cur_subtype = cur_subtype.parent_type
+        catch_all_field = None
+        if data_type.closed:
+            if parent_type and not parent_type.closed:
+                # Due to the reversed super type / child type relationship for
+                # unions, a child type cannot be closed if its parent is open
+                # because the parent now has an extra field that is not
+                # recognized by the child if it were substituted in for it.
+                raise InvalidSpec(
+                    "Union cannot be closed since parent type '%s' is open." % (
+                        parent_type.name),
+                    data_type._token.lineno, data_type._token.path)
+        else:
+            if not parent_type or parent_type.closed:
+                # Create a catch-all field
+                catch_all_field = UnionField(
+                    name='other', data_type=Void(), doc=None,
+                    token=data_type._token, catch_all=True)
+                api_type_fields.append(catch_all_field)
 
-                catch_all_field = api_type_field
-            api_type_fields.append(api_type_field)
         data_type.set_attributes(
             data_type._token.doc, api_type_fields, parent_type, catch_all_field)
 
@@ -574,7 +581,7 @@ class TowerOfStone(object):
         if isinstance(stone_field, StoneVoidField):
             api_type_field = UnionField(
                 name=stone_field.name, data_type=Void(), doc=stone_field.doc,
-                token=stone_field, catch_all=stone_field.catch_all)
+                token=stone_field)
         else:
             data_type = self._resolve_type(env, stone_field.type_ref)
             if isinstance(data_type, Void):

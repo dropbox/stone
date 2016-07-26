@@ -437,6 +437,7 @@ class TestStoneInternal(unittest.TestCase):
             'WriteConflictPolicy',
             None,
             ns,
+            True,
         )
         conflict.set_attributes(
             'Policy for managing write conflicts.',

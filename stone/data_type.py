@@ -1225,6 +1225,10 @@ class Union(UserDefined):
 
     composite_type = 'union'
 
+    def __init__(self, name, namespace, token, closed):
+        super(Union, self).__init__(name, namespace, token)
+        self.closed = closed
+
     def set_attributes(self, doc, fields, parent_type=None, catch_all_field=None):
         """
         :param UnionField catch_all_field: The field designated as the
