@@ -39,7 +39,7 @@ Assuming that the generator is saved in your current directory as
 `Language Reference <lang_ref.rst>`_ is also in the current directory. you can
 invoke the generator with the following command::
 
-    $ stone example.stoneg.py users.stone .
+    $ stone example.stoneg.py . users.stone
 
 Generating Output Files
 =======================
@@ -562,7 +562,7 @@ Command-Line Arguments
 Generators can receive arguments from the command-line. A ``--`` is used to
 separate arguments to the ``stone`` program and the generator. For example::
 
-    $ stone generator/python/python.stoneg spec.stone . -- -h
+    $ stone generator/python/python.stoneg.py . spec.stone -- -h
     usage: python-generator [-h] [-r ROUTE_METHOD]
 
     optional arguments:
@@ -635,7 +635,7 @@ where the output of our ``emit*()`` calls go (See more emit_methods_).
 Run the generator from the root of the Stone folder using the example specs
 we've provided::
 
-    $ stone example/generator/ex1/ex1.stoneg.py example/api/dbx-core/*.stone output/ex1
+    $ stone example/generator/ex1/ex1.stoneg.py output/ex1 example/api/dbx-core/*.stone
 
 Now examine the contents of the output::
 
@@ -673,7 +673,7 @@ class to ``True``.
 Run the generator from the root of the Stone folder using the example specs
 we've provided::
 
-    $ stone example/generator/ex2/ex2.stoneg.py example/api/dbx-core/*.stone output/ex2
+    $ stone example/generator/ex2/ex2.stoneg.py output/ex2 example/api/dbx-core/*.stone
 
 Now examine the contents of the output::
 
