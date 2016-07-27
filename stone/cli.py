@@ -299,6 +299,12 @@ def main():
               args.generator, file=sys.stderr)
         sys.exit(1)
     else:
+        # A bit hacky, but we add the folder that the generator is in to our
+        # python path to support the case where the generator imports other
+        # files in its local directory.
+        new_python_path = os.path.dirname(args.generator)
+        if new_python_path not in sys.path:
+            sys.path.append(new_python_path)
         try:
             generator_module = imp.load_source('user_generator', args.generator)
         except:
