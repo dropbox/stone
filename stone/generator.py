@@ -113,7 +113,7 @@ class Generator(six.with_metaclass(ABCMeta)):
                 self.cmdline_parser)
             try:
                 self.args = self.cmdline_parser.parse_args(args)
-            except SystemExit as e:
+            except SystemExit:
                 print('Note: This is for generator-specific arguments which '
                       'follow arguments to Stone after a "--" delimiter.')
                 raise
