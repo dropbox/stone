@@ -102,31 +102,41 @@ class StoneLexer(object):
         'KEYWORD',
         'PATH',
         'DOT',
+    )  # type: Tuple[str, ...]
 
-        # Whitespace tokens
+    # Whitespace tokens
+    tokens += (
         'DEDENT',
         'INDENT',
         'NEWLINE',
+    )
 
-        # Attribute lists, aliases
+    # Attribute lists, aliases
+    tokens += (
         'COMMA',
         'EQ',
         'LPAR',
         'RPAR',
+    )
 
-        # Primitive types
+    # Primitive types
+    tokens += (
         'BOOLEAN',
         'FLOAT',
         'INTEGER',
         'NULL',
         'STRING',
+    )
 
-        # List notation
+    # List notation
+    tokens += (
         'LBRACKET',
         'RBRACKET',
+    )
 
+    tokens += (
         'Q',
-    )  # type: Tuple[str, ...]
+    )
 
     # Regular expression rules for simple tokens
     t_DOT = r'\.'

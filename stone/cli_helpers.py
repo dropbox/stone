@@ -1,5 +1,6 @@
 import abc
 import six
+from typing import Tuple
 
 from ply import lex, yacc
 
@@ -10,16 +11,22 @@ class FilterExprLexer(object):
         'ID',
         'LPAR',
         'RPAR',
+    )  # type: Tuple[str, ...]
 
-        # Conjunctions
+    # Conjunctions
+    tokens += (
         'AND',
         'OR',
+    )
 
-        # Comparison operators
+    # Comparison operators
+    tokens += (
         'NEQ',
         'EQ',
+    )
 
-        # Primitive types
+    # Primitive types
+    tokens += (
         'BOOLEAN',
         'FLOAT',
         'INTEGER',
