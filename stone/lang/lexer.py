@@ -5,6 +5,8 @@ import os
 
 import ply.lex as lex
 
+from typing import Tuple
+
 class MultiToken(object):
     """Object used to monkeypatch ply.lex so that we can return multiple
     tokens from one lex operation."""
@@ -100,7 +102,7 @@ class StoneLexer(object):
         'KEYWORD',
         'PATH',
         'DOT',
-    )
+    )  # type: Tuple[str, ...]
 
     # Whitespace tokens
     tokens += (
