@@ -5,6 +5,8 @@ import os
 
 import ply.lex as lex
 
+from typing import Tuple
+
 class MultiToken(object):
     """Object used to monkeypatch ply.lex so that we can return multiple
     tokens from one lex operation."""
@@ -100,41 +102,31 @@ class StoneLexer(object):
         'KEYWORD',
         'PATH',
         'DOT',
-    )
 
-    # Whitespace tokens
-    tokens += (
+        # Whitespace tokens
         'DEDENT',
         'INDENT',
         'NEWLINE',
-    )
 
-    # Attribute lists, aliases
-    tokens += (
+        # Attribute lists, aliases
         'COMMA',
         'EQ',
         'LPAR',
         'RPAR',
-    )
 
-    # Primitive types
-    tokens += (
+        # Primitive types
         'BOOLEAN',
         'FLOAT',
         'INTEGER',
         'NULL',
         'STRING',
-    )
 
-    # List notation
-    tokens += (
+        # List notation
         'LBRACKET',
         'RBRACKET',
-    )
 
-    tokens += (
         'Q',
-    )
+    )  # type: Tuple[str, ...]
 
     # Regular expression rules for simple tokens
     t_DOT = r'\.'

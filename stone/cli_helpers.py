@@ -10,22 +10,16 @@ class FilterExprLexer(object):
         'ID',
         'LPAR',
         'RPAR',
-    )
 
-    # Conjunctions
-    tokens += (
+        # Conjunctions
         'AND',
         'OR',
-    )
 
-    # Comparison operators
-    tokens += (
+        # Comparison operators
         'NEQ',
         'EQ',
-    )
 
-    # Primitive types
-    tokens += (
+        # Primitive types
         'BOOLEAN',
         'FLOAT',
         'INTEGER',

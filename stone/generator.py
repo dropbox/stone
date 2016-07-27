@@ -60,7 +60,8 @@ def remove_aliases_from_api(api):
     return api
 
 
-class Generator(six.with_metaclass(ABCMeta)):
+@six.add_metaclass(ABCMeta)
+class Generator(object):
     """
     The parent class for all generators. All generators should extend this
     class to be recognized as such.
