@@ -175,12 +175,17 @@ class PythonClientGenerator(CodeGenerator):
                 if not download_to_file:
                     footer = DOCSTRING_CLOSE_RESPONSE
 
+            if route.doc:
+                func_docstring = self.process_doc(route.doc, self._docf)
+            else:
+                func_docstring = None
+
             self._generate_docstring_for_func(
                 namespace,
                 arg_data_type,
                 result_data_type,
                 route.error_data_type,
-                overview=self.process_doc(route.doc, self._docf),
+                overview=func_docstring,
                 extra_request_args=extra_request_args,
                 extra_return_arg=extra_return_arg,
                 footer=footer,
