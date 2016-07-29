@@ -7,12 +7,30 @@ import logging
 import os
 import six
 import textwrap
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    TypeVar,
+    Tuple,
+)
+
+from stone.api import Api
 
 from stone.lang.tower import doc_ref_re
 from stone.data_type import (
     is_alias,
 )
 
+# Generic Dict key-val types
+K = TypeVar('K')
+V = TypeVar('V')
+
+DelimTuple = Tuple[str, str]
 
 def remove_aliases_from_api(api):
     for namespace in api.namespaces.values():
@@ -94,6 +112,7 @@ class Generator(object):
     preserve_aliases = False
 
     def __init__(self, target_folder_path, args):
+        # type: (str, Optional[Sequence[str]]) -> None
         """
         Args:
             target_folder_path (str): Path to the folder where all generated
@@ -104,9 +123,11 @@ class Generator(object):
         self.target_folder_path = target_folder_path
         # Output is a list of strings that should be concatenated together for
         # the final output.
-        self.output = []
+        self.output = []  # type: List[str]
         self.lineno = 1
         self.cur_indent = 0
+
+        self.args = None  # type: Optional[argparse.Namespace]
 
         if self.cmdline_parser:
             assert isinstance(self.cmdline_parser, argparse.ArgumentParser), (
@@ -118,11 +139,10 @@ class Generator(object):
                 print('Note: This is for generator-specific arguments which '
                       'follow arguments to Stone after a "--" delimiter.')
                 raise
-        else:
-            self.args = None
 
     @abstractmethod
     def generate(self, api):
+        # type: (Api) -> None
         """
         Subclasses should override this method. It's the entry point that is
         invoked by the rest of the toolchain.
@@ -134,6 +154,7 @@ class Generator(object):
 
     @contextmanager
     def output_to_relative_path(self, relative_path):
+        # type: (str) -> Iterator[None]
         """
         Sets up generator so that all emits are directed towards the new file
         created at :param:`relative_path`.
@@ -154,6 +175,7 @@ class Generator(object):
         self.output = []
 
     def output_buffer_to_string(self):
+        # type: () -> str
         """Returns the contents of the output buffer as a string."""
         return ''.join(self.output)
 
@@ -162,6 +184,7 @@ class Generator(object):
 
     @contextmanager
     def indent(self, dent=None):
+        # type: (Optional[int]) -> Iterator[None]
         """
         For the duration of the context manager, indentation will be increased
         by dent. Dent is in units of spaces or tabs depending on the value of
@@ -179,6 +202,7 @@ class Generator(object):
         self.cur_indent -= dent
 
     def make_indent(self):
+        # type: () -> str
         """
         Returns a string representing the current indentation. Indents can be
         either spaces or tabs, depending on the value of the class variable
@@ -190,6 +214,7 @@ class Generator(object):
             return ' ' * self.cur_indent
 
     def emit_raw(self, s):
+        # type: (str) -> None
         """
         Adds the input string to the output buffer. The string must end in a
         newline. It may contain any number of newline characters. No
@@ -202,6 +227,7 @@ class Generator(object):
                 'Input string to emit_raw must end with a newline.')
 
     def emit(self, s=''):
+        # type: (str) -> None
         """
         Adds indentation, then the input string, and lastly a newline to the
         output buffer. If s is an empty string (default) then an empty line is
@@ -215,8 +241,17 @@ class Generator(object):
         else:
             self.emit_raw('\n')
 
-    def emit_wrapped_text(self, s, prefix='', initial_prefix='', subsequent_prefix='',
-                          width=80, break_long_words=False, break_on_hyphens=False):
+    def emit_wrapped_text(
+            self,
+            s,                       # type: str
+            prefix='',               # type: str
+            initial_prefix='',       # type: str
+            subsequent_prefix='',    # type: str
+            width=80,                # type: int
+            break_long_words=False,  # type: bool
+            break_on_hyphens=False   # type: bool
+    ):
+        # type: (...) -> None
         """
         Adds the input string to the output buffer with indentation and
         wrapping. The wrapping is performed by the :func:`textwrap.fill` Python
@@ -243,7 +278,8 @@ class Generator(object):
         indent = self.make_indent()
         prefix = indent + prefix
 
-        self.emit_raw(textwrap.fill(s,
+        self.emit_raw(textwrap.fill(s,  # type: ignore
+                                        # (Can be removed after github.com/python/typeshed/pull/420)
                                     initial_indent=prefix+initial_prefix,
                                     subsequent_indent=prefix+subsequent_prefix,
                                     width=width,
@@ -253,6 +289,7 @@ class Generator(object):
 
     @classmethod
     def process_doc(cls, doc, handler):
+        # type: (str, Callable[[str, str], str]) -> str
         """
         Helper for parsing documentation references in Stone docstrings and
         replacing them with more suitable annotations for the generated output.
@@ -291,6 +328,7 @@ class CodeGenerator(Generator):
     """
 
     def filter_out_none_valued_keys(self, d):
+        # type: (Dict[K, V]) -> Dict[K, V]
         """Given a dict, returns a new dict with all the same key/values except
         for keys that had values of None."""
         new_d = {}
@@ -299,8 +337,17 @@ class CodeGenerator(Generator):
                 new_d[k] = v
         return new_d
 
-    def generate_multiline_list(self, items, before='', after='',
-                delim=('(', ')'), compact=True, sep=',', skip_last_sep=False):
+    def generate_multiline_list(
+        self,
+        items,               # type: List[str]
+        before='',           # type: str
+        after='',            # type: str
+        delim=('(', ')'),    # type: DelimTuple
+        compact=True,        # type: bool
+        sep=',',             # type: str
+        skip_last_sep=False  # type: bool
+    ):
+        # type: (...) -> None
         """
         Given a list of items, emits one item per line.
 
@@ -363,7 +410,15 @@ class CodeGenerator(Generator):
                 self.emit(delim[1])
 
     @contextmanager
-    def block(self, before='', after='', delim=('{','}'), dent=None, allman=False):
+    def block(
+        self,
+        before='',        # type: str
+        after='',         # type: str
+        delim=('{','}'),  # type: DelimTuple
+        dent=None,        # type: Optional[int]
+        allman=False      # type: bool
+    ):
+        # type: (...) -> Iterator[None]
         """
         A context manager that emits configurable lines before and after an
         indented block of text.
