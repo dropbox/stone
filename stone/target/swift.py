@@ -73,7 +73,7 @@ import Foundation
 """.format(stone_warning)
 
 
-undocumented = '(undocumented)'
+undocumented = '(no description)'
 
 
 class SwiftBaseGenerator(CodeGenerator):

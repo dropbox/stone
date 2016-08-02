@@ -338,7 +338,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 typ = self._format_tag_type(namespace, field.data_type)
 
                 fdoc = self.process_doc(field.doc,
-                    self._docf) if field.doc else undocumented
+                    self._docf) if field.doc else 'An unspecified error.'
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
                 self.emit('case {}{}'.format(fmt_class(field.name),
                                                   typ))
