@@ -25,8 +25,6 @@ from stone.data_type import (
     is_alias,
     is_boolean_type,
     is_bytes_type,
-    is_float_type,
-    is_integer_type,
     is_list_type,
     is_nullable_type,
     is_numeric_type,
@@ -39,28 +37,21 @@ from stone.data_type import (
     is_void_type,
     unwrap_aliases,
     unwrap_nullable,
+    Struct,
+    Union,
 )
+from stone.data_type import DataType  # noqa: F401 # pylint: disable=unused-import
 from stone.generator import CodeGenerator
 from stone.target.python_helpers import (
+    class_name_for_data_type,
     fmt_class,
     fmt_func,
     fmt_obj,
     fmt_var,
+    generate_imports_for_referenced_namespaces,
+    validators_import,
 )
-
-
-# This will be at the top of every generated file.
-validators_import = """\
-try:
-    from . import stone_validators as bv
-    from . import stone_base as bb
-except (SystemError, ValueError):
-    # Catch errors raised when importing a relative module when not in a package.
-    # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bv
-    import stone_base as bb
-
-"""
+from stone.target.python_type_mapping import map_stone_type_to_python_type
 
 # Matches format of Stone doc tags
 doc_sub_tag_re = re.compile(':(?P<tag>[A-z]*):`(?P<val>.*?)`')
@@ -124,27 +115,13 @@ class PythonTypesGenerator(CodeGenerator):
 
         self.emit_raw(validators_import)
 
-        imported_namespaces = namespace.get_imported_namespaces()
-        if imported_namespaces:
-            # Generate import statements for all referenced namespaces.
-            self.emit('try:')
-            with self.indent():
-                self.emit('from . import (')
-                with self.indent():
-                    for ns in imported_namespaces:
-                        self.emit(ns.name + ',')
-                self.emit(')')
-            self.emit('except (SystemError, ValueError):')
-            # Fallback if imported from outside a package.
-            with self.indent():
-                for ns in imported_namespaces:
-                    self.emit('import %s' % ns.name)
-            self.emit()
+        # Generate import statements for all referenced namespaces.
+        self._generate_imports_for_referenced_namespaces(namespace)
 
         for data_type in namespace.linearize_data_types():
-            if is_struct_type(data_type):
+            if isinstance(data_type, Struct):
                 self._generate_struct_class(namespace, data_type)
-            elif is_union_type(data_type):
+            elif isinstance(data_type, Union):
                 self._generate_union_class(namespace, data_type)
             else:
                 raise TypeError('Cannot handle type %r' % type(data_type))
@@ -182,6 +159,13 @@ class PythonTypesGenerator(CodeGenerator):
                 alias.name,
                 class_name_for_data_type(alias.data_type, namespace)))
 
+    def _generate_imports_for_referenced_namespaces(self, namespace):
+        # type: (ApiNamespace) -> None
+        generate_imports_for_referenced_namespaces(
+            generator=self,
+            namespace=namespace
+        )
+
     def _docf(self, tag, val):
         """
         Callback used as the handler argument to process_docs(). This converts
@@ -211,40 +195,10 @@ class PythonTypesGenerator(CodeGenerator):
             raise RuntimeError('Unknown doc ref tag %r' % tag)
 
     def _python_type_mapping(self, ns, data_type):
+        # type: (ApiNamespace, DataType) -> str
         """Map Stone data types to their most natural equivalent in Python
         for documentation purposes."""
-        if is_string_type(data_type):
-            return 'str'
-        elif is_bytes_type(data_type):
-            return 'bytes'
-        elif is_boolean_type(data_type):
-            return 'bool'
-        elif is_float_type(data_type):
-            return 'float'
-        elif is_integer_type(data_type):
-            return 'long'
-        elif is_void_type(data_type):
-            return 'None'
-        elif is_timestamp_type(data_type):
-            return 'datetime.datetime'
-        elif is_alias(data_type):
-            return self._python_type_mapping(ns, data_type.data_type)
-        elif is_user_defined_type(data_type):
-            class_name = class_name_for_data_type(data_type)
-            if data_type.namespace.name != ns.name:
-                return '%s.%s_validator' % (
-                    data_type.namespace.name, class_name)
-            else:
-                return class_name
-        elif is_list_type(data_type):
-            # PyCharm understands this description format for a list
-            return 'list of [{}]'.format(self._python_type_mapping(
-                ns, data_type.data_type))
-        elif is_nullable_type(data_type):
-            return 'Optional[{}]'.format(
-                self._python_type_mapping(ns, data_type.data_type))
-        else:
-            raise TypeError('Unknown data type %r' % data_type)
+        return map_stone_type_to_python_type(ns, data_type)
 
     def _class_declaration_for_type(self, ns, data_type):
         assert is_user_defined_type(data_type), \
@@ -265,6 +219,7 @@ class PythonTypesGenerator(CodeGenerator):
     #
 
     def _generate_struct_class(self, ns, data_type):
+        # type: (ApiNamespace, Struct) -> None
         """Defines a Python class that represents a struct in Stone."""
         self.emit(self._class_declaration_for_type(ns, data_type))
         with self.indent():
@@ -628,6 +583,7 @@ class PythonTypesGenerator(CodeGenerator):
     #
 
     def _generate_union_class(self, ns, data_type):
+        # type: (ApiNamespace, Union) -> None
         """Defines a Python class that represents a union in Stone."""
         self.emit(self._class_declaration_for_type(ns, data_type))
         with self.indent():
@@ -940,21 +896,3 @@ def generate_func_call(name, args=None, kwargs=None):
         all_args.extend('{}={}'.format(k, v)
                         for k, v in kwargs if v is not None)
     return '{}({})'.format(name, ', '.join(all_args))
-
-
-def class_name_for_data_type(data_type, ns=None):
-    """
-    Returns the name of the Python class that maps to a user-defined type.
-    The name is identical to the name in the spec.
-
-    If ``ns`` is set to a Namespace and the namespace of `data_type` does
-    not match, then a namespace prefix is added to the returned name.
-    For example, ``foreign_ns.TypeName``.
-    """
-    assert is_user_defined_type(data_type) or is_alias(data_type), \
-        'Expected composite type, got %r' % type(data_type)
-    name = fmt_class(data_type.name)
-    if ns and data_type.namespace != ns:
-        # If from an imported namespace, add a namespace prefix.
-        name = '{}.{}'.format(data_type.namespace.name, name)
-    return name

@@ -32,9 +32,9 @@ if _MYPY:
     # unicode literal after <https://github.com/python/mypy/pull/2516>
     # makes it into a PyPi release
     if six.PY3:
-        NamespaceDict = typing.Dict[str, 'ApiNamespace']
+        NamespaceDict = typing.Dict[typing.Text, 'ApiNamespace']
     else:
-        NamespaceDict = typing.Dict[str, b'ApiNamespace']
+        NamespaceDict = typing.Dict[typing.Text, b'ApiNamespace']
 
 class Api(object):
     """
@@ -96,7 +96,7 @@ class ApiNamespace(object):
     """
 
     def __init__(self, name):
-        # type: (str) -> None
+        # type: (typing.Text) -> None
         self.name = name
         self.doc = None                 # type: typing.Optional[six.text_type]
         self.routes = []                # type: typing.List[ApiRoute]

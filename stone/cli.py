@@ -40,6 +40,7 @@ _builtin_generators = (
     'tsd_client',
     'tsd_types',
     'python_types',
+    'python_type_stubs',
     'python_client',
     'swift_types',
     'swift_client',
