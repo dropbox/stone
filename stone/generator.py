@@ -154,7 +154,7 @@ class Generator(object):
 
     @contextmanager
     def output_to_relative_path(self, relative_path):
-        # type: (str) -> typing.Iterator[None]
+        # type: (typing.Text) -> typing.Iterator[None]
         """
         Sets up generator so that all emits are directed towards the new file
         created at :param:`relative_path`.
@@ -221,10 +221,14 @@ class Generator(object):
         indentation is generated.
         """
         self.lineno += s.count('\n')
-        self.output.append(s)
+        self._append_output(s)
         if len(s) > 0 and s[-1] != '\n':
             raise AssertionError(
                 'Input string to emit_raw must end with a newline.')
+
+    def _append_output(self, s):
+        # type: (typing.Text) -> None
+        self.output.append(s)
 
     def emit(self, s=''):
         # type: (typing.Text) -> None

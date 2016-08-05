@@ -5,15 +5,14 @@ Builtin Generators
 Using a generator, you can convert the data types and routes in your spec into
 objects in your programming language of choice.
 
-Currently, the only generator included with Stone is for `Python
-<#python-guide>`_. Dropbox has written generators for an assortment of
-languages, which we intend to release, including:
+Dropbox has written generators for an assortment of languages, including:
 
-    * C#
-    * Go
-    * Java
+    * `Python <#python-guide>`_
+    * Python `Type Stubs <https://www.python.org/dev/peps/pep-0484/#id42>`_
     * Javascript
+    * Objective-C
     * Swift
+    * Typescript
 
 If you're looking to make your own generator, see `Writing a Generator
 <generator_ref.rst>`_. We would love to see a contribution of a PHP or Ruby
