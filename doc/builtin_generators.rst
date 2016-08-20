@@ -29,21 +29,21 @@ command-line interface (CLI)::
     usage: stone [-h] [-v] [--clean-build] [-f FILTER_BY_ROUTE_ATTR]
                  [-w WHITELIST_NAMESPACE_ROUTES | -b BLACKLIST_NAMESPACE_ROUTES]
                  generator output [spec [spec ...]]
-    
+
     StoneAPI
-    
+
     positional arguments:
       generator             Either the name of a built-in generator or the path to
                             a generator module. Paths to generator modules must
                             end with a .stoneg.py extension. The following
-                            generators are built-in: js_client, python_types,
-                            python_client, swift_client
+                            generators are built-in: js_client, js_types,
+                            python_types, python_client, swift_client
       output                The folder to save generated files to.
       spec                  Path to API specifications. Each must have a .stone
                             extension. If omitted or set to "-", the spec is read
                             from stdin. Multiple namespaces can be provided over
                             stdin by concatenating multiple specs together.
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       -v, --verbose         Print debugging statements.
@@ -69,25 +69,25 @@ We'll generate code based on an ``calc.stone`` spec with the following
 contents::
 
     namespace calc
-     
+
     route eval(Expression, Result, CalcError)
-    
+
     struct Expression
         "This expression is limited to a binary operation."
         op Operator = add
         left Int64
         right Int64
-    
+
     union Operator
         add
         sub
         mult
         div Boolean
             "If value is true, rounds up. Otherwise, rounds down."
-    
+
     struct Result
         answer Int64
-    
+
     union EvalError
         overflow
 
@@ -114,7 +114,7 @@ Three additional modules are copied into the target directory. The first,
 ``stone_validators.py``, contains classes for validating Python values against
 their expected Stone types. You will not need to explicitly import this module,
 but the auto-generated Python classes depend on it. The second,
-``stone_serializers.py``, contains a pair of ``json_encode()`` and 
+``stone_serializers.py``, contains a pair of ``json_encode()`` and
 `json_decode()`` functions. You will need to import this module to serialize
 your objects. The last is ``stone_base.py`` which shouldn't be used directly.
 
@@ -151,7 +151,7 @@ Struct
 For each struct in your spec, you will see a corresponding Python class of the
 same name.
 
-In our example, ``Expression``, ``Operator``, ``Answer``, ``EvalError``, and 
+In our example, ``Expression``, ``Operator``, ``Answer``, ``EvalError``, and
 are Python classes. They have an attribute (getter/setter/deleter property) for
 each field defined in the spec. You can instantiate these classes and specify
 field values either in the constructor or by assigning to an attribute::
