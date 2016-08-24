@@ -1,28 +1,44 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
+from typing import (
+    Dict,
+    List,
+    Optional,
+    Union,
+    cast,
+)
 
 from collections import OrderedDict
 from distutils.version import StrictVersion
 import six
 
 from stone.data_type import (
+    Alias,
+    List as DataTypeList,
+    Nullable,
+    Struct,
+    UserDefined,
     doc_unwrap,
     is_alias,
     is_composite_type,
     is_list_type,
     is_nullable_type,
 )
+from stone.lang.parser import StoneRouteDef
 
+NamespaceDict = Dict[str, 'ApiNamespace']
 
 class Api(object):
     """
     A full description of an API's namespaces, data types, and routes.
     """
     def __init__(self, version):
+        # type: (str) -> None
         self.version = StrictVersion(version)
-        self.namespaces = OrderedDict()
-        self.route_schema = None
+        self.namespaces = OrderedDict()  # type: NamespaceDict
+        self.route_schema = None  # type: Optional[Struct]
 
     def ensure_namespace(self, name):
+        # type: (str) -> ApiNamespace
         """
         Only creates a namespace if it hasn't yet been defined.
 
@@ -35,11 +51,12 @@ class Api(object):
         return self.namespaces.get(name)
 
     def normalize(self):
+        # type: () -> None
         """
         Alphabetizes namespaces and routes to make spec parsing order mostly
         irrelevant.
         """
-        ordered_namespaces = OrderedDict()
+        ordered_namespaces = OrderedDict()  # type: NamespaceDict
         # self.namespaces is currently ordered by declaration order.
         for namespace_name in sorted(self.namespaces.keys()):
             ordered_namespaces[namespace_name] = self.namespaces[namespace_name]
@@ -49,6 +66,7 @@ class Api(object):
             namespace.normalize()
 
     def add_route_schema(self, route_schema):
+        # type: (Struct) -> None
         assert self.route_schema is None
         self.route_schema = route_schema
 
@@ -58,6 +76,7 @@ class _ImportReason(object):
     """
 
     def __init__(self):
+        # type: () -> None
         self.alias = False
         self.data_type = False
 
@@ -68,18 +87,19 @@ class ApiNamespace(object):
     """
 
     def __init__(self, name):
+        # type: (str) -> None
         self.name = name
-        self.doc = None
-        self.routes = []
-        self.route_by_name = {}
-        self.data_types = []
-        self.data_type_by_name = {}
-        self.aliases = []
-        self.alias_by_name = {}
-        # Dict[Namespace, _ImportReason]
-        self._imported_namespaces = {}
+        self.doc = None                 # type: Optional[six.text_type]
+        self.routes = []                # type: List[ApiRoute]
+        self.route_by_name = {}         # type: Dict[str, ApiRoute]
+        self.data_types = []            # type: List[UserDefined]
+        self.data_type_by_name = {}     # type: Dict[str, UserDefined]
+        self.aliases = []               # type: List[Alias]
+        self.alias_by_name = {}         # type: Dict[str, Alias]
+        self._imported_namespaces = {}  # type: Dict[ApiNamespace, _ImportReason]
 
     def add_doc(self, docstring):
+        # type: (six.text_type) -> None
         """Adds a docstring for this namespace.
 
         The input docstring is normalized to have no leading whitespace and
@@ -96,14 +116,17 @@ class ApiNamespace(object):
             self.doc += normalized_docstring
 
     def add_route(self, route):
+        # type: (ApiRoute) -> None
         self.routes.append(route)
         self.route_by_name[route.name] = route
 
     def add_data_type(self, data_type):
+        # type: (UserDefined) -> None
         self.data_types.append(data_type)
         self.data_type_by_name[data_type.name] = data_type
 
     def add_alias(self, alias):
+        # type: (Alias) -> None
         self.aliases.append(alias)
         self.alias_by_name[alias.name] = alias
 
@@ -111,6 +134,7 @@ class ApiNamespace(object):
                                namespace,
                                imported_alias=False,
                                imported_data_type=False):
+        # type: (ApiNamespace, bool, bool) -> None
         """
         Keeps track of namespaces that this namespace imports.
 
@@ -130,6 +154,7 @@ class ApiNamespace(object):
             reason.data_type = True
 
     def linearize_data_types(self):
+        # type: () -> List[UserDefined]
         """
         Returns a list of all data types used in the namespace. Because the
         inheritance of data types can be modeled as a DAG, the list will be a
@@ -138,9 +163,10 @@ class ApiNamespace(object):
         defined in the correct order.
         """
         linearized_data_types = []
-        seen_data_types = set()
+        seen_data_types = set()  # type: Set[UserDefined]
 
         def add_data_type(data_type):
+            # type: (UserDefined) -> None
             if data_type in seen_data_types:
                 return
             elif data_type.namespace != self:
@@ -157,15 +183,17 @@ class ApiNamespace(object):
         return linearized_data_types
 
     def linearize_aliases(self):
+        # type: () -> List[Alias]
         """
         Returns a list of all aliases used in the namespace. The aliases are
         ordered to ensure that if they reference other aliases those aliases
         come earlier in the list.
         """
         linearized_aliases = []
-        seen_aliases = set()
+        seen_aliases = set()  # type: Set[Alias]
 
         def add_alias(alias):
+            # type: (Alias) -> None
             if alias in seen_aliases:
                 return
             elif alias.namespace != self:
@@ -181,24 +209,27 @@ class ApiNamespace(object):
         return linearized_aliases
 
     def get_route_io_data_types(self):
+        # type: () -> List[UserDefined]
         """
         Returns a list of all user-defined data types that are referenced as
         either an argument, result, or error of a route. If a List or Nullable
         data type is referenced, then the contained data type is returned
         assuming it's a user-defined type.
         """
-        data_types = set()
+        data_types = set()  # type: Set[UserDefined]
         for route in self.routes:
             for dtype in (route.arg_data_type, route.result_data_type,
                           route.error_data_type):
                 while is_list_type(dtype) or is_nullable_type(dtype):
-                    dtype = dtype.data_type
+                    dtype_as_list = cast(Union[DataTypeList, Nullable], dtype)
+                    dtype = dtype_as_list.data_type
                 if is_composite_type(dtype) or is_alias(dtype):
                     data_types.add(dtype)
 
         return sorted(data_types, key=lambda dt: dt.name)
 
     def get_imported_namespaces(self, must_have_imported_data_type=False):
+        # type: (bool) -> List[ApiNamespace]
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and a data type is
@@ -220,6 +251,7 @@ class ApiNamespace(object):
         return imported_namespaces
 
     def get_namespaces_imported_by_route_io(self):
+        # type: () -> List[ApiNamespace]
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and has a data type
@@ -235,6 +267,7 @@ class ApiNamespace(object):
         return sorted(referenced_namespaces, key=lambda n: n.name)
 
     def normalize(self):
+        # type: () -> None
         """
         Alphabetizes routes to make route declaration order irrelevant.
         """
@@ -243,6 +276,7 @@ class ApiNamespace(object):
         self.aliases.sort(key=lambda alias: alias.name)
 
     def __repr__(self):
+        # type: () -> str
         return 'ApiNamespace({!r})'.format(self.name)
 
 
@@ -254,6 +288,7 @@ class ApiRoute(object):
     def __init__(self,
                  name,
                  token):
+        # type: (str, StoneRouteDef) -> None
         """
         :param str name: Designated name of the endpoint.
         :param token: Raw route definition from the parser.
@@ -301,6 +336,7 @@ class ApiRoute(object):
 class DeprecationInfo(object):
 
     def __init__(self, by=None):
+        # type: (Optional[ApiRoute]) -> None
         """
         :param ApiRoute by: The route that replaces this deprecated one.
         """
