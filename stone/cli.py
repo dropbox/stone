@@ -34,6 +34,8 @@ _builtin_generators = (
     'obj_c_tests',
     'js_client',
     'js_types',
+    'tsd_client',
+    'tsd_types',
     'python_types',
     'python_client',
     'swift_types',
