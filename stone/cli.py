@@ -23,6 +23,8 @@ from .lang.tower import TowerOfStone
 _builtin_generators = (
     'js_client',
     'js_types',
+    'tsd_client',
+    'tsd_types',
     'python_types',
     'python_client',
     'swift_types',

@@ -37,7 +37,8 @@ command-line interface (CLI)::
                             a generator module. Paths to generator modules must
                             end with a .stoneg.py extension. The following
                             generators are built-in: js_client, js_types,
-                            python_types, python_client, swift_client
+                            tsd_client, tsd_types, python_types, python_client,
+                            swift_client
       output                The folder to save generated files to.
       spec                  Path to API specifications. Each must have a .stone
                             extension. If omitted or set to "-", the spec is read
