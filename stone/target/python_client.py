@@ -63,6 +63,13 @@ _cmdline_parser.add_argument(
     type=str,
     help='The name of the Python class that contains each route as a method.',
 )
+_cmdline_parser.add_argument(
+    '-t',
+    '--types-package',
+    required=True,
+    type=str,
+    help='The output Python package of the python_types generator.',
+)
 
 
 class PythonClientGenerator(CodeGenerator):
@@ -353,7 +360,7 @@ class PythonClientGenerator(CodeGenerator):
                         if is_user_defined_type(field.data_type):
                             # It's clearer to declare the type of a composite on
                             # a separate line since it references a class in
-                            # the dropbox package.
+                            # another module
                             self.emit(':type {}: {}'.format(
                                 field.name,
                                 self._format_type_in_doc(namespace, field.data_type),
@@ -421,7 +428,10 @@ class PythonClientGenerator(CodeGenerator):
         Babel doc references to Sphinx-friendly annotations.
         """
         if tag == 'type':
-            return ':class:`{}`'.format(val)
+            fq_val = val
+            if '.' not in val:
+                fq_val = self.cur_namespace.name + '.' + fq_val
+            return ':class:`{}.{}`'.format(self.args.types_package, fq_val)
         elif tag == 'route':
             if '.' in val:
                 return ':meth:`{}`'.format(fmt_func(val))
@@ -450,8 +460,8 @@ class PythonClientGenerator(CodeGenerator):
         if is_void_type(data_type):
             return 'None'
         elif is_user_defined_type(data_type):
-            return ':class:`dropbox.{}.{}`'.format(
-                namespace.name, fmt_type(data_type))
+            return ':class:`{}.{}.{}`'.format(
+                self.args.types_package, namespace.name, fmt_type(data_type))
         else:
             return fmt_type(data_type)
 
