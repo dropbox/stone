@@ -175,7 +175,7 @@ class PythonTypesGenerator(CodeGenerator):
         elif tag == 'route':
             if self.args.route_method:
                 return ':meth:`%s`' % self.args.route_method.format(
-                    ns=self.cur_namespace.name, route=val)
+                    ns=self.cur_namespace.name, route=fmt_func(val))
             else:
                 return val
         elif tag == 'link':

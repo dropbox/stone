@@ -72,8 +72,8 @@ class PythonClientGenerator(CodeGenerator):
     def generate(self, api):
         """Generates a module called "base".
 
-        The module will contain a "DropboxBase" class that will have a method
-        for each route across all namespaces.
+        The module will contain a base class that will have a method for
+        each route across all namespaces.
         """
         with self.output_to_relative_path('%s.py' % self.args.module_name):
             self.emit_raw(base)
@@ -115,7 +115,10 @@ class PythonClientGenerator(CodeGenerator):
     def _generate_route_methods(self, namespaces):
         """Creates methods for the routes in each namespace. All data types
         and routes are represented as Python classes."""
+        self.cur_namespace = None
         for namespace in namespaces:
+            # Hack: needed for _docf()
+            self.cur_namespace = namespace
             if namespace.routes:
                 self.emit('# ------------------------------------------')
                 self.emit('# Routes in {} namespace'.format(namespace.name))
@@ -420,7 +423,10 @@ class PythonClientGenerator(CodeGenerator):
         if tag == 'type':
             return ':class:`{}`'.format(val)
         elif tag == 'route':
-            return ':meth:`{}`'.format(fmt_func(val))
+            if '.' in val:
+                return ':meth:`{}`'.format(fmt_func(val))
+            else:
+                return ':meth:`{}_{}`'.format(self.cur_namespace.name, fmt_func(val))
         elif tag == 'link':
             anchor, link = val.rsplit(' ', 1)
             return '`{} <{}>`_'.format(anchor, link)
