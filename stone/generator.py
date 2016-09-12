@@ -191,7 +191,7 @@ class Generator(object):
         the class variable tabs_for_indents. If dent is None, indentation will
         increase by either four spaces or one tab.
         """
-        assert dent is None or dent > 0, 'dent must be a whole number.'
+        assert dent is None or dent >= 0, 'dent must be >= 0.'
         if dent is None:
             if self.tabs_for_indents:
                 dent = 1

@@ -1,0 +1,112 @@
+{
+  "author": "Dropbox, Inc.",
+  "skip_undocumented": true,
+  "custom_categories": [
+    {
+      "name": "Clients",
+      "children": [
+        "DropboxClient",
+        "DropboxTeamClient",
+        "DropboxClientsManager"
+      ]
+    },
+    {
+      "name": "API Routes",
+      "children": []
+    },
+    {
+      "name": "Async",
+      "children": []
+    },
+    {
+      "name": "Auth",
+      "children": []
+    },
+    {
+      "name": "Files",
+      "children": []
+    },
+    {
+      "name": "Properties",
+      "children": []
+    },
+    {
+      "name": "Sharing",
+      "children": []
+    },
+    {
+      "name": "Team",
+      "children": []
+    },
+    {
+      "name": "Team Common",
+      "children": []
+    },
+    {
+      "name": "Team Policies",
+      "children": []
+    },
+    {
+      "name": "Users",
+      "children": []
+    },
+    {
+      "name": "Networking",
+      "children": [
+        "DBTransportClient",
+        "DBDelegate",
+        "DBTask",
+        "DBRpcTask",
+        "DBUploadTask",
+        "DBDownloadUrlTask",
+        "DBDownloadDataTask",
+        "DBError",
+        "DBRequestHttpError",
+        "DBRequestBadInputError",
+        "DBRequestAuthError",
+        "DBRequestRateLimitError",
+        "DBRequestInternalServerError",
+        "DBRequestClientError",
+        "DBSessionData",
+        "DBProgressData",
+        "DBCompletionData"
+      ]
+    },
+    {
+      "name": "OAuth",
+      "children": [
+        "DBDesktopOAuthManager",
+        "DBMobileOAuthManager",
+        "DBOAuthManager",
+        "DBAccessToken",
+        "DBOAuthResult",
+        "DBMobileSharedApplication",
+        "DBDesktopSharedApplication",
+        "DBSharedApplication"
+      ]
+    },
+    {
+      "name": "Serializers", 
+      "children": [
+        "DBArraySerializer",
+        "DBNSDateSerializer"
+      ]
+    },
+    {
+      "name": "Union Tags", 
+      "children": [
+        "DBOAuthErrorType",
+        "DBOAuthResultTag",
+        "DBRequestErrorTag"
+      ]
+    },
+    {
+      "name": "Route Objects", 
+      "children": []
+    }
+  ],
+  "author_url": "https://dropbox.com/developers",
+  "hide_documentation_coverage": true,
+  "module_version": "1.0",
+  "module": "ObjectiveDropboxOfficial"
+}

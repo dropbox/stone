@@ -21,6 +21,9 @@ from .lang.tower import TowerOfStone
 
 # These generators come by default
 _builtin_generators = (
+    'obj_c_client',
+    'obj_c_types',
+    'obj_c_tests',
     'js_client',
     'js_types',
     'python_types',
