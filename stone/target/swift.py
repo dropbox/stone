@@ -123,7 +123,7 @@ class SwiftBaseGenerator(CodeGenerator):
 
         extend_suffix = ': {}'.format(', '.join(extensions)) if extensions else ''
 
-        with self.block('public class {}{}'.format(name, extend_suffix)):
+        with self.block('open class {}{}'.format(name, extend_suffix)):
             yield
 
     def _struct_init_args(self, data_type, namespace=None):
@@ -135,7 +135,7 @@ class SwiftBaseGenerator(CodeGenerator):
 
             if field.has_default:
                 if is_union_type(data_type):
-                    default = '.{}'.format(fmt_class(field.default.tag_name))
+                    default = '.{}'.format(fmt_var(field.default.tag_name))
                 else:
                     default = fmt_obj(field.default)
                 value += ' = {}'.format(default)

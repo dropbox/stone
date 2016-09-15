@@ -129,7 +129,7 @@ class SwiftGenerator(SwiftBaseGenerator):
         self.emit('import Alamofire')
         self.emit()
 
-        with self.block('public class {}'.format(self.args.class_name)):
+        with self.block('open class {}'.format(self.args.class_name)):
             namespace_fields = []
             for namespace in api.namespaces.values():
                 if namespace.routes:
@@ -138,7 +138,7 @@ class SwiftGenerator(SwiftBaseGenerator):
             for var, typ in namespace_fields:
                 self.emit('/// Routes within the {} namespace. '
                           'See {}Routes for details.'.format(var, typ))
-                self.emit('public var {}: {}Routes!'.format(var, typ))
+                self.emit('open var {}: {}Routes!'.format(var, typ))
             self.emit()
 
             with self.function_block('public init', args=self._func_args(
@@ -151,8 +151,8 @@ class SwiftGenerator(SwiftBaseGenerator):
         self.emit_raw(stone_warning)
         self.emit('/// Routes for the {} namespace'.format(namespace.name))
 
-        with self.block('public class {}Routes'.format(ns_class)):
-            self.emit('public let client: {}'.format(self.args.transport_client_name))
+        with self.block('open class {}Routes'.format(ns_class)):
+            self.emit('open let client: {}'.format(self.args.transport_client_name))
             args = [('client', '{}'.format(self.args.transport_client_name))]
             
             with self.function_block('init', self._func_args(args)):
@@ -223,8 +223,8 @@ class SwiftGenerator(SwiftBaseGenerator):
 
         self._maybe_generate_deprecation_warning(route)
 
-        with self.function_block('public func {}'.format(func_name),
-                args=self._func_args(arg_list, force_first=True),
+        with self.function_block('open func {}'.format(func_name),
+                args=self._func_args(arg_list, force_first=False),
                 return_type='{}<{}, {}>'.format(req_obj_name, rtype, etype)):
             self.emit('let route = {}.{}'.format(fmt_class(namespace.name), func_name))
             if is_struct_type(route.arg_data_type):
@@ -248,7 +248,7 @@ class SwiftGenerator(SwiftBaseGenerator):
             if route.deprecated.by:
                 msg += ' Use {}.'.format(route.deprecated.by.name)
             args = ["'{}'".format(msg), 'DeprecationWarning']
-            self.emit('@available(*, unavailable, message="{}")'.format(msg))
+            self.emit('@available(*, unavailable, message:"{}")'.format(msg))
 
     def _generate_route(self, namespace, route):
         route_type = route.attrs.get('style')
