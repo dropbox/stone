@@ -249,18 +249,18 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 ))
 
                 with self.indent():
-                    with self.block('for (k,v) in Serialization.getFields({}.serialize({}))'.format(
+                    with self.block('for (k, v) in Serialization.getFields({}.serialize({}))'.format(
                         fmt_serial_obj(subtype), tagvar
                     )):
                         self.emit('output[k] = v')
-                    self.emit('output[".tag"] = .Str("{}")'.format(tag))
+                    self.emit('output[".tag"] = .str("{}")'.format(tag))
             self.emit('default: fatalError("Tried to serialize unexpected subtype")')
 
     def _generate_struct_base_class_deserializer(self, namespace, data_type):
             args = []
             for field in data_type.all_fields:
                 var = fmt_var(field.name)
-                self.emit('let {} = {}.deserialize(dict["{}"] ?? .Null)'.format(
+                self.emit('let {} = {}.deserialize(dict["{}"] ?? .null)'.format(
                     var,
                     fmt_serial_obj(field.data_type),
                     field.name,
@@ -306,10 +306,10 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
 
                     if data_type.has_enumerated_subtypes():
                         self._generate_enumerated_subtype_serializer(namespace, data_type)
-                self.emit('return .Dictionary(output)')
+                self.emit('return .dictionary(output)')
             with self.deserializer_func(data_type):
                 with self.block("switch json"):
-                    self.emit("case .Dictionary(let dict):")
+                    self.emit("case .dictionary(let dict):")
                     with self.indent():
                         if data_type.has_enumerated_subtypes():
                             self._generate_enumerated_subtype_deserializer(namespace, data_type)
@@ -340,7 +340,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 fdoc = self.process_doc(field.doc,
                     self._docf) if field.doc else 'An unspecified error.'
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('case {}{}'.format(fmt_class(field.name),
+                self.emit('case {}{}'.format(fmt_var(field.name),
                                                   typ))
             self.emit()
             with self.block('public var description: String'):
@@ -353,7 +353,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
     def _tag_type(self, data_type, field):
         return "{}.{}".format(
             fmt_class(data_type.name),
-            fmt_class(field.name)
+            fmt_var(field.name)
         )
 
     def _generate_union_serializer(self, data_type):
@@ -361,7 +361,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             with self.serializer_func(data_type), self.block('switch value'):
                 for field in data_type.all_fields:
                     field_type = field.data_type
-                    case = '.{}{}'.format(fmt_class(field.name),
+                    case = '.{}{}'.format(fmt_var(field.name),
                                          '' if is_void_type(field_type) else '(let arg)')
                     self.emit('case {}:'.format(case))
 
@@ -376,11 +376,11 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                             self.emit('var d = ["{}": {}.serialize(arg)]'.format(
                                 field.name,
                                 fmt_serial_obj(field_type)))
-                        self.emit('d[".tag"] = .Str("{}")'.format(field.name))
-                        self.emit('return .Dictionary(d)')
+                        self.emit('d[".tag"] = .str("{}")'.format(field.name))
+                        self.emit('return .dictionary(d)')
             with self.deserializer_func(data_type):
                 with self.block("switch json"):
-                    self.emit("case .Dictionary(let d):")
+                    self.emit("case .dictionary(let d):")
                     with self.indent():
                         self.emit('let tag = Serialization.getTag(d)')
                         with self.block('switch tag'):
@@ -397,7 +397,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                                                 not field_type.has_enumerated_subtypes()):
                                             subdict = 'json'
                                         else:
-                                            subdict = 'd["{}"] ?? .Null'.format(field.name)
+                                            subdict = 'd["{}"] ?? .null'.format(field.name)
 
                                         self.emit('let v = {}.deserialize({})'.format(
                                             fmt_serial_obj(field_type), subdict
@@ -426,14 +426,14 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
     @contextmanager
     def serializer_func(self, data_type):
         with self.function_block('public func serialize',
-                                 args=self._func_args([('value', fmt_class(data_type.name))]),
+                                 args=self._func_args([('_ value', fmt_class(data_type.name))]),
                                  return_type='JSON'):
             yield
 
     @contextmanager
     def deserializer_func(self, data_type):
         with self.function_block('public func deserialize',
-                                 args=self._func_args([('json', 'JSON')]),
+                                 args=self._func_args([('_ json', 'JSON')]),
                                  return_type=fmt_class(data_type.name)):
             yield
 

@@ -224,7 +224,7 @@ class SwiftGenerator(SwiftBaseGenerator):
         self._maybe_generate_deprecation_warning(route)
 
         with self.function_block('public func {}'.format(func_name),
-                args=self._func_args(arg_list, force_first=True),
+                args=self._func_args(arg_list, force_first=False),
                 return_type='{}<{}, {}>'.format(req_obj_name, rtype, etype)):
             self.emit('let route = {}.{}'.format(fmt_class(namespace.name), func_name))
             if is_struct_type(route.arg_data_type):
@@ -248,7 +248,7 @@ class SwiftGenerator(SwiftBaseGenerator):
             if route.deprecated.by:
                 msg += ' Use {}.'.format(route.deprecated.by.name)
             args = ["'{}'".format(msg), 'DeprecationWarning']
-            self.emit('@available(*, unavailable, message="{}")'.format(msg))
+            self.emit('@available(*, unavailable, message:"{}")'.format(msg))
 
     def _generate_route(self, namespace, route):
         route_type = route.attrs.get('style')

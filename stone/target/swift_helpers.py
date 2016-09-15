@@ -27,14 +27,14 @@ from .helpers import split_words
 
 _type_table = {
     Boolean: 'Bool',
-    Bytes: 'NSData',
+    Bytes: 'Data',
     Float32: 'Float',
     Float64: 'Double',
     Int32: 'Int32',
     Int64: 'Int64',
     List: 'Array',
     String: 'String',
-    Timestamp: 'NSDate',
+    Timestamp: 'Date',
     UInt32: 'UInt32',
     UInt64: 'UInt64',
     Void: 'Void',
