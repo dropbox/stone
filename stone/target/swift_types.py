@@ -131,7 +131,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             if namespace.routes:
                 jazzy_cfg['custom_categories'][0]['children'].append(ns_class + 'Routes')
 
-        with self.output_to_relative_path('../.jazzy.json'):
+        with self.output_to_relative_path('../../../.jazzy.json'):
             self.emit_raw(json.dumps(jazzy_cfg, indent=2)+'\n')
 
     def _generate_base_namespace_module(self, api, namespace):
