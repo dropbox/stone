@@ -18,6 +18,7 @@ from stone.data_type import (
 )
 from stone.target.swift_helpers import (
     fmt_class,
+    fmt_default_value,
     fmt_func,
     fmt_var,
     fmt_type,
@@ -260,10 +261,12 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             args = []
             for field in data_type.all_fields:
                 var = fmt_var(field.name)
-                self.emit('let {} = {}.deserialize(dict["{}"] ?? .null)'.format(
+                value = 'dict["{}"]'.format(field.name)
+                self.emit('let {} = {}.deserialize({} ?? {})'.format(
                     var,
                     fmt_serial_obj(field.data_type),
-                    field.name,
+                    value,
+                    fmt_default_value(namespace, field) if field.has_default else '.null'
                 ))
 
                 args.append((var, var))

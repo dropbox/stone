@@ -15,7 +15,11 @@ from stone.data_type import (
     UInt32,
     UInt64,
     Void,
+    is_boolean_type,
     is_list_type,
+    is_numeric_type,
+    is_string_type,
+    is_tag_ref,
     is_user_defined_type,
     unwrap_nullable,
 )
@@ -123,3 +127,26 @@ def fmt_type(data_type):
 
 def fmt_var(name):
     return _format_camelcase(name)
+
+
+def fmt_default_value(namespace, field):
+    if is_tag_ref(field.default):
+        return '{}.{}Serializer().serialize(.{})'.format(
+            fmt_class(namespace.name),
+            fmt_class(field.default.union_data_type.name),
+            fmt_var(field.default.tag_name))
+    elif is_list_type(field.data_type):
+        return '.array({})'.format(field.default)
+    elif is_numeric_type(field.data_type):
+        return '.number({})'.format(field.default)
+    elif is_string_type(field.data_type):
+        return ''
+    elif is_boolean_type(field.data_type):
+        if field.default:
+            bool_str = '1'
+        else:
+            bool_str = '0'
+        return '.number({})'.format(bool_str)
+    else:
+        raise TypeError('Can\'t handle default value type %r' %
+                        type(field.data_type))
