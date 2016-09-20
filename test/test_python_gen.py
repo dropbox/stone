@@ -550,6 +550,19 @@ union_closed U
     t0
         "Sample field doc."
     t1 String
+    t2
+
+union UOpen extends U
+    t3
+
+union_closed UExtend extends U
+    t3
+
+union_closed UExtend2 extends U
+    t3
+
+union_closed UExtendExtend extends UExtend
+    t4
 
 union V
     t0
@@ -928,6 +941,72 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(b, self.ns.OptionalS)
         self.assertEqual(b.f1, 'hello')
         self.assertEqual(b.f2, 3)
+
+    def test_union_equality_with_object(self):
+        """Should not throw an error when comparing with object.
+
+        Object is a superclass of Union, but it should not be considered for equality.
+        """
+        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        self.assertFalse(u == object())
+
+    def test_union_equality_with_tag(self):
+        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_equal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_unequal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't2'}))
+        self.assertEqual(u, u_equal)
+        self.assertEqual(hash(u), hash(u_equal))
+        self.assertNotEqual(u, u_unequal)
+        self.assertNotEqual(hash(u), hash(u_unequal))
+
+    def test_union_equality_with_value(self):
+        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'a'}))
+        u_equal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'a'}))
+        u_unequal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'b'}))
+        self.assertEqual(u, u_equal)
+        self.assertEqual(hash(u), hash(u_equal))
+        self.assertNotEqual(u, u_unequal)
+        self.assertNotEqual(hash(u), hash(u_unequal))
+
+    def test_union_equality_with_closed_and_open(self):
+        """A closed union should be considered equal to an open union if they have a direct
+        inheritance relationship."""
+        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_open = self.decode(self.sv.Union(self.ns.UOpen), json.dumps({'.tag': 't0'}))
+        self.assertEqual(u, u_open)
+        self.assertEqual(hash(u), hash(u_open))
+
+    def test_union_equality_with_different_types(self):
+        """Unions of different types that do not have an inheritance relationship are not considered
+        equal to each other."""
+        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0'}))
+        self.assertNotEqual(u, v)
+        # They still hash to the same value, since they have the same tag and value, but this is
+        # fine since we don't expect to use a large number of unions as dict keys.
+        self.assertEqual(hash(u), hash(v))
+
+        # U_extend and U_extend2 are indirectly related because they both extend U, but they do not
+        # have a direct line of inheritance to each other.
+        u_extend = self.decode(self.sv.Union(self.ns.UExtend), json.dumps({'.tag': 't0'}))
+        u_extend2 = self.decode(self.sv.Union(self.ns.UExtend2), json.dumps({'.tag': 't0'}))
+        self.assertNotEqual(u_extend, u_extend2)
+        # They still hash to the same value, since they have the same tag and value, but this is
+        # fine since we don't expect to use a large number of unions as dict keys.
+        self.assertEqual(hash(u_extend), hash(u_extend2))
+
+    def test_extended_union_equality(self):
+        """Unions which subclass each other are considered equal to each other."""
+        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_extend = self.decode(self.sv.Union(self.ns.UExtend), json.dumps({'.tag': 't0'}))
+        u_extend_extend = self.decode(self.sv.Union(self.ns.UExtendExtend),
+                                      json.dumps({'.tag': 't0'}))
+        self.assertEqual(u, u_extend)
+        self.assertEqual(hash(u), hash(u_extend))
+        self.assertEqual(u, u_extend_extend)
+        self.assertEqual(hash(u), hash(u_extend_extend))
+        self.assertEqual(u_extend, u_extend_extend)
+        self.assertEqual(hash(u_extend), hash(u_extend_extend))
 
     def test_struct_decoding_with_optional_struct(self):
         opt_s = self.decode(
