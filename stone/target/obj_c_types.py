@@ -126,10 +126,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             jazzy_cfg = json.load(jazzy_file)
 
 
-        with self.output_to_relative_path('../PlatformDependent/iOS/DropboxSDKImportsMobile.h'):
+        with self.output_to_relative_path('../PlatformDependent/iOS/DropboxSDKImports.h'):
             self._generate_all_imports(api, ['DropboxClientsManager+MobileAuth', 'DBOAuthMobile'])
 
-        with self.output_to_relative_path('../PlatformDependent/macOS/DropboxSDKImportsDesktop.h'):
+        with self.output_to_relative_path('../PlatformDependent/macOS/DropboxSDKImports.h'):
             self._generate_all_imports(api, ['DropboxClientsManager+DesktopAuth', 'DBOAuthDesktop'])
 
         with self.output_to_relative_path('../../../Format/DropboxSDKImports.h'):
@@ -182,6 +182,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             'DBHandlerTypes',
             'DBOAuthResult',
             'DBStoneSerializers',
+            'DBStoneBase',
+            'DBStoneValidators',
+            'DBReachability',
         ]
 
         self._generate_imports_m(default_imports)
@@ -792,12 +795,13 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                         deserialize_call = self._fmt_serialization_call(
                             field.data_type, input_value, False)
 
-                    if nullable:
+                    if nullable or field.has_default:
+                        default_value = fmt_default_value(field) if field.has_default else 'nil'
                         if is_primitive_type(data_type):
-                            deserialize_call = '{} ?: nil'.format(input_value)
+                            deserialize_call = '{} ?: {}'.format(input_value, default_value)
                         else:
-                            deserialize_call = '{} ? {} : nil'.format(
-                                input_value, deserialize_call)
+                            deserialize_call = '{} ? {} : {}'.format(
+                                input_value, deserialize_call, default_value)
 
                     self.emit('{}{} = {};'.format(
                         fmt_type(field.data_type), fmt_var(field.name), deserialize_call))

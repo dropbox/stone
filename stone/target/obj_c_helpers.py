@@ -385,6 +385,8 @@ def fmt_default_value(field):
         else:
             bool_str = 'NO'
         return '@{}'.format(bool_str)
+    elif is_string_type(field.data_type):
+        return '@"{}"'.format(field.default)
     else:
         raise TypeError('Can\'t handle default value type %r' %
                         type(field.data_type))
