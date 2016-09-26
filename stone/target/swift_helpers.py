@@ -140,7 +140,7 @@ def fmt_default_value(namespace, field):
     elif is_numeric_type(field.data_type):
         return '.number({})'.format(field.default)
     elif is_string_type(field.data_type):
-        return ''
+        return '.str({})'.format(field.default)
     elif is_boolean_type(field.data_type):
         if field.default:
             bool_str = '1'

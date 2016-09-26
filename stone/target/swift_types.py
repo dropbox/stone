@@ -50,16 +50,16 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
     Endpoint argument (struct):
 
     ```
-    public class CopyArg: CustomStringConvertible {
-        public let fromPath: String
-        public let toPath: String
+    open class CopyArg: CustomStringConvertible {
+        open let fromPath: String
+        open let toPath: String
         public init(fromPath: String, toPath: String) {
             stringValidator(pattern: "/(.|[\\r\\n])*")(value: fromPath)
             self.fromPath = fromPath
             stringValidator(pattern: "/(.|[\\r\\n])*")(value: toPath)
             self.toPath = toPath
         }
-        public var description: String {
+        open var description: String {
             return "\(SerializeUtil.prepareJSONForSerialization(
                 CopyArgSerializer().serialize(self)))"
         }
@@ -69,11 +69,11 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
     Endpoint error (union):
 
     ```
-    public enum CopyError: CustomStringConvertible {
+    open enum CopyError: CustomStringConvertible {
         case TooManyFiles
         case Other
 
-        public var description: String {
+        open var description: String {
             return "\(SerializeUtil.prepareJSONForSerialization(
                 CopyErrorSerializer().serialize(self)))"
         }
@@ -83,16 +83,16 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
     Argument serializer (error serializer not listed):
     
     ```
-    public class CopyArgSerializer: JSONSerializer {
+    open class CopyArgSerializer: JSONSerializer {
         public init() { }
-        public func serialize(value: CopyArg) -> JSON {
+        open func serialize(value: CopyArg) -> JSON {
             let output = [ 
             "from_path": Serialization.serialize(value.fromPath),
             "to_path": Serialization.serialize(value.toPath),
             ]
             return .Dictionary(output)
         }
-        public func deserialize(json: JSON) -> CopyArg {
+        open func deserialize(json: JSON) -> CopyArg {
             switch json {
                 case .Dictionary(let dict):
                     let fromPath = Serialization.deserialize(dict["from_path"] ?? .Null)
@@ -141,7 +141,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
         routes_base = 'Datatypes and serializers for the {} namespace'.format(namespace.name)
         self.emit_wrapped_text(routes_base, prefix='/// ', width=120)
 
-        with self.block('public class {}'.format(fmt_class(namespace.name))):
+        with self.block('open class {}'.format(fmt_class(namespace.name))):
             for data_type in namespace.linearize_data_types():
                 if is_struct_type(data_type):
                     self._generate_struct_class(namespace, data_type)
@@ -167,13 +167,13 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 fdoc = self.process_doc(field.doc,
                     self._docf) if field.doc else undocumented
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('public let {}: {}'.format(
+                self.emit('open let {}: {}'.format(
                     fmt_var(field.name),
                     fmt_type(field.data_type),
                 ))
             self._generate_struct_init(namespace, data_type)
 
-            decl = 'public var' if not data_type.parent_type else 'public override var'
+            decl = 'open var' if not data_type.parent_type else 'open override var'
 
             with self.block('{} description: String'.format(decl)):
                 cls = fmt_class(data_type.name)+'Serializer'
@@ -428,14 +428,14 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
 
     @contextmanager
     def serializer_func(self, data_type):
-        with self.function_block('public func serialize',
+        with self.function_block('open func serialize',
                                  args=self._func_args([('_ value', fmt_class(data_type.name))]),
                                  return_type='JSON'):
             yield
 
     @contextmanager
     def deserializer_func(self, data_type):
-        with self.function_block('public func deserialize',
+        with self.function_block('open func deserialize',
                                  args=self._func_args([('_ json', 'JSON')]),
                                  return_type=fmt_class(data_type.name)):
             yield
