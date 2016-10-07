@@ -116,7 +116,7 @@ If you choose not to install ``stone`` using the method above, you will need
 to ensure that you have the Python packages ``ply`` and ``six``, which can be
 installed through ``pip``::
 
-    $ pip install ply>=3.4 six>=1.3.0
+    $ pip install "ply>=3.4" "six>=1.3.0" "typing>=3.5.2"
 
 If the ``stone`` package is in your PYTHONPATH, you can replace ``stone``
 with ``python -m stone.cli`` as follows::
@@ -126,5 +126,5 @@ with ``python -m stone.cli`` as follows::
 If you have the ``stone`` package on your machine, but did not install it or
 add its location to your PYTHONPATH, you can use the following::
 
-    $ PYTOHNPATH=path/to/stone python -m stone.cli -h
+    $ PYTHONPATH=path/to/stone python -m stone.cli -h
 
