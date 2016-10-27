@@ -174,8 +174,8 @@ class PythonClientGenerator(CodeGenerator):
             footer=None
             if request_binary_body:
                 extra_request_args = [('f',
-                                       None,
-                                       'A string or file-like obj of data.')]
+                                       'bytes',
+                                       'Contents to upload.')]
             elif download_to_file:
                 extra_request_args = [('download_path',
                                        'str',
