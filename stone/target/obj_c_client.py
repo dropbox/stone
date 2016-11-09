@@ -382,6 +382,8 @@ class ObjCGenerator(ObjCBaseGenerator):
 
         deprecated = 'DEPRECATED: ' if route.deprecated else ''
 
+        func_name = '{}{}'.format(fmt_var(route.name), func_suffix)
+
         self.emit(comment_prefix)
         if route.doc:
             route_doc = self.process_doc(route.doc, self._docf)
@@ -411,7 +413,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                                             result_type_str, error_type_str)
 
         deprecated = self._get_deprecation_warning(route)
-        route_signature = fmt_signature(func='{}{}'.format(fmt_var(route.name), func_suffix),
+        route_signature = fmt_signature(func=func_name,
                                         args=fmt_func_args_declaration(
                                             route_args),
                                         return_type='{} _Nonnull'.format(return_type))

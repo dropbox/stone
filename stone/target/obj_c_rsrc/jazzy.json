@@ -24,7 +24,9 @@
     },
     {
       "name": "Files",
-      "children": []
+      "children": [
+        "DBBatchUploadData"
+      ]
     },
     {
       "name": "Properties",

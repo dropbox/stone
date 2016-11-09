@@ -14,7 +14,7 @@
 /// Class method which returns a json-compatible dictionary representation of the
 /// supplied object.
 ///
-/// @param instance: An instance of the API object to be serialized.
+/// @param instance An instance of the API object to be serialized.
 ///
 /// @return A serialized, json-compatible dictionary representation of the API object.
 ///
@@ -24,7 +24,7 @@
 /// Class method which returns an instantiation of the supplied object as represented
 /// by a json-compatible dictionary.
 ///
-/// @param dict: A dictionary representation of the API object to be serialized.
+/// @param dict A dictionary representation of the API object to be serialized.
 ///
 /// @return A deserialized, instantiation of the API object.
 ///

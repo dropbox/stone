@@ -126,14 +126,11 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             jazzy_cfg = json.load(jazzy_file)
 
 
-        with self.output_to_relative_path('../PlatformDependent/iOS/DropboxSDKImports.h'):
+        with self.output_to_relative_path('../ObjectiveDropboxOfficial_iOS/iOS/DropboxSDKImportsMobile.h'):
             self._generate_all_imports(api, ['DropboxClientsManager+MobileAuth', 'DBOAuthMobile'])
 
-        with self.output_to_relative_path('../PlatformDependent/macOS/DropboxSDKImports.h'):
+        with self.output_to_relative_path('../ObjectiveDropboxOfficial_macOS/macOS/DropboxSDKImportsDesktop.h'):
             self._generate_all_imports(api, ['DropboxClientsManager+DesktopAuth', 'DBOAuthDesktop'])
-
-        with self.output_to_relative_path('../../../Format/DropboxSDKImports.h'):
-            self._generate_all_imports(api, ['DropboxClientsManager+MobileAuth', 'DBOAuthMobile', 'DropboxClientsManager+DesktopAuth', 'DBOAuthDesktop'])
 
         for namespace in api.namespaces.values():
             for data_type in namespace.linearize_data_types():
@@ -185,6 +182,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             'DBStoneBase',
             'DBStoneValidators',
             'DBReachability',
+            'DBCustomRoutes',
+            'DBChunkInputStream',
+            'DBConstants',
+            'DBTasksStorage'
         ]
 
         self._generate_imports_m(default_imports)
