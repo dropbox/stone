@@ -67,6 +67,12 @@ _cmdline_parser.add_argument(
           'given route; use {ns} as a placeholder for namespace name and '
           '{route} for the route name.'),
 )
+_cmdline_parser.add_argument(
+    '-d',
+    '--documentation',
+    type=bool,
+    help=('Sets whether documentation is generated.'),
+)
 
 
 jazzy_category_map = {
@@ -121,9 +127,11 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         shutil.copy(os.path.join(rsrc_folder, 'DBSerializableProtocol.h'),
                     rsrc_output_folder)
 
-        jazzy_cfg_path = os.path.join(rsrc_folder, 'jazzy.json')
-        with open(jazzy_cfg_path) as jazzy_file:
-            jazzy_cfg = json.load(jazzy_file)
+        jazzy_cfg = ''
+        if self.args.documentation:
+            jazzy_cfg_path = os.path.join(rsrc_folder, 'jazzy.json')
+            with open(jazzy_cfg_path) as jazzy_file:
+                jazzy_cfg = json.load(jazzy_file)
 
 
         with self.output_to_relative_path('../ObjectiveDropboxOfficial_iOS/iOS/DropboxSDKImportsMobile.h'):
@@ -142,15 +150,17 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self._generate_namespace_types(namespace, jazzy_cfg)
 
             if namespace.routes:
-                jazzy_cfg['custom_categories'][jazzy_category_map['Routes']][
-                    'children'].append(fmt_routes_class(ns_name))
-                jazzy_cfg['custom_categories'][jazzy_category_map['RouteObjects']][
-                    'children'].append(fmt_route_obj_class(ns_name))
+                if self.args.documentation:
+                    jazzy_cfg['custom_categories'][jazzy_category_map['Routes']][
+                        'children'].append(fmt_routes_class(ns_name))
+                    jazzy_cfg['custom_categories'][jazzy_category_map['RouteObjects']][
+                        'children'].append(fmt_route_obj_class(ns_name))
                 self._generate_route_objects_m(api.route_schema, namespace)
                 self._generate_route_objects_h(api.route_schema, namespace)
 
-        with self.output_to_relative_path('../../../.jazzy.json'):
-            self.emit_raw(json.dumps(jazzy_cfg, indent=2) + '\n')
+        if self.args.documentation:
+            with self.output_to_relative_path('../../../.jazzy.json'):
+                self.emit_raw(json.dumps(jazzy_cfg, indent=2) + '\n')
 
     def _generate_all_imports(self, api, platform_imports):
         self.emit_raw(base_file_comment)
@@ -219,10 +229,12 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
         for data_type in namespace.linearize_data_types():
             class_name = fmt_class_prefix(data_type)
-            jazzy_cfg['custom_categories'][jazzy_category_map[
-                ns_name]]['children'].append(class_name)
-            jazzy_cfg['custom_categories'][jazzy_category_map['Serializers']][
-                'children'].append('{}Serializer'.format(class_name))
+
+            if self.args.documentation:
+                jazzy_cfg['custom_categories'][jazzy_category_map[
+                    ns_name]]['children'].append(class_name)
+                jazzy_cfg['custom_categories'][jazzy_category_map['Serializers']][
+                    'children'].append('{}Serializer'.format(class_name))
 
             if is_struct_type(data_type):
                 # struct implementation
@@ -235,8 +247,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     self.emit_raw(base_file_comment)
                     self._generate_struct_class_h(data_type)
             elif is_union_type(data_type):
-                jazzy_cfg['custom_categories'][jazzy_category_map['Tags']][
-                    'children'].append('{}Tag'.format(fmt_class_prefix(data_type)))
+
+                if self.args.documentation:
+                    jazzy_cfg['custom_categories'][jazzy_category_map['Tags']][
+                        'children'].append('{}Tag'.format(fmt_class_prefix(data_type)))
 
                 # union implementation
                 with self.output_to_relative_path(os.path.join(output_path, class_name + '.m')):
