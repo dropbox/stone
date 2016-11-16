@@ -108,6 +108,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'obj_c_rsrc')
         rsrc_output_folder = os.path.join(self.target_folder_path, 'Resources')
 
+        if not os.path.exists(rsrc_output_folder):
+            os.makedirs(rsrc_output_folder)
+
         self.logger.info('Copying DBStoneValidators.{h,m} to output folder')
         shutil.copy(os.path.join(rsrc_folder, 'DBStoneValidators.h'),
                     rsrc_output_folder)
@@ -134,10 +137,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 jazzy_cfg = json.load(jazzy_file)
 
 
-        with self.output_to_relative_path('../ObjectiveDropboxOfficial_iOS/iOS/DropboxSDKImportsMobile.h'):
+        with self.output_to_relative_path('../../ObjectiveDropboxOfficial_iOS/Generated/DropboxSDKImportsMobile.h'):
             self._generate_all_imports(api, ['DropboxClientsManager+MobileAuth', 'DBOAuthMobile'])
 
-        with self.output_to_relative_path('../ObjectiveDropboxOfficial_macOS/macOS/DropboxSDKImportsDesktop.h'):
+        with self.output_to_relative_path('../../ObjectiveDropboxOfficial_macOS/Generated/DropboxSDKImportsDesktop.h'):
             self._generate_all_imports(api, ['DropboxClientsManager+DesktopAuth', 'DBOAuthDesktop'])
 
         for namespace in api.namespaces.values():
@@ -159,7 +162,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 self._generate_route_objects_h(api.route_schema, namespace)
 
         if self.args.documentation:
-            with self.output_to_relative_path('../../../.jazzy.json'):
+            with self.output_to_relative_path('../../../../.jazzy.json'):
                 self.emit_raw(json.dumps(jazzy_cfg, indent=2) + '\n')
 
     def _generate_all_imports(self, api, platform_imports):
