@@ -112,7 +112,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                     fmt_route_obj_class(namespace.name),
                     self.args.transport_client_name,
                     'DBStoneBase',
-                    'DBErrors',
+                    'DBRequestErrors',
                 ]
 
                 with self.output_to_relative_path('Routes/{}.m'.format(fmt_routes_class(namespace.name))):

@@ -100,7 +100,7 @@
 
   NSUInteger len = [format length];
 
-  int i = 0;
+  NSUInteger i = 0;
   while (i < len) {
     char ch = [format characterAtIndex:i];
     if (ch == '%') {

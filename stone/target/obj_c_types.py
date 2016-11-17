@@ -182,7 +182,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         default_imports = [
             'DropboxClient',
             'DropboxTeamClient',
-            'DBErrors',
+            'DBRequestErrors',
             'DBDelegate',
             'DBSessionData',
             'DBKeychain',
@@ -1005,7 +1005,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 fmt_route_obj_class(namespace.name),
                 'DBTransportClient',
                 'DBStoneBase',
-                'DBErrors',
+                'DBRequestErrors',
             ]
 
             imports_classes_m = import_classes + \
@@ -1028,13 +1028,13 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                         deprecated = '@{}'.format('NO')
 
                     if not is_void_type(route.result_data_type):
-                        result_type = fmt_func_call(caller=fmt_class_type(route.result_data_type),
+                        result_type = fmt_func_call(caller=fmt_class_type(route.result_data_type, suppress_ptr=True),
                                                     callee='class')
                     else:
                         result_type = 'nil'
 
                     if not is_void_type(route.error_data_type):
-                        error_type = fmt_func_call(caller=fmt_class_type(route.error_data_type),
+                        error_type = fmt_func_call(caller=fmt_class_type(route.error_data_type, suppress_ptr=True),
                                                    callee='class')
                     else:
                         error_type = 'nil'

@@ -218,7 +218,7 @@ def fmt_class_caps(name):
     return fmt_camel_upper(name).upper()
 
 
-def fmt_class_type(data_type):
+def fmt_class_type(data_type, suppress_ptr=False):
     data_type, nullable = unwrap_nullable(data_type)
 
     if is_user_defined_type(data_type):
@@ -227,10 +227,13 @@ def fmt_class_type(data_type):
         result = _primitive_table.get(
             data_type.__class__, fmt_class(data_type.name))
 
+        if suppress_ptr:
+            result = result.replace(' *', '')
+            result = result.replace('*', '')
+
         if is_list_type(data_type):
             data_type, _ = unwrap_nullable(data_type.data_type)
             result = result + '<{}>'.format(fmt_type(data_type))
-
     return result
 
 
