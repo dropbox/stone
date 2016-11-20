@@ -70,7 +70,7 @@ contents::
 
     namespace calc
 
-    route eval(Expression, Result, CalcError)
+    route eval(Expression, Result, EvalError)
 
     struct Expression
         "This expression is limited to a binary operation."
