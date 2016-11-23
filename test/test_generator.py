@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
@@ -213,3 +215,6 @@ int sq(int x) <
     def test_generator_cmdline(self):
         t = TesterCmdline(None, ['-v'])
         self.assertTrue(t.args.verbose)
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import base64
@@ -1293,3 +1295,6 @@ class TestGeneratedPython(unittest.TestCase):
     def test_struct_union_default(self):
         s = self.ns.S3()
         assert s.u == self.ns2.BaseU.z
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
@@ -124,3 +126,6 @@ class TestCLI(unittest.TestCase):
         self.assertTrue(expr.eval(MockRoute({'a': 2, 'b': 3, 'c': 4})))
         self.assertFalse(expr.eval(MockRoute({'a': 1})))
         self.assertFalse(expr.eval(MockRoute({'a': 1, 'b': 3})))
+
+if __name__ == '__main__':
+    unittest.main()

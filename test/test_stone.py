@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import datetime
@@ -3389,3 +3391,6 @@ class TestStone(unittest.TestCase):
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
         self.assertEqual(cm.exception.path, 'ns1.stone')
+
+if __name__ == '__main__':
+    unittest.main()
