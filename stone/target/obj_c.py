@@ -1,10 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
-import os
-
-from collections import namedtuple
 from contextlib import contextmanager
+from typing import Dict
 
 from stone.data_type import (
     Boolean,
@@ -70,7 +67,7 @@ undocumented = '(no description).'
 comment_prefix = '/// '
 
 
-obj_name_to_namespace = {}
+obj_name_to_namespace = {}  # type: Dict[str, str]
 
 
 class ObjCBaseGenerator(CodeGenerator):

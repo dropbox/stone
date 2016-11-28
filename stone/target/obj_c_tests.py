@@ -45,7 +45,7 @@ from stone.target.obj_c_helpers import (
     is_ptr_type,
 )
 from stone.target.obj_c import (
-    base,
+    base_file_comment,
     comment_prefix,
     ObjCBaseGenerator,
     stone_warning,
@@ -65,7 +65,7 @@ class ObjCTestGenerator(ObjCBaseGenerator):
 
     def generate(self, api):
         with self.output_to_relative_path('DbxSerializationTests.m'):
-            self.emit_raw(base)
+            self.emit_raw(base_file_comment)
             self.emit('#import <XCTest/XCTest.h>')
             self.emit()
             self._generate_testing_imports(api)
