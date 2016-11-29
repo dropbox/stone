@@ -44,7 +44,6 @@ from stone.target.obj_c import (
     base_file_comment,
     comment_prefix,
     ObjCBaseGenerator,
-    obj_name_to_namespace,
     stone_warning,
     undocumented,
 )
@@ -99,10 +98,12 @@ class ObjCGenerator(ObjCBaseGenerator):
     """Generates ObjC client base that implements route interfaces."""
     cmdline_parser = _cmdline_parser
 
+    obj_name_to_namespace = {}
+
     def generate(self, api):
         for namespace in api.namespaces.values():
             for data_type in namespace.linearize_data_types():
-                obj_name_to_namespace[
+                self.obj_name_to_namespace[
                     data_type.name] = fmt_class_prefix(data_type)
 
         for namespace in api.namespaces.values():
@@ -473,3 +474,19 @@ class ObjCGenerator(ObjCBaseGenerator):
             doc_list = []
 
         return arg_list, doc_list
+
+    def _docf(self, tag, val):
+        if tag == 'route':
+            return '`{}`'.format(fmt_func(val))
+        elif tag == 'field':
+            if '.' in val:
+                cls_name, field = val.split('.')
+                return ('`{}` in `{}`'.format(fmt_var(field), self.obj_name_to_namespace[cls_name]))
+            else:
+                return fmt_var(val)
+        elif tag in ('type', 'val', 'link'):
+            return val
+        else:
+            import pdb
+            pdb.set_trace()
+            return val

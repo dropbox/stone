@@ -67,9 +67,6 @@ undocumented = '(no description).'
 comment_prefix = '/// '
 
 
-obj_name_to_namespace = {}  # type: Dict[str, str]
-
-
 class ObjCBaseGenerator(CodeGenerator):
     """Wrapper class over Stone generator for Obj C logic."""
 
@@ -281,19 +278,3 @@ class ObjCBaseGenerator(CodeGenerator):
     def _struct_has_defaults(self, struct):
         """Returns whether the given struct has any default values."""
         return [f for f in struct.all_fields if f.has_default or is_nullable_type(f.data_type)]
-
-    def _docf(self, tag, val):
-        if tag == 'route':
-            return '`{}`'.format(fmt_func(val))
-        elif tag == 'field':
-            if '.' in val:
-                cls_name, field = val.split('.')
-                return ('`{}` in `{}`'.format(fmt_var(field), obj_name_to_namespace[cls_name]))
-            else:
-                return fmt_var(val)
-        elif tag in ('type', 'val', 'link'):
-            return val
-        else:
-            import pdb
-            pdb.set_trace()
-            return val
