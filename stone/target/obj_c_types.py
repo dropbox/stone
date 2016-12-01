@@ -704,10 +704,12 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                                  [('valueObj', '{} *'.format(struct_name))]),
                              return_type='NSDictionary *',
                              class_func=True):
+            if not struct.all_fields and not struct.has_enumerated_subtypes():
+                self.emit('#pragma unused(valueObj)')
+
             self.emit(
                 'NSMutableDictionary *jsonDict = [[NSMutableDictionary alloc] init];')
             self.emit()
-
             for field in struct.all_fields:
                 data_type, nullable = unwrap_nullable(field.data_type)
 
@@ -763,6 +765,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                                  [('valueDict', 'NSDictionary *')]),
                              return_type='{} *'.format(struct_name),
                              class_func=True):
+            if not struct.all_fields and not struct.has_enumerated_subtypes():
+                self.emit('#pragma unused(valueDict)')
+
             if not struct.has_enumerated_subtypes():
                 for field in struct.all_fields:
                     data_type, nullable = unwrap_nullable(field.data_type)
@@ -826,6 +831,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                                  [('valueObj', '{} *'.format(union_name))]),
                              return_type='NSDictionary *',
                              class_func=True):
+
+            if not union.all_fields:
+                self.emit('#pragma unused(valueObj)')
+
             self.emit(
                 'NSMutableDictionary *jsonDict = [[NSMutableDictionary alloc] init];')
             self.emit()
@@ -885,6 +894,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                                  [('valueDict', 'NSDictionary *')]),
                              return_type='{} *'.format(union_name),
                              class_func=True):
+            if not union.all_fields:
+                self.emit('#pragma unused(valueDict)')
+
             self.emit('NSString *tag = valueDict[@".tag"];')
             self.emit()
 
