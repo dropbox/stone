@@ -2,23 +2,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import argparse
 import json
-import os
-import re
-
-from contextlib import contextmanager
 
 from stone.data_type import (
-    is_list_type,
     is_nullable_type,
     is_struct_type,
-    is_user_defined_type,
     is_union_type,
     is_void_type,
     unwrap_nullable,
 )
 from stone.target.obj_c_helpers import (
     fmt_alloc_call,
-    fmt_camel,
     fmt_camel_upper,
     fmt_class,
     fmt_class_prefix,
@@ -28,17 +21,12 @@ from stone.target.obj_c_helpers import (
     fmt_func_call,
     fmt_import,
     fmt_property_str,
-    fmt_public_name,
     fmt_route_obj_class,
     fmt_route_var,
     fmt_routes_class,
-    fmt_route_type,
-    fmt_serial_obj,
     fmt_signature,
     fmt_type,
     fmt_var,
-    is_primitive_type,
-    is_ptr_type,
 )
 from stone.target.obj_c import (
     base_file_comment,
@@ -98,7 +86,7 @@ class ObjCGenerator(ObjCBaseGenerator):
     """Generates ObjC client base that implements route interfaces."""
     cmdline_parser = _cmdline_parser
 
-    obj_name_to_namespace = {}
+    obj_name_to_namespace = {}  # type: Dict[str, int]
 
     def generate(self, api):
         for namespace in api.namespaces.values():
@@ -116,7 +104,8 @@ class ObjCGenerator(ObjCBaseGenerator):
                     'DBRequestErrors',
                 ]
 
-                with self.output_to_relative_path('Routes/{}.m'.format(fmt_routes_class(namespace.name))):
+                with self.output_to_relative_path(
+                        'Routes/{}.m'.format(fmt_routes_class(namespace.name))):
                     self.emit_raw(stone_warning)
 
                     imports_classes_m = import_classes + \
@@ -126,7 +115,8 @@ class ObjCGenerator(ObjCBaseGenerator):
 
                     self._generate_routes_m(namespace)
 
-                with self.output_to_relative_path('Routes/{}.h'.format(fmt_routes_class(namespace.name))):
+                with self.output_to_relative_path(
+                        'Routes/{}.h'.format(fmt_routes_class(namespace.name))):
                     self.emit_raw(base_file_comment)
                     self.emit('#import <Foundation/Foundation.h>')
                     self.emit()
@@ -136,7 +126,9 @@ class ObjCGenerator(ObjCBaseGenerator):
                         self.args.transport_client_name,
                         'DBNilObject',
                     ]
-                    import_classes_h = import_classes_h + self._get_imports_h(self._get_namespace_route_imports(namespace, include_route_args=False, include_route_deep_args=True))
+                    import_classes_h = (import_classes_h +
+                        self._get_imports_h(self._get_namespace_route_imports(
+                            namespace, include_route_args=False, include_route_deep_args=True)))
                     self._generate_imports_h(import_classes_h)
 
                     self._generate_routes_h(namespace)
@@ -158,7 +150,6 @@ class ObjCGenerator(ObjCBaseGenerator):
         import_classes.append(self.args.transport_client_name)
         self._generate_imports_m(import_classes)
 
-
         with self.block_m(self.args.class_name):
             client_args = fmt_func_args_declaration(
                 [('client', '{} *'.format(self.args.transport_client_name))])
@@ -170,8 +161,9 @@ class ObjCGenerator(ObjCBaseGenerator):
                 with self.block_init():
                     for namespace in api.namespaces.values():
                         if namespace.routes:
-                            self.emit('_{}Routes = [[{} alloc] init:client];'.format(fmt_var(namespace.name),
-                                                                                     fmt_routes_class(namespace.name)))
+                            base_string = '_{}Routes = [[{} alloc] init:client];'
+                            self.emit(base_string.format(
+                                fmt_var(namespace.name), fmt_routes_class(namespace.name)))
 
     def _generate_client_h(self, api):
         """Generates client base header file. For each namespace, the client will
@@ -198,8 +190,9 @@ class ObjCGenerator(ObjCBaseGenerator):
                     class_doc = 'Routes within the `{}` namespace.'.format(
                         fmt_var(namespace.name))
                     self.emit_wrapped_text(class_doc, prefix=comment_prefix)
-                    self.emit(fmt_property_str(prop='{}Routes'.format(fmt_var(namespace.name)),
-                                               typ='{} * _Nonnull'.format(fmt_routes_class(namespace.name))))
+                    prop = '{}Routes'.format(fmt_var(namespace.name))
+                    typ = '{} * _Nonnull'.format(fmt_routes_class(namespace.name))
+                    self.emit(fmt_property_str(prop=prop, typ=typ))
                     self.emit()
 
             client_args = fmt_func_args_declaration(
@@ -244,18 +237,20 @@ class ObjCGenerator(ObjCBaseGenerator):
                         extra_args = [tuple(type_data[:-1])
                                       for type_data in type_data_dict[1]]
 
-                        if is_struct_type(route.arg_data_type) and self._struct_has_defaults(route.arg_data_type):
+                        if (is_struct_type(route.arg_data_type) and
+                                self._struct_has_defaults(route.arg_data_type)):
                             route_args, _ = self._get_default_route_args(
                                 namespace, route)
-                            self._generate_route_m(
-                                route, namespace, route_args, extra_args, task_type_name, func_suffix)
+                            self._generate_route_m(route, namespace, route_args,
+                                                   extra_args, task_type_name, func_suffix)
 
                         route_args, _ = self._get_route_args(namespace, route)
                         self._generate_route_m(
                             route, namespace, route_args, extra_args, task_type_name, func_suffix)
                 else:
                     task_type_name = style_to_request[route_type]
-                    if is_struct_type(route.arg_data_type) and self._struct_has_defaults(route.arg_data_type):
+                    if (is_struct_type(route.arg_data_type) and
+                            self._struct_has_defaults(route.arg_data_type)):
                         route_args, _ = self._get_default_route_args(
                             namespace, route)
                         self._generate_route_m(
@@ -265,7 +260,8 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self._generate_route_m(
                         route, namespace, route_args, [], task_type_name, '')
 
-    def _generate_route_m(self, route, namespace, route_args, extra_args, task_type_name, func_suffix):
+    def _generate_route_m(self, route, namespace, route_args,
+                          extra_args, task_type_name, func_suffix):
         """Generates route method implementation for the given route."""
         user_args = list(route_args)
 
@@ -279,9 +275,6 @@ class ObjCGenerator(ObjCBaseGenerator):
                 (name, typ.replace(' _Nonnull', '').replace(' _Nullable', '')))
             transport_args.append((name, value))
 
-        route_result_type = fmt_type(route.result_data_type, tag=False) if not is_void_type(
-            route.result_data_type) else ''
-
         with self.block_func(func='{}{}'.format(fmt_var(route.name), func_suffix),
                              args=fmt_func_args_declaration(user_args),
                              return_type='{} *'.format(task_type_name)):
@@ -291,10 +284,11 @@ class ObjCGenerator(ObjCBaseGenerator):
                 self.emit('{} *arg = {};'.format(fmt_class_prefix(route.arg_data_type),
                                                  fmt_var(route.arg_data_type.name)))
             elif not is_void_type(route.arg_data_type):
-                init_call = fmt_func_call(caller=fmt_alloc_call(caller=fmt_class_prefix(route.arg_data_type)),
-                                          callee=self._cstor_name_from_fields_names(
-                                              route_args),
-                                          args=fmt_func_args([(f[0], f[0]) for f in route_args]))
+                init_call = fmt_func_call(
+                    caller=fmt_alloc_call(caller=fmt_class_prefix(route.arg_data_type)),
+                    callee=self._cstor_name_from_fields_names(route_args),
+                    args=fmt_func_args([(f[0], f[0]) for f in route_args])
+                )
                 self.emit('{} *arg = {};'.format(fmt_class_prefix(route.arg_data_type),
                                                  init_call))
             request_call = fmt_func_call(caller='self.client',
@@ -350,19 +344,23 @@ class ObjCGenerator(ObjCBaseGenerator):
                         extra_docs = [(type_data[0], type_data[-1])
                                       for type_data in type_data_dict[1]]
 
-                        if is_struct_type(route.arg_data_type) and self._struct_has_defaults(route.arg_data_type):
+                        if (is_struct_type(route.arg_data_type) and
+                                self._struct_has_defaults(route.arg_data_type)):
                             route_args, doc_list = self._get_default_route_args(
                                 namespace, route, tag=True)
-                            self._generate_route_signature(
-                                route, namespace, route_args, extra_args, doc_list + extra_docs, task_type_name, func_suffix)
+                            self._generate_route_signature(route, namespace, route_args,
+                                                           extra_args, doc_list + extra_docs,
+                                                           task_type_name, func_suffix)
 
                         route_args, doc_list = self._get_route_args(
                             namespace, route, tag=True)
-                        self._generate_route_signature(
-                            route, namespace, route_args, extra_args, doc_list + extra_docs, task_type_name, func_suffix)
+                        self._generate_route_signature(route, namespace, route_args,
+                                                       extra_args, doc_list + extra_docs,
+                                                       task_type_name, func_suffix)
                 else:
                     task_type_name = style_to_request[route_type]
-                    if is_struct_type(route.arg_data_type) and self._struct_has_defaults(route.arg_data_type):
+                    if (is_struct_type(route.arg_data_type) and
+                            self._struct_has_defaults(route.arg_data_type)):
                         route_args, doc_list = self._get_default_route_args(
                             namespace, route, tag=True)
                         self._generate_route_signature(
@@ -373,13 +371,11 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self._generate_route_signature(
                         route, namespace, route_args, [], doc_list, task_type_name, '')
 
-    def _generate_route_signature(self, route, namespace, route_args, extra_args, doc_list, task_type_name, func_suffix):
+    def _generate_route_signature(self, route, namespace, route_args,
+                                  extra_args, doc_list, task_type_name, func_suffix):
         """Generates route method signature for the given route."""
         for name, value, typ in extra_args:
             route_args.append((name, typ))
-
-        result_type = '{} _Nullable'.format(
-            fmt_type(route.result_data_type)) if not is_void_type(route.result_data_type) else ''
 
         deprecated = 'DEPRECATED: ' if route.deprecated else ''
 
@@ -467,8 +463,9 @@ class ObjCGenerator(ObjCBaseGenerator):
                     arg_list.append(
                         (fmt_var(field.name), fmt_type(field.data_type, tag=tag)))
 
-            doc_list = [(fmt_var(f.name), self.process_doc(f.doc, self._docf))
-                        for f in data_type.fields if f.doc and not f.has_default and not is_nullable_type(f.data_type)]
+            doc_list = ([(fmt_var(f.name), self.process_doc(f.doc, self._docf))
+                for f in data_type.fields if f.doc and
+                not f.has_default and not is_nullable_type(f.data_type)])
         else:
             arg_list = []
             doc_list = []

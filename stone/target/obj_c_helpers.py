@@ -15,16 +15,11 @@ from stone.data_type import (
     UInt32,
     UInt64,
     Void,
-    is_alias,
     is_boolean_type,
-    is_float_type,
     is_list_type,
     is_numeric_type,
     is_string_type,
-    is_struct_type,
-    is_timestamp_type,
     is_tag_ref,
-    is_union_type,
     is_user_defined_type,
     is_void_type,
     unwrap_nullable,
@@ -440,7 +435,8 @@ def fmt_property(field):
         attrs.append('copy')
     base_string = '@property ({}) {} {};'
 
-    return base_string.format(', '.join(attrs), fmt_type(field.data_type, tag=True), fmt_var(field.name))
+    return base_string.format(', '.join(attrs), fmt_type(
+        field.data_type, tag=True), fmt_var(field.name))
 
 
 def fmt_import(header_file):
@@ -452,12 +448,3 @@ def fmt_property_str(prop, typ, attrs=None):
         attrs = ['nonatomic', 'readonly']
     base_string = '@property ({}) {} {};'
     return base_string.format(', '.join(attrs), typ, prop)
-
-
-def is_ptr_type(data_type):
-    data_type, _ = unwrap_nullable(data_type)
-    if data_type.__class__ in _true_primitives:
-        type_name = 'NSInteger'
-    type_name = _primitive_table.get(
-        data_type.__class__, fmt_class(data_type.name))
-    return type_name[-1] == '*' or is_struct_type(data_type) or is_list_type(data_type)

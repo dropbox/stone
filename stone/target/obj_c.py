@@ -1,32 +1,12 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from contextlib import contextmanager
-from typing import Dict
 
 from stone.data_type import (
-    Boolean,
-    Bytes,
-    DataType,
-    Float32,
-    Float64,
-    Int32,
-    Int64,
-    List,
-    String,
-    Timestamp,
-    UInt32,
-    UInt64,
-    Void,
-    is_boolean_type,
-    is_bytes_type,
     is_list_type,
-    is_string_type,
     is_struct_type,
-    is_timestamp_type,
     is_union_type,
-    is_numeric_type,
     is_nullable_type,
-    is_tag_ref,
     is_user_defined_type,
     is_void_type,
     unwrap_nullable,
@@ -36,13 +16,7 @@ from stone.target.obj_c_helpers import (
     fmt_camel_upper,
     fmt_class,
     fmt_class_prefix,
-    fmt_func,
     fmt_import,
-    fmt_obj,
-    fmt_type,
-    fmt_var,
-    is_ptr_type,
-    is_primitive_type,
 )
 
 
@@ -98,7 +72,8 @@ class ObjCBaseGenerator(CodeGenerator):
             base = fmt_class_prefix(data_type.parent_type) if (
                 data_type.parent_type and not is_union_type(data_type)) else 'NSObject'
             extend_suffix = ' : {} <{}>'.format(base, ', '.join(protocol))
-        with self.block('@interface {}{}'.format(fmt_class_prefix(data_type), extend_suffix), delim=('', '@end'), dent=0):
+        with self.block('@interface {}{}'.format(
+                fmt_class_prefix(data_type), extend_suffix), delim=('', '@end'), dent=0):
             self.emit()
             yield
 
@@ -113,7 +88,8 @@ class ObjCBaseGenerator(CodeGenerator):
             extend_suffix = ' : {} <{}>'.format(
                 ', '.join(extensions), fmt_class(protocol))
 
-        with self.block('@interface {}{}'.format(class_name, extend_suffix), delim=('', '@end'), dent=0):
+        with self.block('@interface {}{}'.format(
+                class_name, extend_suffix), delim=('', '@end'), dent=0):
             self.emit()
             yield
 
@@ -179,12 +155,9 @@ class ObjCBaseGenerator(CodeGenerator):
             for field in data_type.all_fields:
                 data_type, _ = unwrap_nullable(field.data_type)
 
-
-
                 # unpack list
                 while is_list_type(data_type):
                     data_type = data_type.data_type
-
 
                 if is_user_defined_type(data_type):
                     import_classes.append(fmt_class_prefix(data_type))
@@ -223,7 +196,10 @@ class ObjCBaseGenerator(CodeGenerator):
 
         self.emit()
 
-    def _get_namespace_route_imports(self, namespace, include_route_args=True, include_route_deep_args=False):
+    def _get_namespace_route_imports(self,
+                                     namespace,
+                                     include_route_args=True,
+                                     include_route_deep_args=False):
         result = []
 
         def _unpack_and_store_data_type(data_type):
@@ -246,7 +222,9 @@ class ObjCBaseGenerator(CodeGenerator):
                 elif not is_void_type(data_type):
                     for field in data_type.all_fields:
                         data_type, _ = unwrap_nullable(field.data_type)
-                        if is_struct_type(data_type) or is_union_type(data_type) or is_list_type(data_type):
+                        if (is_struct_type(data_type) or
+                                is_union_type(data_type) or
+                                is_list_type(data_type)):
                             _unpack_and_store_data_type(data_type)
 
             _unpack_and_store_data_type(route.result_data_type)
