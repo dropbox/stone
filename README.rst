@@ -13,7 +13,7 @@ choice.
 
 Stone is made up of several components:
 
-    1. An language for specifying APIs.
+    1. A language for specifying APIs.
     2. A command-line tool (``stone``) that takes an API specification and
        generator module, and generates output.
     3. Builtin generators: Python, Swift (more coming soon)
@@ -35,8 +35,6 @@ internally: Swift, C#, Java, Go, JavaScript, and HTML documentation.
     * `Writing a Generator <doc/generator_ref.rst>`_
     * `JSON Serializer <doc/json_serializer.rst>`_
     * `Network Protocol <doc/network_protocol.rst>`_
-
-.. _motivation:
 
 Motivation
 ==========
@@ -95,8 +93,6 @@ result types defined without relation to each other. In other words, the
 type of response does not change based on the input to the endpoint. An
 exception to this rule is afforded for error responses.
 
-.. _installation:
-
 Installation
 ============
 
@@ -127,4 +123,3 @@ If you have the ``stone`` package on your machine, but did not install it or
 add its location to your PYTHONPATH, you can use the following::
 
     $ PYTHONPATH=path/to/stone python -m stone.cli -h
-

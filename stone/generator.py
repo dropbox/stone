@@ -1,25 +1,23 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from abc import ABCMeta, abstractmethod
-import argparse
 from contextlib import contextmanager
-import logging
 import os
 import six
 import textwrap
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Sequence,
-    TypeVar,
-    Tuple,
-)
+import typing
 
-from stone.api import Api
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
+logging = importlib.import_module(str('logging'))  # type: typing.Any
+open = open  # type: typing.Any # pylint: disable=redefined-builtin
+
+from stone.api import Api  # noqa: F401 # pylint: disable=unused-import
 
 from stone.lang.tower import doc_ref_re
 from stone.data_type import (
@@ -27,10 +25,10 @@ from stone.data_type import (
 )
 
 # Generic Dict key-val types
-K = TypeVar('K')
-V = TypeVar('V')
+K = typing.TypeVar('K')
+V = typing.TypeVar('V')
 
-DelimTuple = Tuple[str, str]
+DelimTuple = typing.Tuple[typing.Text, typing.Text]
 
 def remove_aliases_from_api(api):
     for namespace in api.namespaces.values():
@@ -112,7 +110,7 @@ class Generator(object):
     preserve_aliases = False
 
     def __init__(self, target_folder_path, args):
-        # type: (str, Optional[Sequence[str]]) -> None
+        # type: (str, typing.Optional[typing.Sequence[str]]) -> None
         """
         Args:
             target_folder_path (str): Path to the folder where all generated
@@ -123,11 +121,11 @@ class Generator(object):
         self.target_folder_path = target_folder_path
         # Output is a list of strings that should be concatenated together for
         # the final output.
-        self.output = []  # type: List[str]
+        self.output = []  # type: typing.List[typing.Text]
         self.lineno = 1
         self.cur_indent = 0
 
-        self.args = None  # type: Optional[argparse.Namespace]
+        self.args = None  # type: typing.Optional[argparse.Namespace]
 
         if self.cmdline_parser:
             assert isinstance(self.cmdline_parser, argparse.ArgumentParser), (
@@ -154,7 +152,7 @@ class Generator(object):
 
     @contextmanager
     def output_to_relative_path(self, relative_path):
-        # type: (str) -> Iterator[None]
+        # type: (str) -> typing.Iterator[None]
         """
         Sets up generator so that all emits are directed towards the new file
         created at :param:`relative_path`.
@@ -175,7 +173,7 @@ class Generator(object):
         self.output = []
 
     def output_buffer_to_string(self):
-        # type: () -> str
+        # type: () -> typing.Text
         """Returns the contents of the output buffer as a string."""
         return ''.join(self.output)
 
@@ -184,7 +182,7 @@ class Generator(object):
 
     @contextmanager
     def indent(self, dent=None):
-        # type: (Optional[int]) -> Iterator[None]
+        # type: (typing.Optional[int]) -> typing.Iterator[None]
         """
         For the duration of the context manager, indentation will be increased
         by dent. Dent is in units of spaces or tabs depending on the value of
@@ -202,7 +200,7 @@ class Generator(object):
         self.cur_indent -= dent
 
     def make_indent(self):
-        # type: () -> str
+        # type: () -> typing.Text
         """
         Returns a string representing the current indentation. Indents can be
         either spaces or tabs, depending on the value of the class variable
@@ -214,7 +212,7 @@ class Generator(object):
             return ' ' * self.cur_indent
 
     def emit_raw(self, s):
-        # type: (str) -> None
+        # type: (typing.Text) -> None
         """
         Adds the input string to the output buffer. The string must end in a
         newline. It may contain any number of newline characters. No
@@ -227,7 +225,7 @@ class Generator(object):
                 'Input string to emit_raw must end with a newline.')
 
     def emit(self, s=''):
-        # type: (str) -> None
+        # type: (typing.Text) -> None
         """
         Adds indentation, then the input string, and lastly a newline to the
         output buffer. If s is an empty string (default) then an empty line is
@@ -243,10 +241,10 @@ class Generator(object):
 
     def emit_wrapped_text(
             self,
-            s,                       # type: str
-            prefix='',               # type: str
-            initial_prefix='',       # type: str
-            subsequent_prefix='',    # type: str
+            s,                       # type: typing.Text
+            prefix='',               # type: typing.Text
+            initial_prefix='',       # type: typing.Text
+            subsequent_prefix='',    # type: typing.Text
             width=80,                # type: int
             break_long_words=False,  # type: bool
             break_on_hyphens=False   # type: bool
@@ -278,8 +276,7 @@ class Generator(object):
         indent = self.make_indent()
         prefix = indent + prefix
 
-        self.emit_raw(textwrap.fill(s,  # type: ignore
-                                        # (Can be removed after github.com/python/typeshed/pull/420)
+        self.emit_raw(textwrap.fill(s,
                                     initial_indent=prefix+initial_prefix,
                                     subsequent_indent=prefix+subsequent_prefix,
                                     width=width,
@@ -289,7 +286,7 @@ class Generator(object):
 
     @classmethod
     def process_doc(cls, doc, handler):
-        # type: (str, Callable[[str, str], str]) -> str
+        # type: (str, typing.Callable[[str, str], str]) -> str
         """
         Helper for parsing documentation references in Stone docstrings and
         replacing them with more suitable annotations for the generated output.
@@ -326,9 +323,10 @@ class CodeGenerator(Generator):
     Extend this instead of :class:`Generator` when generating source code.
     Contains helper functions specific to code generation.
     """
+    # pylint: disable=abstract-method
 
     def filter_out_none_valued_keys(self, d):
-        # type: (Dict[K, V]) -> Dict[K, V]
+        # type: (typing.Dict[K, V]) -> typing.Dict[K, V]
         """Given a dict, returns a new dict with all the same key/values except
         for keys that had values of None."""
         new_d = {}
@@ -339,12 +337,12 @@ class CodeGenerator(Generator):
 
     def generate_multiline_list(
         self,
-        items,               # type: List[str]
-        before='',           # type: str
-        after='',            # type: str
+        items,               # type: typing.List[typing.Text]
+        before='',           # type: typing.Text
+        after='',            # type: typing.Text
         delim=('(', ')'),    # type: DelimTuple
         compact=True,        # type: bool
-        sep=',',             # type: str
+        sep=',',             # type: typing.Text
         skip_last_sep=False  # type: bool
     ):
         # type: (...) -> None
@@ -412,13 +410,13 @@ class CodeGenerator(Generator):
     @contextmanager
     def block(
         self,
-        before='',        # type: str
-        after='',         # type: str
+        before='',        # type: typing.Text
+        after='',         # type: typing.Text
         delim=('{','}'),  # type: DelimTuple
-        dent=None,        # type: Optional[int]
+        dent=None,        # type: typing.Optional[int]
         allman=False      # type: bool
     ):
-        # type: (...) -> Iterator[None]
+        # type: (...) -> typing.Iterator[None]
         """
         A context manager that emits configurable lines before and after an
         indented block of text.

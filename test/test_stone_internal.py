@@ -478,5 +478,6 @@ class TestStoneInternal(unittest.TestCase):
         self.assertEqual(conflict.get_examples()['default'].value,
             {'.tag': 'update_if_matching_parent_rev', 'parent_rev': 'xyz123'})
 
+
 if __name__ == '__main__':
     unittest.main()

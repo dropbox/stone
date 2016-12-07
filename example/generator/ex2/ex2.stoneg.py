@@ -9,7 +9,7 @@ class ExamplePythonGenerator(CodeGenerator):
             with self.output_to_relative_path('{}.py'.format(namespace.name)):
                 self._generate_namespace_module(namespace)
 
-    def _generate_namespace_module(self, namespace):
+    def _generate_namespace_module(self, namespace):  # pylint: disable=unused-argument
         self.emit('def noop():')
         with self.indent():
             self.emit('pass')

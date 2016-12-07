@@ -1,11 +1,15 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import json
-import os
-import re
 
-from contextlib import contextmanager
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.data_type import (
     is_struct_type,
@@ -78,7 +82,7 @@ class SwiftGenerator(SwiftBaseGenerator):
     Generates Swift client base that implements route interfaces.
 
     Examples:
-    
+
     ```
     open class ExampleClientBase {
         /// Routes within the namespace1 namespace. See Namespace1 for details.
@@ -97,7 +101,7 @@ class SwiftGenerator(SwiftBaseGenerator):
     project-specific networking client. Additionally, the `Namespace1` object would
     have as its methods all routes in the `Namespace1` namespace. A hypothetical 'copy'
     enpoding might be implemented like:
-    
+
     ```
     open func copy(fromPath fromPath: String, toPath: String) ->
                      ExampleRequestType<Namespace1.CopySerializer, Namespace1.CopyErrorSerializer> {
@@ -106,7 +110,7 @@ class SwiftGenerator(SwiftBaseGenerator):
         return client.request(route, serverArgs: serverArgs)
     }
     ```
-    
+
     Here, ExampleRequestType is a project-specific request type, parameterized by response and
     error serializers.
     """
@@ -114,7 +118,6 @@ class SwiftGenerator(SwiftBaseGenerator):
     cmdline_parser = _cmdline_parser
 
     def generate(self, api):
-        rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
         for namespace in api.namespaces.values():
             ns_class = fmt_class(namespace.name)
             if namespace.routes:
@@ -154,7 +157,7 @@ class SwiftGenerator(SwiftBaseGenerator):
         with self.block('open class {}Routes'.format(ns_class)):
             self.emit('open let client: {}'.format(self.args.transport_client_name))
             args = [('client', '{}'.format(self.args.transport_client_name))]
-            
+
             with self.function_block('init', self._func_args(args)):
                 self.emit('self.client = client')
 
@@ -239,7 +242,11 @@ class SwiftGenerator(SwiftBaseGenerator):
 
             return_args += client_args
 
-            self.emit('return client.request({})'.format(self._func_args(return_args, not_init=True)))
+            txt = 'return client.request({})'.format(
+                self._func_args(return_args, not_init=True)
+            )
+
+            self.emit(txt)
         self.emit()
 
     def _maybe_generate_deprecation_warning(self, route):
@@ -247,7 +254,6 @@ class SwiftGenerator(SwiftBaseGenerator):
             msg = '{} is deprecated.'.format(route.name)
             if route.deprecated.by:
                 msg += ' Use {}.'.format(route.deprecated.by.name)
-            args = ["'{}'".format(msg), 'DeprecationWarning']
             self.emit('@available(*, unavailable, message:"{}")'.format(msg))
 
     def _generate_route(self, namespace, route):
