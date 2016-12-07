@@ -99,7 +99,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                 import_classes = [
                     fmt_routes_class(namespace.name),
                     fmt_route_obj_class(namespace.name),
-                    self.args.transport_client_name,
+                    '{}Protocol'.format(self.args.transport_client_name),
                     'DBStoneBase',
                     'DBRequestErrors',
                 ]
@@ -123,14 +123,14 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self.emit(fmt_import('DBTasks'))
                     self.emit()
                     import_classes_h = [
-                        self.args.transport_client_name,
                         'DBNilObject',
                     ]
                     import_classes_h = (import_classes_h +
                         self._get_imports_h(self._get_namespace_route_imports(
                             namespace, include_route_args=False, include_route_deep_args=True)))
                     self._generate_imports_h(import_classes_h)
-
+                    self.emit('@protocol {};'.format(self.args.transport_client_name),)
+                    self.emit()
                     self._generate_routes_h(namespace)
 
         with self.output_to_relative_path('Client/{}.m'.format(self.args.module_name)):
@@ -147,12 +147,12 @@ class ObjCGenerator(ObjCBaseGenerator):
         import_classes = [self.args.module_name]
         import_classes += [fmt_routes_class(
             ns.name) for ns in api.namespaces.values() if ns.routes]
-        import_classes.append(self.args.transport_client_name)
+        import_classes.append('{}Protocol'.format(self.args.transport_client_name))
         self._generate_imports_m(import_classes)
 
         with self.block_m(self.args.class_name):
             client_args = fmt_func_args_declaration(
-                [('client', '{} *'.format(self.args.transport_client_name))])
+                [('client', 'id<{}> _Nonnull'.format(self.args.transport_client_name))])
             with self.block_func(func='initWithTransportClient',
                                  args=client_args,
                                  return_type='instancetype'):
@@ -175,8 +175,10 @@ class ObjCGenerator(ObjCBaseGenerator):
 
         import_classes = [fmt_routes_class(
             ns.name) for ns in api.namespaces.values() if ns.routes]
-        import_classes.append(self.args.transport_client_name)
         self._generate_imports_h(import_classes)
+        self.emit()
+        self.emit('@protocol {};'.format(self.args.transport_client_name))
+        self.emit()
 
         self.emit(comment_prefix)
         description_str = ('Base client object that contains an instance field for '
@@ -196,7 +198,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self.emit()
 
             client_args = fmt_func_args_declaration(
-                [('client', '{} * _Nonnull'.format(self.args.transport_client_name))])
+                [('client', 'id<{}> _Nonnull'.format(self.args.transport_client_name))])
 
             description_str = (
                 'Initializes the `{}` object with a networking client.')
@@ -213,7 +215,7 @@ class ObjCGenerator(ObjCBaseGenerator):
         all routes within the namespace."""
         with self.block_m(fmt_routes_class(namespace.name)):
             init_args = fmt_func_args_declaration(
-                [('client', '{} *'.format(self.args.transport_client_name))])
+                [('client', 'id<{}>'.format(self.args.transport_client_name))])
 
             with self.block_func(func='init',
                                  args=init_args,
@@ -311,11 +313,11 @@ class ObjCGenerator(ObjCBaseGenerator):
                                'route will use to submit a request.')
             self.emit_wrapped_text(description_str, prefix=comment_prefix)
             self.emit(fmt_property_str(prop='client',
-                                       typ='{} * _Nonnull'.format(self.args.transport_client_name)))
+                                       typ='id<{}> _Nonnull'.format(self.args.transport_client_name)))
             self.emit()
 
             routes_obj_args = fmt_func_args_declaration(
-                [('client', '{} * _Nonnull'.format(self.args.transport_client_name))])
+                [('client', 'id<{}> _Nonnull'.format(self.args.transport_client_name))])
 
             init_signature = fmt_signature(func='init',
                                            args=routes_obj_args,
