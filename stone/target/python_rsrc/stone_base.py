@@ -8,6 +8,8 @@ than being added to a project.
 
 from __future__ import absolute_import, unicode_literals
 
+import typing  # noqa: F401 # pylint: disable=unused-import
+
 try:
     from . import stone_validators as bv
 except (SystemError, ValueError):
@@ -17,10 +19,10 @@ except (SystemError, ValueError):
 
 
 class Union(object):
-
     # TODO(kelkabany): Possible optimization is to remove _value if a
     # union is composed of only symbols.
     __slots__ = ['_tag', '_value']
+    _tagmap = {}  # type: typing.Dict[typing.Text, bv.Validator]
 
     def __init__(self, tag, value=None):
         assert tag in self._tagmap, 'Invalid tag %r.' % tag

@@ -118,10 +118,10 @@ def fmt_type(data_type):
                                 fmt_class(data_type.name))
     else:
         result = _type_table.get(data_type.__class__, fmt_class(data_type.name))
-        
+
         if is_list_type(data_type):
-            result = result + '<{}>'.format(fmt_type(data_type.data_type))            
-    
+            result = result + '<{}>'.format(fmt_type(data_type.data_type))
+
     return result if not nullable else result + '?'
 
 

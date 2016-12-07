@@ -1,9 +1,13 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
-import json
-import six
-import sys
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.generator import CodeGenerator
 from stone.target.js_helpers import (
@@ -12,7 +16,6 @@ from stone.target.js_helpers import (
     fmt_obj,
     fmt_type,
 )
-
 
 _cmdline_parser = argparse.ArgumentParser(prog='js-client-generator')
 _cmdline_parser.add_argument(
@@ -41,7 +44,7 @@ class JavascriptClientGenerator(CodeGenerator):
     cmdline_parser = _cmdline_parser
 
     # Instance var of the current namespace being generated
-    cur_namespace = None
+    cur_namespace = None  # type: ignore # TODO: What is the type of this thing?!
 
     preserve_aliases = True
 
@@ -92,7 +95,7 @@ class JavascriptClientGenerator(CodeGenerator):
                     'return this.request("%s", arg);' % url)
         self.emit('};')
 
-    def _docf(self, tag, val):
+    def _docf(self, tag, val):  # pylint: disable=unused-argument
         """
         Callback used as the handler argument to process_docs(). This converts
         Stone doc references to JSDoc-friendly annotations.

@@ -1,6 +1,6 @@
 import abc
 import six
-from typing import Tuple
+import typing  # noqa: F401 # pylint: disable=unused-import
 
 from ply import lex, yacc
 
@@ -11,7 +11,7 @@ class FilterExprLexer(object):
         'ID',
         'LPAR',
         'RPAR',
-    )  # type: Tuple[str, ...]
+    )  # type: typing.Tuple[str, ...]
 
     # Conjunctions
     tokens += (

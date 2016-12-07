@@ -18,12 +18,13 @@ import math
 import numbers
 import re
 import six
-from typing import Optional
+import typing  # noqa: F401 # pylint: disable=unused-import
 
+# See <http://python3porting.com/differences.html#buffer>
 if six.PY3:
-    _binary_types = (bytes, memoryview)
+    _binary_types = (bytes, memoryview)  # noqa: E501,F821 # pylint: disable=undefined-variable,useless-suppression
 else:
-    _binary_types = (bytes, buffer)
+    _binary_types = (bytes, buffer)  # noqa: E501,F821 # pylint: disable=undefined-variable,useless-suppression
 
 
 class ValidationError(Exception):
@@ -106,6 +107,7 @@ class Validator(object):
 
 class Primitive(Validator):
     """A basic type that is defined by Stone."""
+    # pylint: disable=abstract-method
     pass
 
 
@@ -122,8 +124,8 @@ class Integer(Primitive):
     Do not use this class directly. Extend it and specify a 'minimum' and
     'maximum' value as class variables for a more restrictive integer range.
     """
-    minimum = None  # type: Optional[numbers.Integral]
-    maximum = None  # type: Optional[numbers.Integral]
+    minimum = None  # type: typing.Optional[numbers.Integral]
+    maximum = None  # type: typing.Optional[numbers.Integral]
 
     def __init__(self, min_value=None, max_value=None):
         """
@@ -184,8 +186,8 @@ class Real(Primitive):
     and 'maximum' value to enforce a range that's a subset of the Python float
     implementation. Python floats are doubles.
     """
-    minimum = None  # type: Optional[numbers.Real]
-    maximum = None  # type: Optional[numbers.Real]
+    minimum = None  # type: typing.Optional[numbers.Real]
+    maximum = None  # type: typing.Optional[numbers.Real]
 
     def __init__(self, min_value=None, max_value=None):
         """
@@ -347,11 +349,11 @@ class Timestamp(Primitive):
     since a native Python datetime object is preferred. The format, however,
     can and should be used by serializers."""
 
-    def __init__(self, format):
-        """format must be composed of format codes that the C standard (1989)
+    def __init__(self, fmt):
+        """fmt must be composed of format codes that the C standard (1989)
         supports, most notably in its strftime() function."""
-        assert isinstance(format, six.text_type), 'format must be a string'
-        self.format = format
+        assert isinstance(fmt, six.text_type), 'format must be a string'
+        self.format = fmt
 
     def validate(self, val):
         if not isinstance(val, datetime.datetime):
@@ -367,6 +369,7 @@ class Timestamp(Primitive):
 class Composite(Validator):
     """Validator for a type that builds on other primitive and composite
     types."""
+    # pylint: disable=abstract-method
     pass
 
 

@@ -2,10 +2,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import logging
 import os
+import typing  # noqa: F401 # pylint: disable=unused-import
 
 import ply.lex as lex
-
-from typing import Tuple
 
 class MultiToken(object):
     """Object used to monkeypatch ply.lex so that we can return multiple
@@ -56,7 +55,7 @@ class StoneLexer(object):
         else:
             r = self.lex.token()
             if isinstance(r, MultiToken):
-                self.tokens_queue.extend(r.tokens)
+                self.tokens_queue.extend(r.tokens)  # pylint: disable=no-member
                 self.last_token = self.tokens_queue.pop(0)
             else:
                 if r is None and self.cur_indent > 0:
@@ -102,7 +101,7 @@ class StoneLexer(object):
         'KEYWORD',
         'PATH',
         'DOT',
-    )  # type: Tuple[str, ...]
+    )  # type: typing.Tuple[typing.Text, ...]
 
     # Whitespace tokens
     tokens += (

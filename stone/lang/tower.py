@@ -4,6 +4,7 @@ import copy
 import inspect
 import logging
 import re
+import typing  # noqa: F401 # pylint: disable=unused-import
 
 from ..api import (
     Api,
@@ -66,7 +67,8 @@ class Environment(dict):
     # The default environment won't have a name set since it applies to all
     # namespaces. But, every time it's copied to represent the environment
     # of a specific namespace, a name should be set.
-    namespace_name = None
+    # See <https://github.com/python/mypy/issues/1833>
+    namespace_name = None  # type: typing.Any
 
 class TowerOfStone(object):
 
@@ -168,7 +170,7 @@ class TowerOfStone(object):
         """
         if len(desc) == 0 or not isinstance(desc[0], StoneNamespace):
             if self._debug:
-                self._logger.info('Description: %r' % desc)
+                self._logger.info('Description: %r', desc)
             raise InvalidSpec('First declaration in a stone must be '
                               'a namespace. Possibly caused by preceding '
                               'errors.', desc[0].lineno, desc[0].path)
@@ -420,7 +422,7 @@ class TowerOfStone(object):
 
         catch_all_field = None
         if data_type.closed:
-            if parent_type and not parent_type.closed:
+            if parent_type and not parent_type.closed:  # pylint: disable=no-member
                 # Due to the reversed super type / child type relationship for
                 # unions, a child type cannot be closed if its parent is open
                 # because the parent now has an extra field that is not
@@ -430,7 +432,7 @@ class TowerOfStone(object):
                         parent_type.name),
                     data_type._token.lineno, data_type._token.path)
         else:
-            if not parent_type or parent_type.closed:
+            if not parent_type or parent_type.closed:  # pylint: disable=no-member
                 # Create a catch-all field
                 catch_all_field = UnionField(
                     name='other', data_type=Void(), doc=None,
@@ -611,7 +613,7 @@ class TowerOfStone(object):
         assert issubclass(data_type_class, DataType), \
             'Expected stone.data_type.DataType, got %r' % data_type_class
 
-        argspec = inspect.getargspec(data_type_class.__init__)
+        argspec = inspect.getargspec(data_type_class.__init__)  # noqa: E501 # pylint: disable=deprecated-method,useless-suppression
         argspec.args.remove('self')
         num_args = len(argspec.args)
         # Unfortunately, argspec.defaults is None if there are no defaults
@@ -1007,18 +1009,18 @@ class TowerOfStone(object):
         except KeyError:
             return mk_route_schema()
 
-        if stone_cfg.routes:
-            route = stone_cfg.routes[0]
+        if stone_cfg.routes:  # pylint: disable=no-member
+            route = stone_cfg.routes[0]  # pylint: disable=no-member
             raise InvalidSpec(
                 'No routes can be defined in the stone_cfg namespace.',
                 route._token.lineno,
                 route._token.path,
             )
 
-        if not stone_cfg.data_types:
+        if not stone_cfg.data_types:  # pylint: disable=no-member
             return mk_route_schema()
 
-        for data_type in stone_cfg.data_types:
+        for data_type in stone_cfg.data_types:  # pylint: disable=no-member
             if data_type.name != 'Route':
                 raise InvalidSpec(
                     "Only a struct named 'Route' can be defined in the "
@@ -1027,4 +1029,6 @@ class TowerOfStone(object):
                     data_type._token.path,
                 )
 
+        # TODO: are we always guaranteed at least one data type?
+        # pylint: disable=undefined-loop-variable
         return data_type

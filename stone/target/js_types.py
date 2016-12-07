@@ -1,9 +1,17 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import json
 import six
 import sys
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.data_type import (
     is_user_defined_type,
@@ -87,38 +95,38 @@ class JavascriptTypesGenerator(CodeGenerator):
         """
         extra_args = {}
 
-        for extra_arg_raw in extra_args_raw:
-            def exit(m):
-                print('Invalid --extra-arg:%s: %s' % (m, extra_arg_raw),
-                      file=sys.stderr)
-                sys.exit(1)
+        def die(m, extra_arg_raw):
+            print('Invalid --extra-arg:%s: %s' % (m, extra_arg_raw),
+                  file=sys.stderr)
+            sys.exit(1)
 
+        for extra_arg_raw in extra_args_raw:
             try:
                 extra_arg = json.loads(extra_arg_raw)
             except ValueError as e:
-                exit(str(e))
+                die(str(e), extra_arg_raw)
 
             # Validate extra_arg JSON blob
             if 'match' not in extra_arg:
-                exit('No match key')
+                die('No match key', extra_arg_raw)
             elif (not isinstance(extra_arg['match'], list) or
                       len(extra_arg['match']) != 2):
-                exit('match key is not a list of two strings')
+                die('match key is not a list of two strings', extra_arg_raw)
             elif (not isinstance(extra_arg['match'][0], six.text_type) or
                       not isinstance(extra_arg['match'][1], six.text_type)):
                 print(type(extra_arg['match'][0]))
-                exit('match values are not strings')
+                die('match values are not strings', extra_arg_raw)
             elif 'arg_name' not in extra_arg:
-                exit('No arg_name key')
+                die('No arg_name key', extra_arg_raw)
             elif not isinstance(extra_arg['arg_name'], six.text_type):
-                exit('arg_name is not a string')
+                die('arg_name is not a string', extra_arg_raw)
             elif 'arg_type' not in extra_arg:
-                exit('No arg_type key')
+                die('No arg_type key', extra_arg_raw)
             elif not isinstance(extra_arg['arg_type'], six.text_type):
-                exit('arg_type is not a string')
+                die('arg_type is not a string', extra_arg_raw)
             elif ('arg_docstring' in extra_arg and
                       not isinstance(extra_arg['arg_docstring'], six.text_type)):
-                exit('arg_docstring is not a string')
+                die('arg_docstring is not a string', extra_arg_raw)
 
             attr_key, attr_val = extra_arg['match'][0], extra_arg['match'][1]
 
@@ -150,53 +158,70 @@ class JavascriptTypesGenerator(CodeGenerator):
         elif is_union_type(data_type):
             self._generate_union(data_type)
 
-    def _emit_jsdoc_header(self, doc = None):
+    def _emit_jsdoc_header(self, doc=None):
         self.emit()
         self.emit('/**')
         if doc:
-            self.emit_wrapped_text(self.process_doc(doc, self._docf), prefix = ' * ')
+            self.emit_wrapped_text(self.process_doc(doc, self._docf), prefix=' * ')
 
-    def _generate_struct(self, struct_type, extra_parameters = [], nameOverride = None):
+    def _generate_struct(self, struct_type, extra_parameters=None, nameOverride=None):
         """
         Emits a JSDoc @typedef for a struct.
         """
+        extra_parameters = extra_parameters if extra_parameters is not None else []
         self._emit_jsdoc_header(struct_type.doc)
-        self.emit(' * @typedef {Object} %s' % (nameOverride if nameOverride else fmt_type_name(struct_type)))
+        self.emit(
+            ' * @typedef {Object} %s' % (
+                nameOverride if nameOverride else fmt_type_name(struct_type)
+            )
+        )
 
-        # Some structs can explicitly list their subtypes. These structs have a .tag field that indicate
-        # which subtype they are.
+        # Some structs can explicitly list their subtypes. These structs
+        # have a .tag field that indicate which subtype they are.
         if struct_type.is_member_of_enumerated_subtypes_tree():
             if struct_type.has_enumerated_subtypes():
-                # This struct is the parent to multiple subtypes. Determine all of the possible
-                # values of the .tag property.
+                # This struct is the parent to multiple subtypes.
+                # Determine all of the possible values of the .tag
+                # property.
                 tag_values = []
                 for tags, _ in struct_type.get_all_subtypes_with_tags():
                     for tag in tags:
                         tag_values.append('"%s"' % tag)
 
                 jsdoc_tag_union = fmt_jsdoc_union(tag_values)
-                self.emit_wrapped_text('@property {%s} .tag - Tag identifying the subtype variant.' % jsdoc_tag_union)
+                txt = '@property {%s} .tag - Tag identifying the subtype variant.' % \
+                    jsdoc_tag_union
+                self.emit_wrapped_text(txt)
             else:
-                # This struct is a particular subtype. Find the applicable .tag value from the parent
-                # type, which may be an arbitrary number of steps up the inheritance hierarchy.
-                previous = struct_type
+                # This struct is a particular subtype. Find the applicable
+                # .tag value from the parent type, which may be an
+                # arbitrary number of steps up the inheritance hierarchy.
                 parent = struct_type.parent_type
                 while not parent.has_enumerated_subtypes():
-                    previous = parent
                     parent = parent.parent_type
-                # parent now contains the closest parent type in the inheritance hierarchy that has
-                # enumerated subtypes. Determine which subtype this is.
+                # parent now contains the closest parent type in the
+                # inheritance hierarchy that has enumerated subtypes.
+                # Determine which subtype this is.
                 for subtype in parent.get_enumerated_subtypes():
                     if subtype.data_type == struct_type:
-                        self.emit_wrapped_text('@property {\'%s\'} [.tag] - Tag identifying this subtype variant. '
-                            'This field is only present when needed to discriminate between multiple possible '
-                            'subtypes.' % subtype.name)
+                        txt = '@property {\'%s\'} [.tag] - Tag identifying ' \
+                            'this subtype variant. This field is only ' \
+                            'present when needed to discriminate ' \
+                            'between multiple possible subtypes.' % \
+                            subtype.name
+                        self.emit_wrapped_text(txt)
                         break
 
         for param_name, param_type, param_docstring in extra_parameters:
             param_docstring = ' - %s' % param_docstring if param_docstring else ''
-            self.emit_wrapped_text('@property {%s} %s%s' %
-                (param_type, param_name, param_docstring), prefix = ' * ')
+            self.emit_wrapped_text(
+                '@property {%s} %s%s' % (
+                    param_type,
+                    param_name,
+                    param_docstring,
+                ),
+                prefix=' * ',
+            )
 
         # NOTE: JSDoc @typedef does not support inheritance. Using @class would be inappropriate,
         # since these are not nominal types backed by a constructor. Thus, we emit all_fields,
@@ -207,9 +232,14 @@ class JavascriptTypesGenerator(CodeGenerator):
             field_js_type = fmt_type(field_type)
             # Translate nullable types into optional properties.
             field_name = '[' + field.name + ']' if nullable else field.name
-            self.emit_wrapped_text('@property {%s} %s%s' %
-                (field_js_type, field_name, self.process_doc(field_doc, self._docf)),
-                    prefix = ' * ')
+            self.emit_wrapped_text(
+                '@property {%s} %s%s' % (
+                    field_js_type,
+                    field_name,
+                    self.process_doc(field_doc, self._docf),
+                ),
+                prefix=' * ',
+            )
 
         self.emit(' */')
 
@@ -229,12 +259,19 @@ class JavascriptTypesGenerator(CodeGenerator):
                 variant_doc = ' - Available if .tag is %s.' % variant.name
                 if variant.doc:
                     variant_doc += ' ' + variant.doc
-                self.emit_wrapped_text('@property {%s} [%s]%s' % (fmt_type(variant_data_type), variant.name, variant_doc), prefix = ' * ')
+                self.emit_wrapped_text(
+                    '@property {%s} [%s]%s' % (
+                        fmt_type(variant_data_type),
+                        variant.name,
+                        variant_doc,
+                    ),
+                    prefix=' * ',
+                )
         jsdoc_tag_union = fmt_jsdoc_union(variant_types)
         self.emit(' * @property {%s} .tag - Tag identifying the union variant.' % jsdoc_tag_union)
         self.emit(' */')
 
-    def _docf(self, tag, val):
+    def _docf(self, tag, val):  # pylint: disable=unused-argument
         """
         Callback used as the handler argument to process_docs(). This converts
         Stone doc references to JSDoc-friendly annotations.

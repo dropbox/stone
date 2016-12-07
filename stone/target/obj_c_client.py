@@ -1,7 +1,15 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import json
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.data_type import (
     is_nullable_type,
@@ -86,7 +94,7 @@ class ObjCGenerator(ObjCBaseGenerator):
     """Generates ObjC client base that implements route interfaces."""
     cmdline_parser = _cmdline_parser
 
-    obj_name_to_namespace = {}  # type: Dict[str, int]
+    obj_name_to_namespace = {}  # type: typing.Dict[str, int]
 
     def generate(self, api):
         for namespace in api.namespaces.values():
@@ -313,7 +321,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                                'route will use to submit a request.')
             self.emit_wrapped_text(description_str, prefix=comment_prefix)
             self.emit(fmt_property_str(prop='client',
-                                       typ='id<{}> _Nonnull'.format(self.args.transport_client_name)))
+                typ='id<{}> _Nonnull'.format(self.args.transport_client_name)))
             self.emit()
 
             routes_obj_args = fmt_func_args_declaration(
@@ -373,10 +381,10 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self._generate_route_signature(
                         route, namespace, route_args, [], doc_list, task_type_name, '')
 
-    def _generate_route_signature(self, route, namespace, route_args,
-                                  extra_args, doc_list, task_type_name, func_suffix):
+    def _generate_route_signature(self, route, namespace,  # pylint: disable=unused-argument
+            route_args, extra_args, doc_list, task_type_name, func_suffix):
         """Generates route method signature for the given route."""
-        for name, value, typ in extra_args:
+        for name, _, typ in extra_args:
             route_args.append((name, typ))
 
         deprecated = 'DEPRECATED: ' if route.deprecated else ''
@@ -429,7 +437,7 @@ class ObjCGenerator(ObjCBaseGenerator):
             result = ' __deprecated_msg("{}")'.format(msg)
         return result
 
-    def _get_route_args(self, namespace, route, tag=False):
+    def _get_route_args(self, namespace, route, tag=False):  # pylint: disable=unused-argument
         """Returns a list of name / value string pairs representing the arguments for
         a particular route."""
         data_type, _ = unwrap_nullable(route.arg_data_type)
@@ -454,7 +462,8 @@ class ObjCGenerator(ObjCBaseGenerator):
 
         return arg_list, doc_list
 
-    def _get_default_route_args(self, namespace, route, tag=False):
+    def _get_default_route_args(self, namespace,  # pylint: disable=unused-argument
+            route, tag=False):
         """Returns a list of name / value string pairs representing the default arguments for
         a particular route."""
         data_type, _ = unwrap_nullable(route.arg_data_type)
@@ -486,6 +495,4 @@ class ObjCGenerator(ObjCBaseGenerator):
         elif tag in ('type', 'val', 'link'):
             return val
         else:
-            import pdb
-            pdb.set_trace()
             return val

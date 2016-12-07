@@ -15,6 +15,7 @@ import math
 import numbers
 import re
 import six
+import typing  # noqa: F401 # pylint: disable=unused-import
 
 from .lang.exception import InvalidSpec
 from .lang.parser import (
@@ -102,6 +103,7 @@ class DataType(object):
 
 
 class Primitive(DataType):
+    # pylint: disable=abstract-method
 
     def check_attr_repr(self, attr_field):
         try:
@@ -116,12 +118,14 @@ class Composite(DataType):
     Composite types are any data type which can be constructed using primitive
     data types and other composite types.
     """
+    # pylint: disable=abstract-method
     pass
 
 
 class Nullable(Composite):
 
     def __init__(self, data_type):
+        super(Nullable, self).__init__()
         self.data_type = data_type
 
     def check(self, val):
@@ -181,11 +185,16 @@ class _BoundedInteger(Primitive):
     is the range of values supported by the data type.
     """
 
+    # See <https://github.com/python/mypy/issues/1833>
+    minimum = None  # type: typing.Any
+    maximum = None  # type: typing.Any
+
     def __init__(self, min_value=None, max_value=None):
         """
         A more restrictive minimum or maximum value can be specified than the
         range inherent to the defined type.
         """
+        super(_BoundedInteger, self).__init__()
         if min_value is not None:
             if not isinstance(min_value, numbers.Integral):
                 raise ParameterError('min_value must be an integral number')
@@ -256,14 +265,16 @@ class _BoundedFloat(Primitive):
     float will pass the data type range check automatically.
     """
 
-    minimum = None
-    maximum = None
+    # See <https://github.com/python/mypy/issues/1833>
+    minimum = None  # type: typing.Any
+    maximum = None  # type: typing.Any
 
     def __init__(self, min_value=None, max_value=None):
         """
         A more restrictive minimum or maximum value can be specified than the
         range inherent to the defined type.
         """
+        super(_BoundedFloat, self).__init__()
         if min_value is not None:
             if not isinstance(min_value, numbers.Real):
                 raise ParameterError('min_value must be a real number')
@@ -351,6 +362,7 @@ class Boolean(Primitive):
 class String(Primitive):
 
     def __init__(self, min_length=None, max_length=None, pattern=None):
+        super(String, self).__init__()
         if min_length is not None:
             if not isinstance(min_length, numbers.Integral):
                 raise ParameterError('min_length must be an integral number')
@@ -402,10 +414,11 @@ class String(Primitive):
 
 class Timestamp(Primitive):
 
-    def __init__(self, format):
-        if not isinstance(format, six.string_types):
+    def __init__(self, fmt):
+        super(Timestamp, self).__init__()
+        if not isinstance(fmt, six.string_types):
             raise ParameterError('format must be a string')
-        self.format = format
+        self.format = fmt
 
     def check(self, val):
         if not isinstance(val, six.string_types):
@@ -434,6 +447,7 @@ class Timestamp(Primitive):
 class List(Composite):
 
     def __init__(self, data_type, min_items=None, max_items=None):
+        super(List, self).__init__()
         self.data_type = data_type
 
         if min_items is not None and min_items < 0:
@@ -621,6 +635,7 @@ class UserDefined(Composite):
         :param token: Raw type definition from the parser.
         :type token: stone.stone.parser.StoneTypeDef
         """
+        super(UserDefined, self).__init__()
         self._name = name
         self.namespace = namespace
         self._token = token
@@ -629,6 +644,7 @@ class UserDefined(Composite):
         self.raw_doc = None
         self.doc = None
         self.fields = None
+        self.parent_type = None
         self._raw_examples = None
         self._examples = None
         self._fields_by_name = None
@@ -769,6 +785,7 @@ class Struct(UserDefined):
     """
     Defines a product type: Composed of other primitive and/or struct types.
     """
+    # pylint: disable=attribute-defined-outside-init
 
     composite_type = 'struct'
 
@@ -1222,6 +1239,7 @@ class Struct(UserDefined):
 
 class Union(UserDefined):
     """Defines a tagged union. Fields are variants."""
+    # pylint: disable=attribute-defined-outside-init
 
     composite_type = 'union'
 
@@ -1229,7 +1247,10 @@ class Union(UserDefined):
         super(Union, self).__init__(name, namespace, token)
         self.closed = closed
 
-    def set_attributes(self, doc, fields, parent_type=None, catch_all_field=None):
+    # TODO: Why is this a different signature than the parent? Is this
+    # intentional?
+    def set_attributes(self, doc, fields,  # pylint: disable=arguments-differ
+            parent_type=None, catch_all_field=None):
         """
         :param UnionField catch_all_field: The field designated as the
             catch-all. This field should be a member of the list of fields.
@@ -1320,6 +1341,8 @@ class Union(UserDefined):
                 example.lineno, example.path
             )
 
+        # TODO: are we always guaranteed at least one field?
+        # pylint: disable=undefined-loop-variable
         try:
             field.data_type.check_example(example_field)
         except InvalidSpec as e:
@@ -1402,6 +1425,8 @@ class Union(UserDefined):
                 if field.name == example_field.name:
                     break
 
+            # TODO: are we always guaranteed at least one field?
+            # pylint: disable=undefined-loop-variable
             data_type, _ = unwrap_nullable(field.data_type)
             inner_ex_val = get_json_val(data_type, example_field.value)
             if (isinstance(data_type, Struct) and
@@ -1422,6 +1447,8 @@ class Union(UserDefined):
             else:
                 raise AssertionError('No example for label %r' % label)
 
+            # TODO: are we always guaranteed at least one field?
+            # pylint: disable=undefined-loop-variable
             assert is_void_type(field.data_type)
             return Example(
                 field.name, field.doc, OrderedDict([('.tag', field.name)]))
@@ -1480,6 +1507,7 @@ class Alias(Composite):
         :param token: Raw type definition from the parser.
         :type token: stone.stone.parser.StoneTypeDef
         """
+        super(Alias, self).__init__()
         self._name = name
         self.namespace = namespace
         self._token = token

@@ -43,6 +43,7 @@ comment_prefix = '/// '
 
 class ObjCBaseGenerator(CodeGenerator):
     """Wrapper class over Stone generator for Obj C logic."""
+    # pylint: disable=abstract-method
 
     @contextmanager
     def block_m(self, class_name):
@@ -100,7 +101,8 @@ class ObjCBaseGenerator(CodeGenerator):
         self.emit('return self;')
 
     @contextmanager
-    def block_func(self, func, args=[], return_type='void', class_func=False):
+    def block_func(self, func, args=None, return_type='void', class_func=False):
+        args = args if args is not None else []
         modifier = '-' if not class_func else '+'
         base_string = '{} ({}){}:{}' if args else '{} ({}){}'
         signature = base_string.format(modifier, return_type, func, args)
@@ -121,7 +123,7 @@ class ObjCBaseGenerator(CodeGenerator):
                 import_classes.append(fmt_class_prefix(data_type.parent_type))
 
             if is_struct_type(data_type) and data_type.has_enumerated_subtypes():
-                for tags, subtype in data_type.get_all_subtypes_with_tags():
+                for _, subtype in data_type.get_all_subtypes_with_tags():
                     import_classes.append(fmt_class_prefix(subtype))
 
             for field in data_type.all_fields:
