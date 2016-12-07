@@ -11,10 +11,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import six
 
-from stone.stone.parser import StoneTypeRef
+from stone.lang.parser import StoneTypeRef
 from stone.data_type import DataType, _BoundedInteger, _BoundedFloat
 from stone.data_type import List, String, Timestamp
-from stone.data_type import Struct, Symbol, Union
+from stone.data_type import Struct, Union, Void
 from stone.generator import CodeGenerator
 
 
@@ -23,13 +23,13 @@ class UnstoneGenerator(CodeGenerator):
 
     The Stone CLI finds this class through introspection."""
 
-    def generate(self):
+    def generate(self, api):
         """Main code generator entry point."""
         # Create a file for each namespace.
-        for namespace in self.api.namespaces.values():
+        for namespace in api.namespaces.values():
             with self.output_to_relative_path('%s.stone' % namespace.name):
                 # Output a namespace header.
-                self.emit_line('namespace %s' % namespace.name)
+                self.emit('namespace %s' % namespace.name)
                 # Output all data type (struct and union) definitions.
                 for data_type in namespace.linearize_data_types():
                     self.generate_data_type(data_type)
@@ -41,52 +41,52 @@ class UnstoneGenerator(CodeGenerator):
         """Output a data type definition (a struct or union)."""
         if isinstance(data_type, Struct):
             # Output a struct definition.
-            self.emit_line('')
-            self.emit_line('struct %s' % data_type.name)
+            self.emit('')
+            self.emit('struct %s' % data_type.name)
             with self.indent():
                 if data_type.doc is not None:
-                    self.emit_line(self.format_string(data_type.doc))
+                    self.emit(self.format_string(data_type.doc))
                 for field in data_type.fields:
                     type_repr = self.format_data_type(field.data_type)
                     if not field.has_default:
-                        self.emit_line('%s %s' % (field.name, type_repr))
+                        self.emit('%s %s' % (field.name, type_repr))
                     else:
-                        self.emit_line('%s %s = %s' %
+                        self.emit('%s %s = %s' %
                                        (field.name, type_repr,
                                         self.format_value(field.default)))
                     if field.doc is not None:
                         with self.indent():
-                            self.emit_line(self.format_value(field.doc))
+                            self.emit(self.format_value(field.doc))
         elif isinstance(data_type, Union):
             # Output a union definition.
-            self.emit_line('')
-            self.emit_line('union %s' % data_type.name)
+            self.emit('')
+            self.emit('union %s' % data_type.name)
             with self.indent():
                 if data_type.doc is not None:
-                    self.emit_line(self.format_string(data_type.doc))
+                    self.emit(self.format_string(data_type.doc))
                 for field in data_type.fields:
                     name = field.name
                     # Add a star for a catch-all field.
                     # (There are two ways to recognize these.)
                     if field.catch_all or field is data_type.catch_all_field:
                         name += '*'
-                    if isinstance(field.data_type, Symbol):
-                        self.emit_line('%s' % (name))
+                    if isinstance(field.data_type, Void):
+                        self.emit('%s' % (name))
                     else:
                         type_repr = self.format_data_type(field.data_type)
-                        self.emit_line('%s %s' % (name, type_repr))
+                        self.emit('%s %s' % (name, type_repr))
                     if field.doc is not None:
                         with self.indent():
-                            self.emit_line(self.format_value(field.doc))
+                            self.emit(self.format_value(field.doc))
         else:
             # Don't know what this is.
-            self.emit_line('')
-            self.emit_line('# ??? %s' % repr(data_type))
+            self.emit('')
+            self.emit('# ??? %s' % repr(data_type))
 
     def generate_route(self, route):
         """Output a route definition."""
-        self.emit_line('')
-        self.emit_line('route %s (%s, %s, %s)' %
+        self.emit('')
+        self.emit('route %s (%s, %s, %s)' %
                        (route.name,
                         self.format_data_type(route.arg_data_type),
                         self.format_data_type(route.result_data_type),
@@ -94,7 +94,7 @@ class UnstoneGenerator(CodeGenerator):
         # Output the docstring.
         with self.indent():
             if route.doc is not None:
-                self.emit_line(self.format_string(route.doc))
+                self.emit(self.format_string(route.doc))
 
     # Table describing data types with parameters.
     _data_type_map = [

@@ -1,16 +1,11 @@
 from stone.data_type import is_struct_type
-from stone.generator import CodeGeneratorMonolingual
-from stone.target.python import (
+from stone.generator import CodeGenerator
+from stone.target.python_helpers import (
     fmt_class,
     fmt_var,
 )
 
-class ExamplePythonGenerator(CodeGeneratorMonolingual):
-
-    # PythonTargetLanguage has helper methods for formatting class, obj
-    # and variable names (some languages use underscores to separate words,
-    # others use camelcase).
-    lang = PythonTargetLanguage()
+class ExamplePythonGenerator(CodeGenerator):
 
     def generate(self, api):
         """Generates a module for each namespace."""

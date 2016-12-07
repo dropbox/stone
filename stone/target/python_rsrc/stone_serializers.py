@@ -18,18 +18,18 @@ import datetime
 import functools
 import json
 import six
-import typing  # pylint: disable=unused-import
+import typing  # noqa: F401 # pylint: disable=unused-import
 
 try:
-    from . import stone_base as bb  # pylint: disable=unused-import
+    from . import stone_base as bb  # noqa: F401 # pylint: disable=unused-import
     from . import stone_validators as bv
 except (SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bb  # type: ignore # pylint: disable=unused-import
+    import stone_validators as bb  # type: ignore # noqa: F401 # pylint: disable=unused-import
     import stone_validators as bv  # type: ignore
 
-#-------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 class StoneEncoderInterface(object):
     """
     Interface defining a stone object encoder.
@@ -54,7 +54,7 @@ class StoneEncoderInterface(object):
         """
         raise NotImplementedError
 
-#-------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 class StoneSerializerBase(StoneEncoderInterface):
 
     def __init__(self, alias_validators=None):
@@ -71,7 +71,7 @@ class StoneSerializerBase(StoneEncoderInterface):
                 raise a ``stone_validators.ValidationError`` on failure.
                 Defaults to ``None``.
         """
-        self._alias_validators = {}  # type: typing.Dict[bv.Validator, typing.Callable[[typing.Any], None]]
+        self._alias_validators = {}  # type: typing.Dict[bv.Validator, typing.Callable[[typing.Any], None]] # noqa: E501
 
         if alias_validators is not None:
             self._alias_validators.update(alias_validators)
@@ -173,11 +173,11 @@ class StoneSerializerBase(StoneEncoderInterface):
         """
         raise NotImplementedError
 
-#-------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 
     def __init__(self, alias_validators=None, for_msgpack=False, old_style=False):
-        # type: (typing.Mapping[bv.Validator, typing.Callable[[typing.Any], None]], bool, bool) -> None
+        # type: (typing.Mapping[bv.Validator, typing.Callable[[typing.Any], None]], bool, bool) -> None # noqa: E501
         """
         Args:
             alias_validators (``typing.Mapping``, optional): Passed
@@ -249,7 +249,6 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         # they've already been validated on assignment
         d = collections.OrderedDict()  # type: typing.Dict[str, typing.Any]
 
-        # pylint: disable=protected-access
         for field_name, field_validator in validator.definition._all_fields_:
             try:
                 field_value = getattr(value, field_name)
@@ -271,7 +270,6 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         return d
 
     def encode_struct_tree(self, validator, value):
-        # pylint: disable=protected-access
         assert type(value) in validator.definition._pytype_to_tag_and_subtype_, \
             '%r is not a serializable subtype of %r.' % (type(value), validator.definition)
 
@@ -293,13 +291,12 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         return d
 
     def encode_union(self, validator, value):
-        # pylint: disable=protected-access
         if value._tag is None:
             raise bv.ValidationError('no tag set')
 
         field_validator = validator.definition._tagmap[value._tag]
         is_none = isinstance(field_validator, bv.Void) \
-                or (isinstance(field_validator, bv.Nullable) \
+                or (isinstance(field_validator, bv.Nullable)
                     and value._value is None)
 
         def encode_sub(sub_validator, sub_value, parent_tag):
@@ -345,7 +342,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                     (value._tag, encoded_val),
                 ))
 
-#-------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
 
     def encode(self, validator, value):
@@ -544,7 +541,6 @@ def _decode_struct(
                                  bv.generic_type_name(obj))
     if strict:
         for key in obj:
-            # pylint: disable=protected-access
             if (key not in data_type.definition._all_field_names_ and
                     not key.startswith('.tag')):
                 raise bv.ValidationError("unknown field '%s'" % key)
@@ -856,6 +852,7 @@ def _make_stone_friendly(
     if alias_validators is not None and data_type in alias_validators:
         alias_validators[data_type](ret)
     return ret
+
 
 try:
     import msgpack

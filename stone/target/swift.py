@@ -1,8 +1,5 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
-import os
-
 from contextlib import contextmanager
 
 from stone.data_type import (
@@ -19,17 +16,10 @@ from stone.data_type import (
     UInt32,
     UInt64,
     Void,
-    is_boolean_type,
-    is_bytes_type,
     is_list_type,
-    is_string_type,
-    is_struct_type,
     is_timestamp_type,
     is_union_type,
-    is_nullable_type,
-    is_numeric_type,
     is_user_defined_type,
-    is_void_type,
     unwrap_nullable,
 )
 from stone.generator import CodeGenerator
@@ -80,6 +70,7 @@ undocumented = '(no description)'
 
 class SwiftBaseGenerator(CodeGenerator):
     """Wrapper class over Stone generator for Swift logic."""
+    # pylint: disable=abstract-method
 
     @contextmanager
     def function_block(self, func, args, return_type=None):
@@ -99,7 +90,7 @@ class SwiftBaseGenerator(CodeGenerator):
             # `Bool = True` is a type, hence this check.
             if first and force_first and '=' not in v:
                 k = "{} {}".format(k, k)
-            
+
             if first and v is not None and not_init:
                 out.append('{}'.format(v))
             elif v is not None:
@@ -128,7 +119,7 @@ class SwiftBaseGenerator(CodeGenerator):
         with self.block('open class {}{}'.format(name, extend_suffix)):
             yield
 
-    def _struct_init_args(self, data_type, namespace=None):
+    def _struct_init_args(self, data_type, namespace=None):  # pylint: disable=unused-argument
         args = []
         for field in data_type.all_fields:
             name = fmt_var(field.name)
@@ -173,9 +164,9 @@ def fmt_serial_type(data_type):
                                 fmt_class(data_type.name))
     else:
         result = _serial_type_table.get(data_type.__class__, fmt_class(data_type.name))
-        
+
         if is_list_type(data_type):
-            result = result + '<{}>'.format(fmt_serial_type(data_type.data_type))        
+            result = result + '<{}>'.format(fmt_serial_type(data_type.data_type))
 
     return result if not nullable else 'NullableSerializer'
 

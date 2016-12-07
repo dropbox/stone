@@ -4,7 +4,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import base64
 import datetime
-import imp
 import json
 import shutil
 import six
@@ -28,8 +27,10 @@ class TestDropInModules(unittest.TestCase):
     def mk_validator_testers(self, validator):
         def p(i):
             validator.validate(i)
+
         def f(i):
             self.assertRaises(bv.ValidationError, validator.validate, i)
+
         return p, f  # 'p(input)' if you expect it to pass, 'f(input)' if you expect it to fail.
 
     def test_string_validator(self):
@@ -116,19 +117,25 @@ class TestDropInModules(unittest.TestCase):
 
     def test_timestamp_validator(self):
         class UTC(datetime.tzinfo):
-            def utcoffset(self, dt):
+            def utcoffset(self, dt):  # pylint: disable=unused-argument,useless-suppression
                 return datetime.timedelta(0)
-            def tzname(self, dt):
+
+            def tzname(self, dt):  # pylint: disable=unused-argument,useless-suppression
                 return 'UTC'
-            def dst(self, dt):
+
+            def dst(self, dt):  # pylint: disable=unused-argument,useless-suppression
                 return datetime.timedelta(0)
+
         class PST(datetime.tzinfo):
-            def utcoffset(self, dt):
+            def utcoffset(self, dt):  # pylint: disable=unused-argument,useless-suppression
                 return datetime.timedelta(-8)
-            def tzname(self, dt):
+
+            def tzname(self, dt):  # pylint: disable=unused-argument,useless-suppression
                 return 'PST'
-            def dst(self, dt):
+
+            def dst(self, dt):  # pylint: disable=unused-argument,useless-suppression
                 return datetime.timedelta(0)
+
         t = bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000')
         self.assertRaises(bv.ValidationError, lambda: t.validate('abcd'))
         now = datetime.datetime.utcnow()
@@ -201,10 +208,13 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Nullable(bv.String()), u'abc'), json.dumps('abc'))
 
     def test_json_encoder_union(self):
+        # pylint: disable=attribute-defined-outside-init
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
+
         class U(object):
+            # pylint: disable=no-member
             _tagmap = {'a': bv.Int64(),
                        'b': bv.Void(),
                        'c': bv.Struct(S),
@@ -212,13 +222,17 @@ class TestDropInModules(unittest.TestCase):
                        'e': bv.Nullable(bv.Int64()),
                        'f': bv.Nullable(bv.Struct(S))}
             _tag = None
+
             def __init__(self, tag, value=None):
                 self._tag = tag
                 self._value = value
+
             def get_a(self):
                 return self._a
+
             def get_c(self):
                 return self._c
+
             def get_d(self):
                 return self._d
 
@@ -274,22 +288,29 @@ class TestDropInModules(unittest.TestCase):
                          json.dumps({'f': {'f': 'hello'}}))
 
     def test_json_encoder_error_messages(self):
+        # pylint: disable=attribute-defined-outside-init
         class S3(object):
             _all_field_names_ = {'j'}
             _all_fields_ = [('j', bv.UInt64(max_value=10))]
+
         class S2(object):
             _all_field_names_ = {'i'}
             _all_fields_ = [('i', bv.Struct(S3))]
+
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.Struct(S2))]
+
         class U(object):
+            # pylint: disable=no-member
             _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
             _catch_all = None
+
             def __init__(self, tag, value=None):
                 self._tag = tag
                 self._value = value
+
             def get_t(self):
                 return self._t
 
@@ -363,15 +384,19 @@ class TestDropInModules(unittest.TestCase):
             _all_fields_ = [('f', bv.String()),
                             ('g', bv.Nullable(bv.String()))]
             _g = None
+
             @property
             def f(self):
                 return self._f
+
             @f.setter
             def f(self, val):
-                self._f = val
+                self._f = val  # pylint: disable=attribute-defined-outside-init
+
             @property
             def g(self):
                 return self._g
+
             @g.setter
             def g(self, val):
                 self._g = val
@@ -395,6 +420,7 @@ class TestDropInModules(unittest.TestCase):
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
+
         class U(object):
             _tagmap = {'a': bv.Int64(),
                        'b': bv.Void(),
@@ -405,16 +431,27 @@ class TestDropInModules(unittest.TestCase):
                        'g': bv.Void()}
             _catch_all = 'g'
             _tag = None
+
             def __init__(self, tag, value=None):
                 self._tag = tag
                 self._value = value
+
             def get_a(self):
                 return self._value
+
             def get_c(self):
                 return self._value
+
             def get_d(self):
                 return self._value
+
         U.b = U('b')
+
+        # TODO: When run with Python 3, pylint thinks `u` is a `datetime`
+        # object. This results in spurious `no-member` errors, which we
+        # choose to ignore here (for now). This does not happen when
+        # running pylint with Python 2 (hence the useless-suppression).
+        # pylint: disable=no-member,useless-suppression
 
         # Test primitive variant
         u = json_decode(bv.Union(U), json.dumps({'a': 64}), old_style=True)
@@ -477,19 +514,24 @@ class TestDropInModules(unittest.TestCase):
         class S3(object):
             _all_field_names_ = {'j'}
             _all_fields_ = [('j', bv.UInt64(max_value=10))]
+
         class S2(object):
             _all_field_names_ = {'i'}
             _all_fields_ = [('i', bv.Struct(S3))]
+
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.Struct(S2))]
+
         class U(object):
             _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
             _catch_all = None
+
             def __init__(self, tag, value=None):
                 self._tag = tag
                 self._value = value
+
             def get_t(self):
                 return self._value
 
@@ -1295,6 +1337,7 @@ class TestGeneratedPython(unittest.TestCase):
     def test_struct_union_default(self):
         s = self.ns.S3()
         assert s.u == self.ns2.BaseU.z
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -127,5 +127,6 @@ class TestCLI(unittest.TestCase):
         self.assertFalse(expr.eval(MockRoute({'a': 1})))
         self.assertFalse(expr.eval(MockRoute({'a': 1, 'b': 3})))
 
+
 if __name__ == '__main__':
     unittest.main()

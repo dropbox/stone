@@ -21,7 +21,7 @@ install_reqs = [
 ]
 
 with open('LICENSE') as f:
-    license = f.read()
+    LICENSE = f.read()
 
 dist = setup(
     name='stone',
@@ -33,7 +33,7 @@ dist = setup(
     maintainer_email='dev-platform@dropbox.com',
     url='https://github.com/dropbox/stone',
     install_requires=install_reqs,
-    license=license,
+    license=LICENSE,
     zip_safe=False,
     packages=['stone',
               'stone.lang',

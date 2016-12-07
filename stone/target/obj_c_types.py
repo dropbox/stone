@@ -1,12 +1,19 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import json
 import os
 import shutil
 
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
+
 from stone.data_type import (
-    is_boolean_type,
     is_list_type,
     is_nullable_type,
     is_numeric_type,
@@ -495,7 +502,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                             fmt_var(field.name), fmt_var(field.name)))
             self.emit()
 
-    def _generate_union_cstor_signatures(self, union, fields):
+    def _generate_union_cstor_signatures(self, union, fields):  # pylint: disable=unused-argument
         """Emits union constructor signatures to be used in the union's header file."""
         for field in fields:
             args = self._cstor_args_from_fields(
@@ -819,9 +826,6 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
         self.emit()
 
-    def is_primitive_type(data_type):
-        return is_string_type(data_type) or is_boolean_type(data_type) or is_numeric_type(data_type)
-
     def _generate_union_serializer(self, union):
         """Emits the serialize method for the serialization object for the given union."""
         union_name = fmt_class_prefix(union)
@@ -1066,7 +1070,8 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                         self.emit('return {};'.format(route_name))
                     self.emit()
 
-    def _generate_route_objects_h(self, route_schema, namespace):
+    def _generate_route_objects_h(self, route_schema,  # pylint: disable=unused-argument
+            namespace):
         """Emits header files for Route objects which encapsulate information
          regarding each route. These objects are passed as parameters when route calls are made."""
         output_path = 'Routes/RouteObjects/{}.h'.format(fmt_route_obj_class(namespace.name))

@@ -91,7 +91,7 @@ def fmt_jsdoc_union(type_strings):
     """
     Returns a JSDoc union of the given type strings.
     """
-    return '(' + '|'.join(type_strings) + ')' if len(type_strings) > 1 else type_strings[0];
+    return '(' + '|'.join(type_strings) + ')' if len(type_strings) > 1 else type_strings[0]
 
 
 def fmt_func(name):

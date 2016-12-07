@@ -4,10 +4,19 @@ Code generator for Python.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import os
 import re
 import shutil
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
+
 from stone.data_type import (
     is_alias,
     is_boolean_type,

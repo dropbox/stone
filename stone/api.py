@@ -1,31 +1,36 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-from typing import (
-    Dict,
-    List,
-    Optional,
-    Union,
-    cast,
-)
 
 from collections import OrderedDict
-from distutils.version import StrictVersion
+# See <https://github.com/PyCQA/pylint/issues/73>
+from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 import six
+import typing
 
 from stone.data_type import (
-    Alias,
     List as DataTypeList,
     Nullable,
-    Struct,
-    UserDefined,
     doc_unwrap,
     is_alias,
     is_composite_type,
     is_list_type,
     is_nullable_type,
 )
-from stone.lang.parser import StoneRouteDef
 
-NamespaceDict = Dict[str, 'ApiNamespace']
+from stone.data_type import (  # noqa: F401 # pylint: disable=unused-import
+    Alias,
+    Struct,
+    UserDefined,
+)
+
+from stone.lang.parser import StoneRouteDef  # noqa: F401 # pylint: disable=unused-import
+
+# TODO: This can be changed back to a single declaration with a unicode
+# literal after <https://github.com/python/mypy/pull/2516> makes it into a
+# PyPi release
+if six.PY3:
+    NamespaceDict = typing.Dict[str, 'ApiNamespace']
+else:
+    NamespaceDict = typing.Dict[str, b'ApiNamespace']
 
 class Api(object):
     """
@@ -35,7 +40,7 @@ class Api(object):
         # type: (str) -> None
         self.version = StrictVersion(version)
         self.namespaces = OrderedDict()  # type: NamespaceDict
-        self.route_schema = None  # type: Optional[Struct]
+        self.route_schema = None  # type: typing.Optional[Struct]
 
     def ensure_namespace(self, name):
         # type: (str) -> ApiNamespace
@@ -89,14 +94,14 @@ class ApiNamespace(object):
     def __init__(self, name):
         # type: (str) -> None
         self.name = name
-        self.doc = None                 # type: Optional[six.text_type]
-        self.routes = []                # type: List[ApiRoute]
-        self.route_by_name = {}         # type: Dict[str, ApiRoute]
-        self.data_types = []            # type: List[UserDefined]
-        self.data_type_by_name = {}     # type: Dict[str, UserDefined]
-        self.aliases = []               # type: List[Alias]
-        self.alias_by_name = {}         # type: Dict[str, Alias]
-        self._imported_namespaces = {}  # type: Dict[ApiNamespace, _ImportReason]
+        self.doc = None                 # type: typing.Optional[six.text_type]
+        self.routes = []                # type: typing.List[ApiRoute]
+        self.route_by_name = {}         # type: typing.Dict[str, ApiRoute]
+        self.data_types = []            # type: typing.List[UserDefined]
+        self.data_type_by_name = {}     # type: typing.Dict[str, UserDefined]
+        self.aliases = []               # type: typing.List[Alias]
+        self.alias_by_name = {}         # type: typing.Dict[str, Alias]
+        self._imported_namespaces = {}  # type: typing.Dict[ApiNamespace, _ImportReason]
 
     def add_doc(self, docstring):
         # type: (six.text_type) -> None
@@ -154,7 +159,7 @@ class ApiNamespace(object):
             reason.data_type = True
 
     def linearize_data_types(self):
-        # type: () -> List[UserDefined]
+        # type: () -> typing.List[UserDefined]
         """
         Returns a list of all data types used in the namespace. Because the
         inheritance of data types can be modeled as a DAG, the list will be a
@@ -163,7 +168,7 @@ class ApiNamespace(object):
         defined in the correct order.
         """
         linearized_data_types = []
-        seen_data_types = set()  # type: Set[UserDefined]
+        seen_data_types = set()  # type: typing.Set[UserDefined]
 
         def add_data_type(data_type):
             # type: (UserDefined) -> None
@@ -183,14 +188,14 @@ class ApiNamespace(object):
         return linearized_data_types
 
     def linearize_aliases(self):
-        # type: () -> List[Alias]
+        # type: () -> typing.List[Alias]
         """
         Returns a list of all aliases used in the namespace. The aliases are
         ordered to ensure that if they reference other aliases those aliases
         come earlier in the list.
         """
         linearized_aliases = []
-        seen_aliases = set()  # type: Set[Alias]
+        seen_aliases = set()  # type: typing.Set[Alias]
 
         def add_alias(alias):
             # type: (Alias) -> None
@@ -209,19 +214,19 @@ class ApiNamespace(object):
         return linearized_aliases
 
     def get_route_io_data_types(self):
-        # type: () -> List[UserDefined]
+        # type: () -> typing.List[UserDefined]
         """
         Returns a list of all user-defined data types that are referenced as
         either an argument, result, or error of a route. If a List or Nullable
         data type is referenced, then the contained data type is returned
         assuming it's a user-defined type.
         """
-        data_types = set()  # type: Set[UserDefined]
+        data_types = set()  # type: typing.Set[UserDefined]
         for route in self.routes:
             for dtype in (route.arg_data_type, route.result_data_type,
                           route.error_data_type):
                 while is_list_type(dtype) or is_nullable_type(dtype):
-                    dtype_as_list = cast(Union[DataTypeList, Nullable], dtype)
+                    dtype_as_list = typing.cast(typing.Union[DataTypeList, Nullable], dtype)
                     dtype = dtype_as_list.data_type
                 if is_composite_type(dtype) or is_alias(dtype):
                     data_types.add(dtype)
@@ -229,7 +234,7 @@ class ApiNamespace(object):
         return sorted(data_types, key=lambda dt: dt.name)
 
     def get_imported_namespaces(self, must_have_imported_data_type=False):
-        # type: (bool) -> List[ApiNamespace]
+        # type: (bool) -> typing.List[ApiNamespace]
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and a data type is
@@ -251,7 +256,7 @@ class ApiNamespace(object):
         return imported_namespaces
 
     def get_namespaces_imported_by_route_io(self):
-        # type: () -> List[ApiNamespace]
+        # type: () -> typing.List[ApiNamespace]
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and has a data type
@@ -277,7 +282,7 @@ class ApiNamespace(object):
 
     def __repr__(self):
         # type: () -> str
-        return 'ApiNamespace({!r})'.format(self.name)
+        return str('ApiNamespace({!r})').format(self.name)
 
 
 class ApiRoute(object):
@@ -336,7 +341,7 @@ class ApiRoute(object):
 class DeprecationInfo(object):
 
     def __init__(self, by=None):
-        # type: (Optional[ApiRoute]) -> None
+        # type: (typing.Optional[ApiRoute]) -> None
         """
         :param ApiRoute by: The route that replaces this deprecated one.
         """

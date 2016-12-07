@@ -1,11 +1,19 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import json
 import os
 import shutil
 
 from contextlib import contextmanager
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.data_type import (
     is_list_type,
@@ -60,7 +68,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             self.toPath = toPath
         }
         open var description: String {
-            return "\(SerializeUtil.prepareJSONForSerialization(
+            return "\\(SerializeUtil.prepareJSONForSerialization(
                 CopyArgSerializer().serialize(self)))"
         }
     }
@@ -74,19 +82,19 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
         case Other
 
         open var description: String {
-            return "\(SerializeUtil.prepareJSONForSerialization(
+            return "\\(SerializeUtil.prepareJSONForSerialization(
                 CopyErrorSerializer().serialize(self)))"
         }
     }
     ```
 
     Argument serializer (error serializer not listed):
-    
+
     ```
     open class CopyArgSerializer: JSONSerializer {
         public init() { }
         open func serialize(value: CopyArg) -> JSON {
-            let output = [ 
+            let output = [
             "from_path": Serialization.serialize(value.fromPath),
             "to_path": Serialization.serialize(value.toPath),
             ]
@@ -177,12 +185,12 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
 
             with self.block('{} description: String'.format(decl)):
                 cls = fmt_class(data_type.name)+'Serializer'
-                self.emit('return "\(SerializeUtil.prepareJSONForSerialization' +
+                self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
                           '({}().serialize(self)))"'.format(cls))
 
         self._generate_struct_class_serializer(namespace, data_type)
 
-    def _generate_struct_init(self, namespace, data_type):
+    def _generate_struct_init(self, namespace, data_type):  # pylint: disable=unused-argument
         # init method
         args = self._struct_init_args(data_type)
         if data_type.parent_type and not data_type.fields:
@@ -223,7 +231,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             )
         elif is_string_type(data_type):
             pat = data_type.pattern if data_type.pattern else None
-            pat = pat.encode('unicode_escape').replace("\"", "\\\"") if pat else pat                
+            pat = pat.encode('unicode_escape').replace("\"", "\\\"") if pat else pat
             v = "stringValidator({})".format(
                 self._func_args([
                     ("minLength", data_type.min_length),
@@ -238,7 +246,8 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             v = "nullableValidator({})".format(v)
         return v
 
-    def _generate_enumerated_subtype_serializer(self, namespace, data_type):
+    def _generate_enumerated_subtype_serializer(self, namespace,  # pylint: disable=unused-argument
+            data_type):
         with self.block('switch value'):
             for tags, subtype in data_type.get_all_subtypes_with_tags():
                 assert len(tags) == 1, tags
@@ -250,30 +259,32 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 ))
 
                 with self.indent():
-                    with self.block('for (k, v) in Serialization.getFields({}.serialize({}))'.format(
-                        fmt_serial_obj(subtype), tagvar
-                    )):
+                    block_txt = 'for (k, v) in Serialization.getFields({}.serialize({}))'.format(
+                        fmt_serial_obj(subtype),
+                        tagvar,
+                    )
+                    with self.block(block_txt):
                         self.emit('output[k] = v')
                     self.emit('output[".tag"] = .str("{}")'.format(tag))
             self.emit('default: fatalError("Tried to serialize unexpected subtype")')
 
     def _generate_struct_base_class_deserializer(self, namespace, data_type):
-            args = []
-            for field in data_type.all_fields:
-                var = fmt_var(field.name)
-                value = 'dict["{}"]'.format(field.name)
-                self.emit('let {} = {}.deserialize({} ?? {})'.format(
-                    var,
-                    fmt_serial_obj(field.data_type),
-                    value,
-                    fmt_default_value(namespace, field) if field.has_default else '.null'
-                ))
-
-                args.append((var, var))
-            self.emit('return {}({})'.format(
-                fmt_class(data_type.name),
-                self._func_args(args)
+        args = []
+        for field in data_type.all_fields:
+            var = fmt_var(field.name)
+            value = 'dict["{}"]'.format(field.name)
+            self.emit('let {} = {}.deserialize({} ?? {})'.format(
+                var,
+                fmt_serial_obj(field.data_type),
+                value,
+                fmt_default_value(namespace, field) if field.has_default else '.null'
             ))
+
+            args.append((var, var))
+        self.emit('return {}({})'.format(
+            fmt_class(data_type.name),
+            self._func_args(args)
+        ))
 
     def _generate_enumerated_subtype_deserializer(self, namespace, data_type):
         self.emit('let tag = Serialization.getTag(dict)')
@@ -322,7 +333,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                     with self.indent():
                         self.emit('fatalError("Type error deserializing")')
 
-    def _format_tag_type(self, namespace, data_type):
+    def _format_tag_type(self, namespace, data_type):  # pylint: disable=unused-argument
         if is_void_type(data_type):
             return ''
         else:
@@ -348,7 +359,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             self.emit()
             with self.block('public var description: String'):
                 cls = class_type+'Serializer'
-                self.emit('return "\(SerializeUtil.prepareJSONForSerialization' +
+                self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
                           '({}().serialize(self)))"'.format(cls))
 
         self._generate_union_serializer(data_type)
@@ -413,7 +424,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                                         self._tag_type(data_type, data_type.catch_all_field)
                                     ))
                                 else:
-                                    self.emit('fatalError("Unknown tag \(tag)")')
+                                    self.emit('fatalError("Unknown tag \\(tag)")')
                     self.emit("default:")
                     with self.indent():
 

@@ -15,13 +15,14 @@ from stone.generator import (
 class GeneratorException(Exception):
     """Saves the traceback of an exception raised by a generator."""
 
-    def __init__(self, generator_name, traceback):
+    def __init__(self, generator_name, tb):
         """
         :type generator_name: str
-        :type traceback: str
+        :type tb: str
         """
+        super(GeneratorException, self).__init__()
         self.generator_name = generator_name
-        self.traceback = traceback
+        self.traceback = tb
 
 
 class Compiler(object):
@@ -92,7 +93,7 @@ class Compiler(object):
         Returns True if the file name matches the format of a stone generator,
         ie. its inner extension of "stoneg". For example: xyz.stoneg.py
         """
-        path_without_ext, first_ext = os.path.splitext(path)
+        path_without_ext, _ = os.path.splitext(path)
         _, second_ext = os.path.splitext(path_without_ext)
         return second_ext == cls.generator_extension
 

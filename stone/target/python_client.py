@@ -1,7 +1,15 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import re
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.data_type import (
     is_nullable_type,
@@ -73,6 +81,7 @@ _cmdline_parser.add_argument(
 
 
 class PythonClientGenerator(CodeGenerator):
+    # pylint: disable=attribute-defined-outside-init
 
     cmdline_parser = _cmdline_parser
 
@@ -171,7 +180,7 @@ class PythonClientGenerator(CodeGenerator):
         with self.indent():
             extra_request_args = None
             extra_return_arg = None
-            footer=None
+            footer = None
             if request_binary_body:
                 extra_request_args = [('f',
                                        'bytes',
@@ -212,7 +221,7 @@ class PythonClientGenerator(CodeGenerator):
                     before='arg = {}.{}'.format(
                         arg_data_type.namespace.name,
                         fmt_class(arg_data_type.name)),
-                    )
+                )
             elif not is_union_type(arg_data_type):
                 raise AssertionError('Unhandled request type %r' %
                                      arg_data_type)
@@ -287,7 +296,12 @@ class PythonClientGenerator(CodeGenerator):
             if route.deprecated.by:
                 msg += ' Use {}.'.format(route.deprecated.by.name)
             args = ["'{}'".format(msg), 'DeprecationWarning']
-            self.generate_multiline_list(args, before='warnings.warn', delim=('(', ')'), compact=False)
+            self.generate_multiline_list(
+                args,
+                before='warnings.warn',
+                delim=('(', ')'),
+                compact=False,
+            )
 
     def _generate_docstring_for_func(self, namespace, arg_data_type,
                                      result_data_type=None, error_data_type=None,

@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# pylint: disable=deprecated-method,useless-suppression
+
 import datetime
 import textwrap
 import unittest
@@ -15,9 +17,9 @@ from stone.lang.parser import (
 )
 from stone.lang.tower import (
     InvalidSpec,
-    TagRef,
     TowerOfStone,
 )
+from stone.lang.tower import TagRef  # noqa: F401 # pylint: disable=unused-import
 from stone.data_type import (
     Alias,
     Nullable,
@@ -504,7 +506,7 @@ class TestStone(unittest.TestCase):
                 email String
             """)
         self.parser.parse(text)
-        msg, lineno, path = self.parser.errors[0]
+        msg, lineno, _ = self.parser.errors[0]
         self.assertEqual(msg, "Unexpected ID with value 'strct'.")
         self.assertEqual(lineno, 4)
 
@@ -3391,6 +3393,7 @@ class TestStone(unittest.TestCase):
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
         self.assertEqual(cm.exception.path, 'ns1.stone')
+
 
 if __name__ == '__main__':
     unittest.main()

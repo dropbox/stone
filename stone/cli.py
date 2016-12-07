@@ -4,7 +4,6 @@ A command-line interface for StoneAPI.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import argparse
 import codecs
 import imp
 import io
@@ -13,6 +12,15 @@ import os
 import six
 import sys
 import traceback
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+import typing  # noqa: F401 # pylint: disable=unused-import
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from .cli_helpers import parse_route_attr_filter
 from .compiler import Compiler, GeneratorException
@@ -149,7 +157,7 @@ def main():
         # The module should should contain an api variable that references a
         # :class:`stone.api.Api` object.
         try:
-            api = imp.load_source('api', args.api[0]).api
+            api = imp.load_source('api', args.api[0]).api  # pylint: disable=redefined-outer-name
         except ImportError as e:
             print('error: Could not import API description due to:',
                   e, file=sys.stderr)
@@ -188,7 +196,8 @@ def main():
                 sys.stdin = UTF8Reader(sys.stdin)
                 stdin_text = sys.stdin.read()
             else:
-                stdin_text = io.TextIOWrapper(sys.stdin.buffer, encoding='utf-8').read()
+                stdin_buffer = sys.stdin.buffer  # pylint: disable=no-member,useless-suppression
+                stdin_text = io.TextIOWrapper(stdin_buffer, encoding='utf-8').read()
 
             parts = stdin_text.split('namespace')
             if len(parts) == 1:

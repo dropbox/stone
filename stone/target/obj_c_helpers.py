@@ -172,7 +172,7 @@ def fmt_obj(o):
     return pprint.pformat(o, width=1)
 
 
-def fmt_camel(name, upper_first=False, reserved=True, prefixes=False):
+def fmt_camel(name, upper_first=False, reserved=True):
     name = str(name)
     words = [word.capitalize() for word in split_words(name)]
     if not upper_first:
@@ -214,7 +214,7 @@ def fmt_class_caps(name):
 
 
 def fmt_class_type(data_type, suppress_ptr=False):
-    data_type, nullable = unwrap_nullable(data_type)
+    data_type, _ = unwrap_nullable(data_type)
 
     if is_user_defined_type(data_type):
         result = '{}'.format(fmt_class_prefix(data_type))
@@ -292,7 +292,7 @@ def fmt_validator(data_type):
 
 
 def fmt_serial_obj(data_type):
-    data_type, nullable = unwrap_nullable(data_type)
+    data_type, _ = unwrap_nullable(data_type)
 
     if is_user_defined_type(data_type):
         result = fmt_serial_class(fmt_class_prefix(data_type))
@@ -405,7 +405,7 @@ def fmt_ns_number_call(data_type):
             result = 'numberWithDouble'
         elif isinstance(data_type, Float64):
             result = 'numberWithDouble'
-    elif is_boolean_type:
+    elif is_boolean_type(data_type):
         result = 'numberWithBool'
     return result
 
