@@ -17,7 +17,7 @@ from setuptools import setup
 install_reqs = [
     'ply>=3.4',
     'six>=1.3.0',
-    'typing==3.5.0.1',
+    'typing>=3.5.2',
 ]
 
 with open('LICENSE') as f:
