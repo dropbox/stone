@@ -94,7 +94,7 @@ class ObjCGenerator(ObjCBaseGenerator):
     """Generates ObjC client base that implements route interfaces."""
     cmdline_parser = _cmdline_parser
 
-    obj_name_to_namespace = {}  # type: Dict[str, int]
+    obj_name_to_namespace = {}  # type: typing.Dict[str, int]
 
     def generate(self, api):
         for namespace in api.namespaces.values():
@@ -495,6 +495,4 @@ class ObjCGenerator(ObjCBaseGenerator):
         elif tag in ('type', 'val', 'link'):
             return val
         else:
-            import pdb
-            pdb.set_trace()
             return val
