@@ -302,14 +302,15 @@ class ApiRoute(object):
         self.name = name
         self._token = token
 
-        # These attributes are set later by set_attributes()
-        self.deprecated = None
-        self.raw_doc = None
-        self.doc = None
-        self.arg_data_type = None
-        self.result_data_type = None
-        self.error_data_type = None
-        self.attrs = None
+        # These attributes are set later by set_attributes(); see
+        # <https://github.com/python/mypy/issues/1833>
+        self.deprecated = None  # type: typing.Any
+        self.raw_doc = None  # type: typing.Any
+        self.doc = None  # type: typing.Any
+        self.arg_data_type = None  # type: typing.Any
+        self.result_data_type = None  # type: typing.Any
+        self.error_data_type = None  # type: typing.Any
+        self.attrs = None  # type: typing.Any
 
     def set_attributes(self, deprecated, doc, arg_data_type, result_data_type,
                        error_data_type, attrs):

@@ -44,7 +44,7 @@ class JavascriptClientGenerator(CodeGenerator):
     cmdline_parser = _cmdline_parser
 
     # Instance var of the current namespace being generated
-    cur_namespace = None
+    cur_namespace = None  # type: ignore # TODO: What is the type of this thing?!
 
     preserve_aliases = True
 
