@@ -4,6 +4,7 @@ import copy
 import inspect
 import logging
 import re
+import typing  # noqa: F401 # pylint: disable=unused-import
 
 from ..api import (
     Api,
@@ -66,7 +67,8 @@ class Environment(dict):
     # The default environment won't have a name set since it applies to all
     # namespaces. But, every time it's copied to represent the environment
     # of a specific namespace, a name should be set.
-    namespace_name = None
+    # See <https://github.com/python/mypy/issues/1833>
+    namespace_name = None  # type: typing.Any
 
 class TowerOfStone(object):
 

@@ -15,6 +15,7 @@ import math
 import numbers
 import re
 import six
+import typing  # noqa: F401 # pylint: disable=unused-import
 
 from .lang.exception import InvalidSpec
 from .lang.parser import (
@@ -184,8 +185,9 @@ class _BoundedInteger(Primitive):
     is the range of values supported by the data type.
     """
 
-    minimum = None
-    maximum = None
+    # See <https://github.com/python/mypy/issues/1833>
+    minimum = None  # type: typing.Any
+    maximum = None  # type: typing.Any
 
     def __init__(self, min_value=None, max_value=None):
         """
@@ -263,8 +265,9 @@ class _BoundedFloat(Primitive):
     float will pass the data type range check automatically.
     """
 
-    minimum = None
-    maximum = None
+    # See <https://github.com/python/mypy/issues/1833>
+    minimum = None  # type: typing.Any
+    maximum = None  # type: typing.Any
 
     def __init__(self, min_value=None, max_value=None):
         """
