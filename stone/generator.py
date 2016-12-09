@@ -101,7 +101,7 @@ class Generator(object):
     tabs_for_indents = False
 
     # Can be overridden with an argparse.ArgumentParser object.
-    cmdline_parser = None
+    cmdline_parser = None  # type: argparse.ArgumentParser
 
     # Can be overridden by a subclass. If true, stone.data_type.Alias
     # objects will be present in the API object. If false, aliases are masked
