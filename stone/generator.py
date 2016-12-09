@@ -28,8 +28,6 @@ from stone.data_type import (
 K = typing.TypeVar('K')
 V = typing.TypeVar('V')
 
-DelimTuple = typing.Tuple[typing.Text, typing.Text]
-
 def remove_aliases_from_api(api):
     for namespace in api.namespaces.values():
         # Important: Even if this namespace has no aliases, it may reference
@@ -340,7 +338,7 @@ class CodeGenerator(Generator):
         items,               # type: typing.List[typing.Text]
         before='',           # type: typing.Text
         after='',            # type: typing.Text
-        delim=('(', ')'),    # type: DelimTuple
+        delim=('(', ')'),    # type: typing.Tuple[typing.Text, typing.Text]
         compact=True,        # type: bool
         sep=',',             # type: typing.Text
         skip_last_sep=False  # type: bool
@@ -412,7 +410,7 @@ class CodeGenerator(Generator):
         self,
         before='',        # type: typing.Text
         after='',         # type: typing.Text
-        delim=('{','}'),  # type: DelimTuple
+        delim=('{','}'),  # type: typing.Tuple[typing.Text, typing.Text]
         dent=None,        # type: typing.Optional[int]
         allman=False      # type: bool
     ):
