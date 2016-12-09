@@ -100,7 +100,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
     """Generates Obj C modules to represent the input Stone spec."""
 
     cmdline_parser = _cmdline_parser
-    obj_name_to_namespace = {}  # type: Dict[str, str]
+    obj_name_to_namespace = {}  # type: typing.Dict[str, str]
 
     def generate(self, api):
         """
@@ -453,8 +453,8 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         self.emit()
 
     def _generate_struct_cstor_signature_default(self, struct):
-        """Emits struct convenience constructor with default arguments ommitted signature to be used in the
-        struct header file."""
+        """Emits struct convenience constructor with default arguments
+        ommitted signature to be used in the struct header file."""
         if not self._struct_has_defaults(struct):
             return
 
@@ -1269,6 +1269,4 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         elif tag in ('type', 'val', 'link'):
             return val
         else:
-            import pdb
-            pdb.set_trace()
             return val

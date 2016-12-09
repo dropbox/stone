@@ -89,14 +89,14 @@
       ]
     },
     {
-      "name": "Serializers", 
+      "name": "Serializers",
       "children": [
         "DBArraySerializer",
         "DBNSDateSerializer"
       ]
     },
     {
-      "name": "Union Tags", 
+      "name": "Union Tags",
       "children": [
         "DBOAuthErrorType",
         "DBOAuthResultTag",
@@ -104,7 +104,7 @@
       ]
     },
     {
-      "name": "Route Objects", 
+      "name": "Route Objects",
       "children": []
     }
   ],
