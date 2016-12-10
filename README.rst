@@ -1,6 +1,6 @@
-*****
+=====
 Stone
-*****
+=====
 
 *Warning: The documentation is undergoing a rewrite.*
 

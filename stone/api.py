@@ -9,6 +9,7 @@ import typing
 from stone.data_type import (
     List as DataTypeList,
     Nullable,
+    UserDefined,
     doc_unwrap,
     is_alias,
     is_composite_type,
@@ -18,19 +19,21 @@ from stone.data_type import (
 
 from stone.data_type import (  # noqa: F401 # pylint: disable=unused-import
     Alias,
+    DataType,
     Struct,
-    UserDefined,
 )
 
 from stone.lang.parser import StoneRouteDef  # noqa: F401 # pylint: disable=unused-import
 
-# TODO: This can be changed back to a single declaration with a unicode
-# literal after <https://github.com/python/mypy/pull/2516> makes it into a
-# PyPi release
-if six.PY3:
-    NamespaceDict = typing.Dict[str, 'ApiNamespace']
-else:
-    NamespaceDict = typing.Dict[str, b'ApiNamespace']
+__MYPY = False
+if __MYPY:
+    # TODO: This can be changed back to a single declaration with a
+    # unicode literal after <https://github.com/python/mypy/pull/2516>
+    # makes it into a PyPi release
+    if six.PY3:
+        NamespaceDict = typing.Dict[str, 'ApiNamespace']
+    else:
+        NamespaceDict = typing.Dict[str, b'ApiNamespace']
 
 class Api(object):
     """
@@ -229,7 +232,7 @@ class ApiNamespace(object):
                     dtype_as_list = typing.cast(typing.Union[DataTypeList, Nullable], dtype)
                     dtype = dtype_as_list.data_type
                 if is_composite_type(dtype) or is_alias(dtype):
-                    data_types.add(dtype)
+                    data_types.add(typing.cast(UserDefined, dtype))
 
         return sorted(data_types, key=lambda dt: dt.name)
 
@@ -302,15 +305,14 @@ class ApiRoute(object):
         self.name = name
         self._token = token
 
-        # These attributes are set later by set_attributes(); see
-        # <https://github.com/python/mypy/issues/1833>
-        self.deprecated = None  # type: typing.Any
-        self.raw_doc = None  # type: typing.Any
-        self.doc = None  # type: typing.Any
-        self.arg_data_type = None  # type: typing.Any
-        self.result_data_type = None  # type: typing.Any
-        self.error_data_type = None  # type: typing.Any
-        self.attrs = None  # type: typing.Any
+        # These attributes are set later by set_attributes()
+        self.deprecated = None  # type: typing.Optional[DeprecationInfo]
+        self.raw_doc = None  # type: typing.Optional[typing.Text]
+        self.doc = None  # type: typing.Optional[typing.Text]
+        self.arg_data_type = None  # type: typing.Optional[DataType]
+        self.result_data_type = None  # type: typing.Optional[DataType]
+        self.error_data_type = None  # type: typing.Optional[DataType]
+        self.attrs = None  # type: typing.Optional[typing.Mapping[typing.Text, typing.Any]]
 
     def set_attributes(self, deprecated, doc, arg_data_type, result_data_type,
                        error_data_type, attrs):

@@ -24,9 +24,12 @@ from stone.data_type import (
     is_alias,
 )
 
-# Generic Dict key-val types
-K = typing.TypeVar('K')
-V = typing.TypeVar('V')
+__MYPY = False
+if __MYPY:
+    # Generic Dict key-val types
+    DelimTuple = typing.Tuple[typing.Text, typing.Text]
+    K = typing.TypeVar('K')
+    V = typing.TypeVar('V')
 
 def remove_aliases_from_api(api):
     for namespace in api.namespaces.values():
@@ -338,7 +341,7 @@ class CodeGenerator(Generator):
         items,               # type: typing.List[typing.Text]
         before='',           # type: typing.Text
         after='',            # type: typing.Text
-        delim=('(', ')'),    # type: typing.Tuple[typing.Text, typing.Text]
+        delim=('(', ')'),    # type: DelimTuple
         compact=True,        # type: bool
         sep=',',             # type: typing.Text
         skip_last_sep=False  # type: bool
@@ -410,7 +413,7 @@ class CodeGenerator(Generator):
         self,
         before='',        # type: typing.Text
         after='',         # type: typing.Text
-        delim=('{','}'),  # type: typing.Tuple[typing.Text, typing.Text]
+        delim=('{','}'),  # type: DelimTuple
         dent=None,        # type: typing.Optional[int]
         allman=False      # type: bool
     ):
