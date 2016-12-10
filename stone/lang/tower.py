@@ -3,8 +3,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import copy
 import inspect
 import logging
-import re
 import typing  # noqa: F401 # pylint: disable=unused-import
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+re = importlib.import_module(str('re'))  # type: typing.Any
 
 from ..api import (
     Api,
@@ -67,8 +74,7 @@ class Environment(dict):
     # The default environment won't have a name set since it applies to all
     # namespaces. But, every time it's copied to represent the environment
     # of a specific namespace, a name should be set.
-    # See <https://github.com/python/mypy/issues/1833>
-    namespace_name = None  # type: typing.Any
+    namespace_name = None  # type: typing.Optional[typing.Text]
 
 class TowerOfStone(object):
 

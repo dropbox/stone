@@ -23,6 +23,9 @@ install_reqs = [
 with open('LICENSE') as f:
     LICENSE = f.read()
 
+with open('README.rst') as f:
+    README = f.read()
+
 dist = setup(
     name='stone',
     version='0.1',
@@ -39,7 +42,7 @@ dist = setup(
               'stone.lang',
               'stone.target',
               'stone.target.python_rsrc'],
-    long_description=open('README.rst').read(),
+    long_description=README,
     platforms=['CPython 2.7', 'CPython 3.4', 'CPython 3.5'],
     entry_points={
         'console_scripts': ['stone=stone.cli:main'],
@@ -47,6 +50,7 @@ dist = setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
+        'License :: OSI Approved :: MIT License',
         'Operating System :: POSIX',
         'Operating System :: Microsoft :: Windows',
         'Operating System :: MacOS :: MacOS X',
