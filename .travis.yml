@@ -9,7 +9,7 @@ python:
     - pypy3
 
 install:
-    - pip install tox-travis
+    - pip install tox
 
 matrix:
     allow_failures:
