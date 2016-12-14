@@ -7,14 +7,11 @@
 /build
 /dist
 /MANIFEST
-/setuptools-3.1-py2.7.egg
-/setuptools-3.1.zip
 /stone.egg-info
 .arcconfig
 .DS_Store
 .idea
 parser.out
-parsetab.py
 *.pyc
 *.pyo
 *.swp
