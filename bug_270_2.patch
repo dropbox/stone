@@ -1,0 +1,60 @@
+diff --git a/docutils/frontend.py.2014-12-15-070721 b/docutils/frontend.py
+index f837c62..0b2d4ea 100644
+--- a/docutils/frontend.py.2014-12-15-070721
++++ b/docutils/frontend.py
+@@ -29,6 +29,7 @@ Also exports the following functions:
+ 
+ __docformat__ = 'reStructuredText'
+ 
++import inspect
+ import os
+ import os.path
+ import sys
+@@ -41,6 +42,7 @@ import docutils
+ import docutils.utils
+ import docutils.nodes
+ from docutils.utils.error_reporting import locale_encoding, ErrorOutput, ErrorString
++from docutils.parsers import Parser
+ 
+ 
+ def store_multiple(option, opt, value, parser, *args, **kwargs):
+@@ -562,6 +564,19 @@ class OptionParser(optparse.OptionParser, docutils.SettingsSpec):
+         # Make an instance copy (it will be modified):
+         self.relative_path_settings = list(self.relative_path_settings)
+         self.components = (self,) + tuple(components)
++
++        # distutils.command.check does:
++        # settings = frontend.OptionParser().get_default_values()
++        # and as a result is missing important defaults like
++        # `syntax_highlight`, causing
++        # `python setup.py check --restructuredtext --strict --metadata` to
++        # fail with `warning: check: Could not finish the parsing.` if the RST
++        # document uses `code` or `code-block` directives.
++        # See http://bugs.python.org/issue23063
++        if len(components) == 0 and self.called_by_distutils_check():
++            from docutils.parsers.rst import Parser as RSTParser
++            self.components += (RSTParser,)
++
+         self.populate_from_components(self.components)
+         self.set_defaults_from_dict(defaults or {})
+         if read_config_files and not self.defaults['_disable_config']:
+@@ -571,6 +586,19 @@ class OptionParser(optparse.OptionParser, docutils.SettingsSpec):
+                 self.error(error)
+             self.set_defaults_from_dict(config_settings.__dict__)
+ 
++    def called_by_distutils_check(self):
++        frame = inspect.currentframe()
++
++        while frame:
++            filename = frame.f_code.co_filename
++            func_name = frame.f_code.co_name
++            if 'distutils' in filename:
++                if func_name == 'check_restructuredtext':
++                    return True
++            frame = frame.f_back
++
++        return False
++
+     def populate_from_components(self, components):
+         """
+         For each component, first populate from the `SettingsSpec.settings_spec`
