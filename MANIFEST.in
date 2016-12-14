@@ -1,4 +1,0 @@
-include ez_setup.py
-include LICENSE
-include *.rst
-include stone/target/swift_rsrc/*
