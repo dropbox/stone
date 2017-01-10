@@ -186,8 +186,8 @@ class _BoundedInteger(Primitive):
     """
 
     # See <https://github.com/python/mypy/issues/1833>
-    minimum = None  # type: typing.Optional[numbers.Integral]
-    maximum = None  # type: typing.Optional[numbers.Integral]
+    minimum = None  # type: typing.Optional[int]
+    maximum = None  # type: typing.Optional[int]
 
     def __init__(self, min_value=None, max_value=None):
         """
@@ -266,8 +266,8 @@ class _BoundedFloat(Primitive):
     """
 
     # See <https://github.com/python/mypy/issues/1833>
-    minimum = None  # type: typing.Optional[numbers.Real]
-    maximum = None  # type: typing.Optional[numbers.Real]
+    minimum = None  # type: typing.Optional[float]
+    maximum = None  # type: typing.Optional[float]
 
     def __init__(self, min_value=None, max_value=None):
         """
