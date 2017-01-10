@@ -124,8 +124,8 @@ class Integer(Primitive):
     Do not use this class directly. Extend it and specify a 'minimum' and
     'maximum' value as class variables for a more restrictive integer range.
     """
-    minimum = None  # type: typing.Optional[numbers.Integral]
-    maximum = None  # type: typing.Optional[numbers.Integral]
+    minimum = None  # type: typing.Optional[int]
+    maximum = None  # type: typing.Optional[int]
 
     def __init__(self, min_value=None, max_value=None):
         """
@@ -186,8 +186,8 @@ class Real(Primitive):
     and 'maximum' value to enforce a range that's a subset of the Python float
     implementation. Python floats are doubles.
     """
-    minimum = None  # type: typing.Optional[numbers.Real]
-    maximum = None  # type: typing.Optional[numbers.Real]
+    minimum = None  # type: typing.Optional[float]
+    maximum = None  # type: typing.Optional[float]
 
     def __init__(self, min_value=None, max_value=None):
         """
