@@ -17,6 +17,7 @@ import collections
 import datetime
 import functools
 import json
+import logging
 import six
 import typing  # noqa: F401 # pylint: disable=unused-import
 
@@ -29,14 +30,17 @@ except (SystemError, ValueError):
     import stone_validators as bb  # type: ignore # noqa: F401 # pylint: disable=unused-import
     import stone_validators as bv  # type: ignore
 
+_LOGGER = logging.getLogger(__name__)
+_FAILED_VALIDATION_VALUE = '<failed_validation>'
+
 # ------------------------------------------------------------------------
 class StoneEncoderInterface(object):
     """
     Interface defining a stone object encoder.
     """
 
-    def encode(self, validator, value):
-        # type: (bv.Validator, typing.Any) -> typing.Any
+    def encode(self, validator, value, relax_validation=False):
+        # type: (bv.Validator, typing.Any, bool) -> typing.Any
         """
         Validate ``value`` using ``validator`` and return the encoding.
 
@@ -44,6 +48,10 @@ class StoneEncoderInterface(object):
             validator: the ``stone_validators.Validator`` used to validate
                 ``value``
             value: the object to encode
+            relax_validation: instead of raising a
+                ``stone_validators.ValidationError``, log it as a warning
+                and replace the failed value with the string
+                ``"<failed validation>"`` (defaults to ``False``)
 
         Returns:
             The encoded object. This is implementation-defined.
@@ -85,88 +93,98 @@ class StoneSerializerBase(StoneEncoderInterface):
         """
         return self._alias_validators
 
-    def encode(self, validator, value):
-        return self.encode_sub(validator, value)
+    def encode(self, validator, value, relax_validation=False):
+        return self.encode_sub(validator, value, relax_validation)
 
-    def encode_sub(self, validator, value):
+    def encode_sub(self, validator, value, relax_validation):
         # type: (bv.Validator, typing.Any) -> typing.Any
         """
         Callback intended to be called by other ``encode`` methods to
         delegate encoding of sub-values. Arguments have the same semantics
         as with the ``encode`` method.
         """
-        if isinstance(validator, bv.List):
-            # Because Lists are mutable, we always validate them during
-            # serialization
-            validate_f = validator.validate
-            encode_f = self.encode_list
-        elif isinstance(validator, bv.Nullable):
-            validate_f = validator.validate
-            encode_f = self.encode_nullable
-        elif isinstance(validator, bv.Primitive):
-            validate_f = validator.validate
-            encode_f = self.encode_primitive
-        elif isinstance(validator, bv.Struct):
-            if isinstance(validator, bv.StructTree):
+        try:
+            if isinstance(validator, bv.List):
+                # Because Lists are mutable, we always validate them during
+                # serialization
                 validate_f = validator.validate
-                encode_f = self.encode_struct_tree
-            else:
+                encode_f = self.encode_list
+            elif isinstance(validator, bv.Nullable):
+                validate_f = validator.validate
+                encode_f = self.encode_nullable
+            elif isinstance(validator, bv.Primitive):
+                validate_f = validator.validate
+                encode_f = self.encode_primitive
+            elif isinstance(validator, bv.Struct):
+                if isinstance(validator, bv.StructTree):
+                    validate_f = validator.validate
+                    encode_f = self.encode_struct_tree
+                else:
+                    # Fields are already validated on assignment
+                    validate_f = validator.validate_type_only
+                    encode_f = self.encode_struct
+            elif isinstance(validator, bv.Union):
                 # Fields are already validated on assignment
                 validate_f = validator.validate_type_only
-                encode_f = self.encode_struct
-        elif isinstance(validator, bv.Union):
-            # Fields are already validated on assignment
-            validate_f = validator.validate_type_only
-            encode_f = self.encode_union
-        else:
-            raise bv.ValidationError('Unsupported data type {}'.format(type(validator).__name__))
+                encode_f = self.encode_union
+            else:
+                msg = 'Unsupported data type {}'.format(type(validator).__name__)
 
-        validate_f(value)
+                raise bv.ValidationError(msg)
 
-        return encode_f(validator, value)
+            validate_f(value)
 
-    def encode_list(self, validator, value):
-        # type: (bv.List, typing.Any) -> typing.Any
+            return encode_f(validator, value, relax_validation)
+        except bv.ValidationError as exc:
+            if relax_validation:
+                _LOGGER.warn('validation failed: %r', exc)
+
+                return _FAILED_VALIDATION_VALUE
+            else:
+                raise
+
+    def encode_list(self, validator, value, relax_validation):
+        # type: (bv.List, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.List``. Arguments
         have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_nullable(self, validator, value):
-        # type: (bv.Nullable, typing.Any) -> typing.Any
+    def encode_nullable(self, validator, value, relax_validation):
+        # type: (bv.Nullable, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Nullable``.
         Arguments have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_primitive(self, validator, value):
-        # type: (bv.Primitive, typing.Any) -> typing.Any
+    def encode_primitive(self, validator, value, relax_validation):
+        # type: (bv.Primitive, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Primitive``.
         Arguments have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_struct(self, validator, value):
-        # type: (bv.Struct, typing.Any) -> typing.Any
+    def encode_struct(self, validator, value, relax_validation):
+        # type: (bv.Struct, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Struct``. Arguments
         have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_struct_tree(self, validator, value):
-        # type: (bv.StructTree, typing.Any) -> typing.Any
+    def encode_struct_tree(self, validator, value, relax_validation):
+        # type: (bv.StructTree, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.StructTree``.
         Arguments have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_union(self, validator, value):
-        # type: (bv.Union, bb.Union) -> typing.Any
+    def encode_union(self, validator, value, relax_validation):
+        # type: (bv.Union, bb.Union, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Union``. Arguments
         have the same semantics as with the ``encode`` method.
@@ -210,31 +228,42 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         """
         return self._old_style
 
-    def encode_list(self, validator, value):
+    def encode_list(self, validator, value, relax_validation):
         validated_value = validator.validate(value)
 
-        return [self.encode_sub(validator.item_validator, value_item) for value_item in
-                validated_value]
+        return [self.encode_sub(validator.item_validator, value_item, relax_validation)
+                for value_item in validated_value]
 
-    def encode_nullable(self, validator, value):
+    def encode_nullable(self, validator, value, relax_validation):
         if value is None:
             return None
 
-        return self.encode_sub(validator.validator, value)
+        return self.encode_sub(validator.validator, value, relax_validation)
 
-    def encode_primitive(self, validator, value):
+    def encode_primitive(self, validator, value, relax_validation):
         if validator in self.alias_validators:
             self.alias_validators[validator](value)
 
         if isinstance(validator, bv.Void):
             return None
         elif isinstance(validator, bv.Timestamp):
-            return value.strftime(validator.format)
+            try:
+                value_strftime = value.strftime
+            except AttributeError as exc:
+                raise bv.ValidationError(*exc.args)
+
+            try:
+                return value_strftime(validator.format)
+            except (TypeError, ValueError) as exc:
+                raise bv.ValidationError(*exc.args)
         elif isinstance(validator, bv.Bytes):
             if self.for_msgpack:
                 return value
             else:
-                return base64.b64encode(value).decode('ascii')
+                try:
+                    return base64.b64encode(value).decode('ascii')
+                except TypeError as exc:
+                    raise bv.ValidationError(*exc.args)
         elif isinstance(validator, bv.Integer) \
                     and isinstance(value, bool):
             # bool is sub-class of int so it passes Integer validation,
@@ -244,7 +273,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         else:
             return value
 
-    def encode_struct(self, validator, value):
+    def encode_struct(self, validator, value, relax_validation):
         # Skip validation of fields with primitive data types because
         # they've already been validated on assignment
         d = collections.OrderedDict()  # type: typing.Dict[str, typing.Any]
@@ -253,7 +282,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             try:
                 field_value = getattr(value, field_name)
             except AttributeError as exc:
-                raise bv.ValidationError(exc.args[0])
+                raise bv.ValidationError(*exc.args)
 
             presence_key = '_%s_present' % field_name
 
@@ -262,14 +291,14 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                 # Only serialize struct fields that have been explicitly
                 # set, even if there is a default
                 try:
-                    d[field_name] = self.encode_sub(field_validator, field_value)
+                    d[field_name] = self.encode_sub(field_validator, field_value, relax_validation)
                 except bv.ValidationError as exc:
                     exc.add_parent(field_name)
 
                     raise
         return d
 
-    def encode_struct_tree(self, validator, value):
+    def encode_struct_tree(self, validator, value, relax_validation):
         assert type(value) in validator.definition._pytype_to_tag_and_subtype_, \
             '%r is not a serializable subtype of %r.' % (type(value), validator.definition)
 
@@ -280,17 +309,15 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             'Cannot serialize type %r because it enumerates subtypes.' % subtype.definition
 
         if self.old_style:
-            d = {
-                tags[0]: self.encode_struct(subtype, value),
-            }
+            d = {tags[0]: self.encode_struct(subtype, value, relax_validation)}
         else:
             d = collections.OrderedDict()
             d['.tag'] = tags[0]
-            d.update(self.encode_struct(subtype, value))
+            d.update(self.encode_struct(subtype, value, relax_validation))
 
         return d
 
-    def encode_union(self, validator, value):
+    def encode_union(self, validator, value, relax_validation):
         if value._tag is None:
             raise bv.ValidationError('no tag set')
 
@@ -301,7 +328,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 
         def encode_sub(sub_validator, sub_value, parent_tag):
             try:
-                encoded_val = self.encode_sub(sub_validator, sub_value)
+                encoded_val = self.encode_sub(sub_validator, sub_value, relax_validation)
             except bv.ValidationError as exc:
                 exc.add_parent(parent_tag)
 
@@ -345,8 +372,10 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 # ------------------------------------------------------------------------
 class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
 
-    def encode(self, validator, value):
-        return json.dumps(super(StoneToJsonSerializer, self).encode(validator, value))
+    def encode(self, validator, value, relax_validation=False):
+        encoded = super(StoneToJsonSerializer, self).encode(validator, value, relax_validation)
+
+        return json.dumps(encoded)
 
 # --------------------------------------------------------------
 # JSON Encoder
