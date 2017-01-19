@@ -16,6 +16,7 @@ import stone.target.python_rsrc.stone_validators as bv
 from stone.target.python_rsrc.stone_serializers import (
     json_encode,
     json_decode,
+    _strftime as stone_strftime,
 )
 
 
@@ -140,6 +141,10 @@ class TestDropInModules(unittest.TestCase):
         self.assertRaises(bv.ValidationError, lambda: t.validate('abcd'))
         now = datetime.datetime.utcnow()
         t.validate(now)
+        then = datetime.datetime(1776, 7, 4, 12, 0, 0)
+        t.validate(then)
+        new_then = json_decode(t, json_encode(t, then))
+        self.assertEqual(then, new_then)
         # Accept a tzinfo only if it's UTC
         t.validate(now.replace(tzinfo=UTC()))
         # Do not accept a non-UTC tzinfo
@@ -1337,6 +1342,39 @@ class TestGeneratedPython(unittest.TestCase):
     def test_struct_union_default(self):
         s = self.ns.S3()
         assert s.u == self.ns2.BaseU.z
+
+# Adapted from:
+# http://code.activestate.com/recipes/306860-proleptic-gregorian-dates-and-strftime-before-1900/
+# Make sure that the day names are in order from 0001/01/01 until
+# 2000/08/01
+class TestCustomStrftime(unittest.TestCase):
+    def test_strftime(self):
+        s = stone_strftime(datetime.date(1800, 9, 23), '%Y has the same days as 1980 and 2008')
+        assert s == '1800 has the same days as 1980 and 2008'
+
+        # Get the weekdays. Can't hard code them; they could be localized.
+        days = []
+
+        for i in range(1, 10):
+            days.append(datetime.date(2000, 1, i).strftime('%A'))
+
+        nextday = {}
+
+        for i in range(8):
+            nextday[days[i]] = days[i+1]
+
+        startdate = datetime.date(1, 1, 1)
+        enddate = datetime.date(2000, 8, 1)
+        prevday = stone_strftime(startdate, '%A')
+        one_day = datetime.timedelta(1)
+
+        testdate = startdate + one_day
+
+        while testdate < enddate:
+            day = stone_strftime(testdate, '%A')
+            assert nextday[prevday] == day, str(testdate)
+            prevday = day
+            testdate = testdate + one_day
 
 
 if __name__ == '__main__':
