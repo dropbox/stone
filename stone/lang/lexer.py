@@ -2,9 +2,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import logging
 import os
-import typing  # noqa: F401 # pylint: disable=unused-import
 
 import ply.lex as lex
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
+
 
 class MultiToken(object):
     """Object used to monkeypatch ply.lex so that we can return multiple

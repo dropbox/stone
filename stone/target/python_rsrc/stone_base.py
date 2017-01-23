@@ -8,14 +8,16 @@ than being added to a project.
 
 from __future__ import absolute_import, unicode_literals
 
-import typing  # noqa: F401 # pylint: disable=unused-import
-
 try:
     from . import stone_validators as bv
 except (SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
     import stone_validators as bv  # type: ignore
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
 class Union(object):

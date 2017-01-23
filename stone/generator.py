@@ -5,7 +5,21 @@ from contextlib import contextmanager
 import os
 import six
 import textwrap
-import typing
+
+from stone.lang.tower import doc_ref_re
+from stone.data_type import (
+    is_alias,
+)
+
+_MYPY = False
+if _MYPY:
+    from stone.api import Api  # noqa: F401 # pylint: disable=unused-import
+    import typing  # pylint: disable=import-error,useless-suppression
+
+    # Generic Dict key-val types
+    DelimTuple = typing.Tuple[typing.Text, typing.Text]
+    K = typing.TypeVar('K')
+    V = typing.TypeVar('V')
 
 # Hack to get around some of Python 2's standard library modules that
 # accept ascii-encodable unicode literals in lieu of strs, but where
@@ -17,19 +31,6 @@ argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 logging = importlib.import_module(str('logging'))  # type: typing.Any
 open = open  # type: typing.Any # pylint: disable=redefined-builtin
 
-from stone.api import Api  # noqa: F401 # pylint: disable=unused-import
-
-from stone.lang.tower import doc_ref_re
-from stone.data_type import (
-    is_alias,
-)
-
-__MYPY = False
-if __MYPY:
-    # Generic Dict key-val types
-    DelimTuple = typing.Tuple[typing.Text, typing.Text]
-    K = typing.TypeVar('K')
-    V = typing.TypeVar('V')
 
 def remove_aliases_from_api(api):
     for namespace in api.namespaces.values():

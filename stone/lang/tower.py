@@ -3,7 +3,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import copy
 import inspect
 import logging
-import typing  # noqa: F401 # pylint: disable=unused-import
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 # Hack to get around some of Python 2's standard library modules that
 # accept ascii-encodable unicode literals in lieu of strs, but where

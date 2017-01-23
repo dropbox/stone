@@ -15,7 +15,6 @@ import math
 import numbers
 import re
 import six
-import typing  # noqa: F401 # pylint: disable=unused-import
 
 from .lang.exception import InvalidSpec
 from .lang.parser import (
@@ -23,6 +22,10 @@ from .lang.parser import (
     StoneExampleRef,
     StoneTagRef,
 )
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
 class ParameterError(Exception):
