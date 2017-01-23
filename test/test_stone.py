@@ -19,7 +19,6 @@ from stone.lang.tower import (
     InvalidSpec,
     TowerOfStone,
 )
-from stone.lang.tower import TagRef  # noqa: F401 # pylint: disable=unused-import
 from stone.data_type import (
     Alias,
     Nullable,

@@ -20,7 +20,6 @@ import json
 import re
 import six
 import time
-import typing  # noqa: F401 # pylint: disable=unused-import
 
 try:
     from . import stone_base as bb  # noqa: F401 # pylint: disable=unused-import
@@ -30,6 +29,11 @@ except (SystemError, ValueError):
     # This makes testing this file directly (outside of a package) easier.
     import stone_validators as bb  # type: ignore # noqa: F401 # pylint: disable=unused-import
     import stone_validators as bv  # type: ignore
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
+
 
 # ------------------------------------------------------------------------
 class StoneEncoderInterface(object):

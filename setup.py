@@ -17,7 +17,14 @@ from setuptools import setup
 install_reqs = [
     'ply>=3.4',
     'six>=1.3.0',
-    'typing>=3.5.2',
+]
+
+setup_requires = [
+    'pytest-runner',
+]
+
+test_reqs = [
+    'pytest',
 ]
 
 with open('LICENSE') as f:
@@ -36,6 +43,8 @@ dist = setup(
     maintainer_email='dev-platform@dropbox.com',
     url='https://github.com/dropbox/stone',
     install_requires=install_reqs,
+    setup_requires=setup_requires,
+    tests_require=test_reqs,
     license=LICENSE,
     zip_safe=False,
     packages=['stone',

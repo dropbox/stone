@@ -4,12 +4,8 @@ from collections import OrderedDict
 # See <https://github.com/PyCQA/pylint/issues/73>
 from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 import six
-import typing
 
 from stone.data_type import (
-    List as DataTypeList,
-    Nullable,
-    UserDefined,
     doc_unwrap,
     is_alias,
     is_composite_type,
@@ -17,16 +13,21 @@ from stone.data_type import (
     is_nullable_type,
 )
 
-from stone.data_type import (  # noqa: F401 # pylint: disable=unused-import
-    Alias,
-    DataType,
-    Struct,
-)
+_MYPY = False
+if _MYPY:
+    import typing  # pylint: disable=import-error,useless-suppression
 
-from stone.lang.parser import StoneRouteDef  # noqa: F401 # pylint: disable=unused-import
+    from stone.data_type import (  # noqa: F401 # pylint: disable=unused-import
+        Alias,
+        DataType,
+        List as DataTypeList,
+        Nullable,
+        UserDefined,
+        Struct,
+    )
 
-__MYPY = False
-if __MYPY:
+    from stone.lang.parser import StoneRouteDef  # noqa: F401 # pylint: disable=unused-import
+
     # TODO: This can be changed back to a single declaration with a
     # unicode literal after <https://github.com/python/mypy/pull/2516>
     # makes it into a PyPi release
@@ -229,10 +230,11 @@ class ApiNamespace(object):
             for dtype in (route.arg_data_type, route.result_data_type,
                           route.error_data_type):
                 while is_list_type(dtype) or is_nullable_type(dtype):
-                    dtype_as_list = typing.cast(typing.Union[DataTypeList, Nullable], dtype)
-                    dtype = dtype_as_list.data_type
+                    data_list_type = dtype  # type: typing.Any
+                    dtype = data_list_type.data_type
                 if is_composite_type(dtype) or is_alias(dtype):
-                    data_types.add(typing.cast(UserDefined, dtype))
+                    data_user_type = dtype  # type: typing.Any
+                    data_types.add(data_user_type)
 
         return sorted(data_types, key=lambda dt: dt.name)
 

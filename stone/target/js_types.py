@@ -4,15 +4,6 @@ import json
 import six
 import sys
 
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-import typing  # noqa: F401 # pylint: disable=unused-import
-argparse = importlib.import_module(str('argparse'))  # type: typing.Any
-
 from stone.data_type import (
     is_user_defined_type,
     is_union_type,
@@ -26,6 +17,18 @@ from stone.target.js_helpers import (
     fmt_type,
     fmt_type_name,
 )
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
+
+# Hack to get around some of Python 2's standard library modules that
+# accept ascii-encodable unicode literals in lieu of strs, but where
+# actually passing such literals results in errors with mypy --py2. See
+# <https://github.com/python/typeshed/issues/756> and
+# <https://github.com/python/mypy/issues/2536>.
+import importlib
+argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 
 _cmdline_parser = argparse.ArgumentParser(prog='js-types-generator')

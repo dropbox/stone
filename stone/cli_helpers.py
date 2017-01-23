@@ -1,8 +1,11 @@
 import abc
 import six
-import typing  # noqa: F401 # pylint: disable=unused-import
 
 from ply import lex, yacc
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
 class FilterExprLexer(object):

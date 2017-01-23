@@ -18,7 +18,10 @@ import math
 import numbers
 import re
 import six
-import typing  # noqa: F401 # pylint: disable=unused-import
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 # See <http://python3porting.com/differences.html#buffer>
 if six.PY3:
