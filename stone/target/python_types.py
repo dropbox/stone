@@ -17,6 +17,7 @@ import importlib
 import typing  # noqa: F401 # pylint: disable=unused-import
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
+from stone.api import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.data_type import (
     is_alias,
     is_boolean_type,
@@ -76,7 +77,7 @@ class PythonTypesGenerator(CodeGenerator):
     cmdline_parser = _cmdline_parser
 
     # Instance var of the current namespace being generated
-    cur_namespace = None  # type: ignore # TODO: What is the type of this thing?!
+    cur_namespace = None  # type: typing.Optional[ApiNamespace]
 
     preserve_aliases = True
 

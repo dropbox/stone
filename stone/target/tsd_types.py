@@ -15,6 +15,7 @@ import importlib
 import typing  # noqa: F401 # pylint: disable=unused-import
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
+from stone.api import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.data_type import (
     is_alias,
     is_struct_type,
@@ -112,7 +113,8 @@ class TSDTypesGenerator(CodeGenerator):
 
     preserve_aliases = True
 
-    cur_namespace = None
+    # Instance var of the current namespace being generated
+    cur_namespace = None  # type: typing.Optional[ApiNamespace]
 
     def generate(self, api):
         spaces_per_indent = self.args.spaces_per_indent
