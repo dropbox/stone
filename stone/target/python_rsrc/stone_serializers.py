@@ -22,6 +22,11 @@ import six
 import time
 
 try:
+    import dateutil.parser  # type: ignore
+except ImportError:
+    dateutil = None  # type: ignore
+
+try:
     from . import stone_base as bb  # noqa: F401 # pylint: disable=unused-import
     from . import stone_validators as bv
 except (SystemError, ValueError):
@@ -34,6 +39,25 @@ _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
+
+# ------------------------------------------------------------------------
+class UTC(datetime.tzinfo):
+    """
+    A UTC timezone info class.
+    """
+
+    ZERO = datetime.timedelta(0)
+
+    def utcoffset(self, dt):  # pylint: disable=unused-argument,useless-suppression
+        return UTC.ZERO
+
+    def tzname(self, dt):  # pylint: disable=unused-argument,useless-suppression
+        return 'UTC'
+
+    def dst(self, dt):  # pylint: disable=unused-argument,useless-suppression
+        return UTC.ZERO
+
+TZINFO_UTC = UTC()
 
 # ------------------------------------------------------------------------
 class StoneEncoderInterface(object):
@@ -236,6 +260,8 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             return None
         elif isinstance(validator, bv.Timestamp):
             return _strftime(value, validator.format)
+        elif isinstance(validator, bv.Iso8601Timestamp):
+            return _strftime(value.astimezone(TZINFO_UTC), validator.output_format)
         elif isinstance(validator, bv.Bytes):
             if self.for_msgpack:
                 return value
@@ -836,6 +862,27 @@ def _make_stone_friendly(
             ret = datetime.datetime.strptime(val, data_type.format)
         except (TypeError, ValueError) as e:
             raise bv.ValidationError(e.args[0])
+    elif isinstance(data_type, bv.Iso8601Timestamp):
+        ret = None
+
+        if dateutil is None:
+            name = bv.Iso8601Timestamp.__name__
+            raise RuntimeError('{} requires python-dateutil which is not available'.format(name))
+
+        if data_type.input_re is not None and not data_type.input_re.search(val):
+            raise bv.ValidationError('{} does not match {}'.format(val, data_type.input_re.pattern))
+
+        try:
+            ret = dateutil.parser.parse(val)
+        except (TypeError, ValueError) as e:
+            raise bv.ValidationError(e.args[0])
+
+        # Assume UTC if no timezone was inferred
+        if ret.tzinfo is None:
+            ret = ret.replace(tzinfo=TZINFO_UTC)
+
+        # Convert all times to UTC
+        ret = ret.astimezone(TZINFO_UTC)
     elif isinstance(data_type, bv.Bytes):
         if for_msgpack:
             if isinstance(val, six.text_type):
@@ -893,7 +940,7 @@ def _strftime(dt, fmt):
             raise
 
     if _ILLEGAL_S.search(fmt):
-        raise TypeError("This strftime implementation does not handle %s")
+        raise TypeError('This strftime implementation does not handle %s')
 
     year = dt.year
 

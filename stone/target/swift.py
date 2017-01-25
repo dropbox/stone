@@ -10,12 +10,14 @@ from stone.data_type import (
     Float64,
     Int32,
     Int64,
+    Iso8601Timestamp,
     List,
     String,
     Timestamp,
     UInt32,
     UInt64,
     Void,
+    is_iso8601timestamp_type,
     is_list_type,
     is_timestamp_type,
     is_union_type,
@@ -39,6 +41,7 @@ _serial_type_table = {
     Float64: 'DoubleSerializer',
     Int32: 'Int32Serializer',
     Int64: 'Int64Serializer',
+    Iso8601Timestamp: 'NSDateSerializer',
     List: 'ArraySerializer',
     String: 'StringSerializer',
     Timestamp: 'NSDateSerializer',
@@ -183,6 +186,8 @@ def fmt_serial_obj(data_type):
 
         if is_list_type(data_type):
             result = result + '({})'.format(fmt_serial_obj(data_type.data_type))
+        elif is_iso8601timestamp_type(data_type):
+            result = result + '("{}")'.format(data_type.out_format)
         elif is_timestamp_type(data_type):
             result = result + '("{}")'.format(data_type.format)
         else:

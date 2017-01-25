@@ -25,6 +25,7 @@ from stone.data_type import (
     is_alias,
     is_boolean_type,
     is_bytes_type,
+    is_iso8601timestamp_type,
     is_list_type,
     is_nullable_type,
     is_numeric_type,
@@ -848,6 +849,11 @@ def generate_validator_constructor(ns, data_type):
                 ('min_length', dt.min_length),
                 ('max_length', dt.max_length),
                 ('pattern', pattern)],
+        )
+    elif is_iso8601timestamp_type(dt):
+        v = generate_func_call(
+            'bv.Iso8601Timestamp',
+            args=[repr(dt.out_format), repr(dt.input_re.pattern)],
         )
     elif is_timestamp_type(dt):
         v = generate_func_call(
