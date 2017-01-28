@@ -193,6 +193,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         for the given namespace."""
         ns_name = fmt_public_name(namespace.name)
         output_path = os.path.join('ApiObjects', ns_name)
+        output_path_headers = os.path.join(output_path, 'Headers')
 
         for data_type in namespace.linearize_data_types():
             class_name = fmt_class_prefix(data_type)
@@ -204,13 +205,8 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     'children'].append('{}Serializer'.format(class_name))
 
             if is_struct_type(data_type):
-                # struct implementation
-                with self.output_to_relative_path(os.path.join(output_path, class_name + '.m')):
-                    self.emit_raw(base_file_comment)
-                    self._generate_struct_class_m(data_type)
-
                 # struct header
-                with self.output_to_relative_path(os.path.join(output_path, class_name + '.h')):
+                with self.output_to_relative_path(os.path.join(output_path_headers, class_name + '.h')):
                     self.emit_raw(base_file_comment)
                     self._generate_struct_class_h(data_type)
             elif is_union_type(data_type):
@@ -218,21 +214,28 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 if self.args.documentation:
                     jazzy_cfg['custom_categories'][jazzy_category_map['Tags']][
                         'children'].append('{}Tag'.format(fmt_class_prefix(data_type)))
-
-                # union implementation
-                with self.output_to_relative_path(os.path.join(output_path, class_name + '.m')):
-                    self.emit_raw(base_file_comment)
-                    self._generate_union_class_m(data_type)
-
                 # union header
-                with self.output_to_relative_path(os.path.join(output_path, class_name + '.h')):
+                with self.output_to_relative_path(os.path.join(output_path_headers, class_name + '.h')):
                     self.emit_raw(base_file_comment)
                     self._generate_union_class_h(data_type)
             else:
                 raise TypeError('Can\'t handle type %r' % type(data_type))
 
+        with self.output_to_relative_path(os.path.join(output_path, 'DB{}Objects.m'.format(fmt_camel_upper(namespace.name)))):
+            self.emit_raw(base_file_comment)
+            description = '/// Arguments, results, and errors for the `{}` namespace.'.format(fmt_camel_upper(namespace.name))
+            self.emit(description)
+            for data_type in namespace.linearize_data_types():
+                if is_struct_type(data_type):
+                    # struct implementation
+                    self._generate_struct_class_m(data_type)
+                elif is_union_type(data_type):
+                    # union implementation
+                    self._generate_union_class_m(data_type)
+
     def _generate_struct_class_m(self, struct):
         """Defines an Obj C implementation file that represents a struct in Stone."""
+        self.emit()
         self._generate_imports_m(self._get_imports_m(struct, default_imports=['DBStoneSerializers',
                                                                               'DBStoneValidators']))
 
@@ -296,6 +299,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
     def _generate_union_class_m(self, union):
         """Defines an Obj C implementation file that represents a union in Stone."""
+        self.emit()
         self._generate_imports_m(self._get_imports_m(union, default_imports=['DBStoneSerializers',
                                                                              'DBStoneValidators']))
 
