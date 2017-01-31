@@ -206,7 +206,8 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
             if is_struct_type(data_type):
                 # struct header
-                with self.output_to_relative_path(os.path.join(output_path_headers, class_name + '.h')):
+                file_path = os.path.join(output_path_headers, class_name + '.h')
+                with self.output_to_relative_path(file_path):
                     self.emit_raw(base_file_comment)
                     self._generate_struct_class_h(data_type)
             elif is_union_type(data_type):
@@ -215,15 +216,19 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     jazzy_cfg['custom_categories'][jazzy_category_map['Tags']][
                         'children'].append('{}Tag'.format(fmt_class_prefix(data_type)))
                 # union header
-                with self.output_to_relative_path(os.path.join(output_path_headers, class_name + '.h')):
+                file_path = os.path.join(output_path_headers, class_name + '.h')
+                with self.output_to_relative_path(file_path):
                     self.emit_raw(base_file_comment)
                     self._generate_union_class_h(data_type)
             else:
                 raise TypeError('Can\'t handle type %r' % type(data_type))
 
-        with self.output_to_relative_path(os.path.join(output_path, 'DB{}Objects.m'.format(fmt_camel_upper(namespace.name)))):
+        file_path = os.path.join(output_path, 'DB{}Objects.m'.format(
+            fmt_camel_upper(namespace.name)))
+        with self.output_to_relative_path(file_path):
             self.emit_raw(base_file_comment)
-            description = '/// Arguments, results, and errors for the `{}` namespace.'.format(fmt_camel_upper(namespace.name))
+            description = '/// Arguments, results, and errors for the `{}` namespace.'.format(
+                fmt_camel_upper(namespace.name))
             self.emit(description)
             for data_type in namespace.linearize_data_types():
                 if is_struct_type(data_type):
