@@ -995,7 +995,6 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             import_classes = [
                 fmt_routes_class(namespace.name),
                 fmt_route_obj_class(namespace.name),
-                'DBTransportClient',
                 'DBStoneBase',
                 'DBRequestErrors',
             ]
