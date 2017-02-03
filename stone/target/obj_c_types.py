@@ -832,7 +832,6 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 description_str = ('[NSString stringWithFormat:@"Tag has an invalid '
                                    'value: \\\"%@\\\".", valueDict[@".tag"]]')
                 self._generate_throw_error('InvalidTag', description_str)
-
         self.emit()
 
     def _generate_union_serializer(self, union):
@@ -890,8 +889,11 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     first_block = False
 
             with self.block('else'):
-                self._generate_throw_error(
-                    'InvalidTag', '@"Object not properly initialized. Tag has an unknown value."')
+                if not union.closed:
+                    self.emit('jsonDict[@".tag"] = @"other";')
+                else:
+                    self._generate_throw_error(
+                        'InvalidTag', '@"Object not properly initialized. Tag has an unknown value."')
 
             self.emit()
             self.emit('return jsonDict;')
@@ -949,11 +951,16 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     self.emit('return {};'.format(fmt_func_call(caller=fmt_alloc_call(union_name),
                                                                 callee=callee,
                                                                 args=args)))
+            with self.block('else'):
+                if not union.closed:
+                    callee = 'initWithOther'
+                    self.emit('return {};'.format(fmt_func_call(
+                        caller=fmt_alloc_call(union_name), callee=callee)))
+                else:
+                    reason = ('[NSString stringWithFormat:@"Tag has an '
+                                        'invalid value: \\\"%@\\\".", valueDict[@".tag"]]')
+                    self._generate_throw_error('InvalidTag', reason)
             self.emit()
-            reason = ('[NSString stringWithFormat:@"Tag has an '
-                'invalid value: \\\"%@\\\".", valueDict[@".tag"]]')
-            self._generate_throw_error('InvalidTag', reason)
-        self.emit()
 
     def _fmt_serialization_call(self, data_type, input_value, serialize):
         """Returns the appropriate serialization / deserialization method
