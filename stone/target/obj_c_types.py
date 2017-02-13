@@ -893,7 +893,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     self.emit('jsonDict[@".tag"] = @"other";')
                 else:
                     self._generate_throw_error(
-                        'InvalidTag', '@"Object not properly initialized. Tag has an unknown value."')
+                        'InvalidTag',
+                        '@"Object not properly initialized. Tag has an unknown value."'
+                    )
 
             self.emit()
             self.emit('return jsonDict;')
