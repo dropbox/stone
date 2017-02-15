@@ -56,7 +56,7 @@ class Api(object):
         """
         if name not in self.namespaces:
             self.namespaces[name] = ApiNamespace(name)
-        return self.namespaces.get(name)
+        return self.namespaces[name]
 
     def normalize(self):
         # type: () -> None
