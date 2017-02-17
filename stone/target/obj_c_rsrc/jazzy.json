@@ -5,9 +5,9 @@
     {
       "name": "Clients",
       "children": [
-        "DropboxClient",
-        "DropboxTeamClient",
-        "DropboxClientsManager"
+        "DBUserClient",
+        "DBTeamClient",
+        "DBClientsManager"
       ]
     },
     {
@@ -24,9 +24,11 @@
     },
     {
       "name": "Files",
-      "children": [
-        "DBBatchUploadData"
-      ]
+      "children": []
+    },
+    {
+      "name": "Paper",
+      "children": []
     },
     {
       "name": "Properties",
@@ -55,8 +57,6 @@
     {
       "name": "Networking",
       "children": [
-        "DBTransportClient",
-        "DBDelegate",
         "DBTask",
         "DBRpcTask",
         "DBUploadTask",
@@ -70,9 +70,20 @@
         "DBRequestRateLimitError",
         "DBRequestInternalServerError",
         "DBRequestClientError",
-        "DBSessionData",
-        "DBProgressData",
-        "DBCompletionData"
+        "DBTransportBaseConfig",
+        "DBTransportDefaultConfig",
+        "DBTransportBaseClient",
+        "DBTransportDefaultClient",
+        "DBProgressBlock",
+        "DBBatchUploadResponseBlock",
+        "DBTasksStorage"
+      ]
+    },
+    {
+      "name": "Custom",
+      "children": [
+        "DBBatchUploadData",
+        "DBBatchUploadTask"
       ]
     },
     {
@@ -110,6 +121,6 @@
   ],
   "author_url": "https://dropbox.com/developers",
   "hide_documentation_coverage": true,
-  "module_version": "1.0",
+  "module_version": "3.0",
   "module": "ObjectiveDropboxOfficial"
 }
