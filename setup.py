@@ -2,6 +2,7 @@
 # where package_data is expected to be str and not unicode.
 from __future__ import absolute_import, division, print_function
 
+import os.path
 import sys
 
 try:
