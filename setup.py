@@ -27,6 +27,12 @@ test_reqs = [
     'pytest',
 ]
 
+# WARNING: This imposes limitations on test/requirements.txt such that the
+# full Pip syntax is not supported. See also
+# <http://stackoverflow.com/questions/14399534/>.
+with open('test/requirements.txt') as f:
+    test_reqs += f.read().splitlines()
+
 with open('LICENSE') as f:
     LICENSE = f.read()
 
