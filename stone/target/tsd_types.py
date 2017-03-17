@@ -150,7 +150,7 @@ class TSDTypesGenerator(CodeGenerator):
 
     def _generate_types(self, api, spaces_per_indent, indent_level, extra_args):
         indent = spaces_per_indent * indent_level
-        indent_spaces = (' '*indent)
+        indent_spaces = (' ' * indent)
         with self.indent(dent=indent):
             indented_types_header = indent_spaces + (
                 ('\n' + indent_spaces)

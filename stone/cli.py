@@ -137,7 +137,7 @@ def main():
 
     if '--' in sys.argv:
         cli_args = sys.argv[1:sys.argv.index('--')]
-        generator_args = sys.argv[sys.argv.index('--')+1:]
+        generator_args = sys.argv[sys.argv.index('--') + 1:]
     else:
         cli_args = sys.argv[1:]
         generator_args = []

@@ -161,7 +161,7 @@ def fmt_serial_type(data_type):
     if is_user_defined_type(data_type):
         result = '{}.{}Serializer'
         result = result.format(fmt_class(data_type.namespace.name),
-                                fmt_class(data_type.name))
+            fmt_class(data_type.name))
     else:
         result = _serial_type_table.get(data_type.__class__, fmt_class(data_type.name))
 
@@ -177,7 +177,7 @@ def fmt_serial_obj(data_type):
     if is_user_defined_type(data_type):
         result = '{}.{}Serializer()'
         result = result.format(fmt_class(data_type.namespace.name),
-                                fmt_class(data_type.name))
+            fmt_class(data_type.name))
     else:
         result = _serial_type_table.get(data_type.__class__, fmt_class(data_type.name))
 

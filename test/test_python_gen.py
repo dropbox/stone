@@ -41,7 +41,7 @@ class TestDropInModules(unittest.TestCase):
         # Too short
         self.assertRaises(bv.ValidationError, lambda: s.validate(''))
         # Too long
-        self.assertRaises(bv.ValidationError, lambda: s.validate('a'*6))
+        self.assertRaises(bv.ValidationError, lambda: s.validate('a' * 6))
         # Doesn't pass regex
         self.assertRaises(bv.ValidationError, lambda: s.validate('#'))
         # Passes
@@ -112,7 +112,7 @@ class TestDropInModules(unittest.TestCase):
         # Too short
         self.assertRaises(bv.ValidationError, lambda: b.validate(b''))
         # Too long
-        self.assertRaises(bv.ValidationError, lambda: b.validate(b'\x00'*11))
+        self.assertRaises(bv.ValidationError, lambda: b.validate(b'\x00' * 11))
         # Passes
         b.validate(b'\x00')
 
@@ -158,7 +158,7 @@ class TestDropInModules(unittest.TestCase):
         # Too short
         self.assertRaises(bv.ValidationError, lambda: l.validate([]))
         # Too long
-        self.assertRaises(bv.ValidationError, lambda: l.validate([1]*11))
+        self.assertRaises(bv.ValidationError, lambda: l.validate([1] * 11))
         # Not a valid string type
         self.assertRaises(bv.ValidationError, lambda: l.validate([1]))
         # Passes
@@ -466,15 +466,15 @@ class TestDropInModules(unittest.TestCase):
         u = json_decode(bv.Union(U), json.dumps('b'))
         self.assertEqual(u._tag, 'b')
         self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Union(U), json.dumps({'b': [1,2]})))
-        u = json_decode(bv.Union(U), json.dumps({'b': [1,2]}), strict=False, old_style=True)
+                          lambda: json_decode(bv.Union(U), json.dumps({'b': [1, 2]})))
+        u = json_decode(bv.Union(U), json.dumps({'b': [1, 2]}), strict=False, old_style=True)
         self.assertEqual(u._tag, 'b')
 
         # Test struct variant
         u = json_decode(bv.Union(U), json.dumps({'c': {'f': 'hello'}}), old_style=True)
         self.assertEqual(u.get_c().f, 'hello')
         self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Union(U), json.dumps({'c': [1,2,3]})))
+                          lambda: json_decode(bv.Union(U), json.dumps({'c': [1, 2, 3]})))
 
         # Test list variant
         l = [1, 2, 3, 4]
@@ -1361,7 +1361,7 @@ class TestCustomStrftime(unittest.TestCase):
         nextday = {}
 
         for i in range(8):
-            nextday[days[i]] = days[i+1]
+            nextday[days[i]] = days[i + 1]
 
         startdate = datetime.date(1, 1, 1)
         enddate = datetime.date(2000, 8, 1)

@@ -113,10 +113,10 @@ class JavascriptTypesGenerator(CodeGenerator):
             if 'match' not in extra_arg:
                 die('No match key', extra_arg_raw)
             elif (not isinstance(extra_arg['match'], list) or
-                      len(extra_arg['match']) != 2):
+                    len(extra_arg['match']) != 2):
                 die('match key is not a list of two strings', extra_arg_raw)
             elif (not isinstance(extra_arg['match'][0], six.text_type) or
-                      not isinstance(extra_arg['match'][1], six.text_type)):
+                    not isinstance(extra_arg['match'][1], six.text_type)):
                 print(type(extra_arg['match'][0]))
                 die('match values are not strings', extra_arg_raw)
             elif 'arg_name' not in extra_arg:
@@ -128,7 +128,7 @@ class JavascriptTypesGenerator(CodeGenerator):
             elif not isinstance(extra_arg['arg_type'], six.text_type):
                 die('arg_type is not a string', extra_arg_raw)
             elif ('arg_docstring' in extra_arg and
-                      not isinstance(extra_arg['arg_docstring'], six.text_type)):
+                    not isinstance(extra_arg['arg_docstring'], six.text_type)):
                 die('arg_docstring is not a string', extra_arg_raw)
 
             attr_key, attr_val = extra_arg['match'][0], extra_arg['match'][1]

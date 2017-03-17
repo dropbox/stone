@@ -208,7 +208,7 @@ class SwiftGenerator(SwiftBaseGenerator):
             self.emit_wrapped_text(param_doc, prefix='/// ', width=120)
         self.emit('///')
         output = (' - returns: Through the response callback, the caller will ' +
-                         'receive a `{}` object on success or a `{}` object on failure.')
+            'receive a `{}` object on success or a `{}` object on failure.')
         output = output.format(fmt_type(route.result_data_type),
                                fmt_type(route.error_data_type))
         self.emit_wrapped_text(output, prefix='/// ', width=120)
