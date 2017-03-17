@@ -96,7 +96,7 @@ class FilterExprLexer(object):
         token.lexer.skip(1)
 
     # Test output
-    def test(self,data):
+    def test(self, data):
         self.lexer.input(data)
         while True:
             tok = self.lexer.token()

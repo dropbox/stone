@@ -192,7 +192,7 @@ class TestStoneInternal(unittest.TestCase):
 
         # check number that is too small
         with self.assertRaises(ValueError) as cm:
-            i.check(-2**31-1)
+            i.check(-2**31 - 1)
         self.assertIn('not within range', cm.exception.args[0])
 
         i = UInt32()
@@ -216,7 +216,7 @@ class TestStoneInternal(unittest.TestCase):
 
         # check number that is too small
         with self.assertRaises(ValueError) as cm:
-            i.check(-2**63-1)
+            i.check(-2**63 - 1)
         self.assertIn('not within range', cm.exception.args[0])
 
         i = UInt64()

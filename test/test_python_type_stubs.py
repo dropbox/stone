@@ -122,16 +122,18 @@ def _make_namespace_with_a_union():
     u1.set_attributes(
         doc=None,
         fields=[
-            UnionField(name="first",
-                          doc=None,
-                          data_type=Void(),
-                          token=None
-                       ),
-            UnionField(name="last",
-                       doc=None,
-                       data_type=Void(),
-                       token=None
-                       ),
+            UnionField(
+                name="first",
+                doc=None,
+                data_type=Void(),
+                token=None
+            ),
+            UnionField(
+                name="last",
+                doc=None,
+                data_type=Void(),
+                token=None
+            ),
         ],
     )
     ns.add_data_type(u1)
@@ -141,16 +143,18 @@ def _make_namespace_with_a_union():
     shape_union.set_attributes(
         doc=None,
         fields=[
-            UnionField(name="point",
-                       doc=None,
-                       data_type=Void(),
-                       token=None
-                       ),
-            UnionField(name="circle",
-                       doc=None,
-                       data_type=Float64(),
-                       token=None
-                       ),
+            UnionField(
+                name="point",
+                doc=None,
+                data_type=Void(),
+                token=None
+            ),
+            UnionField(
+                name="circle",
+                doc=None,
+                data_type=Float64(),
+                token=None
+            ),
         ],
     )
     ns.add_data_type(shape_union)

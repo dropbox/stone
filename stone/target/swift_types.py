@@ -144,7 +144,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 jazzy_cfg['custom_categories'][0]['children'].append(ns_class + 'Routes')
 
         with self.output_to_relative_path('../../../.jazzy.json'):
-            self.emit_raw(json.dumps(jazzy_cfg, indent=2)+'\n')
+            self.emit_raw(json.dumps(jazzy_cfg, indent=2) + '\n')
 
     def _generate_base_namespace_module(self, api, namespace):
         self.emit_raw(base)
@@ -187,7 +187,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             decl = 'open var' if not data_type.parent_type else 'open override var'
 
             with self.block('{} description: String'.format(decl)):
-                cls = fmt_class(data_type.name)+'Serializer'
+                cls = fmt_class(data_type.name) + 'Serializer'
                 self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
                           '({}().serialize(self)))"'.format(cls))
 
@@ -357,11 +357,10 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 fdoc = self.process_doc(field.doc,
                     self._docf) if field.doc else 'An unspecified error.'
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('case {}{}'.format(fmt_var(field.name),
-                                                  typ))
+                self.emit('case {}{}'.format(fmt_var(field.name), typ))
             self.emit()
             with self.block('public var description: String'):
-                cls = class_type+'Serializer'
+                cls = class_type + 'Serializer'
                 self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
                           '({}().serialize(self)))"'.format(cls))
 
@@ -435,7 +434,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
 
     @contextmanager
     def serializer_block(self, data_type):
-        with self.class_block(fmt_class(data_type.name)+'Serializer',
+        with self.class_block(fmt_class(data_type.name) + 'Serializer',
                               protocols=['JSONSerializer']):
             self.emit("public init() { }")
             yield

@@ -52,8 +52,7 @@ class UnstoneGenerator(CodeGenerator):
                         self.emit('%s %s' % (field.name, type_repr))
                     else:
                         self.emit('%s %s = %s' %
-                                       (field.name, type_repr,
-                                        self.format_value(field.default)))
+                            (field.name, type_repr, self.format_value(field.default)))
                     if field.doc is not None:
                         with self.indent():
                             self.emit(self.format_value(field.doc))
@@ -86,11 +85,12 @@ class UnstoneGenerator(CodeGenerator):
     def generate_route(self, route):
         """Output a route definition."""
         self.emit('')
-        self.emit('route %s (%s, %s, %s)' %
-                       (route.name,
-                        self.format_data_type(route.arg_data_type),
-                        self.format_data_type(route.result_data_type),
-                        self.format_data_type(route.error_data_type)))
+        self.emit('route %s (%s, %s, %s)' % (
+            route.name,
+            self.format_data_type(route.arg_data_type),
+            self.format_data_type(route.result_data_type),
+            self.format_data_type(route.error_data_type)
+        ))
         # Output the docstring.
         with self.indent():
             if route.doc is not None:

@@ -283,8 +283,8 @@ class Generator(object):
         prefix = indent + prefix
 
         self.emit_raw(textwrap.fill(s,
-                                    initial_indent=prefix+initial_prefix,
-                                    subsequent_indent=prefix+subsequent_prefix,
+                                    initial_indent=prefix + initial_prefix,
+                                    subsequent_indent=prefix + subsequent_prefix,
                                     width=width,
                                     break_long_words=break_long_words,
                                     break_on_hyphens=break_on_hyphens,
@@ -416,11 +416,11 @@ class CodeGenerator(Generator):
     @contextmanager
     def block(
         self,
-        before='',        # type: typing.Text
-        after='',         # type: typing.Text
-        delim=('{','}'),  # type: DelimTuple
-        dent=None,        # type: typing.Optional[int]
-        allman=False      # type: bool
+        before='',         # type: typing.Text
+        after='',          # type: typing.Text
+        delim=('{', '}'),  # type: DelimTuple
+        dent=None,         # type: typing.Optional[int]
+        allman=False       # type: bool
     ):
         # type: (...) -> typing.Iterator[None]
         """

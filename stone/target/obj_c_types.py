@@ -958,7 +958,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                         caller=fmt_alloc_call(union_name), callee=callee)))
                 else:
                     reason = ('[NSString stringWithFormat:@"Tag has an '
-                                        'invalid value: \\\"%@\\\".", valueDict[@".tag"]]')
+                        'invalid value: \\\"%@\\\".", valueDict[@".tag"]]')
                     self._generate_throw_error('InvalidTag', reason)
             self.emit()
 
@@ -1129,8 +1129,8 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit(comment_prefix)
             if not is_void_type(field.data_type):
                 warning_str = ('@note Call this method and ensure it returns true before '
-                                'accessing the `{}` property, otherwise a runtime exception '
-                                'will be thrown.')
+                    'accessing the `{}` property, otherwise a runtime exception '
+                    'will be thrown.')
                 self.emit_wrapped_text(warning_str.format(
                     fmt_var(field.name)), prefix=comment_prefix)
                 self.emit(comment_prefix)

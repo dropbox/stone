@@ -757,7 +757,7 @@ class UserDefined(Composite):
 
         for example in examples.values():
             if (isinstance(example.value, dict) and
-                        len(example.value) == 1 and '.tag' in example.value):
+                    len(example.value) == 1 and '.tag' in example.value):
                 # Handle the case where the top-level of the example can be
                 # made compact.
                 example.value = example.value['.tag']
