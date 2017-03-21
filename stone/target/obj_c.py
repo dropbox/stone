@@ -79,7 +79,7 @@ class ObjCBaseGenerator(CodeGenerator):
             yield
 
     @contextmanager
-    def block_h(self, class_name, protocol=None, extensions=None):
+    def block_h(self, class_name, protocol=None, extensions=None, protected=None):
         if not extensions:
             extensions = ['NSObject']
 
@@ -89,8 +89,15 @@ class ObjCBaseGenerator(CodeGenerator):
             extend_suffix = ' : {} <{}>'.format(
                 ', '.join(extensions), fmt_class(protocol))
 
-        with self.block('@interface {}{}'.format(
+        base_interface_str = '@interface {}{} {{' if protected else '@interface {}{}'
+        with self.block(base_interface_str.format(
                 class_name, extend_suffix), delim=('', '@end'), dent=0):
+            if protected:
+                with self.block('', delim=('', '')):
+                    self.emit('@protected')
+                    for field_name, field_type in protected:
+                        self.emit('{} _{};'.format(field_type, field_name))
+                self.emit('}')
             self.emit()
             yield
 

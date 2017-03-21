@@ -199,9 +199,9 @@ class ObjCGenerator(ObjCBaseGenerator):
                            'that namespace. Fully-implemented API clients will inherit this class.')
         self.emit_wrapped_text(description_str, prefix=comment_prefix)
         self.emit(comment_prefix)
-        with self.block_h(self.args.class_name):
-            self.emit(fmt_property_str(
-                'transportClient', 'id<{}> _Nonnull'.format(self.args.transport_client_name)))
+        with self.block_h(self.args.class_name,
+                protected=[('transportClient', 'id<{}> _Nonnull'.format(
+                    self.args.transport_client_name))]):
             self.emit()
             for namespace in api.namespaces.values():
                 if namespace.routes:
