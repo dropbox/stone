@@ -1049,7 +1049,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     self._generate_throw_error('InvalidTag', reason)
             self.emit()
 
-    def _fmt_serialization_call(self, data_type, input_value, serialize):
+    def _fmt_serialization_call(self, data_type, input_value, serialize, depth=0):
         """Returns the appropriate serialization / deserialization method
         call for the given data type."""
         data_type, _ = unwrap_nullable(data_type)
@@ -1062,9 +1062,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         if is_list_type(data_type):
             serializer_args.append(('value', input_value))
             serialization_call = self._fmt_serialization_call(
-                data_type.data_type, 'elem', serialize)
-            array_block = '^id(id elem) {{ return {}; }}'.format(
-                serialization_call)
+                data_type.data_type, 'elem{}'.format(depth), serialize, depth+1)
+            array_block = '^id(id elem{}) {{ return {}; }}'.format(
+                depth, serialization_call)
             serializer_args.append(('withBlock', array_block))
         elif is_timestamp_type(data_type):
             serializer_args.append(('value', input_value))
