@@ -48,6 +48,7 @@ import importlib
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 
+_cmdline_parser = argparse.ArgumentParser(prog='obj-c-types-generator')
 _cmdline_parser = argparse.ArgumentParser(
     prog='ObjC-client-generator',
     description=(
@@ -79,6 +80,12 @@ _cmdline_parser.add_argument(
     help='The name of the ObjC class that manages network API calls.',
 )
 _cmdline_parser.add_argument(
+    '-w',
+    '--auth-type',
+    type=str,
+    help='The auth type of the client to generate.',
+)
+_cmdline_parser.add_argument(
     '-y',
     '--client-args',
     required=True,
@@ -99,17 +106,27 @@ class ObjCGenerator(ObjCBaseGenerator):
     cmdline_parser = _cmdline_parser
 
     obj_name_to_namespace = {}  # type: typing.Dict[str, int]
+    namespace_to_has_routes = {} # type: typing.Dict[Namespace, bool]
 
     def generate(self, api):
+
+        for namespace in api.namespaces.values():
+            self.namespace_to_has_routes[namespace] = False
+            if namespace.routes:
+                for route in namespace.routes:
+                    if route.attrs.get('auth') == self.args.auth_type and route.attrs.get('auth') != 'noauth':
+                        self.namespace_to_has_routes[namespace] = True
+                        break
+
         for namespace in api.namespaces.values():
             for data_type in namespace.linearize_data_types():
                 self.obj_name_to_namespace[
                     data_type.name] = fmt_class_prefix(data_type)
 
         for namespace in api.namespaces.values():
-            if namespace.routes:
+            if namespace.routes and self.namespace_to_has_routes[namespace]:
                 import_classes = [
-                    fmt_routes_class(namespace.name),
+                    fmt_routes_class(namespace.name, self.args.auth_type),
                     fmt_route_obj_class(namespace.name),
                     '{}Protocol'.format(self.args.transport_client_name),
                     'DBStoneBase',
@@ -117,7 +134,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                 ]
 
                 with self.output_to_relative_path(
-                        'Routes/{}.m'.format(fmt_routes_class(namespace.name))):
+                        'Routes/{}.m'.format(fmt_routes_class(namespace.name, self.args.auth_type))):
                     self.emit_raw(stone_warning)
 
                     imports_classes_m = import_classes + \
@@ -128,7 +145,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self._generate_routes_m(namespace)
 
                 with self.output_to_relative_path(
-                        'Routes/{}.h'.format(fmt_routes_class(namespace.name))):
+                        'Routes/{}.h'.format(fmt_routes_class(namespace.name, self.args.auth_type))):
                     self.emit_raw(base_file_comment)
                     self.emit('#import <Foundation/Foundation.h>')
                     self.emit()
@@ -158,7 +175,7 @@ class ObjCGenerator(ObjCBaseGenerator):
 
         import_classes = [self.args.module_name]
         import_classes += [fmt_routes_class(
-            ns.name) for ns in api.namespaces.values() if ns.routes]
+            ns.name, self.args.auth_type) for ns in api.namespaces.values() if ns.routes and self.namespace_to_has_routes[ns]]
         import_classes.append('{}Protocol'.format(self.args.transport_client_name))
         self._generate_imports_m(import_classes)
 
@@ -173,10 +190,10 @@ class ObjCGenerator(ObjCBaseGenerator):
                 with self.block_init():
                     self.emit('_transportClient = client;')
                     for namespace in api.namespaces.values():
-                        if namespace.routes:
+                        if namespace.routes and self.namespace_to_has_routes[namespace]:
                             base_string = '_{}Routes = [[{} alloc] init:client];'
                             self.emit(base_string.format(
-                                fmt_var(namespace.name), fmt_routes_class(namespace.name)))
+                                fmt_var(namespace.name), fmt_routes_class(namespace.name, self.args.auth_type)))
 
     def _generate_client_h(self, api):
         """Generates client base header file. For each namespace, the client will
@@ -187,7 +204,7 @@ class ObjCGenerator(ObjCBaseGenerator):
         self.emit()
 
         import_classes = [fmt_routes_class(
-            ns.name) for ns in api.namespaces.values() if ns.routes]
+            ns.name, self.args.auth_type) for ns in api.namespaces.values() if ns.routes and self.namespace_to_has_routes[ns]]
         self._generate_imports_h(import_classes)
         self.emit()
         self.emit('@protocol {};'.format(self.args.transport_client_name))
@@ -204,12 +221,12 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self.args.transport_client_name))]):
             self.emit()
             for namespace in api.namespaces.values():
-                if namespace.routes:
+                if namespace.routes and self.namespace_to_has_routes[namespace]:
                     class_doc = 'Routes within the `{}` namespace.'.format(
                         fmt_var(namespace.name))
                     self.emit_wrapped_text(class_doc, prefix=comment_prefix)
                     prop = '{}Routes'.format(fmt_var(namespace.name))
-                    typ = '{} * _Nonnull'.format(fmt_routes_class(namespace.name))
+                    typ = '{} * _Nonnull'.format(fmt_routes_class(namespace.name, self.args.auth_type))
                     self.emit(fmt_property_str(prop=prop, typ=typ))
                     self.emit()
 
@@ -229,7 +246,7 @@ class ObjCGenerator(ObjCBaseGenerator):
     def _generate_routes_m(self, namespace):
         """Generates implementation file for namespace object that has as methods
         all routes within the namespace."""
-        with self.block_m(fmt_routes_class(namespace.name)):
+        with self.block_m(fmt_routes_class(namespace.name, self.args.auth_type)):
             init_args = fmt_func_args_declaration(
                 [('client', 'id<{}>'.format(self.args.transport_client_name))])
 
@@ -243,6 +260,9 @@ class ObjCGenerator(ObjCBaseGenerator):
             style_to_request = json.loads(self.args.z__style_to_request)
 
             for route in namespace.routes:
+                if route.attrs.get('auth') != self.args.auth_type:
+                    continue
+
                 route_type = route.attrs.get('style')
                 client_args = json.loads(self.args.client_args)
 
@@ -324,7 +344,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                                prefix=comment_prefix)
         self.emit(comment_prefix)
 
-        with self.block_h(fmt_routes_class(namespace.name)):
+        with self.block_h(fmt_routes_class(namespace.name, self.args.auth_type)):
             description_str = ('An instance of the networking client that each '
                                'route will use to submit a request.')
             self.emit_wrapped_text(description_str, prefix=comment_prefix)
@@ -341,13 +361,16 @@ class ObjCGenerator(ObjCBaseGenerator):
             description_str = ('Initializes the `{}` namespace container object '
                                'with a networking client.')
             self.emit_wrapped_text(description_str.format(
-                fmt_routes_class(namespace.name)), prefix=comment_prefix)
+                fmt_routes_class(namespace.name, self.args.auth_type)), prefix=comment_prefix)
             self.emit('{};'.format(init_signature))
             self.emit()
 
             style_to_request = json.loads(self.args.z__style_to_request)
 
             for route in namespace.routes:
+                if route.attrs.get('auth') != self.args.auth_type:
+                    continue
+
                 route_type = route.attrs.get('style')
                 client_args = json.loads(self.args.client_args)
 

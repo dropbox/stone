@@ -311,8 +311,8 @@ def fmt_route_obj_class(namespace_name):
     return 'DB{}RouteObjects'.format(fmt_class_caps(namespace_name))
 
 
-def fmt_routes_class(namespace_name):
-    return 'DB{}Routes'.format(fmt_class_caps(namespace_name))
+def fmt_routes_class(namespace_name, auth_type):
+    return 'DB{}{}AuthRoutes'.format(fmt_class_caps(namespace_name), fmt_camel_upper(auth_type))
 
 
 def fmt_route_var(namespace_name, route_name):

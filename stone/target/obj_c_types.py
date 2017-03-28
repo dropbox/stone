@@ -86,6 +86,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
     cmdline_parser = _cmdline_parser
     obj_name_to_namespace = {}  # type: typing.Dict[str, str]
     jazzy_category_map = {}  # type: typing.Dict[str, str]
+    namespace_to_has_route_auth_list = {} # type: typing.Dict[Namespace, Set]
 
     def generate(self, api):
         """
@@ -138,6 +139,13 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             with open(jazzy_cfg_path) as jazzy_file:
                 jazzy_cfg = json.load(jazzy_file)
 
+        for namespace in api.namespaces.values():
+            self.namespace_to_has_route_auth_list[namespace] = set()
+            if namespace.routes:
+                for route in namespace.routes:
+                    if route.attrs.get('auth') != 'noauth':
+                        self.namespace_to_has_route_auth_list[namespace].add(route.attrs.get('auth'))
+
         with self.output_to_relative_path('DBSDKImportsGenerated.h'):
             self._generate_all_imports(api)
 
@@ -152,8 +160,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
             if namespace.routes:
                 if self.args.documentation:
-                    jazzy_cfg['custom_categories'][self.jazzy_category_map['Routes']][
-                        'children'].append(fmt_routes_class(ns_name))
+                    for auth_type in self.namespace_to_has_route_auth_list[namespace]:
+                        jazzy_cfg['custom_categories'][self.jazzy_category_map['Routes']][
+                            'children'].append(fmt_routes_class(ns_name, auth_type))
                     jazzy_cfg['custom_categories'][self.jazzy_category_map['RouteObjects']][
                         'children'].append(fmt_route_obj_class(ns_name))
                 self._generate_route_objects_m(api.route_schema, namespace)
@@ -172,7 +181,8 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         self.emit('// Routes')
         for namespace in api.namespaces.values():
             if namespace.routes:
-                self.emit(fmt_import(fmt_routes_class(namespace.name)))
+                for auth_type in self.namespace_to_has_route_auth_list[namespace]:
+                    self.emit(fmt_import(fmt_routes_class(namespace.name, auth_type)))
                 self.emit(fmt_import(fmt_route_obj_class(namespace.name)))
         self.emit()
 
@@ -1000,11 +1010,13 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit_raw(base_file_comment)
 
             import_classes = [
-                fmt_routes_class(namespace.name),
                 fmt_route_obj_class(namespace.name),
                 'DBStoneBase',
                 'DBRequestErrors',
             ]
+
+            for auth_type in self.namespace_to_has_route_auth_list[namespace]:
+                import_classes.append(fmt_routes_class(namespace.name, auth_type))
 
             imports_classes_m = import_classes + \
                 self._get_imports_m(
