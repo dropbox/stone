@@ -9,16 +9,13 @@ from stone.data_type import (
     is_nullable_type,
     is_user_defined_type,
     is_void_type,
-    unwrap_nullable,
-)
+    unwrap_nullable, )
 from stone.generator import CodeGenerator
 from stone.target.obj_c_helpers import (
     fmt_camel_upper,
     fmt_class,
     fmt_class_prefix,
-    fmt_import,
-)
-
+    fmt_import, )
 
 stone_warning = """\
 ///
@@ -34,9 +31,7 @@ base_file_comment = """\
 {}\
 """.format(stone_warning)
 
-
 undocumented = '(no description).'
-
 
 comment_prefix = '/// '
 
@@ -47,7 +42,10 @@ class ObjCBaseGenerator(CodeGenerator):
 
     @contextmanager
     def block_m(self, class_name):
-        with self.block('@implementation {}'.format(class_name), delim=('', '@end'), dent=0):
+        with self.block(
+                '@implementation {}'.format(class_name),
+                delim=('', '@end'),
+                dent=0):
             self.emit()
             yield
 
@@ -71,27 +69,37 @@ class ObjCBaseGenerator(CodeGenerator):
                 ', '.join(extensions)) if extensions else ''
         else:
             base = fmt_class_prefix(data_type.parent_type) if (
-                data_type.parent_type and not is_union_type(data_type)) else 'NSObject'
+                data_type.parent_type and
+                not is_union_type(data_type)) else 'NSObject'
             extend_suffix = ' : {} <{}>'.format(base, ', '.join(protocol))
-        with self.block('@interface {}{}'.format(
-                fmt_class_prefix(data_type), extend_suffix), delim=('', '@end'), dent=0):
+        with self.block(
+                '@interface {}{}'.format(
+                    fmt_class_prefix(data_type), extend_suffix),
+                delim=('', '@end'),
+                dent=0):
             self.emit()
             yield
 
     @contextmanager
-    def block_h(self, class_name, protocol=None, extensions=None, protected=None):
+    def block_h(self,
+                class_name,
+                protocol=None,
+                extensions=None,
+                protected=None):
         if not extensions:
             extensions = ['NSObject']
 
         if not protocol:
             extend_suffix = ' : {}'.format(', '.join(extensions))
         else:
-            extend_suffix = ' : {} <{}>'.format(
-                ', '.join(extensions), fmt_class(protocol))
+            extend_suffix = ' : {} <{}>'.format(', '.join(extensions),
+                                                fmt_class(protocol))
 
         base_interface_str = '@interface {}{} {{' if protected else '@interface {}{}'
-        with self.block(base_interface_str.format(
-                class_name, extend_suffix), delim=('', '@end'), dent=0):
+        with self.block(
+                base_interface_str.format(class_name, extend_suffix),
+                delim=('', '@end'),
+                dent=0):
             if protected:
                 with self.block('', delim=('', '')):
                     self.emit('@protected')
@@ -108,7 +116,8 @@ class ObjCBaseGenerator(CodeGenerator):
         self.emit('return self;')
 
     @contextmanager
-    def block_func(self, func, args=None, return_type='void', class_func=False):
+    def block_func(self, func, args=None, return_type='void',
+                   class_func=False):
         args = args if args is not None else []
         modifier = '-' if not class_func else '+'
         base_string = '{} ({}){}:{}' if args else '{} ({}){}'
@@ -129,7 +138,8 @@ class ObjCBaseGenerator(CodeGenerator):
             if data_type.parent_type:
                 import_classes.append(fmt_class_prefix(data_type.parent_type))
 
-            if is_struct_type(data_type) and data_type.has_enumerated_subtypes():
+            if is_struct_type(
+                    data_type) and data_type.has_enumerated_subtypes():
                 for _, subtype in data_type.get_all_subtypes_with_tags():
                     import_classes.append(fmt_class_prefix(subtype))
 
@@ -264,4 +274,7 @@ class ObjCBaseGenerator(CodeGenerator):
 
     def _struct_has_defaults(self, struct):
         """Returns whether the given struct has any default values."""
-        return [f for f in struct.all_fields if f.has_default or is_nullable_type(f.data_type)]
+        return [
+            f for f in struct.all_fields
+            if f.has_default or is_nullable_type(f.data_type)
+        ]

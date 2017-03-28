@@ -22,13 +22,11 @@ from stone.data_type import (
     is_tag_ref,
     is_user_defined_type,
     is_void_type,
-    unwrap_nullable,
-)
+    unwrap_nullable, )
 from .helpers import split_words
 
 # This file defines *stylistic* choices for Swift
 # (ie, that class names are UpperCamelCase and that variables are lowerCamelCase)
-
 
 _primitive_table = {
     Boolean: 'NSNumber *',
@@ -45,7 +43,6 @@ _primitive_table = {
     Void: 'void',
 }
 
-
 _primitive_table_user_interface = {
     Boolean: 'BOOL',
     Bytes: 'NSData',
@@ -61,7 +58,6 @@ _primitive_table_user_interface = {
     Void: 'void',
 }
 
-
 _serial_table = {
     Boolean: 'DBBoolSerializer',
     Bytes: 'DBNSDataSerializer',
@@ -76,7 +72,6 @@ _serial_table = {
     UInt64: 'DBNSNumberSerializer',
 }
 
-
 _validator_table = {
     Float32: 'numericValidator',
     Float64: 'numericValidator',
@@ -88,7 +83,6 @@ _validator_table = {
     UInt64: 'numericValidator',
 }
 
-
 _wrapper_primitives = {
     Boolean,
     Float32,
@@ -99,7 +93,6 @@ _wrapper_primitives = {
     Int64,
     String,
 }
-
 
 _reserved_words = {
     'auto',
@@ -154,7 +147,6 @@ _reserved_words = {
     'delete',
 }
 
-
 _reserved_prefixes = {
     'copy',
     'new',
@@ -192,9 +184,9 @@ def fmt_camel(name, upper_first=False, reserved=True):
 
 
 def fmt_enum_name(field_name, union):
-    return 'DB{}{}{}'.format(fmt_class_caps(union.namespace.name),
-                             fmt_camel_upper(union.name),
-                             fmt_camel_upper(field_name))
+    return 'DB{}{}{}'.format(
+        fmt_class_caps(union.namespace.name),
+        fmt_camel_upper(union.name), fmt_camel_upper(field_name))
 
 
 def fmt_camel_upper(name, reserved=True):
@@ -219,8 +211,8 @@ def fmt_class_type(data_type, suppress_ptr=False):
     if is_user_defined_type(data_type):
         result = '{}'.format(fmt_class_prefix(data_type))
     else:
-        result = _primitive_table.get(
-            data_type.__class__, fmt_class(data_type.name))
+        result = _primitive_table.get(data_type.__class__,
+                                      fmt_class(data_type.name))
 
         if suppress_ptr:
             result = result.replace(' *', '')
@@ -243,8 +235,8 @@ def fmt_type(data_type, tag=False, has_default=False, no_ptr=False):
         base = '{}' if no_ptr else '{} *'
         result = base.format(fmt_class_prefix(data_type))
     else:
-        result = _primitive_table.get(
-            data_type.__class__, fmt_class(data_type.name))
+        result = _primitive_table.get(data_type.__class__,
+                                      fmt_class(data_type.name))
 
         if is_list_type(data_type):
             data_type, _ = unwrap_nullable(data_type.data_type)
@@ -266,8 +258,8 @@ def fmt_route_type(data_type, tag=False, has_default=False):
     if is_user_defined_type(data_type):
         result = '{} *'.format(fmt_class_prefix(data_type))
     else:
-        result = _primitive_table_user_interface.get(
-            data_type.__class__, fmt_class(data_type.name))
+        result = _primitive_table_user_interface.get(data_type.__class__,
+                                                     fmt_class(data_type.name))
 
         if is_list_type(data_type):
             data_type, _ = unwrap_nullable(data_type.data_type)
@@ -283,8 +275,8 @@ def fmt_route_type(data_type, tag=False, has_default=False):
 
 
 def fmt_class_prefix(data_type):
-    return 'DB{}{}'.format(fmt_class_caps(data_type.namespace.name),
-                           fmt_class(data_type.name))
+    return 'DB{}{}'.format(
+        fmt_class_caps(data_type.namespace.name), fmt_class(data_type.name))
 
 
 def fmt_validator(data_type):
@@ -297,8 +289,8 @@ def fmt_serial_obj(data_type):
     if is_user_defined_type(data_type):
         result = fmt_serial_class(fmt_class_prefix(data_type))
     else:
-        result = _serial_table.get(
-            data_type.__class__, fmt_class(data_type.name))
+        result = _serial_table.get(data_type.__class__,
+                                   fmt_class(data_type.name))
 
     return result
 
@@ -312,11 +304,13 @@ def fmt_route_obj_class(namespace_name):
 
 
 def fmt_routes_class(namespace_name, auth_type):
-    return 'DB{}{}AuthRoutes'.format(fmt_class_caps(namespace_name), fmt_camel_upper(auth_type))
+    return 'DB{}{}AuthRoutes'.format(
+        fmt_class_caps(namespace_name), fmt_camel_upper(auth_type))
 
 
 def fmt_route_var(namespace_name, route_name):
-    return 'DB{}{}'.format(fmt_class_caps(namespace_name), fmt_camel_upper(route_name))
+    return 'DB{}{}'.format(
+        fmt_class_caps(namespace_name), fmt_camel_upper(route_name))
 
 
 def fmt_func_args(arg_str_pairs):
@@ -348,12 +342,12 @@ def fmt_func_args_from_fields(args):
     first_arg = True
     for arg in args:
         if first_arg:
-            result.append('({}){}'.format(
-                fmt_type(arg.data_type), fmt_var(arg.name)))
+            result.append(
+                '({}){}'.format(fmt_type(arg.data_type), fmt_var(arg.name)))
             first_arg = False
         else:
-            result.append('{}:({}){}'.format(fmt_var(arg.name),
-                                             fmt_type(arg.data_type), fmt_var(arg.name)))
+            result.append('{}:({}){}'.format(
+                fmt_var(arg.name), fmt_type(arg.data_type), fmt_var(arg.name)))
     return ' '.join(result)
 
 
@@ -386,8 +380,8 @@ def fmt_default_value(field):
     elif is_string_type(field.data_type):
         return '@"{}"'.format(field.default)
     else:
-        raise TypeError('Can\'t handle default value type %r' %
-                        type(field.data_type))
+        raise TypeError(
+            'Can\'t handle default value type %r' % type(field.data_type))
 
 
 def fmt_ns_number_call(data_type):
@@ -435,8 +429,9 @@ def fmt_property(field):
         attrs.append('copy')
     base_string = '@property ({}) {} {};'
 
-    return base_string.format(', '.join(attrs), fmt_type(
-        field.data_type, tag=True), fmt_var(field.name))
+    return base_string.format(', '.join(attrs),
+                              fmt_type(field.data_type, tag=True),
+                              fmt_var(field.name))
 
 
 def fmt_import(header_file):
