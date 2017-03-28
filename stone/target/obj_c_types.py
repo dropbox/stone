@@ -149,6 +149,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     if route.attrs.get('auth') != 'noauth':
                         self.namespace_to_has_route_auth_list[namespace].add(
                             route.attrs.get('auth'))
+                    else:
+                        self.namespace_to_has_route_auth_list[namespace].add(
+                            'user')
 
         with self.output_to_relative_path('DBSDKImportsGenerated.h'):
             self._generate_all_imports(api)

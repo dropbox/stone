@@ -106,8 +106,8 @@ class ObjCGenerator(ObjCBaseGenerator):
             if namespace.routes:
                 for route in namespace.routes:
                     if route.attrs.get(
-                            'auth') == self.args.auth_type and route.attrs.get(
-                                'auth') != 'noauth':
+                            'auth') == self.args.auth_type or route.attrs.get(
+                                'auth') == 'noauth' and self.args.auth_type == 'user':
                         self.namespace_to_has_routes[namespace] = True
                         break
 
@@ -282,7 +282,8 @@ class ObjCGenerator(ObjCBaseGenerator):
             style_to_request = json.loads(self.args.z__style_to_request)
 
             for route in namespace.routes:
-                if route.attrs.get('auth') != self.args.auth_type:
+                if (route.attrs.get('auth') != self.args.auth_type
+                        and route.attrs.get('auth') != 'noauth'):
                     continue
 
                 route_type = route.attrs.get('style')
@@ -409,7 +410,8 @@ class ObjCGenerator(ObjCBaseGenerator):
             style_to_request = json.loads(self.args.z__style_to_request)
 
             for route in namespace.routes:
-                if route.attrs.get('auth') != self.args.auth_type:
+                if (route.attrs.get('auth') != self.args.auth_type
+                        and route.attrs.get('auth') != 'noauth'):
                     continue
 
                 route_type = route.attrs.get('style')

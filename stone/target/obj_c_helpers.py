@@ -304,8 +304,11 @@ def fmt_route_obj_class(namespace_name):
 
 
 def fmt_routes_class(namespace_name, auth_type):
+    auth_type_to_use = auth_type
+    if auth_type == 'noauth':
+        auth_type_to_use = 'user'
     return 'DB{}{}AuthRoutes'.format(
-        fmt_class_caps(namespace_name), fmt_camel_upper(auth_type))
+        fmt_class_caps(namespace_name), fmt_camel_upper(auth_type_to_use))
 
 
 def fmt_route_var(namespace_name, route_name):
