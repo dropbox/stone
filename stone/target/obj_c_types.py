@@ -1062,7 +1062,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         if is_list_type(data_type):
             serializer_args.append(('value', input_value))
             serialization_call = self._fmt_serialization_call(
-                data_type.data_type, 'elem{}'.format(depth), serialize, depth+1)
+                data_type.data_type, 'elem{}'.format(depth), serialize, depth + 1)
             array_block = '^id(id elem{}) {{ return {}; }}'.format(
                 depth, serialization_call)
             serializer_args.append(('withBlock', array_block))
