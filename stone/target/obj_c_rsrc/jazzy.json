@@ -7,6 +7,7 @@
       "children": [
         "DBUserClient",
         "DBTeamClient",
+        "DBAppClient",
         "DBClientsManager"
       ]
     },
@@ -72,6 +73,7 @@
         "DBRequestClientError",
         "DBTransportBaseConfig",
         "DBTransportDefaultConfig",
+        "DBGlobalErrorResponseHandler",
         "DBTransportBaseClient",
         "DBTransportDefaultClient",
         "DBProgressBlock",
