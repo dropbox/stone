@@ -28,13 +28,13 @@ internally: Swift, C#, Java, Go, JavaScript, and HTML documentation.
     * Introduction
         * Motivation_
         * Installation_
-    * `Language Reference <doc/lang_ref.rst>`_
-    * `Builtin Generators <doc/builtin_generators.rst>`_
-    * `Managing Specs <doc/managing_specs.rst>`_
-    * `Evolving a Spec <doc/evolve_spec.rst>`_
-    * `Writing a Generator <doc/generator_ref.rst>`_
-    * `JSON Serializer <doc/json_serializer.rst>`_
-    * `Network Protocol <doc/network_protocol.rst>`_
+    * `Language Reference <docs/lang_ref.rst>`_
+    * `Builtin Generators <docs/builtin_generators.rst>`_
+    * `Managing Specs <docs/managing_specs.rst>`_
+    * `Evolving a Spec <docs/evolve_spec.rst>`_
+    * `Writing a Generator <docs/generator_ref.rst>`_
+    * `JSON Serializer <docs/json_serializer.rst>`_
+    * `Network Protocol <docs/network_protocol.rst>`_
 
 Motivation
 ==========
