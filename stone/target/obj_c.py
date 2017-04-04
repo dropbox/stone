@@ -257,7 +257,7 @@ class ObjCBaseGenerator(CodeGenerator):
         if fields:
             return self._cstor_name_from_field(fields[0])
         else:
-            return 'init'
+            return 'initDefault'
 
     def _cstor_name_from_field(self, field):
         """Returns an Obj C appropriate name for a constructor based on
@@ -270,7 +270,7 @@ class ObjCBaseGenerator(CodeGenerator):
         if fields_names:
             return 'initWith{}'.format(fmt_camel_upper(fields_names[0][0]))
         else:
-            return 'init'
+            return 'initDefault'
 
     def _struct_has_defaults(self, struct):
         """Returns whether the given struct has any default values."""

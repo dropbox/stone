@@ -291,7 +291,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit()
             self.emit('#pragma mark - Copyable method')
             self.emit()
-            self._generate_copyable_func(struct_name)
+            self._generate_copyable_func()
 
         self.emit()
         self.emit()
@@ -322,6 +322,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit()
             self._generate_struct_cstor_signature(struct)
             self._generate_struct_cstor_signature_default(struct)
+            self._generate_init_unavailable_signature(struct)
 
         self.emit()
         self.emit()
@@ -369,7 +370,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit()
             self.emit('#pragma mark - Copyable method')
             self.emit()
-            self._generate_copyable_func(union_name)
+            self._generate_copyable_func()
 
         self.emit()
         self.emit()
@@ -400,6 +401,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit('#pragma mark - Constructors')
             self.emit()
             self._generate_union_cstor_signatures(union, union.all_fields)
+            self._generate_init_unavailable_signature(union)
             self.emit('#pragma mark - Tag state methods')
             self.emit()
             self._generate_union_tag_access_signatures(union)
@@ -449,7 +451,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 self.emit('self = [super {}:{}];'.format(
                     self._cstor_name_from_fields(super_fields), super_args))
             else:
-                self.emit('self = [super init];')
+                if struct.parent_type:
+                    self.emit('self = [super initDefault];')
+                else:
+                    self.emit('self = [super init];')
             with self.block_init():
                 for field in struct.fields:
                     field_name = fmt_var(field.name)
@@ -620,6 +625,11 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 self.emit()
         self.emit()
 
+    def _generate_init_unavailable_signature(self, data_type):
+        if not data_type.parent_type or is_union_type(data_type):
+            self.emit('- (nonnull instancetype)init NS_UNAVAILABLE;')
+            self.emit()
+
     def _generate_serializable_funcs(self, data_type_name):
         """Emits the two struct/union functions that implement the Serializable protocol."""
         with self.block_func(
@@ -705,7 +715,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 fmt_func_call(caller=serialize_call, callee='description')))
         self.emit()
 
-    def _generate_copyable_func(self, data_type_name):
+    def _generate_copyable_func(self):
         with self.block_func(
                 func='copyWithZone', args=fmt_func_args_declaration(
                     [('zone', 'NSZone *')]), return_type='instancetype'):
