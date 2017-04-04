@@ -288,6 +288,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit('#pragma mark - Description method')
             self.emit()
             self._generate_description_func(struct_name)
+            self.emit()
+            self.emit('#pragma mark - Copyable method')
+            self.emit()
+            self._generate_copyable_func(struct_name)
 
         self.emit()
         self.emit()
@@ -310,7 +314,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
         struct_name = fmt_class_prefix(struct)
 
-        with self.block_h_from_data_type(struct, protocol=['DBSerializable']):
+        with self.block_h_from_data_type(struct, protocol=['DBSerializable', 'NSCopying']):
             self.emit('#pragma mark - Instance fields')
             self.emit()
             self._generate_struct_properties(struct.fields)
@@ -362,6 +366,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit('#pragma mark - Description method')
             self.emit()
             self._generate_description_func(union_name)
+            self.emit()
+            self.emit('#pragma mark - Copyable method')
+            self.emit()
+            self._generate_copyable_func(union_name)
 
         self.emit()
         self.emit()
@@ -383,7 +391,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
         union_name = fmt_class_prefix(union)
 
-        with self.block_h_from_data_type(union, protocol=['DBSerializable']):
+        with self.block_h_from_data_type(union, protocol=['DBSerializable', 'NSCopying']):
             self.emit('#pragma mark - Instance fields')
             self.emit()
             self._generate_union_tag_state(union)
@@ -695,6 +703,15 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 args=fmt_func_args([('valueObj', 'self')]))
             self.emit('return {};'.format(
                 fmt_func_call(caller=serialize_call, callee='description')))
+        self.emit()
+
+    def _generate_copyable_func(self, data_type_name):
+        with self.block_func(
+                func='copyWithZone', args=fmt_func_args_declaration(
+                    [('zone', 'NSZone *')]), return_type='instancetype'):
+            self.emit('#pragma unused(zone)')
+            self.emit_wrapped_text('object is immutable', prefix=comment_prefix)
+            self.emit('return self;')
         self.emit()
 
     def _cstor_args_from_fields(self, fields, is_struct=False):
@@ -1047,7 +1064,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                         '[NSString stringWithFormat:@"Tag has an '
                         'invalid value: \\\"%@\\\".", valueDict[@".tag"]]')
                     self._generate_throw_error('InvalidTag', reason)
-            self.emit()
+        self.emit()
 
     def _fmt_serialization_call(self, data_type, input_value, serialize, depth=0):
         """Returns the appropriate serialization / deserialization method

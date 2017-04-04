@@ -218,7 +218,10 @@ class ObjCGenerator(ObjCBaseGenerator):
             for ns in api.namespaces.values()
             if ns.routes and self.namespace_to_has_routes[ns]
         ]
-        self._generate_imports_h(import_classes)
+        import_classes.append('DBRequestErrors')
+        import_classes.append('DBTasks')
+
+        self._generate_imports_m(import_classes)
         self.emit()
         self.emit('@protocol {};'.format(self.args.transport_client_name))
         self.emit()
