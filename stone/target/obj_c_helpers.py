@@ -428,7 +428,8 @@ def fmt_var(name):
 
 def fmt_property(field):
     attrs = ['nonatomic', 'readonly']
-    if is_string_type(field.data_type):
+    data_type, _ = unwrap_nullable(field.data_type)
+    if is_string_type(data_type):
         attrs.append('copy')
     base_string = '@property ({}) {} {};'
 
