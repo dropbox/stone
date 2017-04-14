@@ -288,10 +288,15 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit('#pragma mark - Description method')
             self.emit()
             self._generate_description_func(struct_name)
-            self.emit()
             self.emit('#pragma mark - Copyable method')
             self.emit()
             self._generate_copyable_func()
+            self.emit('#pragma mark - Hash method')
+            self.emit()
+            self._generate_hash_func(struct)
+            self.emit('#pragma mark - Equality method')
+            self.emit()
+            self._generate_equality_func(struct)
 
         self.emit()
         self.emit()
@@ -367,10 +372,15 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit('#pragma mark - Description method')
             self.emit()
             self._generate_description_func(union_name)
-            self.emit()
             self.emit('#pragma mark - Copyable method')
             self.emit()
             self._generate_copyable_func()
+            self.emit('#pragma mark - Hash method')
+            self.emit()
+            self._generate_hash_func(union)
+            self.emit('#pragma mark - Equality method')
+            self.emit()
+            self._generate_equality_func(union)
 
         self.emit()
         self.emit()
@@ -723,6 +733,100 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit_wrapped_text('object is immutable', prefix=comment_prefix)
             self.emit('return self;')
         self.emit()
+
+    def _generate_hash_func(self, data_type):
+        with self.block_func(
+                func='hash', return_type='NSUInteger'):
+            self.emit('NSUInteger prime = 31;')
+            self.emit('NSUInteger result = 1;')
+            self.emit()
+            if is_union_type(data_type):
+                with self.block('switch (_tag)'):
+                    for field in data_type.all_fields:
+                        enum_field_name = fmt_enum_name(field.name, data_type)
+                        self.emit('case {}:'.format(enum_field_name))
+                        self._generate_hash_func_helper(data_type, field)
+            elif is_struct_type(data_type):
+                for field in data_type.all_fields:
+                    self._generate_hash_func_helper(data_type, field)
+            self.emit()
+            self.emit('return prime * result;')
+        self.emit()
+
+    def _generate_hash_func_helper(self, data_type, field):
+        _, nullable = unwrap_nullable(field.data_type)
+        if nullable:
+            with self.block('if (self.{})'.format(fmt_var(field.name))):
+                self._generate_hash_check(data_type, field)
+        else:
+            self._generate_hash_check(data_type, field)
+
+    def _generate_hash_check(self, data_type, field):
+        if is_union_type(data_type) and is_void_type(field.data_type):
+            self.emit('result = prime * result + [[self tagName] hash];')
+        else:
+            self.emit('result = prime * result + [self.{} hash];'.format(fmt_var(field.name)))
+
+    def _generate_equality_func(self, data_type):
+        is_equal_func_name = 'isEqualTo{}'.format(fmt_camel_upper(data_type.name))
+        with self.block_func(func='isEqual',
+                args=fmt_func_args_declaration([('other', 'id')]),
+                return_type='BOOL'):
+            with self.block('if (other == self)'):
+                self.emit('return YES;')
+            with self.block('if (!other || ![other isKindOfClass:[self class]])'):
+                self.emit('return NO;')
+            self.emit('return [self {}:other];'.format(is_equal_func_name))
+        self.emit()
+
+        if data_type.name[0].lower() in 'aeiou':
+            other_obj_name = 'an{}'.format(fmt_class(data_type.name))
+        else:
+            other_obj_name = 'a{}'.format(fmt_class(data_type.name))
+
+        with self.block_func(
+                func=is_equal_func_name,
+                args=fmt_func_args_declaration([(other_obj_name, '{} *'.format(
+                    fmt_class_type(data_type)))]), return_type='BOOL'):
+            with self.block('if (self == {})'.format(other_obj_name)):
+                self.emit('return YES;')
+            if is_union_type(data_type):
+                with self.block('if (self.tag != {}.tag)'.format(other_obj_name)):
+                    self.emit('return NO;')
+                with self.block('switch (_tag)'):
+                    for field in data_type.all_fields:
+                        self._generate_equality_func_helper(data_type, field, other_obj_name)
+                self.emit('return YES;')
+            elif is_struct_type(data_type):
+                for field in data_type.all_fields:
+                    self._generate_equality_func_helper(data_type, field, other_obj_name)
+                self.emit('return YES;')
+        self.emit()
+
+    def _generate_equality_func_helper(self, data_type, field, other_obj_name):
+        _, nullable = unwrap_nullable(field.data_type)
+        if is_union_type(data_type):
+            enum_field_name = fmt_enum_name(field.name, data_type)
+            self.emit('case {}:'.format(enum_field_name))
+        if nullable:
+            with self.block('if (self.{})'.format(fmt_var(field.name))):
+                self._generate_equality_check(data_type, field, other_obj_name)
+        else:
+            self._generate_equality_check(data_type, field, other_obj_name)
+
+    def _generate_equality_check(self, data_type, field, other_obj_name):
+        field_name = fmt_var(field.name)
+
+        if is_union_type(data_type):
+            if is_void_type(field.data_type):
+                self.emit('return [[self tagName] isEqual:[{} tagName]];'.format(other_obj_name))
+            else:
+                self.emit('return [self.{} isEqual:{}.{}];'.format(
+                    field_name, other_obj_name, field_name))
+        elif is_struct_type(data_type):
+            with self.block('if (![self.{} isEqual:{}.{}])'.format(
+                    field_name, other_obj_name, field_name)):
+                self.emit('return NO;')
 
     def _cstor_args_from_fields(self, fields, is_struct=False):
         """Returns a string representing the properly formatted arguments for a constructor."""
