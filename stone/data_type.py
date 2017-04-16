@@ -1123,7 +1123,7 @@ class Struct(UserDefined):
                 except InvalidSpec as e:
                     e.msg = "Bad example for field '{}': {}".format(
                         field.name, e.msg)
-                    raise e
+                    raise
             elif field.has_default or isinstance(field.data_type, Nullable):
                 # These don't need examples.
                 pass
@@ -1351,7 +1351,7 @@ class Union(UserDefined):
         except InvalidSpec as e:
             e.msg = "Bad example for field '{}': {}".format(
                 field.name, e.msg)
-            raise e
+            raise
 
         self._raw_examples[example.label] = example
 
