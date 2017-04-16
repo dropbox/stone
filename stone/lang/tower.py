@@ -431,7 +431,7 @@ class TowerOfStone(object):
 
         catch_all_field = None
         if data_type.closed:
-            if parent_type and not parent_type.closed:  # pylint: disable=no-member
+            if parent_type and not parent_type.closed:
                 # Due to the reversed super type / child type relationship for
                 # unions, a child type cannot be closed if its parent is open
                 # because the parent now has an extra field that is not
@@ -441,7 +441,7 @@ class TowerOfStone(object):
                         parent_type.name),
                     data_type._token.lineno, data_type._token.path)
         else:
-            if not parent_type or parent_type.closed:  # pylint: disable=no-member
+            if not parent_type or parent_type.closed:
                 # Create a catch-all field
                 catch_all_field = UnionField(
                     name='other', data_type=Void(), doc=None,
@@ -1018,18 +1018,18 @@ class TowerOfStone(object):
         except KeyError:
             return mk_route_schema()
 
-        if stone_cfg.routes:  # pylint: disable=no-member
-            route = stone_cfg.routes[0]  # pylint: disable=no-member
+        if stone_cfg.routes:
+            route = stone_cfg.routes[0]
             raise InvalidSpec(
                 'No routes can be defined in the stone_cfg namespace.',
                 route._token.lineno,
                 route._token.path,
             )
 
-        if not stone_cfg.data_types:  # pylint: disable=no-member
+        if not stone_cfg.data_types:
             return mk_route_schema()
 
-        for data_type in stone_cfg.data_types:  # pylint: disable=no-member
+        for data_type in stone_cfg.data_types:
             if data_type.name != 'Route':
                 raise InvalidSpec(
                     "Only a struct named 'Route' can be defined in the "

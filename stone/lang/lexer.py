@@ -59,7 +59,7 @@ class StoneLexer(object):
         else:
             r = self.lex.token()
             if isinstance(r, MultiToken):
-                self.tokens_queue.extend(r.tokens)  # pylint: disable=no-member
+                self.tokens_queue.extend(r.tokens)
                 self.last_token = self.tokens_queue.pop(0)
             else:
                 if r is None and self.cur_indent > 0:
