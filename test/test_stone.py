@@ -21,6 +21,9 @@ from stone.lang.tower import (
 )
 from stone.data_type import (
     Alias,
+    is_boolean_type,
+    is_integer_type,
+    is_void_type,
     Nullable,
     String,
 )
@@ -146,22 +149,6 @@ class TestStone(unittest.TestCase):
         self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
         self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
 
-        # test without newline after field doc
-        text = textwrap.dedent("""\
-            namespace files
-
-            struct QuotaInfo
-                "The space quota info for a user."
-                quota UInt64
-                    "The user's total quota allocation (bytes)."
-            """)
-        out = self.parser.parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertEqual(out[1].doc, 'The space quota info for a user.')
-        self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
-        self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
-
         # test with example
         text = textwrap.dedent("""\
             namespace files
@@ -248,6 +235,103 @@ class TestStone(unittest.TestCase):
         self.assertEqual("Reference cannot be nullable.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
+    def test_struct_patch_decl(self):
+
+        # test struct patch decl with no docs
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch struct QuotaInfo
+                quota UInt64
+            """)
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'QuotaInfo')
+        self.assertEqual(out[1].fields[0].name, 'quota')
+        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
+
+        # test struct patch with a top-level doc
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch struct QuotaInfo
+                "The space quota info for a user."
+                quota UInt64
+            """)
+        out = self.parser.parse(text)
+        msg, lineno, _ = self.parser.errors[0]
+        # Can't parse patch with doc-string.
+        self.assertEqual(msg, "Unexpected STRING with value 'The " +
+            "space quota info for a user.'.")
+        self.assertEqual(lineno, 4)
+
+        # test struct patch with field doc
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch struct QuotaInfo
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+            """)
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'QuotaInfo')
+        self.assertEqual(out[1].fields[0].name, 'quota')
+        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
+        self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
+
+        # test with example
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch struct QuotaInfo
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+                example default
+                    quota=64000
+            """)
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'QuotaInfo')
+        self.assertIn('default', out[1].examples)
+
+        # test with multiple examples
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch struct QuotaInfo
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+                example default
+                    quota=2000000000
+                example pro
+                    quota=100000000000
+            """)
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'QuotaInfo')
+        self.assertIn('default', out[1].examples)
+        self.assertIn('pro', out[1].examples)
+
+        # test with defaults
+        text = textwrap.dedent("""\
+            namespace ns
+
+            patch struct S
+                n1 Int32 = -5
+                n2 Int32 = 5
+                f1 Float64 = -1.
+                f2 Float64 = -4.2
+                f3 Float64 = -5e-3
+                f4 Float64 = -5.1e-3
+            """)
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'S')
+        self.assertEqual(out[1].fields[0].name, 'n1')
+        self.assertTrue(out[1].fields[0].has_default)
+        self.assertEqual(out[1].fields[0].default, -5)
+        self.assertEqual(out[1].fields[1].default, 5)
+        self.assertEqual(out[1].fields[2].default, -1)
+        self.assertEqual(out[1].fields[3].default, -4.2)
+        self.assertEqual(out[1].fields[4].default, -5e-3)
+        self.assertEqual(out[1].fields[5].default, -5.1e-3)
+
     def test_union_decl(self):
         # test union with only symbols
         text = textwrap.dedent("""\
@@ -300,6 +384,46 @@ class TestStone(unittest.TestCase):
         self.assertEqual(out[1].name, 'U1')
         self.assertEqual(out[2].name, 'U2')
         self.assertEqual(out[2].extends.name, 'U1')
+
+    def test_union_patch_decl(self):
+        # test union with only symbols
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch union Role
+                owner
+                    "Owner of a file."
+            """)
+        out = self.parser.parse(text)
+        self.assertEqual(out[1].name, 'Role')
+        self.assertIsInstance(out[1].fields[0], StoneVoidField)
+        self.assertEqual(out[1].fields[0].name, 'owner')
+
+        # test struct patch with a top-level doc
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch union Role
+                "The role a user may have in a shared folder."
+
+                owner
+                    "Owner of a file."
+            """)
+        out = self.parser.parse(text)
+        msg, lineno, _ = self.parser.errors[0]
+        # Can't parse patch with doc-string.
+        self.assertEqual(msg, "Unexpected STRING with value 'The " +
+            "role a user may have in a shared folder.'.")
+        self.assertEqual(lineno, 4)
+
+        text = textwrap.dedent("""\
+            namespace files
+
+            patch union Error
+                A
+                    "Variant A"
+            """)
+        self.parser.parse(text)
 
     def test_composition(self):
         text = textwrap.dedent("""\
@@ -1310,6 +1434,382 @@ class TestStone(unittest.TestCase):
             t.api.namespaces['test'].data_types[1])
         self.assertEqual(
             t.api.namespaces['test'].data_types[0].fields[0].default.tag_name, 'a')
+
+    def test_struct_patch_semantics(self):
+        # Test patching normal struct
+        text = textwrap.dedent("""\
+            namespace files
+
+            struct QuotaInfo
+                "The space quota info for a user."
+                user_id String
+                    "The user associated with the quota."
+                example default
+                    user_id="1234"
+                example pro
+                    user_id="1234P"
+
+            patch struct QuotaInfo
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+                example default
+                    quota=2000000000
+                example pro
+                    quota=100000000000
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        quota_info_dt = t.api.namespaces['files'].data_type_by_name['QuotaInfo']
+        self.assertEqual(quota_info_dt.fields[1].name, 'quota')
+        self.assertTrue(is_integer_type(quota_info_dt.fields[1].data_type))
+        self.assertEqual(quota_info_dt.fields[1].doc, "The user's total quota allocation (bytes).")
+        self.assertEqual(quota_info_dt.get_examples()['default'].value['quota'], 2000000000)
+        self.assertEqual(quota_info_dt.get_examples()['pro'].value['quota'], 100000000000)
+
+        # Test patching inherited struct
+        text = textwrap.dedent("""\
+            namespace files
+
+            struct QuotaInfo
+                "The space quota info for a user."
+                user_id String
+                    "The user associated with the quota."
+                example default
+                    user_id="1234"
+                example pro
+                    user_id="1234P"
+
+            struct QuotaInfoPersonal extends QuotaInfo
+                "The space quota info for a personal user."
+                personal_quota UInt64
+                    "The user's personal quota allocation (bytes)."
+
+            patch struct QuotaInfo
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+                example default
+                    quota=2000000000
+                example pro
+                    quota=100000000000
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        quota_info_dt = t.api.namespaces['files'].data_type_by_name['QuotaInfoPersonal']
+        self.assertEqual(quota_info_dt.all_fields[1].name, 'quota')
+        self.assertTrue(is_integer_type(quota_info_dt.all_fields[1].data_type))
+        self.assertEqual(
+            quota_info_dt.all_fields[1].doc, "The user's total quota allocation (bytes).")
+
+        # Test patching enumerated supertype struct
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct Resource
+                union
+                    file File
+                    folder Folder
+
+            struct File extends Resource
+                size UInt64
+                    "The size of the file."
+                example default
+                    size=5
+
+            struct Folder extends Resource
+                icon String
+                    "The name of the icon."
+                example default
+                    icon="My Icon"
+
+            patch struct Resource
+                is_public Boolean
+                    "Whether the resource is public."
+
+            patch struct File
+                example default
+                    is_public=true
+
+            patch struct Folder
+                example default
+                    is_public=false
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+
+        resource_dt = t.api.namespaces['test'].data_type_by_name['Resource']
+        self.assertEqual(resource_dt.all_fields[0].name, 'is_public')
+        self.assertTrue(is_boolean_type(resource_dt.all_fields[0].data_type))
+        self.assertEqual(resource_dt.all_fields[0].doc, "Whether the resource is public.")
+
+        file_dt = t.api.namespaces['test'].data_type_by_name['File']
+        self.assertEqual(file_dt.all_fields[0].name, 'is_public')
+        self.assertTrue(is_boolean_type(file_dt.all_fields[0].data_type))
+        self.assertEqual(file_dt.all_fields[0].doc, "Whether the resource is public.")
+        self.assertEqual(file_dt.get_examples()['default'].value['is_public'], True)
+
+        folder_dt = t.api.namespaces['test'].data_type_by_name['Folder']
+        self.assertEqual(folder_dt.all_fields[0].name, 'is_public')
+        self.assertTrue(is_boolean_type(file_dt.all_fields[0].data_type))
+        self.assertEqual(folder_dt.all_fields[0].doc, "Whether the resource is public.")
+        self.assertEqual(folder_dt.get_examples()['default'].value['is_public'], False)
+
+        # Try patching enumerated supertype struct with
+        # nonnull field with missing example
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct Resource
+                union
+                    file File
+                    folder Folder
+
+            struct File extends Resource
+                size UInt64
+                    "The size of the file."
+                example default
+                    size=5
+
+            struct Folder extends Resource
+                icon String
+                    "The name of the icon."
+                example default
+                    icon="My Icon"
+
+            patch struct Resource
+                is_public Boolean
+                    "Whether the resource is public."
+
+            patch struct File
+                example default
+                    is_public=true
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Missing field 'is_public' in example.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 17)
+
+        # Try patching type without pre-existing type
+        text = textwrap.dedent("""\
+            namespace files
+
+            struct QuotaInfo
+                "The space quota info for a user."
+                user_id String
+                    "The user associated with the quota."
+                example default
+                    user_id="1234"
+                example pro
+                    user_id="1234P"
+
+            patch struct QuotaInfoDoesNotExist
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Patch 'QuotaInfoDoesNotExist' must correspond " +
+            "to a pre-existing data_type.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 12)
+
+        # Try patching type with pre-existing name of different type
+        text = textwrap.dedent("""\
+            namespace files
+
+            struct QuotaInfo
+                "The space quota info for a user."
+                user_id String
+                    "The user associated with the quota."
+                example default
+                    user_id="1234"
+                example pro
+                    user_id="1234P"
+
+            patch union QuotaInfo
+                quota UInt64
+                    "The user's total quota allocation (bytes)."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Type mismatch. Patch 'QuotaInfo' corresponds to " +
+            "pre-existing data_type 'QuotaInfo' (test.stone:3) that has " +
+            "type other than 'union'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 12)
+
+        # Try patching field with pre-existing name
+        text = textwrap.dedent("""\
+            namespace files
+
+            struct QuotaInfo
+                "The space quota info for a user."
+                user_id String
+                    "The user associated with the quota."
+                example default
+                    user_id="1234"
+                example pro
+                    user_id="1234P"
+
+            patch struct QuotaInfo
+                user_id Int32
+                    "The user associated with the quota."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Patched field 'user_id' overrides " +
+            "pre-existing field in 'QuotaInfo' (test.stone:5).", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 13)
+
+        # Try patching field with example tag that doesn't exist
+        text = textwrap.dedent("""\
+            namespace files
+
+            struct QuotaInfo
+                "The space quota info for a user."
+                user_id String
+                    "The user associated with the quota."
+                example default
+                    user_id="1234"
+                example pro
+                    user_id="1234P"
+
+            patch struct QuotaInfo
+                quota UInt64
+                    "The user associated with the quota."
+                example doesNotExist
+                    user_id="1234"
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Example defined in patch 'QuotaInfo' must " +
+            "correspond to a pre-existing example.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 15)
+
+    def test_union_patch_semantics(self):
+        # Test patching normal struct
+        text = textwrap.dedent("""\
+            namespace files
+
+            union Role
+                "The role a user may have in a shared folder."
+
+                viewer
+                    "Read only permission."
+                editor
+                    "Read and write permission."
+
+            patch union Role
+                owner
+                    "Owner of a file."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        role_info_dt = t.api.namespaces['files'].data_type_by_name['Role']
+        self.assertEqual(role_info_dt.fields[2].name, 'owner')
+        self.assertTrue(is_void_type(role_info_dt.fields[2].data_type))
+        self.assertEqual(role_info_dt.fields[2].doc, "Owner of a file.")
+
+        # Test patching inherited union
+        text = textwrap.dedent("""\
+            namespace files
+
+            union Role
+                "The role a user may have in a shared folder."
+
+                viewer
+                    "Read only permission."
+                editor
+                    "Read and write permission."
+
+            union TeamRole extends Role
+                "The team role a user may have in a shared folder."
+
+                admin
+                    "Admin permission."
+
+            patch union Role
+                owner
+                    "Owner of a file."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        role_info_dt = t.api.namespaces['files'].data_type_by_name['TeamRole']
+        self.assertEqual(role_info_dt.all_fields[2].name, 'owner')
+        self.assertTrue(is_void_type(role_info_dt.all_fields[2].data_type))
+        self.assertEqual(role_info_dt.all_fields[2].doc, "Owner of a file.")
+
+        # Try patching type without pre-existing type
+        text = textwrap.dedent("""\
+            namespace files
+
+            union Role
+                "The role a user may have in a shared folder."
+
+                viewer
+                    "Read only permission."
+                editor
+                    "Read and write permission."
+
+            patch union RoleDoesNotExist
+                owner
+                    "Owner of a file."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Patch 'RoleDoesNotExist' must correspond " +
+            "to a pre-existing data_type.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 11)
+
+        # Try patching type with pre-existing name of different type
+        text = textwrap.dedent("""\
+            namespace files
+
+            union Role
+                "The role a user may have in a shared folder."
+
+                viewer
+                    "Read only permission."
+                editor
+                    "Read and write permission."
+
+            patch struct Role
+                owner String
+                    "Owner of a file."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Type mismatch. Patch 'Role' corresponds to " +
+            "pre-existing data_type 'Role' (test.stone:3) that has " +
+            "type other than 'struct'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 11)
+
+        # Try patching field with pre-existing name
+        text = textwrap.dedent("""\
+            namespace files
+
+            union Role
+                "The role a user may have in a shared folder."
+
+                viewer
+                    "Read only permission."
+                editor
+                    "Read and write permission."
+
+            patch union Role
+                viewer
+                    "Owner of a file."
+            """)
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec) as cm:
+            t.parse()
+        self.assertEqual("Patched field 'viewer' overrides " +
+            "pre-existing field in 'Role' (test.stone:6).", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 12)
 
     def test_import(self):
         # Test field reference to another namespace

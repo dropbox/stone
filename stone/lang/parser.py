@@ -252,7 +252,7 @@ class StoneField(_Element):
         self.has_default = False
         self.default = None
         self.deprecated = deprecated
-        self.internal = False
+        self.is_private = False
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -265,7 +265,7 @@ class StoneField(_Element):
         return 'StoneField({!r}, {!r}, {!r})'.format(
             self.name,
             self.type_ref,
-            self.internal,
+            self.is_private,
         )
 
 class StoneVoidField(_Element):
@@ -311,7 +311,6 @@ class StoneRouteDef(_Element):
         self.error_type_ref = error_type_ref
         self.doc = None
         self.attrs = {}
-        self.internal = False
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -802,14 +801,14 @@ class StoneParser(object):
             closed=p[1][0] == 'union_closed')
 
     def p_union_patch(self, p):
-        """union_patch : PATCH empty uniont ID NL INDENT field_list examples DEDENT"""
+        """union_patch : PATCH uniont ID NL INDENT field_list examples DEDENT"""
         p[0] = StoneUnionPatch(
             path=self.path,
-            lineno=p[1][1],
-            lexpos=p[1][2],
-            name=p[4],
-            fields=p[7],
-            examples=p[8],
+            lineno=p[2][1],
+            lexpos=p[2][2],
+            name=p[3],
+            fields=p[6],
+            examples=p[7],
             closed=p[1][0] == 'union_closed')
 
     def p_uniont(self, p):
