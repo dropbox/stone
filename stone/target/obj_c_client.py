@@ -187,7 +187,7 @@ class ObjCGenerator(ObjCBaseGenerator):
         with self.block_m(self.args.class_name):
             client_args = fmt_func_args_declaration(
                 [('client',
-                  'id<{}> _Nonnull'.format(self.args.transport_client_name))])
+                  'id<{}>'.format(self.args.transport_client_name))])
             with self.block_func(
                     func='initWithTransportClient',
                     args=client_args,
@@ -211,7 +211,6 @@ class ObjCGenerator(ObjCBaseGenerator):
         self.emit_raw(stone_warning)
 
         self.emit('#import <Foundation/Foundation.h>')
-        self.emit()
 
         import_classes = [
             fmt_routes_class(ns.name, self.args.auth_type)
@@ -222,6 +221,8 @@ class ObjCGenerator(ObjCBaseGenerator):
         import_classes.append('DBTasks')
 
         self._generate_imports_m(import_classes)
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_BEGIN')
         self.emit()
         self.emit('@protocol {};'.format(self.args.transport_client_name))
         self.emit()
@@ -238,7 +239,7 @@ class ObjCGenerator(ObjCBaseGenerator):
                 self.args.class_name,
                 protected=[
                     ('transportClient',
-                     'id<{}> _Nonnull'.format(self.args.transport_client_name))
+                     'id<{}>'.format(self.args.transport_client_name))
                 ]):
             self.emit()
             for namespace in api.namespaces.values():
@@ -247,14 +248,14 @@ class ObjCGenerator(ObjCBaseGenerator):
                         fmt_var(namespace.name))
                     self.emit_wrapped_text(class_doc, prefix=comment_prefix)
                     prop = '{}Routes'.format(fmt_var(namespace.name))
-                    typ = '{} * _Nonnull'.format(
+                    typ = '{} *'.format(
                         fmt_routes_class(namespace.name, self.args.auth_type))
                     self.emit(fmt_property_str(prop=prop, typ=typ))
                     self.emit()
 
             client_args = fmt_func_args_declaration(
                 [('client',
-                  'id<{}> _Nonnull'.format(self.args.transport_client_name))])
+                  'id<{}>'.format(self.args.transport_client_name))])
 
             description_str = (
                 'Initializes the `{}` object with a networking client.')
@@ -264,9 +265,12 @@ class ObjCGenerator(ObjCBaseGenerator):
             init_signature = fmt_signature(
                 func='initWithTransportClient',
                 args=client_args,
-                return_type='nonnull instancetype')
+                return_type='instancetype')
             self.emit('{};'.format(init_signature))
             self.emit()
+
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_END')
 
     def _generate_routes_m(self, namespace):
         """Generates implementation file for namespace object that has as methods
@@ -339,8 +343,7 @@ class ObjCGenerator(ObjCBaseGenerator):
         ]
 
         for name, value, typ in extra_args:
-            user_args.append((name, typ.replace(' _Nonnull', '').replace(
-                ' _Nullable', '')))
+            user_args.append((name, typ))
             transport_args.append((name, value))
 
         with self.block_func(
@@ -379,6 +382,10 @@ class ObjCGenerator(ObjCBaseGenerator):
             prefix=comment_prefix)
         self.emit(comment_prefix)
 
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_BEGIN')
+        self.emit()
+
         with self.block_h(
                 fmt_routes_class(namespace.name, self.args.auth_type)):
             description_str = (
@@ -388,18 +395,18 @@ class ObjCGenerator(ObjCBaseGenerator):
             self.emit(
                 fmt_property_str(
                     prop='client',
-                    typ='id<{}> _Nonnull'.format(
+                    typ='id<{}>'.format(
                         self.args.transport_client_name)))
             self.emit()
 
             routes_obj_args = fmt_func_args_declaration(
                 [('client',
-                  'id<{}> _Nonnull'.format(self.args.transport_client_name))])
+                  'id<{}>'.format(self.args.transport_client_name))])
 
             init_signature = fmt_signature(
                 func='init',
                 args=routes_obj_args,
-                return_type='nonnull instancetype')
+                return_type='instancetype')
             description_str = (
                 'Initializes the `{}` namespace container object '
                 'with a networking client.')
@@ -462,6 +469,9 @@ class ObjCGenerator(ObjCBaseGenerator):
                     self._generate_route_signature(route, namespace,
                                                    route_args, [], doc_list,
                                                    task_type_name, '')
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_END')
+        self.emit()
 
     def _generate_route_signature(
             self,
@@ -516,7 +526,7 @@ class ObjCGenerator(ObjCBaseGenerator):
         route_signature = fmt_signature(
             func=func_name,
             args=fmt_func_args_declaration(route_args),
-            return_type='{} _Nonnull'.format(return_type))
+            return_type='{}'.format(return_type))
         self.emit('{}{};'.format(route_signature, deprecated))
         self.emit()
 

@@ -312,6 +312,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         self._generate_init_imports_h(struct)
         self._generate_imports_h(self._get_imports_h(struct))
 
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_BEGIN')
+        self.emit()
+
         self.emit('#pragma mark - API Object')
         self.emit()
 
@@ -342,6 +346,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         self.emit(comment_prefix)
         with self.block_h(fmt_serial_class(struct_name)):
             self._generate_serializer_signatures(struct_name)
+
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_END')
+        self.emit()
 
     def _generate_union_class_m(self, union):
         """Defines an Obj C implementation file that represents a union in Stone."""
@@ -396,6 +404,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         self._generate_init_imports_h(union)
         self._generate_imports_h(self._get_imports_h(union))
 
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_BEGIN')
+        self.emit()
+
         self.emit('#pragma mark - API Object')
         self.emit()
         self._generate_class_comment(union)
@@ -428,6 +440,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         self.emit(comment_prefix)
         with self.block_h(fmt_serial_class(union_name)):
             self._generate_serializer_signatures(union_name)
+
+        self.emit()
+        self.emit('NS_ASSUME_NONNULL_END')
+        self.emit()
 
     def _generate_synthesize_ivars(self, union):
         non_void_exists = False
@@ -507,7 +523,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         signature = fmt_signature(
             func=self._cstor_name_from_fields(fields),
             args=self._cstor_args_from_fields(fields, is_struct=True),
-            return_type='nonnull instancetype')
+            return_type='instancetype')
         self.emit(comment_prefix)
         for field in struct.all_fields:
             doc = self.process_doc(field.doc,
@@ -538,7 +554,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             func=self._cstor_name_from_fields(fields_no_default),
             args=self._cstor_args_from_fields(
                 fields_no_default, is_struct=True),
-            return_type='nonnull instancetype')
+            return_type='instancetype')
 
         self.emit(comment_prefix)
         description_str = (
@@ -588,7 +604,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             signature = fmt_signature(
                 func=self._cstor_name_from_field(field),
                 args=args,
-                return_type='nonnull instancetype')
+                return_type='instancetype')
             self.emit(comment_prefix)
             self.emit_wrapped_text(
                 'Initializes union class with tag state of "{}".'.format(
@@ -637,7 +653,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
     def _generate_init_unavailable_signature(self, data_type):
         if not data_type.parent_type or is_union_type(data_type):
-            self.emit('- (nonnull instancetype)init NS_UNAVAILABLE;')
+            self.emit('- (instancetype)init NS_UNAVAILABLE;')
             self.emit()
 
     def _generate_serializable_funcs(self, data_type_name):
@@ -671,14 +687,14 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         serial_signature = fmt_signature(
             func='serialize',
             args=fmt_func_args_declaration([(
-                'instance', '{} * _Nonnull'.format(obj_name))]),
-            return_type='NSDictionary * _Nonnull',
+                'instance', '{} *'.format(obj_name))]),
+            return_type='NSDictionary *',
             class_func=True)
         deserial_signature = fmt_signature(
             func='deserialize',
             args=fmt_func_args_declaration([('dict',
-                                             'NSDictionary * _Nonnull')]),
-            return_type='{} * _Nonnull'.format(obj_name),
+                                             'NSDictionary *')]),
+            return_type='{} *'.format(obj_name),
             class_func=True)
         self.emit(comment_prefix)
         self.emit_wrapped_text(
@@ -1334,6 +1350,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit()
             self._generate_imports_h(['DBRoute'])
 
+            self.emit()
+            self.emit('NS_ASSUME_NONNULL_BEGIN')
+            self.emit()
+
             self.emit(comment_prefix)
             description_str = (
                 'Stone route objects for the {} namespace. Each route in '
@@ -1351,7 +1371,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     route_obj_access_signature = fmt_signature(
                         func=route_name,
                         args=None,
-                        return_type='DBRoute * _Nonnull',
+                        return_type='DBRoute *',
                         class_func=True)
                     base_str = 'Accessor method for the {} route object.'
                     self.emit_wrapped_text(
@@ -1359,6 +1379,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                         prefix=comment_prefix)
                     self.emit('{};'.format(route_obj_access_signature))
                     self.emit()
+
+            self.emit()
+            self.emit('NS_ASSUME_NONNULL_END')
+            self.emit()
 
     def _generate_union_tag_access_signatures(self, union):
         """Emits the is<TAG_NAME> methods and tagName method signatures for
@@ -1392,7 +1416,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             self.emit()
 
         get_tag_name_signature = fmt_signature(
-            func='tagName', args=None, return_type='NSString * _Nonnull')
+            func='tagName', args=None, return_type='NSString *')
 
         self.emit(comment_prefix)
         self.emit_wrapped_text(

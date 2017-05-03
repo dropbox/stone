@@ -228,7 +228,7 @@ def fmt_func(name):
     return fmt_camel(name)
 
 
-def fmt_type(data_type, tag=False, has_default=False, no_ptr=False):
+def fmt_type(data_type, tag=False, has_default=False, no_ptr=False, is_prop=False):
     data_type, nullable = unwrap_nullable(data_type)
 
     if is_user_defined_type(data_type):
@@ -244,10 +244,8 @@ def fmt_type(data_type, tag=False, has_default=False, no_ptr=False):
             result = result + base.format(fmt_type(data_type))
 
     if tag:
-        if nullable or has_default:
-            result += ' _Nullable'
-        elif not is_void_type(data_type):
-            result += ' _Nonnull'
+        if (nullable or has_default) and not is_prop:
+            result = 'nullable ' + result
 
     return result
 
@@ -267,9 +265,9 @@ def fmt_route_type(data_type, tag=False, has_default=False):
 
     if is_user_defined_type(data_type) and tag:
         if nullable or has_default:
-            result += ' _Nullable'
+            result = 'nullable ' + result
         elif not is_void_type(data_type):
-            result += ' _Nonnull'
+            result += ''
 
     return result
 
@@ -428,13 +426,15 @@ def fmt_var(name):
 
 def fmt_property(field):
     attrs = ['nonatomic', 'readonly']
-    data_type, _ = unwrap_nullable(field.data_type)
+    data_type, nullable = unwrap_nullable(field.data_type)
     if is_string_type(data_type):
         attrs.append('copy')
-    base_string = '@property ({}) {} {};'
+    if nullable:
+        attrs.append('nullable')
+    base_string = '@property ({}) {}{};'
 
     return base_string.format(', '.join(attrs),
-                              fmt_type(field.data_type, tag=True),
+                              fmt_type(field.data_type, tag=True, is_prop=True),
                               fmt_var(field.name))
 
 
