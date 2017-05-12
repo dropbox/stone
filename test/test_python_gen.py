@@ -978,6 +978,14 @@ class TestGeneratedPython(unittest.TestCase):
         t10 = v.get_t10()
         self.assertEqual(t10[0].get_t1(), 'hello')
 
+        # Test member that has evolved from void to type in non-strict mode.
+        v = self.decode(
+            self.sv.Union(self.ns.V),
+            json.dumps({'.tag': 't0', 't0': "hello"}),
+            strict=False)
+        self.assertIsInstance(v, self.ns.V)
+        self.assertTrue(v.is_t0())
+
     def test_union_decoding_with_optional_struct(self):
         # Simulate that U2 used to have a field b with no value, but it's since
         # been evolved to a field with an optional struct (only has optional
