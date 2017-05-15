@@ -16,6 +16,7 @@ from stone.data_type import (
     is_void_type,
     unwrap_nullable, )
 from stone.target.obj_c_helpers import (
+    append_to_jazzy_category_dict,
     fmt_alloc_call,
     fmt_camel,
     fmt_camel_upper,
@@ -80,7 +81,6 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
     cmdline_parser = _cmdline_parser
     obj_name_to_namespace = {}  # type: typing.Dict[str, str]
-    jazzy_category_map = {}  # type: typing.Dict[str, str]
     namespace_to_has_route_auth_list = {}  # type: typing.Dict[typing.Any, Set]
 
     def generate(self, api):
@@ -120,27 +120,16 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             os.path.join(rsrc_folder, 'DBSerializableProtocol.h'),
             rsrc_output_folder)
 
-        jazzy_cfg = ''
+        jazzy_cfg = None
         if self.args.documentation:
-            count_val = 0
-            for category in ['Clients', 'Routes']:
-                self.jazzy_category_map[category] = count_val
-                count_val += 1
-            for namespace in api.namespaces.values():
-                ns_name = fmt_public_name(namespace.name)
-                if ns_name != 'Common':
-                    self.jazzy_category_map[ns_name] = count_val
-                    count_val += 1
-            grps = [
-                'Networking', 'Custom', 'OAuth', 'Serializers', 'Tags',
-                'RouteObjects'
-            ]
-            for category in grps:
-                self.jazzy_category_map[category] = count_val
-                count_val += 1
-            jazzy_cfg_path = os.path.join(rsrc_folder, 'jazzy.json')
+            jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
             with open(jazzy_cfg_path) as jazzy_file:
                 jazzy_cfg = json.load(jazzy_file)
+
+            for idx, namespace in enumerate(api.namespaces.values()):
+                ns_name = fmt_public_name(namespace.name)
+                ns_dict = {"name": ns_name, "children": [], }
+                jazzy_cfg['custom_categories'].insert(idx, ns_dict)
 
         for namespace in api.namespaces.values():
             self.namespace_to_has_route_auth_list[namespace] = set()
@@ -169,12 +158,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 if self.args.documentation:
                     for auth_type in self.namespace_to_has_route_auth_list[
                             namespace]:
-                        jazzy_cfg['custom_categories'][self.jazzy_category_map[
-                            'Routes']]['children'].append(
-                                fmt_routes_class(ns_name, auth_type))
-                    jazzy_cfg['custom_categories'][self.jazzy_category_map[
-                        'RouteObjects']]['children'].append(
-                            fmt_route_obj_class(ns_name))
+                        append_to_jazzy_category_dict(
+                            jazzy_cfg, 'Routes', fmt_routes_class(ns_name, auth_type))
+                    append_to_jazzy_category_dict(
+                        jazzy_cfg, 'RouteObjects', fmt_route_obj_class(ns_name))
                 self._generate_route_objects_m(api.route_schema, namespace)
                 self._generate_route_objects_h(api.route_schema, namespace)
 
@@ -221,11 +208,9 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             class_name = fmt_class_prefix(data_type)
 
             if self.args.documentation:
-                jazzy_cfg['custom_categories'][self.jazzy_category_map[
-                    ns_name]]['children'].append(class_name)
-                jazzy_cfg['custom_categories'][
-                    self.jazzy_category_map['Serializers']]['children'].append(
-                        '{}Serializer'.format(class_name))
+                append_to_jazzy_category_dict(jazzy_cfg, ns_name, class_name)
+                append_to_jazzy_category_dict(
+                    jazzy_cfg, 'Serializers', '{}Serializer'.format(class_name))
 
             if is_struct_type(data_type):
                 # struct header
@@ -237,9 +222,8 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             elif is_union_type(data_type):
 
                 if self.args.documentation:
-                    jazzy_cfg['custom_categories'][
-                        self.jazzy_category_map['Tags']]['children'].append(
-                            '{}Tag'.format(fmt_class_prefix(data_type)))
+                    append_to_jazzy_category_dict(
+                        jazzy_cfg, 'Tags', '{}Tag'.format(fmt_class_prefix(data_type)))
                 # union header
                 file_path = os.path.join(output_path_headers,
                                          class_name + '.h')

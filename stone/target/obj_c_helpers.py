@@ -447,3 +447,11 @@ def fmt_property_str(prop, typ, attrs=None):
         attrs = ['nonatomic', 'readonly']
     base_string = '@property ({}) {} {};'
     return base_string.format(', '.join(attrs), typ, prop)
+
+
+def append_to_jazzy_category_dict(jazzy_dict, label, item):
+    for category_dict in jazzy_dict['custom_categories']:
+        if category_dict['name'] == label:
+            category_dict['children'].append(item)
+            return
+    return None
