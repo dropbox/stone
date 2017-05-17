@@ -130,7 +130,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
         shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
                     self.target_folder_path)
 
-        jazzy_cfg_path = os.path.join(rsrc_folder, 'jazzy.json')
+        jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
         with open(jazzy_cfg_path) as jazzy_file:
             jazzy_cfg = json.load(jazzy_file)
 
@@ -143,7 +143,7 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
             if namespace.routes:
                 jazzy_cfg['custom_categories'][0]['children'].append(ns_class + 'Routes')
 
-        with self.output_to_relative_path('../../../.jazzy.json'):
+        with self.output_to_relative_path('../../../../.jazzy.json'):
             self.emit_raw(json.dumps(jazzy_cfg, indent=2) + '\n')
 
     def _generate_base_namespace_module(self, api, namespace):
@@ -326,7 +326,8 @@ class SwiftTypesGenerator(SwiftBaseGenerator):
                 self.emit('return .dictionary(output)')
             with self.deserializer_func(data_type):
                 with self.block("switch json"):
-                    self.emit("case .dictionary(let dict):")
+                    dict_name = "let dict" if data_type.all_fields else "_"
+                    self.emit("case .dictionary({}):".format(dict_name))
                     with self.indent():
                         if data_type.has_enumerated_subtypes():
                             self._generate_enumerated_subtype_deserializer(namespace, data_type)

@@ -78,6 +78,7 @@ _reserved_words = {
     'subscript',
     'typealias',
     'var',
+    'default',
 }
 
 
