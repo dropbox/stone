@@ -164,6 +164,19 @@ class TestDropInModules(unittest.TestCase):
         # Passes
         l.validate(['a'])
 
+    def test_map_validator(self):
+        m = bv.Map(bv.String(pattern="^foo.*"), bv.String(pattern=".*bar$"))
+
+        # applies validators of children
+        m.validate({"foo-one": "one-bar", "foo-two":"two-bar"})
+
+        # does not match regex
+        self.assertRaises(bv.ValidationError, lambda: m.validate({"one":"two"}))
+
+        # does not match declared types
+        self.assertRaises(bv.ValidationError, lambda: m.validate({1:2}))
+
+
     def test_nullable_validator(self):
         n = bv.Nullable(bv.String())
         # Absent case
@@ -225,7 +238,8 @@ class TestDropInModules(unittest.TestCase):
                        'c': bv.Struct(S),
                        'd': bv.List(bv.Int64()),
                        'e': bv.Nullable(bv.Int64()),
-                       'f': bv.Nullable(bv.Struct(S))}
+                       'f': bv.Nullable(bv.Struct(S)),
+                       'g': bv.Map(bv.String(), bv.String())}
             _tag = None
 
             def __init__(self, tag, value=None):
@@ -291,6 +305,14 @@ class TestDropInModules(unittest.TestCase):
         u = U('f', c)
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u, old_style=True),
                          json.dumps({'f': {'f': 'hello'}}))
+
+        u = U('g', {'one': 2})
+        self.assertRaises(bv.ValidationError, lambda: json_encode(bv.Union(U), u))
+
+        m = {'one': 'two'}
+        u = U('g', m)
+        self.assertEqual(json_encode(bv.Union(U), u, old_style=True), json.dumps({'g': m}))
+
 
     def test_json_encoder_error_messages(self):
         # pylint: disable=attribute-defined-outside-init
@@ -433,7 +455,8 @@ class TestDropInModules(unittest.TestCase):
                        'd': bv.List(bv.Int64()),
                        'e': bv.Nullable(bv.Int64()),
                        'f': bv.Nullable(bv.Struct(S)),
-                       'g': bv.Void()}
+                       'g': bv.Void(),
+                       'h': bv.Map(bv.String(), bv.String())}
             _catch_all = 'g'
             _tag = None
 
@@ -480,6 +503,11 @@ class TestDropInModules(unittest.TestCase):
         l = [1, 2, 3, 4]
         u = json_decode(bv.Union(U), json.dumps({'d': l}), old_style=True)
         self.assertEqual(u.get_d(), l)
+
+        # Test map variant
+        m = {'one': 'two', 'three': 'four'}
+        u = json_decode(bv.Union(U), json.dumps({'h': m}), old_style=True)
+        self.assertEqual(u.get_d(), m)
 
         # Raises if unknown tag
         self.assertRaises(bv.ValidationError, lambda: json_decode(bv.Union(U), json.dumps('z')))

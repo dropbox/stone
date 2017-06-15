@@ -3,6 +3,7 @@ from stone.data_type import (
     Alias,
     DataType,
     List,
+    Map,
     Nullable,
     Timestamp,
     UserDefined,
@@ -12,6 +13,7 @@ from stone.data_type import (
     is_float_type,
     is_integer_type,
     is_list_type,
+    is_map_type,
     is_nullable_type,
     is_string_type,
     is_timestamp_type,
@@ -79,6 +81,17 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
         return 'list of [{}]'.format(
             map_stone_type_to_python_type(ns, list_type.data_type, override_dict)
         )
+    elif is_map_type(data_type):
+        map_type = cast(Map, data_type)
+        if Map in override_dict:
+            return override_dict[Map](ns, map_type.key_data_type, map_type.value_data_type, override_dict)
+
+
+        return 'dict of [{}:{}]'.format(
+            map_stone_type_to_python_type(ns, map_type.key_data_type, override_dict),
+            map_stone_type_to_python_type(ns, map_type.value_data_type, override_dict),
+        )
+
     elif is_nullable_type(data_type):
         nullable_type = cast(Nullable, data_type)
         if Nullable in override_dict:

@@ -933,7 +933,8 @@ class StoneParser(object):
 
     def p_example_field(self, p):
         """example_field : ID EQ primitive NL
-                         | ID EQ ex_list NL"""
+                         | ID EQ ex_list NL
+                         | ID EQ ex_map NL"""
         if p[3] is StoneNull:
             p[0] = StoneExampleField(
                 self.path, p.lineno(1), p.lexpos(1), p[1], None)
@@ -980,6 +981,46 @@ class StoneParser(object):
         """ex_list_items : ex_list_items COMMA ex_list_item"""
         p[0] = p[1]
         p[0].append(p[3])
+
+    # --------------------------------------------------------------
+    # Maps
+    #
+
+    def p_ex_map(self, p):
+        """ex_map : LBRACE ex_map_pairs RBRACE
+                  | LBRACE empty RBRACE"""
+        p[0] = {} if p[2] is None else p[2]
+
+    def p_ex_map_elem_primitive(self, p):
+        """ex_map_elem : primitive"""
+        p[0] = None if p[1] == StoneNull else p[1]
+
+    def p_ex_map_elem_composit(self, p):
+        """ex_map_elem : ex_map
+                       | ex_list"""
+        p[0] = p[1]
+
+    def p_ex_map_elem_id(self, p):
+        """ex_map_elem : ID"""
+        p[0] = StoneExampleRef(self.path, p.lineno(1), p.lexpos(1), p[1])
+
+    def p_ex_map_pair(self, p):
+        """ex_map_pair : ex_map_elem COLON ex_map_elem"""
+        try:
+            p[0] = {p[1]: p[3]}
+        except TypeError as e:
+            msg = u"%s is an invalid hash key because it cannot be hashed." % repr(p[1])
+            self.errors.append((msg, p.lineno(2), self.path))
+            p[0] = {}
+
+    def p_ex_map_pairs_create(self, p):
+        """ex_map_pairs : ex_map_pair """
+        p[0] = p[1]
+
+    def p_ex_map_pairs_extend(self, p):
+        """ex_map_pairs : ex_map_pairs COMMA ex_map_pair"""
+        p[0] = p[1]
+        p[0].update(p[3])
 
     # --------------------------------------------------------------
 

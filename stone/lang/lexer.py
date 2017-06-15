@@ -137,6 +137,13 @@ class StoneLexer(object):
         'RBRACKET',
     )
 
+    # Map notation
+    tokens += (
+        'LBRACE',
+        'RBRACE',
+        'COLON',
+    )
+
     tokens += (
         'Q',
     )
@@ -150,6 +157,9 @@ class StoneLexer(object):
     t_EQ = r'='
     t_COMMA = r','
     t_Q = r'\?'
+    t_LBRACE = r'\{'
+    t_RBRACE = r'\}'
+    t_COLON = r'\:'
 
     # TODO(kelkabany): Use scoped/conditional lexing to restrict where keywords
     # are identified as such.

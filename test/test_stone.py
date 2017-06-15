@@ -23,6 +23,7 @@ from stone.data_type import (
     Alias,
     Nullable,
     String,
+    Map
 )
 
 
@@ -985,6 +986,77 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             t.parse()
         self.assertIn('union can only extend another union', cm.exception.msg)
+
+
+    def test_map_semantics(self):
+        text = textwrap.dedent("""\
+            namespace test
+            
+            alias M = Map(String, Int32)
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        m_alias = t.api.namespaces['test'].alias_by_name['M']
+        self.assertIsInstance(m_alias, Alias)
+        self.assertIsInstance(m_alias.data_type, Map)
+
+        # maps of maps
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias M = Map(String, Map(String, Int32))
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        m_alias = t.api.namespaces['test'].alias_by_name['M']
+        self.assertIsInstance(m_alias.data_type.value_data_type, Map)
+
+        # Map type errors with 0 args
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias M = Map()
+        """)
+
+        # map type errors with only 1 args
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec):
+            t.parse()
+
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias M = Map(String)
+        """)
+
+        # map type errors with more than two args
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec):
+            t.parse()
+
+        text = textwrap.dedent("""\
+            namespace test
+    
+            alias M = Map(String, String, String)
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec):
+            t.parse()
+
+        # map type errors when key data type is not a String
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias M = Map(Int32, String)
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec):
+            t.parse()
+
 
     def test_enumerated_subtypes(self):
 
@@ -2787,6 +2859,82 @@ class TestStone(unittest.TestCase):
         self.assertEqual(
             u_dt.get_examples()['default'].value,
             {'.tag': 'a', 'a': [[{'.tag': 'x'}, {'.tag': 'y', 'y': 100}, {'.tag': 'x'}]]})
+
+
+    def test_examples_map(self):
+        # valid simple example
+        text = textwrap.dedent("""\
+        namespace test
+
+        struct S
+            m Map(String, Int32)
+            
+            example default
+                m = {"one": 1, "two": 2}
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        s = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertIsInstance(s.get_examples()['default'].value, dict)
+
+        # complex stone example
+        text = textwrap.dedent("""\
+            namespace test
+    
+            alias m = Map(String, Int32)
+            alias mm = Map(String, m)
+            
+            struct S
+                arg mm
+                    "hash of hashes"
+                    
+                example default
+                    arg = {"key": {"one": 1}, "another_key" : {"two" : 2, "three": 3}}
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        s = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertIsInstance(s.get_examples()['default'].value, dict)
+
+        # map of structs
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct Substruct
+                m2 Map(String, Int32)
+
+                example example_ref
+                    m2 = {"one": 1, "two": 2}
+                    
+            struct S
+                m Map(String, Substruct)
+                
+                example default
+                    m = {"key": example_ref, "another_key": example_ref}
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        t.parse()
+        s = t.api.namespaces['test'].data_type_by_name['S']
+        self.assertIsInstance(s.get_examples()['default'].value, dict)
+
+        # error when example doesn't match definition
+        text = textwrap.dedent("""\
+        namespace test
+
+        struct S
+            m Map(String, String)
+
+            example default
+                m = {"one": 1}
+        """)
+
+        t = TowerOfStone([('test.stone', text)])
+        with self.assertRaises(InvalidSpec):
+            t.parse()
+
 
     def test_name_conflicts(self):
         # Test name conflict in same file

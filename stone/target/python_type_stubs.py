@@ -15,6 +15,7 @@ from stone.data_type import (  # noqa: F401 # pylint: disable=unused-import
     Alias,
     DataType,
     List,
+    Map,
     Nullable,
     Struct,
     Timestamp,
@@ -316,6 +317,14 @@ class PythonTypeStubsGenerator(CodeGenerator):
                 map_stone_type_to_python_type(ns, data_type, override_dict)
             )
 
+        def upon_encountering_map(ns, key_data_type, value_data_type, override_dict):
+            # type: (ApiNamespace, DataType, DataType, OverrideDefaultTypesDict) -> str
+            self.import_tracker._register_typing_import("Dict")
+            return str("Dict[{}, {}]").format(
+                map_stone_type_to_python_type(ns, key_data_type, override_dict),
+                map_stone_type_to_python_type(ns, value_data_type, override_dict)
+            )
+
         def upon_encountering_nullable(ns, data_type, override_dict):
             # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> str
             self.import_tracker._register_typing_import("Optional")
@@ -332,6 +341,7 @@ class PythonTypeStubsGenerator(CodeGenerator):
 
         callback_dict = {
             List: upon_encountering_list,
+            Map: upon_encountering_map,
             Nullable: upon_encountering_nullable,
             Timestamp: upon_encountering_timestamp,
         }  # type: OverrideDefaultTypesDict
