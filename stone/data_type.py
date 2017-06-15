@@ -488,6 +488,37 @@ class List(Composite):
             raise ValueError('list has fewer than %s item(s)' % self.min_items)
 
 
+class Map(Composite):
+    def __init__(self, key_data_type, value_data_type):
+        super(Map, self).__init__()
+
+        if not isinstance(key_data_type, String):
+            raise ParameterError("Only String primitives are supported as key types.")
+
+        self.key_data_type = key_data_type
+        self.value_data_type = value_data_type
+
+    def check(self, val):
+        raise NotImplementedError
+
+    def check_example(self, ex_field):
+        if not isinstance(ex_field.value, dict):
+            raise ValueError("%s is not a valid map" % generic_type_name(ex_field.value))
+        for k, v in ex_field.value.items():
+            ex_key_field = self._make_ex_field(ex_field, k)
+            ex_value_field = self._make_ex_field(ex_field, v)
+            self.key_data_type.check_example(ex_key_field)
+            self.value_data_type.check_example(ex_value_field)
+
+    def _make_ex_field(self, ex_field, value):
+        return StoneExampleField(
+            ex_field.path,
+            ex_field.lineno,
+            ex_field.lexpos,
+            ex_field.name,
+            value)
+
+
 def doc_unwrap(raw_doc):
     """
     Applies two transformations to raw_doc:
@@ -1641,6 +1672,8 @@ def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
 def is_list_type(data_type):
     return isinstance(data_type, List)
+def is_map_type(data_type):
+    return isinstance(data_type, Map)
 def is_nullable_type(data_type):
     return isinstance(data_type, Nullable)
 def is_numeric_type(data_type):

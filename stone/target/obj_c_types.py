@@ -81,7 +81,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
     cmdline_parser = _cmdline_parser
     obj_name_to_namespace = {}  # type: typing.Dict[str, str]
-    namespace_to_has_route_auth_list = {}  # type: typing.Dict[typing.Any, Set]
+    namespace_to_has_route_auth_list = {}  # type: typing.Dict[typing.Any, typing.Set]
 
     def generate(self, api):
         """

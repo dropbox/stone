@@ -26,6 +26,7 @@ from stone.data_type import (
     is_boolean_type,
     is_bytes_type,
     is_list_type,
+    is_map_type,
     is_nullable_type,
     is_numeric_type,
     is_string_type,
@@ -830,6 +831,14 @@ def generate_validator_constructor(ns, data_type):
             kwargs=[
                 ('min_items', dt.min_items),
                 ('max_items', dt.max_items)],
+        )
+    elif is_map_type(dt):
+        v = generate_func_call(
+            'bv.Map',
+            args=[
+                generate_validator_constructor(ns, dt.key_data_type),
+                generate_validator_constructor(ns, dt.value_data_type),
+            ]
         )
     elif is_numeric_type(dt):
         v = generate_func_call(

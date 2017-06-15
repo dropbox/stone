@@ -164,6 +164,18 @@ class TestDropInModules(unittest.TestCase):
         # Passes
         l.validate(['a'])
 
+    def test_map_validator(self):
+        m = bv.Map(bv.String(pattern="^foo.*"), bv.String(pattern=".*bar$"))
+
+        # applies validators of children
+        m.validate({"foo-one": "one-bar", "foo-two": "two-bar"})
+
+        # does not match regex
+        self.assertRaises(bv.ValidationError, lambda: m.validate({"one": "two"}))
+
+        # does not match declared types
+        self.assertRaises(bv.ValidationError, lambda: m.validate({1: 2}))
+
     def test_nullable_validator(self):
         n = bv.Nullable(bv.String())
         # Absent case
@@ -225,7 +237,8 @@ class TestDropInModules(unittest.TestCase):
                        'c': bv.Struct(S),
                        'd': bv.List(bv.Int64()),
                        'e': bv.Nullable(bv.Int64()),
-                       'f': bv.Nullable(bv.Struct(S))}
+                       'f': bv.Nullable(bv.Struct(S)),
+                       'g': bv.Map(bv.String(), bv.String())}
             _tag = None
 
             def __init__(self, tag, value=None):
@@ -291,6 +304,13 @@ class TestDropInModules(unittest.TestCase):
         u = U('f', c)
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u, old_style=True),
                          json.dumps({'f': {'f': 'hello'}}))
+
+        u = U('g', {'one': 2})
+        self.assertRaises(bv.ValidationError, lambda: json_encode(bv.Union(U), u))
+
+        m = {'one': 'two'}
+        u = U('g', m)
+        self.assertEqual(json_encode(bv.Union(U), u, old_style=True), json.dumps({'g': m}))
 
     def test_json_encoder_error_messages(self):
         # pylint: disable=attribute-defined-outside-init
@@ -433,7 +453,8 @@ class TestDropInModules(unittest.TestCase):
                        'd': bv.List(bv.Int64()),
                        'e': bv.Nullable(bv.Int64()),
                        'f': bv.Nullable(bv.Struct(S)),
-                       'g': bv.Void()}
+                       'g': bv.Void(),
+                       'h': bv.Map(bv.String(), bv.String())}
             _catch_all = 'g'
             _tag = None
 
@@ -480,6 +501,11 @@ class TestDropInModules(unittest.TestCase):
         l = [1, 2, 3, 4]
         u = json_decode(bv.Union(U), json.dumps({'d': l}), old_style=True)
         self.assertEqual(u.get_d(), l)
+
+        # Test map variant
+        m = {'one': 'two', 'three': 'four'}
+        u = json_decode(bv.Union(U), json.dumps({'h': m}), old_style=True)
+        self.assertEqual(u.get_d(), m)
 
         # Raises if unknown tag
         self.assertRaises(bv.ValidationError, lambda: json_decode(bv.Union(U), json.dumps('z')))
@@ -582,6 +608,7 @@ struct D
     b UInt64 = 10
     c String?
     d List(Int64?)
+    e Map(String, String?)
 
 struct E
     a String = "test"
@@ -625,6 +652,8 @@ union V
     t8 Resource?
     t9 List(String)
     t10 List(U)
+    t11 Map(String, Int32)
+    t12 Map(String, U)
 
 struct S
     f String
@@ -750,42 +779,50 @@ class TestGeneratedPython(unittest.TestCase):
 
     def test_struct_decoding(self):
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'b': 1, 'c': 'C', 'd': []}))
+                        json.dumps({'a': 'A', 'b': 1, 'c': 'C', 'd': [], 'e': {}}))
         self.assertIsInstance(d, self.ns.D)
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
         self.assertEqual(d.c, 'C')
         self.assertEqual(d.d, [])
+        self.assertEqual(d.e, {})
 
         # Test with missing value for nullable field
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'b': 1, 'd': []}))
+                        json.dumps({'a': 'A', 'b': 1, 'd': [], 'e': {}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [])
+        self.assertEqual(d.e, {})
 
         # Test with missing value for field with default
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'c': 'C', 'd': [1]}))
+                        json.dumps({'a': 'A', 'c': 'C', 'd': [1], 'e': {'one': 'two'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 10)
         self.assertEqual(d.c, 'C')
         self.assertEqual(d.d, [1])
+        self.assertEqual(d.e, {'one': 'two'})
 
         # Test with explicitly null value for nullable field
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'c': None, 'd': [1, 2]}))
+                        json.dumps({'a': 'A', 'c': None, 'd': [1, 2], 'e': {'one': 'two'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [1, 2])
+        self.assertEqual(d.e, {'one': 'two'})
 
         # Test with None and numbers in list
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'c': None, 'd': [None, 1]}))
+                        json.dumps({'a': 'A',
+                                    'c': None,
+                                    'd': [None, 1],
+                                    'e': {'one': None, 'two': 'three'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [None, 1])
+        self.assertEqual(d.e, {'one': None, 'two': 'three'})
 
         # Test with explicitly null value for field with default
         with self.assertRaises(self.sv.ValidationError) as cm:
@@ -986,6 +1023,31 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
+        # test maps
+        v = self.decode(
+            self.sv.Union(self.ns.V),
+            json.dumps({'.tag': 't11', 't11': {'a': 100}}))
+        self.assertIsInstance(v, self.ns.V)
+        self.assertEqual(v.get_t11(), {'a': 100})
+
+        # Test map of composites:
+        # Test member that is a list of composites
+        v = self.decode(
+            self.sv.Union(self.ns.V),
+            json.dumps({'.tag': 't12', 't12': {'key': {'.tag': 't1', 't1': 'hello'}}}))
+        self.assertIsInstance(v, self.ns.V)
+        t12 = v.get_t12()
+        self.assertEqual(t12['key'].get_t1(), 'hello')
+
+        # Test member that is a list of composites (old style)
+        v = self.decode(
+            self.sv.Union(self.ns.V),
+            json.dumps({'t12': {'another key': {'t1': 'hello again'}}}),
+            old_style=True)
+        self.assertIsInstance(v, self.ns.V)
+        t12 = v.get_t12()
+        self.assertEqual(t12['another key'].get_t1(), 'hello again')
+
     def test_union_decoding_with_optional_struct(self):
         # Simulate that U2 used to have a field b with no value, but it's since
         # been evolved to a field with an optional struct (only has optional
@@ -1151,6 +1213,13 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(
             self.compat_obj_encode(self.sv.Union(self.ns.V), v_t9),
             {'.tag': 't9', 't9': ['a', 'b']})
+
+        # Test member that is a map
+        v_t11 = self.ns.V.t11({'a_key': 404})
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t11),
+            {'.tag': 't11', 't11': {'a_key': 404}}
+        )
 
     def test_list_coding(self):
         # Test decoding list of composites

@@ -15,6 +15,7 @@ from stone.data_type import (
     Int64,
     InvalidSpec,
     List,
+    Map,
     ParameterError,
     String,
     Timestamp,
@@ -118,6 +119,38 @@ class TestStoneInternal(unittest.TestCase):
                     value=[[]],
                 ))
         self.assertIn("has fewer than 1 item(s)", cm.exception.msg)
+
+        #
+        # Test Map type
+        #
+
+        m = Map(String(), String())
+        # valid example
+        m.check_example(
+            StoneExampleField(
+                path='test.stone',
+                lineno=1,
+                lexpos=0,
+                name='v',
+                value={"foo": "bar"}
+            )
+        )
+
+        # does not conform to declared type
+        with self.assertRaises(InvalidSpec):
+            m.check_example(
+                StoneExampleField(
+                    path='test.stone',
+                    lineno=1,
+                    lexpos=0,
+                    name='v',
+                    value={1: "bar"}
+                )
+            )
+
+        with self.assertRaises(ParameterError):
+            # errors because only string types can be used as keys
+            Map(Int32(), String())
 
         s = Struct('S', None, None)
         s.set_attributes(

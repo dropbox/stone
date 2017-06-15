@@ -13,7 +13,9 @@ from stone.data_type import (
     Alias,
     Boolean,
     List,
+    Map,
     Nullable,
+    String,
     Struct,
     StructField,
     Timestamp,
@@ -77,7 +79,8 @@ def _make_namespace_with_many_structs():
         doc=None,
         fields=[
             StructField('f2', List(UInt64()), None, None),
-            StructField('f3', Timestamp(ISO_8601_FORMAT), None, None)
+            StructField('f3', Timestamp(ISO_8601_FORMAT), None, None),
+            StructField('f4', Map(String(), UInt64()), None, None)
         ]
     )
     ns.add_data_type(struct2)
@@ -230,7 +233,8 @@ class TestPythonTypeStubs(unittest.TestCase):
             class Struct2(object):
                 def __init__(self,
                              f2: List[long] = ...,
-                             f3: datetime.datetime = ...) -> None: ...
+                             f3: datetime.datetime = ...,
+                             f4: Dict[str, long] = ...) -> None: ...
 
                 @property
                 def f2(self) -> List[long]: ...
@@ -252,8 +256,19 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def f3(self) -> None: ...
 
 
+                @property
+                def f4(self) -> Dict[str, long]: ...
+
+                @f4.setter
+                def f4(self, val: Dict[str, long]) -> None: ...
+
+                @f4.deleter
+                def f4(self) -> None: ...
+
+
 
             from typing import (
+                Dict,
                 List,
             )
 

@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import textwrap
 from contextlib import contextmanager
 
+from stone.typing_hacks import cast
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -15,6 +16,7 @@ from stone.data_type import (  # noqa: F401 # pylint: disable=unused-import
     Alias,
     DataType,
     List,
+    Map,
     Nullable,
     Struct,
     Timestamp,
@@ -316,6 +318,15 @@ class PythonTypeStubsGenerator(CodeGenerator):
                 map_stone_type_to_python_type(ns, data_type, override_dict)
             )
 
+        def upon_encountering_map(ns, map_data_type, override_dict):
+            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> str
+            map_type = cast(Map, map_data_type)
+            self.import_tracker._register_typing_import("Dict")
+            return str("Dict[{}, {}]").format(
+                map_stone_type_to_python_type(ns, map_type.key_data_type, override_dict),
+                map_stone_type_to_python_type(ns, map_type.value_data_type, override_dict)
+            )
+
         def upon_encountering_nullable(ns, data_type, override_dict):
             # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> str
             self.import_tracker._register_typing_import("Optional")
@@ -332,6 +343,7 @@ class PythonTypeStubsGenerator(CodeGenerator):
 
         callback_dict = {
             List: upon_encountering_list,
+            Map: upon_encountering_map,
             Nullable: upon_encountering_nullable,
             Timestamp: upon_encountering_timestamp,
         }  # type: OverrideDefaultTypesDict
