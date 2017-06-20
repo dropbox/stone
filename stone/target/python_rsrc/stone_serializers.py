@@ -681,7 +681,7 @@ def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack):
                     raise bv.ValidationError("unexpected key '%s'" % key)
         val = None
     elif isinstance(val_data_type,
-                    (bv.Primitive, bv.List, bv.StructTree, bv.Union)):
+                    (bv.Primitive, bv.List, bv.StructTree, bv.Union, bv.Map)):
         if tag in obj:
             raw_val = obj[tag]
             try:

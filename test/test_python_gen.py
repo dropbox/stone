@@ -610,6 +610,7 @@ struct D
     b UInt64 = 10
     c String?
     d List(Int64?)
+    e Map(String, String?)
 
 struct E
     a String = "test"
@@ -653,6 +654,8 @@ union V
     t8 Resource?
     t9 List(String)
     t10 List(U)
+    t11 Map(String, Int32)
+    t12 Map(String, U)
 
 struct S
     f String
@@ -778,42 +781,51 @@ class TestGeneratedPython(unittest.TestCase):
 
     def test_struct_decoding(self):
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'b': 1, 'c': 'C', 'd': []}))
+                        json.dumps({'a': 'A', 'b': 1, 'c': 'C', 'd': [], 'e': {}}))
         self.assertIsInstance(d, self.ns.D)
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
         self.assertEqual(d.c, 'C')
         self.assertEqual(d.d, [])
+        self.assertEqual(d.e, {})
 
         # Test with missing value for nullable field
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'b': 1, 'd': []}))
+                        json.dumps({'a': 'A', 'b': 1, 'd': [], 'e': {}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [])
+        self.assertEqual(d.e, {})
 
         # Test with missing value for field with default
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'c': 'C', 'd': [1]}))
+                        json.dumps({'a': 'A', 'c': 'C', 'd': [1], 'e': {'one': 'two'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 10)
         self.assertEqual(d.c, 'C')
         self.assertEqual(d.d, [1])
+        self.assertEqual(d.e, {'one': 'two'})
 
         # Test with explicitly null value for nullable field
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'c': None, 'd': [1, 2]}))
+                        json.dumps({'a': 'A', 'c': None, 'd': [1, 2], 'e': {'one': 'two'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [1, 2])
+        self.assertEqual(d.e, {'one': 'two'})
+
 
         # Test with None and numbers in list
         d = self.decode(self.sv.Struct(self.ns.D),
-                        json.dumps({'a': 'A', 'c': None, 'd': [None, 1]}))
+                        json.dumps({'a': 'A',
+                                    'c': None,
+                                    'd': [None, 1],
+                                    'e': {'one': None, 'two': 'three'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
         self.assertEqual(d.d, [None, 1])
+        self.assertEqual(d.e, {'one': None, 'two': 'three'})
 
         # Test with explicitly null value for field with default
         with self.assertRaises(self.sv.ValidationError) as cm:
@@ -1014,6 +1026,32 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
+        # test maps
+        v = self.decode(
+            self.sv.Union(self.ns.V),
+            json.dumps({'.tag': 't11', 't11': {'a': 100}}))
+        self.assertIsInstance(v, self.ns.V)
+        self.assertEqual(v.get_t11(), {'a': 100})
+
+        # Test map of composites:
+        # Test member that is a list of composites
+        v = self.decode(
+            self.sv.Union(self.ns.V),
+            json.dumps({'.tag': 't12', 't12': {'key': {'.tag': 't1', 't1': 'hello'}}}))
+        self.assertIsInstance(v, self.ns.V)
+        t12 = v.get_t12()
+        self.assertEqual(t12['key'].get_t1(), 'hello')
+
+        # Test member that is a list of composites (old style)
+        v = self.decode(
+            self.sv.Union(self.ns.V),
+            json.dumps({'t12': {'another key': {'t1': 'hello again'}}}),
+            old_style=True)
+        self.assertIsInstance(v, self.ns.V)
+        t12 = v.get_t12()
+        self.assertEqual(t12['another key'].get_t1(), 'hello again')
+
+
     def test_union_decoding_with_optional_struct(self):
         # Simulate that U2 used to have a field b with no value, but it's since
         # been evolved to a field with an optional struct (only has optional
@@ -1179,6 +1217,13 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(
             self.compat_obj_encode(self.sv.Union(self.ns.V), v_t9),
             {'.tag': 't9', 't9': ['a', 'b']})
+
+        # Test member that is a map
+        v_t11 = self.ns.V.t11({'a_key': 404})
+        self.assertEquals(
+            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t11),
+            {'.tag': 't11', 't11': {'a_key': 404}}
+        )
 
     def test_list_coding(self):
         # Test decoding list of composites
