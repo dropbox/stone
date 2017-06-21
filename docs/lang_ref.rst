@@ -64,6 +64,12 @@ List                    * **data_type**: A primitive or   Lists are homogeneous.
                           composite type.
                         * min_items
                         * max_items
+Map                     * **key_data_type**: Must be an   Maps must have keys
+                          instance of the String base     that are a String
+                          type.                           type.  Values can be
+                        * **value_data_type**: A          any primitive or
+                          primitive or composite type.    composite as long as
+                                                          they are homogeneous.
 String                  * min_length                      A unicode string.
                         * max_length
                         * pattern: A regular expression
@@ -301,6 +307,13 @@ Lists can be expressed with brackets::
         example default
             items = ["bananas", "yogurt", "cheerios"]
 
+Maps are expressed with curly braces::
+
+    struct Colors
+        similar_colors Map(String, List(String))
+
+        example default
+            similar_colors = {"blue": ["aqua", "azure"], "red": ["crimson"], "green": []}
 Union
 =====
 
