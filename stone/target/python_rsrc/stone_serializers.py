@@ -238,7 +238,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         validated_value = validator.validate(value)
 
         return {
-            self.encode_sub(validator.key_validator, key) :
+            self.encode_sub(validator.key_validator, key):
                 self.encode_sub(validator.value_validator, value) for
             key, value in validated_value.items()
         }
@@ -849,7 +849,7 @@ def _decode_map(
     return {
         _json_compat_obj_decode_helper(
             data_type.key_validator, key, alias_validators, strict,
-            old_style, for_msgpack) :
+            old_style, for_msgpack):
         _json_compat_obj_decode_helper(
             data_type.value_validator, value, alias_validators, strict,
             old_style, for_msgpack)

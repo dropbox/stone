@@ -168,14 +168,13 @@ class TestDropInModules(unittest.TestCase):
         m = bv.Map(bv.String(pattern="^foo.*"), bv.String(pattern=".*bar$"))
 
         # applies validators of children
-        m.validate({"foo-one": "one-bar", "foo-two":"two-bar"})
+        m.validate({"foo-one": "one-bar", "foo-two": "two-bar"})
 
         # does not match regex
-        self.assertRaises(bv.ValidationError, lambda: m.validate({"one":"two"}))
+        self.assertRaises(bv.ValidationError, lambda: m.validate({"one": "two"}))
 
         # does not match declared types
-        self.assertRaises(bv.ValidationError, lambda: m.validate({1:2}))
-
+        self.assertRaises(bv.ValidationError, lambda: m.validate({1: 2}))
 
     def test_nullable_validator(self):
         n = bv.Nullable(bv.String())
@@ -312,7 +311,6 @@ class TestDropInModules(unittest.TestCase):
         m = {'one': 'two'}
         u = U('g', m)
         self.assertEqual(json_encode(bv.Union(U), u, old_style=True), json.dumps({'g': m}))
-
 
     def test_json_encoder_error_messages(self):
         # pylint: disable=attribute-defined-outside-init
@@ -815,7 +813,6 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.d, [1, 2])
         self.assertEqual(d.e, {'one': 'two'})
 
-
         # Test with None and numbers in list
         d = self.decode(self.sv.Struct(self.ns.D),
                         json.dumps({'a': 'A',
@@ -1050,7 +1047,6 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(v, self.ns.V)
         t12 = v.get_t12()
         self.assertEqual(t12['another key'].get_t1(), 'hello again')
-
 
     def test_union_decoding_with_optional_struct(self):
         # Simulate that U2 used to have a field b with no value, but it's since

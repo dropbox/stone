@@ -987,11 +987,10 @@ class TestStone(unittest.TestCase):
             t.parse()
         self.assertIn('union can only extend another union', cm.exception.msg)
 
-
     def test_map_semantics(self):
         text = textwrap.dedent("""\
             namespace test
-            
+
             alias M = Map(String, Int32)
         """)
 
@@ -1038,7 +1037,7 @@ class TestStone(unittest.TestCase):
 
         text = textwrap.dedent("""\
             namespace test
-    
+
             alias M = Map(String, String, String)
         """)
 
@@ -1056,7 +1055,6 @@ class TestStone(unittest.TestCase):
         t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec):
             t.parse()
-
 
     def test_enumerated_subtypes(self):
 
@@ -2860,7 +2858,6 @@ class TestStone(unittest.TestCase):
             u_dt.get_examples()['default'].value,
             {'.tag': 'a', 'a': [[{'.tag': 'x'}, {'.tag': 'y', 'y': 100}, {'.tag': 'x'}]]})
 
-
     def test_examples_map(self):
         # valid simple example
         text = textwrap.dedent("""\
@@ -2868,7 +2865,7 @@ class TestStone(unittest.TestCase):
 
         struct S
             m Map(String, Int32)
-            
+
             example default
                 m = {"one": 1, "two": 2}
         """)
@@ -2881,14 +2878,14 @@ class TestStone(unittest.TestCase):
         # complex stone example
         text = textwrap.dedent("""\
             namespace test
-    
+
             alias m = Map(String, Int32)
             alias mm = Map(String, m)
-            
+
             struct S
                 arg mm
                     "hash of hashes"
-                    
+
                 example default
                     arg = {"key": {"one": 1}, "another_key" : {"two" : 2, "three": 3}}
         """)
@@ -2907,10 +2904,10 @@ class TestStone(unittest.TestCase):
 
                 example example_ref
                     m2 = {"one": 1, "two": 2}
-                    
+
             struct S
                 m Map(String, Substruct)
-                
+
                 example default
                     m = {"key": example_ref, "another_key": example_ref}
         """)
@@ -2934,7 +2931,6 @@ class TestStone(unittest.TestCase):
         t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec):
             t.parse()
-
 
     def test_name_conflicts(self):
         # Test name conflict in same file

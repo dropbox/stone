@@ -502,7 +502,7 @@ class Map(Composite):
         raise NotImplementedError
 
     def check_example(self, ex_field):
-        for k,v in ex_field.value.items():
+        for k, v in ex_field.value.items():
             ex_key_field = self._make_ex_field(ex_field, k)
             ex_value_field = self._make_ex_field(ex_field, v)
             self.key_data_type.check_example(ex_key_field)

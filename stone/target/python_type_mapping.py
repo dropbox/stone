@@ -84,8 +84,12 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
     elif is_map_type(data_type):
         map_type = cast(Map, data_type)
         if Map in override_dict:
-            return override_dict[Map](ns, map_type.key_data_type, map_type.value_data_type, override_dict)
-
+            return override_dict[Map](
+                ns,
+                map_type.key_data_type,
+                map_type.value_data_type,
+                override_dict
+            )
 
         return 'dict of [{}:{}]'.format(
             map_stone_type_to_python_type(ns, map_type.key_data_type, override_dict),

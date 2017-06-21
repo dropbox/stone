@@ -1008,7 +1008,7 @@ class StoneParser(object):
         """ex_map_pair : ex_map_elem COLON ex_map_elem"""
         try:
             p[0] = {p[1]: p[3]}
-        except TypeError as e:
+        except TypeError:
             msg = u"%s is an invalid hash key because it cannot be hashed." % repr(p[1])
             self.errors.append((msg, p.lineno(2), self.path))
             p[0] = {}
