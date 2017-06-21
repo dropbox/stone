@@ -86,14 +86,13 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
         if Map in override_dict:
             return override_dict[Map](
                 ns,
-                map_type.key_data_type,
-                map_type.value_data_type,
+                data_type,
                 override_dict
             )
 
         return 'dict of [{}:{}]'.format(
             map_stone_type_to_python_type(ns, map_type.key_data_type, override_dict),
-            map_stone_type_to_python_type(ns, map_type.value_data_type, override_dict),
+            map_stone_type_to_python_type(ns, map_type.value_data_type, override_dict)
         )
 
     elif is_nullable_type(data_type):
