@@ -1216,7 +1216,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test member that is a map
         v_t11 = self.ns.V.t11({'a_key': 404})
-        self.assertEquals(
+        self.assertEqual(
             self.compat_obj_encode(self.sv.Union(self.ns.V), v_t11),
             {'.tag': 't11', 't11': {'a_key': 404}}
         )
