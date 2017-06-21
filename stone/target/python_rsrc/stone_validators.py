@@ -423,7 +423,7 @@ class Map(Composite):
         if not isinstance(val, dict):
             raise ValidationError('%r is not a valid dict' % val)
         return {
-            self.key_validator.validate(key) :
+            self.key_validator.validate(key):
                 self.value_validator.validate(value) for key, value in val.items()
         }
 
