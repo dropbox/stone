@@ -502,6 +502,8 @@ class Map(Composite):
         raise NotImplementedError
 
     def check_example(self, ex_field):
+        if not isinstance(ex_field.value, dict):
+            raise ValueError("%s is not a valid map" % generic_type_name(ex_field.value))
         for k, v in ex_field.value.items():
             ex_key_field = self._make_ex_field(ex_field, k)
             ex_value_field = self._make_ex_field(ex_field, v)

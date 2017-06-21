@@ -989,7 +989,7 @@ class StoneParser(object):
     def p_ex_map(self, p):
         """ex_map : LBRACE ex_map_pairs RBRACE
                   | LBRACE empty RBRACE"""
-        p[0] = {} if p[2] is None else p[2]
+        p[0] = p[2] or {}
 
     def p_ex_map_elem_primitive(self, p):
         """ex_map_elem : primitive"""
