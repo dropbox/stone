@@ -1220,6 +1220,11 @@ class Struct(UserDefined):
             elif isinstance(val, list):
                 dt, _ = unwrap_nullable(dt)
                 return [get_json_val(dt.data_type, v) for v in val]
+            elif isinstance(val, dict):
+                dt, _ = unwrap_nullable(dt)
+                if is_alias(dt):
+                    return val
+                return {k: get_json_val(dt.value_data_type, v) for (k, v) in val.items()}
             else:
                 return val
 
