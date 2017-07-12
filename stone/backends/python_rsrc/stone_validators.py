@@ -23,6 +23,11 @@ _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
+try:
+    import dateutil.parser  # type: ignore
+except ImportError:
+    dateutil = None  # type: ignore
+
 # See <http://python3porting.com/differences.html#buffer>
 if six.PY3:
     _binary_types = (bytes, memoryview)  # noqa: E501,F821 # pylint: disable=undefined-variable,useless-suppression
@@ -366,6 +371,36 @@ class Timestamp(Primitive):
                 val.tzinfo.utcoffset(val).total_seconds() != 0:
             raise ValidationError('timestamp should have either a UTC '
                                   'timezone or none set at all')
+        return val
+
+
+class Iso8601Timestamp(Primitive):
+    """Note that while a format is specified, it isn't used in validation
+    since a native Python datetime object is preferred. The format, however,
+    can and should be used by serializers."""
+
+    def __init__(self, output_fmt, input_re=None):
+        """output_fmt must be compatible with the C standard (1989)
+        strftime() function."""
+        assert isinstance(output_fmt, six.text_type), 'output_format must be a string'
+        super(Iso8601Timestamp, self).__init__()
+        if dateutil is None:
+            name = self.__class__.__name__
+            raise RuntimeError('{} requires python-dateutil which is not available'.format(name))
+        assert isinstance(output_fmt, six.string_types), 'output_fmt must be a string'
+        self.output_format = output_fmt
+        if isinstance(input_re, six.string_types):
+            input_re = re.compile(input_re)
+        assert input_re is None or hasattr(input_re, 'search'), \
+            'input_re must be a string or a regex object'
+        self.input_re = input_re
+
+    def validate(self, val):
+        if not isinstance(val, datetime.datetime):
+            raise ValidationError('expected timestamp, got %s'
+                                  % generic_type_name(val))
+        elif val.tzinfo is None:
+            raise ValidationError('timestamp should be timezone-aware (not naive)')
         return val
 
 
