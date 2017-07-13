@@ -785,6 +785,9 @@ class UserDefined(Composite):
                         d[key] = inner_d['.tag']
                     else:
                         make_compact(inner_d)
+                if isinstance(d[key], list):
+                    for item in d[key]:
+                        make_compact(item)
 
         for example in examples.values():
             if (isinstance(example.value, dict) and
