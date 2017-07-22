@@ -554,7 +554,8 @@ class Field(object):
                  name,
                  data_type,
                  doc,
-                 token):
+                 token,
+                 internal):
         """
         Creates a new Field.
 
@@ -569,10 +570,12 @@ class Field(object):
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self._token = token
+        self.internal = internal
 
     def __repr__(self):
-        return 'Field(%r, %r)' % (self.name,
-                                  self.data_type)
+        return 'Field(%r, %r, %r)' % (self.name,
+                                      self.data_type,
+                                      self.internal)
 
 
 class StructField(Field):
@@ -585,6 +588,7 @@ class StructField(Field):
                  data_type,
                  doc,
                  token,
+                 internal,
                  deprecated=False):
         """
         Creates a new Field.
@@ -596,7 +600,7 @@ class StructField(Field):
         :type token: stone.stone.parser.StoneField
         :param bool deprecated: Whether the field is deprecated.
         """
-        super(StructField, self).__init__(name, data_type, doc, token)
+        super(StructField, self).__init__(name, data_type, doc, token, internal)
         self.deprecated = deprecated
         self.has_default = False
         self._default = None
@@ -626,8 +630,9 @@ class StructField(Field):
         return attr
 
     def __repr__(self):
-        return 'StructField(%r, %r)' % (self.name,
-                                        self.data_type)
+        return 'StructField(%r, %r, %r)' % (self.name,
+                                        self.data_type,
+                                        self.internal)
 
 
 class UnionField(Field):
@@ -640,14 +645,16 @@ class UnionField(Field):
                  data_type,
                  doc,
                  token,
+                 internal,
                  catch_all=False):
-        super(UnionField, self).__init__(name, data_type, doc, token)
+        super(UnionField, self).__init__(name, data_type, doc, token, internal)
         self.catch_all = catch_all
 
     def __repr__(self):
-        return 'UnionField(%r, %r, %r)' % (self.name,
+        return 'UnionField(%r, %r, %r, %r)' % (self.name,
                                            self.data_type,
-                                           self.catch_all)
+                                           self.catch_all,
+                                           self.internal)
 
 
 class UserDefined(Composite):
@@ -749,6 +756,13 @@ class UserDefined(Composite):
                 return True
         return False
 
+    def has_internal_fields(self):
+        """Returns whether at least one field is internal."""
+        for field in self.fields:
+            if field.internal:
+                return True
+        return False
+
     @property
     def name(self):
         return self._name
@@ -785,9 +799,6 @@ class UserDefined(Composite):
                         d[key] = inner_d['.tag']
                     else:
                         make_compact(inner_d)
-                if isinstance(d[key], list):
-                    for item in d[key]:
-                        make_compact(item)
 
         for example in examples.values():
             if (isinstance(example.value, dict) and

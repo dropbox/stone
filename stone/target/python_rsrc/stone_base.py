@@ -25,11 +25,16 @@ class Union(object):
     # union is composed of only symbols.
     __slots__ = ['_tag', '_value']
     _tagmap = {}  # type: typing.Dict[typing.Text, bv.Validator]
+    _internal_tagmap = {}  # type: typing.Dict[typing.Text, bv.Validator]
 
     def __init__(self, tag, value=None):
-        # type: (typing.Text, typing.Optional[typing.Any]) -> None
-        assert tag in self._tagmap, 'Invalid tag %r.' % tag
-        validator = self._tagmap[tag]
+        assert tag in self._tagmap or tag in self._internal_tagmap, 'Invalid tag %r.' % tag
+
+        if tag in self._tagmap:
+            validator = self._tagmap[tag]
+        else:
+            validator = self._internal_tagmap[tag]
+
         if isinstance(validator, bv.Void):
             assert value is None, 'Void type union member must have None value.'
         elif isinstance(validator, (bv.Struct, bv.Union)):
@@ -53,6 +58,28 @@ class Union(object):
 
     def __hash__(self):
         return hash((self._tag, self._value))
+
+    @classmethod
+    def _is_tag_present(cls, tag, internal_caller):
+        assert tag, 'tag value should not be None'
+
+        if internal_caller:
+            if tag in cls._tagmap or tag in cls._internal_tagmap:
+                return True
+            return False
+
+        return tag in cls._tagmap
+
+    @classmethod
+    def _get_val_data_type(cls, tag, internal_caller):
+        assert tag, 'tag value should not be None'
+
+        if internal_caller:
+            if tag in cls._internal_tagmap:
+                return cls._internal_tagmap[tag]
+
+        return cls._tagmap[tag]
+
 
 class Route(object):
 

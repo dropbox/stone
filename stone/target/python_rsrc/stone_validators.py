@@ -93,7 +93,7 @@ class Validator(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         """Validates that val is of this data type.
 
         Returns: A normalized value if validation succeeds.
@@ -116,7 +116,7 @@ class Primitive(Validator):
 
 class Boolean(Primitive):
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if not isinstance(val, bool):
             raise ValidationError('%r is not a valid boolean' % val)
         return val
@@ -150,7 +150,7 @@ class Integer(Primitive):
                 'this type (%d < %d)' % (max_value, self.maximum)
             self.maximum = max_value
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if not isinstance(val, numbers.Integral):
             raise ValidationError('expected integer, got %s'
                                   % generic_type_name(val))
@@ -224,7 +224,7 @@ class Real(Primitive):
                                      (max_value, self.maximum))
             self.maximum = max_value
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if not isinstance(val, numbers.Real):
             raise ValidationError('expected real number, got %s' %
                                   generic_type_name(val))
@@ -289,7 +289,7 @@ class String(Primitive):
                 raise AssertionError('Regex {!r} failed: {}'.format(
                     pattern, e.args[0]))
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         """
         A unicode string of the correct length and pattern will pass validation.
         In PY2, we enforce that a str type must be valid utf-8, and a unicode
@@ -334,7 +334,7 @@ class Bytes(Primitive):
         self.min_length = min_length
         self.max_length = max_length
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if not isinstance(val, _binary_types):
             raise ValidationError("expected bytes type, got %s"
                                   % generic_type_name(val))
@@ -358,7 +358,7 @@ class Timestamp(Primitive):
         assert isinstance(fmt, six.text_type), 'format must be a string'
         self.format = fmt
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if not isinstance(val, datetime.datetime):
             raise ValidationError('expected timestamp, got %s'
                                   % generic_type_name(val))
@@ -396,7 +396,7 @@ class List(Composite):
         self.min_items = min_items
         self.max_items = max_items
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if not isinstance(val, (tuple, list)):
             raise ValidationError('%r is not a valid list' % val)
         elif self.max_items is not None and len(val) > self.max_items:
@@ -405,7 +405,7 @@ class List(Composite):
         elif self.min_items is not None and len(val) < self.min_items:
             raise ValidationError('%r has fewer than %s items'
                                   % (val, self.min_items))
-        return [self.item_validator.validate(item) for item in val]
+        return [self.item_validator.validate(item, internal_caller) for item in val]
 
 
 class Map(Composite):
@@ -419,12 +419,12 @@ class Map(Composite):
         self.key_validator = key_validator
         self.value_validator = value_validator
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if not isinstance(val, dict):
             raise ValidationError('%r is not a valid dict' % val)
         return {
-            self.key_validator.validate(key):
-                self.value_validator.validate(value) for key, value in val.items()
+            self.key_validator.validate(key, internal_caller):
+                self.value_validator.validate(value, internal_caller) for key, value in val.items()
         }
 
 
@@ -446,16 +446,16 @@ class Struct(Composite):
         super(Struct, self).__init__()
         self.definition = definition
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         """
         For a val to pass validation, val must be of the correct type and have
         all required fields present.
         """
-        self.validate_type_only(val)
-        self.validate_fields_only(val)
+        self.validate_type_only(val, internal_caller)
+        self.validate_fields_only(val, internal_caller)
         return val
 
-    def validate_fields_only(self, val):
+    def validate_fields_only(self, val, internal_caller):
         """
         To pass field validation, no required field should be missing.
 
@@ -470,7 +470,16 @@ class Struct(Composite):
                 raise ValidationError("missing required field '%s'" %
                                       field_name)
 
-    def validate_type_only(self, val):
+        # check if type has been patched
+        if hasattr(self.definition, '_all_internal_fields_'):
+            for field_name, _ in self.definition._all_internal_fields_:
+                if internal_caller:
+                    # validate as normal
+                    if not hasattr(val, field_name):
+                        raise ValidationError("missing required field '%s'" %
+                                              field_name)
+
+    def validate_type_only(self, val, internal_caller=True):
         """
         Use this when you only want to validate that the type of an object
         is correct, but not yet validate each field.
@@ -521,18 +530,28 @@ class Union(Composite):
         """
         self.definition = definition
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         """
         For a val to pass validation, it must have a _tag set. This assumes
         that the object validated that _tag is a valid tag, and that any
         associated value has also been validated.
         """
-        self.validate_type_only(val)
+        self.validate_type_only(val, internal_caller)
         if not hasattr(val, '_tag') or val._tag is None:
             raise ValidationError('no tag set')
+
+        # check if type has been patched
+        if self.definition._internal_tagmap:
+            for field_name, _ in self.definition._internal_tagmap:
+                if not internal_caller:
+                    if field_name == val._tag:
+                        raise ValidationError("cannot return internal tag '%s'"
+                                              "to external client" %
+                                              field_name)
+
         return val
 
-    def validate_type_only(self, val):
+    def validate_type_only(self, val, internal_caller=True):
         """
         Use this when you only want to validate that the type of an object
         is correct, but not yet validate each field.
@@ -549,7 +568,7 @@ class Union(Composite):
 
 class Void(Primitive):
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if val is not None:
             raise ValidationError('expected NoneType, got %s' %
                                   generic_type_name(val))
@@ -572,18 +591,18 @@ class Nullable(Validator):
             'void cannot be made nullable'
         self.validator = validator
 
-    def validate(self, val):
+    def validate(self, val, internal_caller=True):
         if val is None:
             return
         else:
-            return self.validator.validate(val)
+            return self.validator.validate(val, internal_caller)
 
-    def validate_type_only(self, val):
+    def validate_type_only(self, val, internal_caller=True):
         """Use this only if Nullable is wrapping a Composite."""
         if val is None:
             return
         else:
-            return self.validator.validate_type_only(val)
+            return self.validator.validate_type_only(val, internal_caller)
 
     def has_default(self):
         return True

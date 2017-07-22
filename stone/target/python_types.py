@@ -304,15 +304,23 @@ class PythonTypesGenerator(CodeGenerator):
         else:
             parent_type_class_name = None
 
+        parent_has_internal_fields = (data_type.parent_type and
+                                      data_type.parent_type.has_internal_fields())
+
         for field in data_type.fields:
             field_name = fmt_var(field.name)
             validator_name = generate_validator_constructor(ns, field.data_type)
             self.emit('{}._{}_validator = {}'.format(
                 class_name, field_name, validator_name))
 
+        # generate _all_field_names_
         if data_type.is_member_of_enumerated_subtypes_tree():
             self.generate_multiline_list(
-                ["'%s'" % field.name for field in data_type.fields],
+                [
+                    "'%s'" % field.name
+                    for field in data_type.fields
+                    if not field.internal
+                ],
                 before='{}._field_names_ = set('.format(class_name),
                 after=')',
                 delim=('[', ']'),
@@ -335,16 +343,70 @@ class PythonTypesGenerator(CodeGenerator):
             else:
                 before = '{}._all_field_names_ = set('.format(class_name)
                 after = ')'
+            items = [
+                "'%s'" % field.name
+                for field in data_type.fields
+                if not field.internal
+            ]
             self.generate_multiline_list(
-                ["'%s'" % field.name for field in data_type.fields],
+                items,
                 before=before,
                 after=after,
                 delim=('[', ']'),
                 compact=False)
 
+        # generate _all_internal_field_names_
+        if data_type.is_member_of_enumerated_subtypes_tree():
+            if data_type.has_internal_fields() or parent_has_internal_fields:
+                if data_type.has_internal_fields():
+                    self.generate_multiline_list(
+                        [
+                            "'%s'" % field.name
+                            for field in data_type.fields
+                            if field.internal
+                        ],
+                        before='{}._internal_field_names_ = set('.format(class_name),
+                        after=')',
+                        delim=('[', ']'),
+                        compact=False)
+                if parent_has_internal_fields:
+                    self.emit(
+                        '{0}._all_internal_field_names_ = '
+                        '{1}._all_internal_field_names_.union({0}._internal_field_names_)'
+                        .format(class_name, parent_type_class_name))
+                else:
+                    self.emit('{0}._all_internal_field_names_ = {0}._internal_field_names_'.format(
+                        class_name))
+        else:
+            if data_type.has_internal_fields() or parent_has_internal_fields:
+                if parent_has_internal_fields:
+                    before = (
+                        '{}._all_internal_field_names_ = '
+                        '{}._all_internal_field_names_.union(set(').format(
+                        class_name, parent_type_class_name)
+                    after = '))'
+                else:
+                    before = '{}._all_internal_field_names_ = set('.format(class_name)
+                    after = ')'
+                items = [
+                    "'%s'" % field.name
+                    for field in data_type.fields
+                    if field.internal
+                ]
+                self.generate_multiline_list(
+                    items,
+                    before=before,
+                    after=after,
+                    delim=('[', ']'),
+                    compact=False)
+
+        # generate _all_fields_
         if data_type.is_member_of_enumerated_subtypes_tree():
             items = []
             for field in data_type.fields:
+                if field.internal:
+                    continue
+
                 var_name = fmt_var(field.name)
                 validator_name = '{}._{}_validator'.format(class_name,
                                                            var_name)
@@ -368,14 +430,67 @@ class PythonTypesGenerator(CodeGenerator):
                     class_name, parent_type_class_name)
             else:
                 before = '{}._all_fields_ = '.format(class_name)
+
             items = []
+
             for field in data_type.fields:
+                if field.internal:
+                    continue
+
                 var_name = fmt_var(field.name)
                 validator_name = '{}._{}_validator'.format(
                     class_name, var_name)
                 items.append("('{}', {})".format(var_name, validator_name))
             self.generate_multiline_list(
                 items, before=before, delim=('[', ']'), compact=False)
+
+        # generate _all_internal_fields_
+        if data_type.is_member_of_enumerated_subtypes_tree():
+            if data_type.has_internal_fields() or parent_has_internal_fields:
+                items = []
+                for field in data_type.fields:
+                    if not field.internal:
+                        continue
+
+                    var_name = fmt_var(field.name)
+                    validator_name = '{}._{}_validator'.format(class_name,
+                                                               var_name)
+                    items.append("('{}', {})".format(var_name, validator_name))
+                self.generate_multiline_list(
+                    items,
+                    before='{}._internal_fields_ = '.format(class_name),
+                    delim=('[', ']'),
+                    compact=False,
+                )
+
+                if parent_has_internal_fields:
+                    self.emit(
+                        '{0}._all_internal_fields_ = '
+                        '{1}._all_internal_fields_ + {0}._internal_fields_'.format(
+                            class_name, parent_type_class_name))
+                else:
+                    self.emit(
+                        '{0}._all_internal_fields_ = {0}._internal_fields_'.format(class_name))
+        else:
+            if data_type.has_internal_fields() or parent_has_internal_fields:
+                if parent_has_internal_fields:
+                    before = '{}._all_internal_fields_ = {}._all_internal_fields_ + '.format(
+                        class_name, parent_type_class_name)
+                else:
+                    before = '{}._all_internal_fields_ = '.format(class_name)
+
+                items = []
+
+                for field in data_type.fields:
+                    if not field.internal:
+                        continue
+
+                    var_name = fmt_var(field.name)
+                    validator_name = '{}._{}_validator'.format(
+                        class_name, var_name)
+                    items.append("('{}', {})".format(var_name, validator_name))
+                self.generate_multiline_list(
+                    items, before=before, delim=('[', ']'), compact=False)
 
         self.emit()
 
@@ -398,9 +513,10 @@ class PythonTypesGenerator(CodeGenerator):
             # Call the parent constructor if a super type exists
             if data_type.parent_type:
                 class_name = class_name_for_data_type(data_type)
+                all_parent_fields = [fmt_func(f.name, True)
+                              for f in data_type.parent_type.all_fields]
                 self.generate_multiline_list(
-                    [fmt_func(f.name, True)
-                     for f in data_type.parent_type.all_fields],
+                    all_parent_fields,
                     before='super({}, self).__init__'.format(class_name))
 
             # initialize each field
@@ -409,7 +525,6 @@ class PythonTypesGenerator(CodeGenerator):
                 self.emit('self._{}_value = None'.format(field_var_name))
                 self.emit('self._{}_present = False'.format(field_var_name))
 
-            # handle arguments that were set
             for field in data_type.fields:
                 field_var_name = fmt_var(field.name, True)
                 self.emit('if {} is not None:'.format(field_var_name))
@@ -670,15 +785,32 @@ class PythonTypesGenerator(CodeGenerator):
 
         with self.block('{}._tagmap ='.format(class_name)):
             for field in data_type.fields:
+                if field.internal:
+                    continue
                 var_name = fmt_var(field.name)
                 validator_name = '{}._{}_validator'.format(
                     class_name, var_name)
                 self.emit("'{}': {},".format(var_name, validator_name))
 
+        if data_type.has_internal_fields():
+            with self.block('{}._internal_tagmap ='.format(class_name)):
+                for field in data_type.fields:
+                    if not field.internal:
+                        continue
+                    var_name = fmt_var(field.name)
+                    validator_name = '{}._{}_validator'.format(
+                        class_name, var_name)
+                    self.emit("'{}': {},".format(var_name, validator_name))
+
         if data_type.parent_type:
             self.emit('{0}._tagmap.update({1}._tagmap)'.format(
                 class_name,
                 class_name_for_data_type(data_type.parent_type, ns)))
+
+            if data_type.parent_type.has_internal_fields():
+                self.emit('{0}._internal_tagmap.update({1}._internal_tagmap)'.format(
+                    class_name,
+                    class_name_for_data_type(data_type.parent_type, ns)))
 
         self.emit()
 

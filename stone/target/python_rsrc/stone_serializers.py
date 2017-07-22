@@ -41,8 +41,8 @@ class StoneEncoderInterface(object):
     Interface defining a stone object encoder.
     """
 
-    def encode(self, validator, value):
-        # type: (bv.Validator, typing.Any) -> typing.Any
+    def encode(self, validator, value, internal_caller):
+        # type: (bv.Validator, typing.Any, bool) -> typing.Any
         """
         Validate ``value`` using ``validator`` and return the encoding.
 
@@ -91,11 +91,11 @@ class StoneSerializerBase(StoneEncoderInterface):
         """
         return self._alias_validators
 
-    def encode(self, validator, value):
-        return self.encode_sub(validator, value)
+    def encode(self, validator, value, internal_caller):
+        return self.encode_sub(validator, value, internal_caller)
 
-    def encode_sub(self, validator, value):
-        # type: (bv.Validator, typing.Any) -> typing.Any
+    def encode_sub(self, validator, value, internal_caller):
+        # type: (bv.Validator, typing.Any, bool) -> typing.Any
         """
         Callback intended to be called by other ``encode`` methods to
         delegate encoding of sub-values. Arguments have the same semantics
@@ -131,60 +131,60 @@ class StoneSerializerBase(StoneEncoderInterface):
         else:
             raise bv.ValidationError('Unsupported data type {}'.format(type(validator).__name__))
 
-        validate_f(value)
+        validate_f(value, internal_caller)
 
-        return encode_f(validator, value)
+        return encode_f(validator, value, internal_caller)
 
-    def encode_list(self, validator, value):
-        # type: (bv.List, typing.Any) -> typing.Any
+    def encode_list(self, validator, value, internal_caller):
+        # type: (bv.List, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.List``. Arguments
         have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_map(self, validator, value):
-        # type: (bv.Map, typing.Any) -> typing.Any
+    def encode_map(self, validator, value, internal_caller):
+        # type: (bv.Map, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Map``. Arguments
         have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_nullable(self, validator, value):
-        # type: (bv.Nullable, typing.Any) -> typing.Any
+    def encode_nullable(self, validator, value, internal_caller):
+        # type: (bv.Nullable, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Nullable``.
         Arguments have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_primitive(self, validator, value):
-        # type: (bv.Primitive, typing.Any) -> typing.Any
+    def encode_primitive(self, validator, value, internal_caller):
+        # type: (bv.Primitive, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Primitive``.
         Arguments have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_struct(self, validator, value):
-        # type: (bv.Struct, typing.Any) -> typing.Any
+    def encode_struct(self, validator, value, internal_caller):
+        # type: (bv.Struct, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Struct``. Arguments
         have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_struct_tree(self, validator, value):
-        # type: (bv.StructTree, typing.Any) -> typing.Any
+    def encode_struct_tree(self, validator, value, internal_caller):
+        # type: (bv.StructTree, typing.Any, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.StructTree``.
         Arguments have the same semantics as with the ``encode`` method.
         """
         raise NotImplementedError
 
-    def encode_union(self, validator, value):
-        # type: (bv.Union, bb.Union) -> typing.Any
+    def encode_union(self, validator, value, internal_caller):
+        # type: (bv.Union, bb.Union, bool) -> typing.Any
         """
         Callback for serializing a ``stone_validators.Union``. Arguments
         have the same semantics as with the ``encode`` method.
@@ -228,28 +228,28 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         """
         return self._old_style
 
-    def encode_list(self, validator, value):
-        validated_value = validator.validate(value)
+    def encode_list(self, validator, value, internal_caller):
+        validated_value = validator.validate(value, internal_caller)
 
-        return [self.encode_sub(validator.item_validator, value_item) for value_item in
-                validated_value]
+        return [self.encode_sub(validator.item_validator, value_item, internal_caller)
+                for value_item in validated_value]
 
-    def encode_map(self, validator, value):
-        validated_value = validator.validate(value)
+    def encode_map(self, validator, value, internal_caller):
+        validated_value = validator.validate(value, internal_caller)
 
         return {
-            self.encode_sub(validator.key_validator, key):
-                self.encode_sub(validator.value_validator, value) for
+            self.encode_sub(validator.key_validator, key, internal_caller):
+                self.encode_sub(validator.value_validator, value, internal_caller) for
             key, value in validated_value.items()
         }
 
-    def encode_nullable(self, validator, value):
+    def encode_nullable(self, validator, value, internal_caller):
         if value is None:
             return None
 
-        return self.encode_sub(validator.validator, value)
+        return self.encode_sub(validator.validator, value, internal_caller)
 
-    def encode_primitive(self, validator, value):
+    def encode_primitive(self, validator, value, internal_caller):
         if validator in self.alias_validators:
             self.alias_validators[validator](value)
 
@@ -271,12 +271,15 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         else:
             return value
 
-    def encode_struct(self, validator, value):
+    def encode_struct(self, validator, value, internal_caller):
         # Skip validation of fields with primitive data types because
         # they've already been validated on assignment
         d = collections.OrderedDict()  # type: typing.Dict[str, typing.Any]
 
-        for field_name, field_validator in validator.definition._all_fields_:
+        all_fields = validator.definition._all_fields_
+        if internal_caller and hasattr(validator.definition, '_all_internal_fields_'):
+            all_fields = all_fields + validator.definition._all_internal_fields_
+        for field_name, field_validator in all_fields:
             try:
                 field_value = getattr(value, field_name)
             except AttributeError as exc:
@@ -289,14 +292,14 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                 # Only serialize struct fields that have been explicitly
                 # set, even if there is a default
                 try:
-                    d[field_name] = self.encode_sub(field_validator, field_value)
+                    d[field_name] = self.encode_sub(field_validator, field_value, internal_caller)
                 except bv.ValidationError as exc:
                     exc.add_parent(field_name)
 
                     raise
         return d
 
-    def encode_struct_tree(self, validator, value):
+    def encode_struct_tree(self, validator, value, internal_caller):
         assert type(value) in validator.definition._pytype_to_tag_and_subtype_, \
             '%r is not a serializable subtype of %r.' % (type(value), validator.definition)
 
@@ -308,27 +311,31 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 
         if self.old_style:
             d = {
-                tags[0]: self.encode_struct(subtype, value),
+                tags[0]: self.encode_struct(subtype, value, internal_caller),
             }
         else:
             d = collections.OrderedDict()
             d['.tag'] = tags[0]
-            d.update(self.encode_struct(subtype, value))
+            d.update(self.encode_struct(subtype, value, internal_caller))
 
         return d
 
-    def encode_union(self, validator, value):
+    def encode_union(self, validator, value, internal_caller):
         if value._tag is None:
             raise bv.ValidationError('no tag set')
 
-        field_validator = validator.definition._tagmap[value._tag]
+        if not internal_caller and value._tag in validator.definition._internal_tagmap:
+            raise bv.ValidationError('internal tag should not be returned to external client')
+
+        field_validator = validator.definition._get_val_data_type(value._tag, internal_caller)
+
         is_none = isinstance(field_validator, bv.Void) \
             or (isinstance(field_validator, bv.Nullable)
                 and value._value is None)
 
-        def encode_sub(sub_validator, sub_value, parent_tag):
+        def encode_sub(sub_validator, sub_value, parent_tag, internal_caller):
             try:
-                encoded_val = self.encode_sub(sub_validator, sub_value)
+                encoded_val = self.encode_sub(sub_validator, sub_value, internal_caller)
             except bv.ValidationError as exc:
                 exc.add_parent(parent_tag)
 
@@ -342,13 +349,13 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             elif is_none:
                 return value._tag
             else:
-                encoded_val = encode_sub(field_validator, value._value, value._tag)
+                encoded_val = encode_sub(field_validator, value._value, value._tag, internal_caller)
 
                 return {value._tag: encoded_val}
         elif is_none:
             return {'.tag': value._tag}
         else:
-            encoded_val = encode_sub(field_validator, value._value, value._tag)
+            encoded_val = encode_sub(field_validator, value._value, value._tag, internal_caller)
 
             if isinstance(field_validator, bv.Nullable):
                 # We've already checked for the null case above,
@@ -372,8 +379,9 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 # ------------------------------------------------------------------------
 class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
 
-    def encode(self, validator, value):
-        return json.dumps(super(StoneToJsonSerializer, self).encode(validator, value))
+    def encode(self, validator, value, internal_caller):
+        return json.dumps(super(StoneToJsonSerializer, self).encode(
+            validator, value, internal_caller))
 
 # --------------------------------------------------------------
 # JSON Encoder
@@ -381,7 +389,7 @@ class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
 # These interfaces are preserved for backward compatibility and symmetry with deserialization
 # functions.
 
-def json_encode(data_type, obj, alias_validators=None, old_style=False):
+def json_encode(data_type, obj, alias_validators=None, old_style=False, internal_caller=False):
     """Encodes an object into JSON based on its type.
 
     Args:
@@ -434,11 +442,11 @@ def json_encode(data_type, obj, alias_validators=None, old_style=False):
     """
     for_msgpack = False
     serializer = StoneToJsonSerializer(alias_validators, for_msgpack, old_style)
-    return serializer.encode(data_type, obj)
+    return serializer.encode(data_type, obj, internal_caller)
 
 def json_compat_obj_encode(
         data_type, obj, alias_validators=None, old_style=False,
-        for_msgpack=False):
+        for_msgpack=False, internal_caller=False):
     """Encodes an object into a JSON-compatible dict based on its type.
 
     Args:
@@ -452,14 +460,14 @@ def json_compat_obj_encode(
     See json_encode() for additional information about validation.
     """
     serializer = StoneToPythonPrimitiveSerializer(alias_validators, for_msgpack, old_style)
-    return serializer.encode(data_type, obj)
+    return serializer.encode(data_type, obj, internal_caller)
 
 # --------------------------------------------------------------
 # JSON Decoder
 
 def json_decode(
         data_type, serialized_obj, alias_validators=None, strict=True,
-        old_style=False):
+        old_style=False, internal_caller=False):
     """Performs the reverse operation of json_encode.
 
     Args:
@@ -474,6 +482,7 @@ def json_decode(
             recipient of serialized JSON if it's guaranteed that its Stone
             specs are at least as recent as the senders it receives messages
             from.
+        internal_caller (bool): Whether the caller is internal.
 
     Returns:
         The returned object depends on the input data_type.
@@ -495,12 +504,13 @@ def json_decode(
         raise bv.ValidationError('could not decode input as JSON')
     else:
         return json_compat_obj_decode(
-            data_type, deserialized_obj, alias_validators, strict, old_style)
+            data_type, deserialized_obj, alias_validators,
+            strict, old_style, internal_caller=internal_caller)
 
 
 def json_compat_obj_decode(
         data_type, obj, alias_validators=None, strict=True, old_style=False,
-        for_msgpack=False):
+        for_msgpack=False, internal_caller=False):
     """
     Decodes a JSON-compatible object based on its data type into a
     representative Python object.
@@ -511,56 +521,57 @@ def json_compat_obj_decode(
         strict (bool): If strict, then unknown struct fields will raise an
             error, and unknown union variants will raise an error even if a
             catch all field is specified. See json_decode() for more.
+        internal_caller (bool): Whether the caller is internal.
 
     Returns:
         See json_decode().
     """
     if isinstance(data_type, bv.Primitive):
         return _make_stone_friendly(
-            data_type, obj, alias_validators, strict, True, for_msgpack)
+            data_type, obj, alias_validators, strict, True, for_msgpack, internal_caller)
     else:
         return _json_compat_obj_decode_helper(
-            data_type, obj, alias_validators, strict, old_style, for_msgpack)
+            data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller)
 
 
 def _json_compat_obj_decode_helper(
-        data_type, obj, alias_validators, strict, old_style, for_msgpack):
+        data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller):
     """
     See json_compat_obj_decode() for argument descriptions.
     """
     if isinstance(data_type, bv.StructTree):
         return _decode_struct_tree(
-            data_type, obj, alias_validators, strict, for_msgpack)
+            data_type, obj, alias_validators, strict, for_msgpack, internal_caller)
     elif isinstance(data_type, bv.Struct):
         return _decode_struct(
-            data_type, obj, alias_validators, strict, old_style, for_msgpack)
+            data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller)
     elif isinstance(data_type, bv.Union):
         if old_style:
             return _decode_union_old(
-                data_type, obj, alias_validators, strict, for_msgpack)
+                data_type, obj, alias_validators, strict, for_msgpack, internal_caller)
         else:
             return _decode_union(
-                data_type, obj, alias_validators, strict, for_msgpack)
+                data_type, obj, alias_validators, strict, for_msgpack, internal_caller)
     elif isinstance(data_type, bv.List):
         return _decode_list(
-            data_type, obj, alias_validators, strict, old_style, for_msgpack)
+            data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller)
     elif isinstance(data_type, bv.Map):
         return _decode_map(
-            data_type, obj, alias_validators, strict, old_style, for_msgpack)
+            data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller)
     elif isinstance(data_type, bv.Nullable):
         return _decode_nullable(
-            data_type, obj, alias_validators, strict, old_style, for_msgpack)
+            data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller)
     elif isinstance(data_type, bv.Primitive):
         # Set validate to false because validation will be done by the
         # containing struct or union when the field is assigned.
         return _make_stone_friendly(
-            data_type, obj, alias_validators, strict, False, for_msgpack)
+            data_type, obj, alias_validators, strict, False, for_msgpack, internal_caller)
     else:
         raise AssertionError('Cannot handle type %r.' % data_type)
 
 
 def _decode_struct(
-        data_type, obj, alias_validators, strict, old_style, for_msgpack):
+        data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller):
     """
     The data_type argument must be a Struct.
     See json_compat_obj_decode() for argument descriptions.
@@ -570,22 +581,30 @@ def _decode_struct(
     elif not isinstance(obj, dict):
         raise bv.ValidationError('expected object, got %s' %
                                  bv.generic_type_name(obj))
+    all_fields = data_type.definition._all_fields_
+    if internal_caller and hasattr(data_type.definition, '_all_internal_fields_'):
+        all_fields = all_fields + data_type.definition._all_internal_fields_
+
     if strict:
+        all_field_names = data_type.definition._all_field_names_
+        if internal_caller and hasattr(data_type.definition, '_all_internal_field_names_'):
+            all_field_names = all_field_names.union(data_type.definition._all_internal_field_names_)
+
         for key in obj:
-            if (key not in data_type.definition._all_field_names_ and
+            if (key not in all_field_names and
                     not key.startswith('.tag')):
                 raise bv.ValidationError("unknown field '%s'" % key)
     ins = data_type.definition()
     _decode_struct_fields(
-        ins, data_type.definition._all_fields_, obj, alias_validators, strict,
-        old_style, for_msgpack)
+        ins, all_fields, obj, alias_validators, strict,
+        old_style, for_msgpack, internal_caller)
     # Check that all required fields have been set.
-    data_type.validate_fields_only(ins)
+    data_type.validate_fields_only(ins, internal_caller)
     return ins
 
 
 def _decode_struct_fields(
-        ins, fields, obj, alias_validators, strict, old_style, for_msgpack):
+        ins, fields, obj, alias_validators, strict, old_style, for_msgpack, internal_caller):
     """
     Args:
         ins: An instance of the class representing the data type being decoded.
@@ -602,7 +621,7 @@ def _decode_struct_fields(
             try:
                 v = _json_compat_obj_decode_helper(
                     field_data_type, obj[name], alias_validators, strict,
-                    old_style, for_msgpack)
+                    old_style, for_msgpack, internal_caller)
                 setattr(ins, name, v)
             except bv.ValidationError as e:
                 e.add_parent(name)
@@ -611,7 +630,7 @@ def _decode_struct_fields(
             setattr(ins, name, field_data_type.get_default())
 
 
-def _decode_union(data_type, obj, alias_validators, strict, for_msgpack):
+def _decode_union(data_type, obj, alias_validators, strict, for_msgpack, internal_caller):
     """
     The data_type argument must be a Union.
     See json_compat_obj_decode() for argument descriptions.
@@ -621,29 +640,28 @@ def _decode_union(data_type, obj, alias_validators, strict, for_msgpack):
         # Handles the shorthand format where the union is serialized as only
         # the string of the tag.
         tag = obj
-        if tag in data_type.definition._tagmap:
-            val_data_type = data_type.definition._tagmap[tag]
+        if data_type.definition._is_tag_present(tag, internal_caller):
+            val_data_type = data_type.definition._get_val_data_type(tag, internal_caller)
             if not isinstance(val_data_type, (bv.Void, bv.Nullable)):
                 raise bv.ValidationError(
                     "expected object for '%s', got symbol" % tag)
             if tag == data_type.definition._catch_all:
                 raise bv.ValidationError(
                     "unexpected use of the catch-all tag '%s'" % tag)
+        elif not strict and data_type.definition._catch_all:
+            tag = data_type.definition._catch_all
         else:
-            if not strict and data_type.definition._catch_all:
-                tag = data_type.definition._catch_all
-            else:
-                raise bv.ValidationError("unknown tag '%s'" % tag)
+            raise bv.ValidationError("unknown tag '%s'" % tag)
     elif isinstance(obj, dict):
         tag, val = _decode_union_dict(
-            data_type, obj, alias_validators, strict, for_msgpack)
+            data_type, obj, alias_validators, strict, for_msgpack, internal_caller)
     else:
         raise bv.ValidationError("expected string or object, got %s" %
                                  bv.generic_type_name(obj))
     return data_type.definition(tag, val)
 
 
-def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack):
+def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack, internal_caller):
     if '.tag' not in obj:
         raise bv.ValidationError("missing '.tag' key")
     tag = obj['.tag']
@@ -651,7 +669,7 @@ def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack):
         raise bv.ValidationError(
             'tag must be string, got %s' % bv.generic_type_name(tag))
 
-    if tag not in data_type.definition._tagmap:
+    if not data_type.definition._is_tag_present(tag, internal_caller):
         if not strict and data_type.definition._catch_all:
             return data_type.definition._catch_all, None
         else:
@@ -660,7 +678,7 @@ def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack):
         raise bv.ValidationError(
             "unexpected use of the catch-all tag '%s'" % tag)
 
-    val_data_type = data_type.definition._tagmap[tag]
+    val_data_type = data_type.definition._get_val_data_type(tag, internal_caller)
     if isinstance(val_data_type, bv.Nullable):
         val_data_type = val_data_type.validator
         nullable = True
@@ -668,25 +686,22 @@ def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack):
         nullable = False
 
     if isinstance(val_data_type, bv.Void):
-        if strict:
-            # In strict mode, ensure there are no extraneous keys set. In
-            # non-strict mode, we accept that other keys may be set due to a
-            # change of the void type to another.
-            if tag in obj:
-                if obj[tag] is not None:
-                    raise bv.ValidationError('expected null, got %s' %
-                                             bv.generic_type_name(obj[tag]))
-            for key in obj:
-                if key != tag and key != '.tag':
-                    raise bv.ValidationError("unexpected key '%s'" % key)
+        if tag in obj:
+            if obj[tag] is not None:
+                raise bv.ValidationError('expected null, got %s' %
+                                         bv.generic_type_name(obj[tag]))
+        for key in obj:
+            if key != tag and key != '.tag':
+                raise bv.ValidationError("unexpected key '%s'" % key)
         val = None
     elif isinstance(val_data_type,
-                    (bv.Primitive, bv.List, bv.StructTree, bv.Union, bv.Map)):
+                    (bv.Primitive, bv.List, bv.StructTree, bv.Union)):
         if tag in obj:
             raw_val = obj[tag]
             try:
                 val = _json_compat_obj_decode_helper(
-                    val_data_type, raw_val, alias_validators, strict, False, for_msgpack)
+                    val_data_type, raw_val, alias_validators, strict,
+                    False, for_msgpack, internal_caller)
             except bv.ValidationError as e:
                 e.add_parent(tag)
                 raise
@@ -708,7 +723,7 @@ def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack):
             try:
                 val = _json_compat_obj_decode_helper(
                     val_data_type, raw_val, alias_validators, strict, False,
-                    for_msgpack)
+                    for_msgpack, internal_caller)
             except bv.ValidationError as e:
                 e.add_parent(tag)
                 raise
@@ -717,7 +732,7 @@ def _decode_union_dict(data_type, obj, alias_validators, strict, for_msgpack):
     return tag, val
 
 
-def _decode_union_old(data_type, obj, alias_validators, strict, for_msgpack):
+def _decode_union_old(data_type, obj, alias_validators, strict, for_msgpack, internal_caller):
     """
     The data_type argument must be a Union.
     See json_compat_obj_decode() for argument descriptions.
@@ -726,8 +741,8 @@ def _decode_union_old(data_type, obj, alias_validators, strict, for_msgpack):
     if isinstance(obj, six.string_types):
         # Union member has no associated value
         tag = obj
-        if tag in data_type.definition._tagmap:
-            val_data_type = data_type.definition._tagmap[tag]
+        if data_type.definition._is_tag_present(tag, internal_caller):
+            val_data_type = data_type.definition._get_val_data_type(tag, internal_caller)
             if not isinstance(val_data_type, (bv.Void, bv.Nullable)):
                 raise bv.ValidationError(
                     "expected object for '%s', got symbol" % tag)
@@ -742,8 +757,8 @@ def _decode_union_old(data_type, obj, alias_validators, strict, for_msgpack):
             raise bv.ValidationError('expected 1 key, got %s' % len(obj))
         tag = list(obj)[0]
         raw_val = obj[tag]
-        if tag in data_type.definition._tagmap:
-            val_data_type = data_type.definition._tagmap[tag]
+        if data_type.definition._is_tag_present(tag, internal_caller):
+            val_data_type = data_type.definition._get_val_data_type(tag, internal_caller)
             if isinstance(val_data_type, bv.Nullable) and raw_val is None:
                 val = None
             elif isinstance(val_data_type, bv.Void):
@@ -760,7 +775,7 @@ def _decode_union_old(data_type, obj, alias_validators, strict, for_msgpack):
                 try:
                     val = _json_compat_obj_decode_helper(
                         val_data_type, raw_val, alias_validators, strict, True,
-                        for_msgpack)
+                        for_msgpack, internal_caller)
                 except bv.ValidationError as e:
                     e.add_parent(tag)
                     raise
@@ -775,14 +790,14 @@ def _decode_union_old(data_type, obj, alias_validators, strict, for_msgpack):
     return data_type.definition(tag, val)
 
 
-def _decode_struct_tree(data_type, obj, alias_validators, strict, for_msgpack):
+def _decode_struct_tree(data_type, obj, alias_validators, strict, for_msgpack, internal_caller):
     """
     The data_type argument must be a StructTree.
     See json_compat_obj_decode() for argument descriptions.
     """
     subtype = _determine_struct_tree_subtype(data_type, obj, strict)
     return _decode_struct(
-        subtype, obj, alias_validators, strict, False, for_msgpack)
+        subtype, obj, alias_validators, strict, False, for_msgpack, internal_caller)
 
 
 def _determine_struct_tree_subtype(data_type, obj, strict):
@@ -822,7 +837,7 @@ def _determine_struct_tree_subtype(data_type, obj, strict):
 
 
 def _decode_list(
-        data_type, obj, alias_validators, strict, old_style, for_msgpack):
+        data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller):
     """
     The data_type argument must be a List.
     See json_compat_obj_decode() for argument descriptions.
@@ -833,12 +848,12 @@ def _decode_list(
     return [
         _json_compat_obj_decode_helper(
             data_type.item_validator, item, alias_validators, strict,
-            old_style, for_msgpack)
+            old_style, for_msgpack, internal_caller)
         for item in obj]
 
 
 def _decode_map(
-        data_type, obj, alias_validators, strict, old_style, for_msgpack):
+        data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller):
     """
     The data_type argument must be a Map.
     See json_compat_obj_decode() for argument descriptions.
@@ -849,16 +864,16 @@ def _decode_map(
     return {
         _json_compat_obj_decode_helper(
             data_type.key_validator, key, alias_validators, strict,
-            old_style, for_msgpack):
+            old_style, for_msgpack, internal_caller):
         _json_compat_obj_decode_helper(
             data_type.value_validator, value, alias_validators, strict,
-            old_style, for_msgpack)
+            old_style, for_msgpack, internal_caller)
         for key, value in obj.items()
     }
 
 
 def _decode_nullable(
-        data_type, obj, alias_validators, strict, old_style, for_msgpack):
+        data_type, obj, alias_validators, strict, old_style, for_msgpack, internal_caller):
     """
     The data_type argument must be a Nullable.
     See json_compat_obj_decode() for argument descriptions.
@@ -866,13 +881,13 @@ def _decode_nullable(
     if obj is not None:
         return _json_compat_obj_decode_helper(
             data_type.validator, obj, alias_validators, strict, old_style,
-            for_msgpack)
+            for_msgpack, internal_caller)
     else:
         return None
 
 
 def _make_stone_friendly(
-        data_type, val, alias_validators, strict, validate, for_msgpack):
+        data_type, val, alias_validators, strict, validate, for_msgpack, internal_caller):
     """
     Convert a Python object to a type that will pass validation by its
     validator.
@@ -902,7 +917,7 @@ def _make_stone_friendly(
         return None
     else:
         if validate:
-            data_type.validate(val)
+            data_type.validate(val, internal_caller)
         ret = val
     if alias_validators is not None and data_type in alias_validators:
         alias_validators[data_type](ret)

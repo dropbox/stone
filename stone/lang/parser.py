@@ -134,6 +134,25 @@ class StoneStructDef(StoneTypeDef):
             self.fields,
         )
 
+class StoneStructPatch(_Element):
+
+    def __init__(self, path, lineno, lexpos, name, fields, examples):
+        super(StoneStructPatch, self).__init__(path, lineno, lexpos)
+        self.name = name
+        assert isinstance(fields, list)
+        self.fields = fields
+        for field in self.fields:
+            field.internal = True
+
+        assert isinstance(examples, (OrderedDict, type(None))), type(examples)
+        self.examples = examples
+
+    def __repr__(self):
+        return 'StoneStructPatch({!r}, {!r})'.format(
+            self.name,
+            self.fields,
+        )
+
 class StoneUnionDef(StoneTypeDef):
 
     def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
@@ -152,6 +171,27 @@ class StoneUnionDef(StoneTypeDef):
         return 'StoneUnionDef({!r}, {!r}, {!r}, {!r})'.format(
             self.name,
             self.extends,
+            self.fields,
+            self.closed,
+        )
+
+class StoneUnionPatch(_Element):
+
+    def __init__(self, path, lineno, lexpos, name, fields, examples, closed):
+        super(StoneUnionPatch, self).__init__(path, lineno, lexpos)
+        self.name = name
+        assert isinstance(fields, list)
+        self.fields = fields
+        for field in self.fields:
+            field.internal = True
+
+        assert isinstance(examples, (OrderedDict, type(None))), type(examples)
+        self.examples = examples
+        self.closed = closed
+
+    def __repr__(self):
+        return 'StoneUnionPatch({!r}, {!r}, {!r})'.format(
+            self.name,
             self.fields,
             self.closed,
         )
@@ -216,6 +256,7 @@ class StoneField(_Element):
         self.has_default = False
         self.default = None
         self.deprecated = deprecated
+        self.internal = False
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -236,6 +277,7 @@ class StoneVoidField(_Element):
         super(StoneVoidField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.doc = None
+        self.internal = False
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -254,6 +296,7 @@ class StoneSubtypeField(_Element):
         super(StoneSubtypeField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
+        self.internal = False
 
     def __repr__(self):
         return 'StoneSubtypeField({!r}, {!r})'.format(
@@ -421,7 +464,9 @@ class StoneParser(object):
     def p_definition(self, p):
         """definition : alias
                       | struct
+                      | struct_patch
                       | union
+                      | union_patch
                       | route"""
         p[0] = p[1]
 
@@ -623,6 +668,16 @@ class StoneParser(object):
             fields=p[8],
             examples=p[9])
 
+    def p_struct_patch(self, p):
+        """struct_patch : PATCH STRUCT ID NL INDENT field_list examples DEDENT"""
+        p[0] = StoneStructPatch(
+            path=self.path,
+            lineno=p.lineno(1),
+            lexpos=p.lexpos(1),
+            name=p[3],
+            fields=p[6],
+            examples=p[7])
+
     def p_inheritance(self, p):
         """inheritance : EXTENDS type_ref
                        | empty"""
@@ -748,6 +803,17 @@ class StoneParser(object):
             doc=p[6],
             fields=p[7],
             examples=p[8],
+            closed=p[1][0] == 'union_closed')
+
+    def p_union_patch(self, p):
+        """union_patch : PATCH UNION ID NL INDENT field_list examples DEDENT"""
+        p[0] = StoneUnionPatch(
+            path=self.path,
+            lineno=p[2][1],
+            lexpos=p[2][2],
+            name=p[3],
+            fields=p[6],
+            examples=p[7],
             closed=p[1][0] == 'union_closed')
 
     def p_uniont(self, p):

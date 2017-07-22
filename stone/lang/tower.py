@@ -57,10 +57,12 @@ from .parser import (
     StoneParser,
     StoneRouteDef,
     StoneStructDef,
+    StoneStructPatch,
     StoneTagRef,
     StoneTypeDef,
     StoneTypeRef,
     StoneUnionDef,
+    StoneUnionPatch,
     StoneVoidField,
 )
 
@@ -125,6 +127,8 @@ class TowerOfStone(object):
 
         self._item_by_canonical_name = {}
 
+        self._patch_data_by_canonical_name = {}
+
     def parse(self):
         """Parses the text of each spec and returns an API description. Returns
         None if an error was encountered during parsing."""
@@ -149,6 +153,7 @@ class TowerOfStone(object):
                 self._logger.info('Empty spec: %s', path)
 
         self._add_imports_to_env(raw_api)
+        self._resolve_patches()
         self._populate_type_attributes()
         self._populate_field_defaults()
         self._populate_enumerated_subtypes()
@@ -209,26 +214,30 @@ class TowerOfStone(object):
             if isinstance(item, StoneTypeDef):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
-                self._check_canonical_name_available(item, namespace.name)
+                self._enforce_canonical_name_available(item, namespace)
             elif isinstance(item, StoneRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
-                self._check_canonical_name_available(item, namespace.name)
+                self._enforce_canonical_name_available(item, namespace)
             elif isinstance(item, StoneImport):
                 # Handle imports later.
                 pass
+            elif isinstance(item, StoneStructPatch) or isinstance(item, StoneUnionPatch):
+                # Handle patches later.
+                base_name = self._get_base_name(item.name, namespace.name)
+                self._patch_data_by_canonical_name[base_name] = (item, namespace)
             elif isinstance(item, StoneAlias):
                 alias = self._create_alias(env, item)
                 namespace.add_alias(alias)
-                self._check_canonical_name_available(item, namespace.name)
+                self._enforce_canonical_name_available(item, namespace)
             else:
                 raise AssertionError('Unknown Stone Declaration Type %r' %
                                      item.__class__.__name__)
 
-    def _check_canonical_name_available(self, item, namespace_name):
-        base_name = self._get_base_name(item.name, namespace_name)
+    def _enforce_canonical_name_available(self, item, namespace):
+        base_name = self._get_base_name(item.name, namespace.name)
 
-        if base_name not in self._item_by_canonical_name.keys():
+        if self._check_canonical_name_available(item, namespace.name):
             self._item_by_canonical_name[base_name] = item
         else:
             stored_item = self._item_by_canonical_name[base_name]
@@ -241,6 +250,10 @@ class TowerOfStone(object):
                 stored_item.path, stored_item.lineno)
 
             raise InvalidSpec(msg, item.lineno, item.path)
+
+    def _check_canonical_name_available(self, item, namespace_name):
+        base_name = self._get_base_name(item.name, namespace_name)
+        return base_name not in self._item_by_canonical_name.keys()
 
     @classmethod
     def _get_user_friendly_item_type_as_string(cls, item):
@@ -332,7 +345,71 @@ class TowerOfStone(object):
             raise AssertionError('Unknown type definition %r' % type(item))
 
         env[item.name] = api_type
+
         return api_type
+
+    def _resolve_patches(self):
+        for patched_item, patched_namespace in self._patch_data_by_canonical_name.values():
+            patched_item_base_name = self._get_base_name(patched_item.name, patched_namespace.name)
+            if patched_item_base_name not in self._item_by_canonical_name:
+                raise InvalidSpec('Patch {} must correspond to a pre-existing data_type.'.format(
+                    quote(patched_item.name)), patched_item.lineno, patched_item.path)
+
+            existing_item = self._item_by_canonical_name[patched_item_base_name]
+
+            self._check_patch_type_mismatch(patched_item, existing_item)
+
+            if (isinstance(patched_item, StoneStructPatch)
+                    or isinstance(patched_item, StoneUnionPatch)):
+                self._check_field_names_unique(existing_item, patched_item)
+                existing_item.fields += patched_item.fields
+                self._inject_patched_examples(existing_item, patched_item)
+            else:
+                raise AssertionError('Unknown Patch Object Type {}'.format(
+                    patched_item.__class__.__name__))
+
+    def _check_patch_type_mismatch(self, patched_item, existing_item):
+        def raise_mismatch_error(patched_item, existing_item, data_type_name):
+            error_msg = ('Type mismatch. Patch {} corresponds to pre-existing '
+                'data_type {} ({}:{}) that has type other than {}.')
+            raise InvalidSpec(error_msg.format(
+                quote(patched_item.name),
+                quote(existing_item.name),
+                existing_item.path,
+                existing_item.lineno,
+                quote(data_type_name)), patched_item.lineno, patched_item.path)
+
+        if isinstance(patched_item, StoneStructPatch):
+            if not isinstance(existing_item, StoneStructDef):
+                raise_mismatch_error(patched_item, existing_item, 'struct')
+        elif isinstance(patched_item, StoneUnionPatch):
+            if not isinstance(existing_item, StoneUnionDef):
+                raise_mismatch_error(patched_item, existing_item, 'union')
+        else:
+            raise AssertionError(
+                'Unknown Patch Object Type {}'.format(patched_item.__class__.__name__))
+
+    def _check_field_names_unique(self, existing_item, patched_item):
+        existing_fields_by_name = {f.name: f for f in existing_item.fields}
+        for patched_field in patched_item.fields:
+            if patched_field.name in existing_fields_by_name.keys():
+                existing_field = existing_fields_by_name[patched_field.name]
+                raise InvalidSpec('Patched field {} overrides pre-existing field in {} ({}:{}).'
+                    .format(quote(patched_field.name),
+                            quote(patched_item.name),
+                            existing_field.path,
+                            existing_field.lineno), patched_field.lineno, patched_field.path)
+
+    def _inject_patched_examples(self, existing_item, patched_item):
+        for key, _ in patched_item.examples.items():
+            patched_example = patched_item.examples[key]
+            existing_examples = existing_item.examples
+            if key in existing_examples:
+                existing_examples[key].fields.update(patched_example.fields)
+            else:
+                error_msg = 'Example defined in patch {} must correspond to a pre-existing example.'
+                raise InvalidSpec(error_msg.format(
+                    quote(patched_item.name)), patched_example.lineno, patched_example.path)
 
     def _populate_type_attributes(self):
         """
@@ -447,7 +524,7 @@ class TowerOfStone(object):
                 # Create a catch-all field
                 catch_all_field = UnionField(
                     name='other', data_type=Void(), doc=None,
-                    token=data_type._token, catch_all=True)
+                    token=data_type._token, internal=False, catch_all=True)
                 api_type_fields.append(catch_all_field)
 
         data_type.set_attributes(
@@ -575,6 +652,7 @@ class TowerOfStone(object):
             data_type=data_type,
             doc=stone_field.doc,
             token=stone_field,
+            internal=stone_field.internal,
             deprecated=stone_field.deprecated,
         )
         return api_type_field
@@ -594,7 +672,7 @@ class TowerOfStone(object):
         if isinstance(stone_field, StoneVoidField):
             api_type_field = UnionField(
                 name=stone_field.name, data_type=Void(), doc=stone_field.doc,
-                token=stone_field)
+                internal=stone_field.internal, token=stone_field)
         else:
             data_type = self._resolve_type(env, stone_field.type_ref)
             if isinstance(data_type, Void):
@@ -604,7 +682,7 @@ class TowerOfStone(object):
                                   stone_field.lineno, stone_field.path)
             api_type_field = UnionField(
                 name=stone_field.name, data_type=data_type,
-                doc=stone_field.doc, token=stone_field)
+                doc=stone_field.doc, internal=stone_field.internal, token=stone_field)
         return api_type_field
 
     def _instantiate_data_type(self, data_type_class, data_type_args, loc):
@@ -835,7 +913,7 @@ class TowerOfStone(object):
                             'Enumerated subtype %s must be a struct.' %
                             quote(subtype_name), lineno, path)
                     f = UnionField(
-                        subtype_field.name, subtype, None, subtype_field)
+                        subtype_field.name, subtype, None, subtype_field, subtype_field.internal)
                     subtype_fields.append(f)
                 data_type.set_enumerated_subtypes(subtype_fields,
                                                   data_type._token.subtypes[1])
