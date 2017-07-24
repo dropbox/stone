@@ -10,6 +10,7 @@ from stone.data_type import (
     Int32,
     Int64,
     List,
+    Map,
     String,
     Timestamp,
     UInt32,
@@ -17,6 +18,7 @@ from stone.data_type import (
     Void,
     is_boolean_type,
     is_list_type,
+    is_map_type,
     is_numeric_type,
     is_string_type,
     is_tag_ref,
@@ -36,6 +38,7 @@ _primitive_table = {
     Int32: 'NSNumber *',
     Int64: 'NSNumber *',
     List: 'NSArray',
+    Map: 'NSDictionary',
     String: 'NSString *',
     Timestamp: 'NSDate *',
     UInt32: 'NSNumber *',
@@ -51,6 +54,7 @@ _primitive_table_user_interface = {
     Int32: 'int',
     Int64: 'long',
     List: 'NSArray',
+    Map: 'NSDictionary',
     String: 'NSString *',
     Timestamp: 'NSDate *',
     UInt32: 'unsigned int',
@@ -66,6 +70,7 @@ _serial_table = {
     Int32: 'DBNSNumberSerializer',
     Int64: 'DBNSNumberSerializer',
     List: 'DBArraySerializer',
+    Map: 'DBMapSerializer',
     String: 'DBStringSerializer',
     Timestamp: 'DBNSDateSerializer',
     UInt32: 'DBNSNumberSerializer',
@@ -78,6 +83,7 @@ _validator_table = {
     Int32: 'numericValidator',
     Int64: 'numericValidator',
     List: 'arrayValidator',
+    Map: 'mapValidator',
     String: 'stringValidator',
     UInt32: 'numericValidator',
     UInt64: 'numericValidator',
@@ -221,6 +227,9 @@ def fmt_class_type(data_type, suppress_ptr=False):
         if is_list_type(data_type):
             data_type, _ = unwrap_nullable(data_type.data_type)
             result = result + '<{}>'.format(fmt_type(data_type))
+        elif is_map_type(data_type):
+            data_type, _ = unwrap_nullable(data_type.value_data_type)
+            result = result + '<NSString *, {}>'.format(fmt_type(data_type))
     return result
 
 
@@ -242,6 +251,10 @@ def fmt_type(data_type, tag=False, has_default=False, no_ptr=False, is_prop=Fals
             data_type, _ = unwrap_nullable(data_type.data_type)
             base = '<{}>' if no_ptr else '<{}> *'
             result = result + base.format(fmt_type(data_type))
+        elif is_map_type(data_type):
+            data_type, _ = unwrap_nullable(data_type.value_data_type)
+            base = '<NSString *, {}>' if no_ptr else '<NSString *, {}> *'
+            result = result + base.format(fmt_type(data_type))
 
     if tag:
         if (nullable or has_default) and not is_prop:
@@ -262,6 +275,9 @@ def fmt_route_type(data_type, tag=False, has_default=False):
         if is_list_type(data_type):
             data_type, _ = unwrap_nullable(data_type.data_type)
             result = result + '<{}> *'.format(fmt_type(data_type))
+        elif is_map_type(data_type):
+            data_type, _ = unwrap_nullable(data_type.value_data_type)
+            result = result + '<NSString *, {}>'.format(fmt_type(data_type))
 
     if is_user_defined_type(data_type) and tag:
         if nullable or has_default:

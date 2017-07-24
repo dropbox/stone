@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 from stone.data_type import (
     is_list_type,
+    is_map_type,
     is_struct_type,
     is_union_type,
     is_nullable_type,
@@ -146,9 +147,10 @@ class ObjCBaseGenerator(CodeGenerator):
             for field in data_type.all_fields:
                 data_type, _ = unwrap_nullable(field.data_type)
 
-                # unpack list
-                while is_list_type(data_type):
-                    data_type = data_type.data_type
+                # unpack list or map
+                while is_list_type(data_type) or is_map_type(data_type):
+                    data_type = (data_type.value_data_type if
+                        is_map_type(data_type) else data_type.data_type)
 
                 if is_user_defined_type(data_type):
                     import_classes.append(fmt_class_prefix(data_type))
@@ -174,9 +176,10 @@ class ObjCBaseGenerator(CodeGenerator):
             for field in data_type.all_fields:
                 data_type, _ = unwrap_nullable(field.data_type)
 
-                # unpack list
-                while is_list_type(data_type):
-                    data_type = data_type.data_type
+                # unpack list or map
+                while is_list_type(data_type) or is_map_type(data_type):
+                    data_type = (data_type.value_data_type if
+                        is_map_type(data_type) else data_type.data_type)
 
                 if is_user_defined_type(data_type):
                     import_classes.append(fmt_class_prefix(data_type))

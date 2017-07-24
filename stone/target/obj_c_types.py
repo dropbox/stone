@@ -6,6 +6,7 @@ import shutil
 
 from stone.data_type import (
     is_list_type,
+    is_map_type,
     is_nullable_type,
     is_numeric_type,
     is_string_type,
@@ -868,6 +869,16 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                      if data_type.max_items else 'nil'),
                     ('itemValidator', item_validator),
                 ]))
+        elif is_map_type(data_type):
+            item_validator = self._determine_validator_type(
+                data_type.value_data_type, value)
+            item_validator = item_validator if item_validator else 'nil'
+
+            validator = '{}:{}'.format(
+                fmt_validator(data_type),
+                fmt_func_args([
+                    ('itemValidator', item_validator),
+                ]))
         elif is_numeric_type(data_type):
             if data_type.min_value or data_type.max_value:
                 validator = '{}:{}'.format(
@@ -1190,13 +1201,15 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         if is_primitive_type(data_type):
             return input_value
 
-        if is_list_type(data_type):
+        if is_list_type(data_type) or is_map_type(data_type):
             serializer_args.append(('value', input_value))
+            elem_data_type = (data_type.value_data_type if
+                is_map_type(data_type) else data_type.data_type)
             serialization_call = self._fmt_serialization_call(
-                data_type.data_type, 'elem{}'.format(depth), serialize, depth + 1)
-            array_block = '^id(id elem{}) {{ return {}; }}'.format(
+                elem_data_type, 'elem{}'.format(depth), serialize, depth + 1)
+            data_struct_block = '^id(id elem{}) {{ return {}; }}'.format(
                 depth, serialization_call)
-            serializer_args.append(('withBlock', array_block))
+            serializer_args.append(('withBlock', data_struct_block))
         elif is_timestamp_type(data_type):
             serializer_args.append(('value', input_value))
             serializer_args.append(('dateFormat',
@@ -1264,19 +1277,19 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     else:
                         error_type = 'nil'
 
-                    if is_list_type(route.arg_data_type):
-                        arraySerialBlock = '^id(id array) {{ return {}; }}'.format(
+                    if is_list_type(route.arg_data_type) or is_map_type(route.arg_data_type):
+                        dataStructSerialBlock = '^id(id dataStruct) {{ return {}; }}'.format(
                             self._fmt_serialization_call(
-                                route.result_data_type, 'array', True))
+                                route.result_data_type, 'dataStruct', True))
                     else:
-                        arraySerialBlock = 'nil'
+                        dataStructSerialBlock = 'nil'
 
-                    if is_list_type(route.result_data_type):
-                        arrayDeserialBlock = '^id(id array) {{ return {}; }}'.format(
+                    if is_list_type(route.result_data_type) or is_map_type(route.result_data_type):
+                        dataStructDeserialBlock = '^id(id dataStruct) {{ return {}; }}'.format(
                             self._fmt_serialization_call(
-                                route.result_data_type, 'array', False))
+                                route.result_data_type, 'dataStruct', False))
                     else:
-                        arrayDeserialBlock = 'nil'
+                        dataStructDeserialBlock = 'nil'
 
                     with self.block_func(
                             func=route_name,
@@ -1311,10 +1324,10 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                                     delim=('attrs:@{', '}'),
                                     compact=True)
 
-                                self.emit('arraySerialBlock:{}'.format(
-                                    arraySerialBlock))
-                                self.emit('arrayDeserialBlock:{}'.format(
-                                    arrayDeserialBlock))
+                                self.emit('dataStructSerialBlock:{}'.format(
+                                    dataStructSerialBlock))
+                                self.emit('dataStructDeserialBlock:{}'.format(
+                                    dataStructDeserialBlock))
 
                         self.emit('return {};'.format(route_name))
                     self.emit()

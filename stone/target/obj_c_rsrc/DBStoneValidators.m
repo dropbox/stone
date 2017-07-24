@@ -10,17 +10,17 @@
                               maxLength:(NSNumber *)maxLength
                                 pattern:(NSString *)pattern {
 
-  void (^validator)(NSString *) = ^(NSString * value) {
-     __unused NSUInteger length = [value length];
+  void (^validator)(NSString *) = ^(NSString *value) {
+    __unused NSUInteger length = [value length];
 
     if (minLength) {
-        __unused NSString *message =
+      __unused NSString *message =
           [NSString stringWithFormat:@"\"%@\" must be at least %@ characters", value, [minLength stringValue]];
       NSAssert(length >= [minLength unsignedIntegerValue], message);
     }
 
     if (maxLength) {
-       __unused NSString *message =
+      __unused NSString *message =
           [NSString stringWithFormat:@"\"%@\" must be at most %@ characters", value, [maxLength stringValue]];
       NSAssert(length <= [maxLength unsignedIntegerValue], message);
     }
@@ -38,14 +38,16 @@
 }
 
 + (void (^)(NSNumber *))numericValidator:(NSNumber *)minValue maxValue:(NSNumber *)maxValue {
-  void (^validator)(NSNumber *) = ^(NSNumber * value) {
+  void (^validator)(NSNumber *) = ^(NSNumber *value) {
     if (minValue) {
-      __unused NSString *message = [NSString stringWithFormat:@"\"%@\" must be at least %@", value, [minValue stringValue]];
+      __unused NSString *message =
+          [NSString stringWithFormat:@"\"%@\" must be at least %@", value, [minValue stringValue]];
       NSAssert([value unsignedIntegerValue] >= [minValue unsignedIntegerValue], message);
     }
 
     if (maxValue) {
-      __unused NSString *message = [NSString stringWithFormat:@"\"%@\" must be at most %@", value, [maxValue stringValue]];
+      __unused NSString *message =
+          [NSString stringWithFormat:@"\"%@\" must be at most %@", value, [maxValue stringValue]];
       NSAssert([value unsignedIntegerValue] <= [maxValue unsignedIntegerValue], message);
     }
   };
@@ -56,7 +58,7 @@
 + (void (^)(NSArray<id> *))arrayValidator:(NSNumber *)minItems
                                  maxItems:(NSNumber *)maxItems
                             itemValidator:(void (^)(id))itemValidator {
-  void (^validator)(NSArray<id> *) = ^(NSArray<id> * value) {
+  void (^validator)(NSArray<id> *) = ^(NSArray<id> *value) {
     __unused NSUInteger count = [value count];
 
     if (minItems) {
@@ -66,7 +68,8 @@
     }
 
     if (maxItems) {
-      __unused NSString *message = [NSString stringWithFormat:@"\"%@\" must be at most %@ items", value, [maxItems stringValue]];
+      __unused NSString *message =
+          [NSString stringWithFormat:@"\"%@\" must be at most %@ items", value, [maxItems stringValue]];
       NSAssert(count <= [maxItems unsignedIntegerValue], message);
     }
 
@@ -80,8 +83,20 @@
   return validator;
 }
 
++ (void (^)(NSDictionary<NSString *, id> *))mapValidator:(void (^)(id))itemValidator {
+  void (^validator)(NSDictionary<NSString *, id> *) = ^(NSDictionary<NSString *, id> *value) {
+    if (itemValidator) {
+      for (id key in value) {
+        itemValidator(value[key]);
+      }
+    }
+  };
+
+  return validator;
+}
+
 + (void (^_Nonnull)(id))nullableValidator:(void (^_Nonnull)(id))internalValidator {
-  void (^validator)(NSNumber *) = ^(NSNumber * value) {
+  void (^validator)(NSNumber *) = ^(NSNumber *value) {
     if (value) {
       internalValidator(value);
     }

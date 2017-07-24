@@ -17,14 +17,18 @@ NS_ASSUME_NONNULL_BEGIN
                                                  pattern:(nullable NSString *)pattern;
 
 /// Validator for `NSNumber` objects. Enforces minimum value and/or maximum value.
-+ (void (^)(NSNumber *))numericValidator:(nullable NSNumber *)minValue
-                                                 maxValue:(nullable NSNumber *)maxValue;
++ (void (^)(NSNumber *))numericValidator:(nullable NSNumber *)minValue maxValue:(nullable NSNumber *)maxValue;
 
 /// Validator for `NSArray` objects. Enforces minimum number of items and/or maximum minimum number of items. Method
 /// requires a validator block that can validate each item in the array.
 + (void (^)(NSArray<T> *))arrayValidator:(nullable NSNumber *)minItems
-                                                 maxItems:(nullable NSNumber *)maxItems
-                                            itemValidator:(void (^_Nullable)(T))itemValidator;
+                                maxItems:(nullable NSNumber *)maxItems
+                           itemValidator:(void (^_Nullable)(T))itemValidator;
+
+/// Validator for `NSDictionary` objects. Enforces minimum number of items and/or maximum minimum number of items.
+/// Method
+/// requires a validator block that can validate each item in the array.
++ (void (^)(NSDictionary<NSString *, T> *))mapValidator:(void (^_Nullable)(T))itemValidator;
 
 /// Wrapper validator for nullable objects. Maintains a reference to the object's normal non-nullable validator.
 + (void (^)(T))nullableValidator:(void (^)(T))internalValidator;
