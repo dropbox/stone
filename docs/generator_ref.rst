@@ -4,7 +4,7 @@ Writing a Generator
 
 This document explains how to write your own generator. If you're simply
 looking to use an included generator, please see `Using Generated Code
-<using_generator.rst>`_.
+<builtin_generators.rst>`_.
 
 .. contents:: **Table of Contents**
 
