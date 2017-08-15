@@ -11,6 +11,12 @@
                                 pattern:(NSString *)pattern {
 
   void (^validator)(NSString *) = ^(NSString *value) {
+    if (value == nil) {
+      __unused NSString *message =
+          [NSString stringWithFormat:@"\"%@\" must be not be `nil`.", value];
+      NSAssert(NO, message);
+    }
+
     __unused NSUInteger length = [value length];
 
     if (minLength) {
@@ -96,8 +102,8 @@
 }
 
 + (void (^_Nonnull)(id))nullableValidator:(void (^_Nonnull)(id))internalValidator {
-  void (^validator)(NSNumber *) = ^(NSNumber *value) {
-    if (value) {
+  void (^validator)(id) = ^(id value) {
+    if (value && !([value isKindOfClass:[NSString class]] && [value isEqualToString:@""])) {
       internalValidator(value);
     }
   };
