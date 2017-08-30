@@ -113,6 +113,7 @@ def generate_imports_for_referenced_namespaces(generator, namespace, insert_type
 
 # This will be at the top of every generated file.
 _validators_import_template = """\
+import copy
 try:
     from . import stone_validators as bv
     from . import stone_base as bb

@@ -64,14 +64,19 @@ class StoneAlias(_Element):
             name (str): The name of the alias.
             type_ref (StoneTypeRef): The data type of the field.
             doc (Optional[str]): Documentation string for the alias.
+            annotations (List[StoneAnnotationRef]): List of annotations for this alias
         """
         super(StoneAlias, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
         self.doc = doc
+        self.annotations = []
+
+    def set_annotations(self, annotations):
+        self.annotations = annotations
 
     def __repr__(self):
-        return 'StoneAlias({!r}, {!r})'.format(self.name, self.type_ref)
+        return 'StoneAlias({!r}, {!r}, {!r})'.format(self.name, self.type_ref, self.annotations)
 
 class StoneTypeDef(_Element):
 
@@ -141,8 +146,6 @@ class StoneStructPatch(_Element):
         self.name = name
         assert isinstance(fields, list)
         self.fields = fields
-        for field in self.fields:
-            field.internal = True
 
         assert isinstance(examples, (OrderedDict, type(None))), type(examples)
         self.examples = examples
@@ -182,8 +185,6 @@ class StoneUnionPatch(_Element):
         self.name = name
         assert isinstance(fields, list)
         self.fields = fields
-        for field in self.fields:
-            field.internal = True
 
         assert isinstance(examples, (OrderedDict, type(None))), type(examples)
         self.examples = examples
@@ -236,18 +237,54 @@ class StoneTagRef(_Element):
             self.tag,
         )
 
+class StoneAnnotationRef(_Element):
+
+    def __init__(self, path, lineno, lexpos, annotation, ns):
+        """
+        Args:
+            annotation (str): Name of the referenced annotation.
+        """
+        super(StoneAnnotationRef, self).__init__(path, lineno, lexpos)
+        self.annotation = annotation
+        self.ns = ns
+
+    def __repr__(self):
+        return 'StoneAnnotationRef({!r}, {!r})'.format(
+            self.annotation, self.ns
+        )
+
+class StoneAnnotationDef(_Element):
+
+    def __init__(self, path, lineno, lexpos, name, annotation_type, args, kwargs):
+        """
+        Args:
+            name (str): Name of the defined annotation.
+            annotation_type (str): Type of annotation to define.
+            args (str): Arguments to define annotation.
+            kwargs (str): Keyword Arguments to define annotation.
+        """
+        super(StoneAnnotationDef, self).__init__(path, lineno, lexpos)
+        self.name = name
+        self.annotation_type = annotation_type
+        self.args = args
+        self.kwargs = kwargs
+
+    def __repr__(self):
+        return 'StoneAnnotationDef({!r}, {!r}, {!r}, {!r})'.format(
+            self.name, self.annotation_type, self.args, self.kwargs
+        )
+
 class StoneField(_Element):
     """
     Represents both a field of a struct and a field of a union.
     TODO(kelkabany): Split this into two different classes.
     """
 
-    def __init__(self, path, lineno, lexpos, name, type_ref, deprecated):
+    def __init__(self, path, lineno, lexpos, name, type_ref):
         """
         Args:
             name (str): The name of the field.
             type_ref (StoneTypeRef): The data type of the field.
-            deprecated (bool): Whether the field is deprecated.
         """
         super(StoneField, self).__init__(path, lineno, lexpos)
         self.name = name
@@ -255,8 +292,7 @@ class StoneField(_Element):
         self.doc = None
         self.has_default = False
         self.default = None
-        self.deprecated = deprecated
-        self.internal = False
+        self.annotations = []
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -265,10 +301,14 @@ class StoneField(_Element):
         self.has_default = True
         self.default = default
 
+    def set_annotations(self, annotations):
+        self.annotations = annotations
+
     def __repr__(self):
-        return 'StoneField({!r}, {!r})'.format(
+        return 'StoneField({!r}, {!r}, {!r})'.format(
             self.name,
             self.type_ref,
+            self.annotations,
         )
 
 class StoneVoidField(_Element):
@@ -277,17 +317,21 @@ class StoneVoidField(_Element):
         super(StoneVoidField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.doc = None
-        self.internal = False
+        self.annotations = []
 
     def set_doc(self, docstring):
         self.doc = docstring
+
+    def set_annotations(self, annotations):
+        self.annotations = annotations
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return 'StoneVoidField({!r})'.format(
+        return 'StoneVoidField({!r}, {!r})'.format(
             self.name,
+            self.annotations,
         )
 
 class StoneSubtypeField(_Element):
@@ -296,7 +340,6 @@ class StoneSubtypeField(_Element):
         super(StoneSubtypeField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
-        self.internal = False
 
     def __repr__(self):
         return 'StoneSubtypeField({!r}, {!r})'.format(
@@ -467,7 +510,8 @@ class StoneParser(object):
                       | struct_patch
                       | union
                       | union_patch
-                      | route"""
+                      | route
+                      | annotation"""
         p[0] = p[1]
 
     def p_namespace(self, p):
@@ -487,12 +531,20 @@ class StoneParser(object):
         p[0] = StoneImport(self.path, p.lineno(1), p.lexpos(1), p[2])
 
     def p_alias(self, p):
-        """alias : KEYWORD ID EQ type_ref NL
-                 | KEYWORD ID EQ type_ref NL INDENT docsection DEDENT"""
+        """alias : alias_no_annotations
+                 | annotation_ref_list alias_no_annotations"""
+        if len(p) > 2:
+            p[0] = p[2]
+            p[0].set_annotations(p[1])
+        else:
+            p[0] = p[1]
+
+    def p_alias_no_annotations(self, p):
+        """alias_no_annotations : KEYWORD ID EQ type_ref NL
+                                | KEYWORD ID EQ type_ref NL INDENT docsection DEDENT"""
         if p[1] == 'alias':
             doc = p[7] if len(p) > 6 else None
-            p[0] = StoneAlias(
-                self.path, p.lineno(1), p.lexpos(1), p[2], p[4], doc)
+            p[0] = StoneAlias(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], doc)
         else:
             raise ValueError('Expected alias keyword')
 
@@ -726,11 +778,6 @@ class StoneParser(object):
         p[0] = p[1]
         p[0].append(p[2])
 
-    def p_field_deprecation(self, p):
-        """deprecation : DEPRECATED
-                       | empty"""
-        p[0] = (p[1] == 'deprecated')
-
     def p_default_option(self, p):
         """default_option : EQ primitive
                           | EQ tag_ref
@@ -742,23 +789,32 @@ class StoneParser(object):
                 p[0] = p[2]
 
     def p_field(self, p):
-        """field : ID type_ref default_option deprecation NL \
-                    INDENT docsection anony_def_option DEDENT
-                 | ID type_ref default_option deprecation NL"""
-        has_docstring = len(p) > 6 and p[7] is not None
-        has_anony_def = len(p) > 6 and p[8] is not None
+        """field : field_no_annotations
+                 | annotation_ref_list field_no_annotations"""
+        if len(p) > 2:
+            p[0] = p[2]
+            p[0].set_annotations(p[1])
+        else:
+            p[0] = p[1]
+
+    def p_field_no_annotations(self, p):
+        """field_no_annotations : ID type_ref default_option NL \
+                            INDENT docsection anony_def_option DEDENT
+                         | ID type_ref default_option NL"""
+        has_docstring = len(p) > 6 and p[6] is not None
+        has_anony_def = len(p) > 6 and p[7] is not None
         p[0] = StoneField(
-            self.path, p.lineno(1), p.lexpos(1), p[1], p[2], p[4])
+            self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
         if p[3] is not None:
             if p[3] is StoneNull:
                 p[0].set_default(None)
             else:
                 p[0].set_default(p[3])
         if has_docstring:
-            p[0].set_doc(p[7])
+            p[0].set_doc(p[6])
         if has_anony_def:
-            p[8].name = p[2].name
-            self.anony_defs.append(p[8])
+            p[7].name = p[2].name
+            self.anony_defs.append(p[7])
 
     def p_anony_def_option(self, p):
         """anony_def_option : anony_def
@@ -768,6 +824,31 @@ class StoneParser(object):
     def p_tag_ref(self, p):
         'tag_ref : ID'
         p[0] = StoneTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
+
+    def p_annotation(self, p):
+        """annotation : ANNOTATION ID EQ ID args NL"""
+        args, kwargs = p[5]
+        p[0] = StoneAnnotationDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], args, kwargs)
+
+    def p_annotation_ref_list_create(self, p):
+        """annotation_ref_list : annotation_ref"""
+
+        p[0] = [p[1]]
+
+    def p_annotation_ref_list_extend(self, p):
+        """annotation_ref_list : annotation_ref_list annotation_ref"""
+
+        p[0] = p[1]
+        p[0].append(p[2])
+
+    def p_annotation_ref(self, p):
+        """annotation_ref : AT ID NL
+                          | AT ID DOT ID NL"""
+
+        if len(p) < 5:
+            p[0] = StoneAnnotationRef(self.path, p.lineno(1), p.lexpos(1), p[2], None)
+        else:
+            p[0] = StoneAnnotationRef(self.path, p.lineno(1), p.lexpos(1), p[4], p[2])
 
     # --------------------------------------------------------------
     # Unions
@@ -806,7 +887,7 @@ class StoneParser(object):
             closed=p[1][0] == 'union_closed')
 
     def p_union_patch(self, p):
-        """union_patch : PATCH UNION ID NL INDENT field_list examples DEDENT"""
+        """union_patch : PATCH uniont ID NL INDENT field_list examples DEDENT"""
         p[0] = StoneUnionPatch(
             path=self.path,
             lineno=p[2][1],
@@ -814,16 +895,16 @@ class StoneParser(object):
             name=p[3],
             fields=p[6],
             examples=p[7],
-            closed=p[1][0] == 'union_closed')
+            closed=p[2][0] == 'union_closed')
 
     def p_uniont(self, p):
         """uniont : UNION
                   | UNION_CLOSED"""
         p[0] = (p[1], p.lineno(1), p.lexpos(1))
 
-    def p_field_void(self, p):
-        """field : ID NL
-                 | ID NL INDENT docstring NL DEDENT"""
+    def p_field_void_no_annotations(self, p):
+        """field_no_annotations : ID NL
+                                | ID NL INDENT docstring NL DEDENT"""
         p[0] = StoneVoidField(self.path, p.lineno(1), p.lexpos(1), p[1])
         if len(p) > 4:
             p[0].set_doc(p[4])

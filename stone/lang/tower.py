@@ -27,6 +27,7 @@ from ..data_type import (
     Boolean,
     Bytes,
     DataType,
+    Deprecate,
     Float32,
     Float64,
     Int32,
@@ -34,7 +35,11 @@ from ..data_type import (
     List,
     Map,
     Nullable,
+    Omit,
+    Preview,
     ParameterError,
+    RedactBlot,
+    RedactHash,
     String,
     Struct,
     StructField,
@@ -52,6 +57,7 @@ from ..data_type import (
 from .exception import InvalidSpec
 from .parser import (
     StoneAlias,
+    StoneAnnotationDef,
     StoneImport,
     StoneNamespace,
     StoneParser,
@@ -75,6 +81,16 @@ def quote(s):
 doc_ref_re = re.compile(r':(?P<tag>[A-z]+):`(?P<val>.*?)`')
 doc_ref_val_re = re.compile(
     r'^(null|true|false|-?\d+(\.\d*)?(e-?\d+)?|"[^\\"]*")$')
+
+# Defined Annotations
+ANNOTATION_CLASS_BY_STRING = {
+    'Deprecate': Deprecate,
+    'Omit': Omit,
+    'Preview': Preview,
+    'RedactBlot': RedactBlot,
+    'RedactHash': RedactHash,
+}
+
 
 class Environment(dict):
     # The default environment won't have a name set since it applies to all
@@ -160,6 +176,7 @@ class TowerOfStone(object):
         self._populate_route_attributes()
         self._populate_examples()
         self._validate_doc_refs()
+        self._validate_annotations()
 
         self.api.normalize()
 
@@ -199,7 +216,7 @@ class TowerOfStone(object):
     def _add_data_types_and_routes_to_api(self, namespace, desc):
         """
         From the raw output of the parser, create forward references for each
-        user-defined type (struct, union, route, and alias).
+        user-defined type (struct, union, route, alias, and annotation).
 
         Args:
             namespace (stone.api.Namespace): Namespace for definitions.
@@ -229,6 +246,10 @@ class TowerOfStone(object):
             elif isinstance(item, StoneAlias):
                 alias = self._create_alias(env, item)
                 namespace.add_alias(alias)
+                self._enforce_canonical_name_available(item, namespace)
+            elif isinstance(item, StoneAnnotationDef):
+                annotation = self._create_annotation(env, item)
+                namespace.add_annotation(annotation)
                 self._enforce_canonical_name_available(item, namespace)
             else:
                 raise AssertionError('Unknown Stone Declaration Type %r' %
@@ -263,6 +284,8 @@ class TowerOfStone(object):
             return 'route'
         elif isinstance(item, StoneAlias):
             return 'alias'
+        elif isinstance(item, StoneAnnotationDef):
+            return 'annotation'
         elif isinstance(item, StoneNamespace):
             return 'namespace'
         else:
@@ -321,6 +344,25 @@ class TowerOfStone(object):
         alias = Alias(item.name, namespace, item)
         env[item.name] = alias
         return alias
+
+    def _create_annotation(self, env, item):
+        if item.name in env:
+            existing_dt = env[item.name]
+            raise InvalidSpec(
+                'Symbol %s already defined (%s:%d).' %
+                (quote(item.name), existing_dt._token.path,
+                existing_dt._token.lineno), item.lineno, item.path)
+
+        namespace = self.api.ensure_namespace(env.namespace_name)
+
+        if item.annotation_type not in ANNOTATION_CLASS_BY_STRING:
+            raise InvalidSpec('Unknown Annotation type %s.' %
+                              item.annotation_type, item.lineno, item.path)
+
+        annotation_class = ANNOTATION_CLASS_BY_STRING[item.annotation_type]
+        annotation = annotation_class(item.name, namespace, item, *item.args)
+        env[item.name] = annotation
+        return annotation
 
     def _create_type(self, env, item):
         """Create a forward reference for a union or struct."""
@@ -422,6 +464,9 @@ class TowerOfStone(object):
             for alias in namespace.aliases:
                 data_type = self._resolve_type(env, alias._token.type_ref)
                 alias.set_attributes(alias._token.doc, data_type)
+                annotations = [self._resolve_annotation_type(env, annotation)
+                               for annotation in alias._token.annotations]
+                alias.set_annotations(annotations)
 
             for data_type in namespace.data_types:
                 if not data_type._is_forward_ref:
@@ -524,7 +569,7 @@ class TowerOfStone(object):
                 # Create a catch-all field
                 catch_all_field = UnionField(
                     name='other', data_type=Void(), doc=None,
-                    token=data_type._token, internal=False, catch_all=True)
+                    token=data_type._token, catch_all=True)
                 api_type_fields.append(catch_all_field)
 
         data_type.set_attributes(
@@ -637,6 +682,8 @@ class TowerOfStone(object):
                 stone_field.lineno, stone_field.path)
 
         data_type = self._resolve_type(env, stone_field.type_ref)
+        annotations = [self._resolve_annotation_type(env, annotation)
+                       for annotation in stone_field.annotations]
         if isinstance(data_type, Void):
             raise InvalidSpec(
                 'Struct field %s cannot have a Void type.' %
@@ -652,9 +699,9 @@ class TowerOfStone(object):
             data_type=data_type,
             doc=stone_field.doc,
             token=stone_field,
-            internal=stone_field.internal,
-            deprecated=stone_field.deprecated,
         )
+        api_type_field.set_annotations(annotations)
+
         return api_type_field
 
     def _create_union_field(self, env, stone_field):
@@ -669,10 +716,11 @@ class TowerOfStone(object):
         Returns:
             stone.data_type.UnionField: A field of a union.
         """
+        annotations = [self._resolve_annotation_type(env, annotation)
+                       for annotation in stone_field.annotations]
         if isinstance(stone_field, StoneVoidField):
             api_type_field = UnionField(
-                name=stone_field.name, data_type=Void(), doc=stone_field.doc,
-                internal=stone_field.internal, token=stone_field)
+                name=stone_field.name, data_type=Void(), doc=stone_field.doc, token=stone_field)
         else:
             data_type = self._resolve_type(env, stone_field.type_ref)
             if isinstance(data_type, Void):
@@ -682,7 +730,9 @@ class TowerOfStone(object):
                                   stone_field.lineno, stone_field.path)
             api_type_field = UnionField(
                 name=stone_field.name, data_type=data_type,
-                doc=stone_field.doc, internal=stone_field.internal, token=stone_field)
+                doc=stone_field.doc, token=stone_field)
+
+        api_type_field.set_annotations(annotations)
         return api_type_field
 
     def _instantiate_data_type(self, data_type_class, data_type_args, loc):
@@ -834,6 +884,27 @@ class TowerOfStone(object):
 
         return data_type
 
+    def _resolve_annotation_type(self, env, annotation_ref):
+        """
+        Resolves the annotation type referenced by annotation_ref.
+        """
+        loc = annotation_ref.lineno, annotation_ref.path
+        if annotation_ref.ns:
+            if annotation_ref.ns not in env:
+                raise InvalidSpec(
+                    'Namespace %s is not imported' % quote(annotation_ref.ns), *loc)
+            env = env[annotation_ref.ns]
+            if not isinstance(env, Environment):
+                raise InvalidSpec(
+                    '%s is not a namespace.' % quote(annotation_ref.ns), *loc)
+
+        if annotation_ref.annotation not in env:
+            raise InvalidSpec(
+                'Symbol %s is undefined.' % quote(annotation_ref.annotation), *loc)
+
+        return env[annotation_ref.annotation]
+
+
     def _resolve_args(self, env, args):
         """
         Resolves type references in data type arguments to data types in
@@ -913,7 +984,7 @@ class TowerOfStone(object):
                             'Enumerated subtype %s must be a struct.' %
                             quote(subtype_name), lineno, path)
                     f = UnionField(
-                        subtype_field.name, subtype, None, subtype_field, subtype_field.internal)
+                        subtype_field.name, subtype, None, subtype_field)
                     subtype_fields.append(f)
                 data_type.set_enumerated_subtypes(subtype_fields,
                                                   data_type._token.subtypes[1])
@@ -1082,6 +1153,42 @@ class TowerOfStone(object):
                 raise InvalidSpec(
                     'Unknown doc reference tag %s.' % quote(tag),
                     *loc)
+
+    def _validate_annotations(self):
+        """
+        Validates that all annotations are attached to proper types and that no field
+        has conflicting inherited or direct annotations. We need to go through all reference
+        chains to make sure we don't override a redactor set on a parent alias or type
+        """
+        for namespace in self.api.namespaces.values():
+            for data_type in namespace.data_types:
+                for field in data_type.fields:
+                    if field.redactor:
+                        self._validate_object_can_be_annotated(field)
+
+            for alias in namespace.aliases:
+                if alias.redactor:
+                    self._validate_object_can_be_annotated(alias)
+
+
+    def _validate_object_can_be_annotated(self, annotated_object):
+        """
+        Validates that object type can be annotated and object does not have
+        conflicting annotations.
+        """
+        data_type = annotated_object.data_type
+        name = annotated_object.name
+        loc = annotated_object._token.lineno, annotated_object._token.path
+        while isinstance(data_type, Alias) or isinstance(data_type, Nullable):
+            if hasattr(data_type, 'redactor') and data_type.redactor:
+                raise InvalidSpec('A redactor has already been defined for %s by %s' %
+                                  (name, data_type.name), *loc)
+            if hasattr(data_type, 'omission_group') and data_type.omission_group:
+                raise InvalidSpec('An omission group has already been defined for %s by %s' %
+                                  (name, data_type.name), *loc)
+
+            data_type = data_type.data_type
+
 
     def _validate_stone_cfg(self):
         """

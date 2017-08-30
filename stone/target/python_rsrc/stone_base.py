@@ -25,15 +25,15 @@ class Union(object):
     # union is composed of only symbols.
     __slots__ = ['_tag', '_value']
     _tagmap = {}  # type: typing.Dict[typing.Text, bv.Validator]
-    _internal_tagmap = {}  # type: typing.Dict[typing.Text, bv.Validator]
+    _permissioned_tagmaps = set()  # type: typing.Set[typing.Text]
 
     def __init__(self, tag, value=None):
-        assert tag in self._tagmap or tag in self._internal_tagmap, 'Invalid tag %r.' % tag
-
-        if tag in self._tagmap:
-            validator = self._tagmap[tag]
-        else:
-            validator = self._internal_tagmap[tag]
+        validator = None
+        tagmap_names = ['_{}_tagmap'.format(map_name) for map_name in self._permissioned_tagmaps]
+        for tagmap_name in ['_tagmap'] + tagmap_names:
+            if tag in getattr(self, tagmap_name):
+                validator = getattr(self, tagmap_name)[tag]
+        assert validator is not None, 'Invalid tag %r.' % tag
 
         if isinstance(validator, bv.Void):
             assert value is None, 'Void type union member must have None value.'
@@ -60,23 +60,27 @@ class Union(object):
         return hash((self._tag, self._value))
 
     @classmethod
-    def _is_tag_present(cls, tag, internal_caller):
+    def _is_tag_present(cls, tag, caller_permissions):
         assert tag, 'tag value should not be None'
 
-        if internal_caller:
-            if tag in cls._tagmap or tag in cls._internal_tagmap:
-                return True
-            return False
+        if tag in cls._tagmap:
+            return True
 
-        return tag in cls._tagmap
+        for extra_permission in caller_permissions.permissions:
+            tagmap_name = '_{}_tagmap'.format(extra_permission)
+            if hasattr(cls, tagmap_name) and tag in getattr(cls, tagmap_name):
+                return True
+
+        return False
 
     @classmethod
-    def _get_val_data_type(cls, tag, internal_caller):
+    def _get_val_data_type(cls, tag, caller_permissions):
         assert tag, 'tag value should not be None'
 
-        if internal_caller:
-            if tag in cls._internal_tagmap:
-                return cls._internal_tagmap[tag]
+        for extra_permission in caller_permissions.permissions:
+            tagmap_name = '_{}_tagmap'.format(extra_permission)
+            if hasattr(cls, tagmap_name) and tag in getattr(cls, tagmap_name):
+                return getattr(cls, tagmap_name)[tag]
 
         return cls._tagmap[tag]
 

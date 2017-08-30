@@ -554,8 +554,7 @@ class Field(object):
                  name,
                  data_type,
                  doc,
-                 token,
-                 internal):
+                 token):
         """
         Creates a new Field.
 
@@ -570,12 +569,47 @@ class Field(object):
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self._token = token
-        self.internal = internal
+        self.redactor = None
+        self.omission_group = None
+        self.deprecated = None
+        self.preview = None
+
+    def set_annotations(self, annotations):
+        for annotation in annotations:
+            if isinstance(annotation, Deprecate):
+                if self.deprecated:
+                    raise InvalidSpec("Deprecated already set as %r" %
+                                      self.deprecated, self._token.lineno)
+                self.deprecated = True
+                self.doc = 'Field is deprecated. {}'.format(self.doc)
+            elif isinstance(annotation, Omit):
+                if self.omission_group:
+                    raise InvalidSpec("Omission Group already set as %r" %
+                                      self.omission_group, self._token.lineno)
+                self.omission_group = annotation
+                self.doc = 'Field is only returned for "{}" callers. {}'.format(
+                    self.omission_group.group_name, self.doc)
+            elif isinstance(annotation, Preview):
+                if self.preview:
+                    raise InvalidSpec("Preview already set as %r" %
+                                      self.preview, self._token.lineno)
+                self.preview = True
+                self.doc = 'Field is in preview mode - do not rely on in production. {}'.format(
+                    self.doc
+                )
+            elif isinstance(annotation, Redact):
+                # Make sure we don't set multiple conflicting annotations on one field
+                if self.redactor:
+                    raise InvalidSpec("Redactor already set as %r" %
+                                      self.redactor, self._token.lineno)
+                self.redactor = annotation
+            else:
+                raise InvalidSpec(
+                    'Annotation %r not recognized for field.' % annotation, self._token.lineno)
 
     def __repr__(self):
-        return 'Field(%r, %r, %r)' % (self.name,
-                                      self.data_type,
-                                      self.internal)
+        return 'Field(%r, %r)' % (self.name,
+                                  self.data_type)
 
 
 class StructField(Field):
@@ -587,9 +621,7 @@ class StructField(Field):
                  name,
                  data_type,
                  doc,
-                 token,
-                 internal,
-                 deprecated=False):
+                 token):
         """
         Creates a new Field.
 
@@ -598,10 +630,8 @@ class StructField(Field):
         :param str doc: Documentation for the field.
         :param token: Raw field definition from the parser.
         :type token: stone.stone.parser.StoneField
-        :param bool deprecated: Whether the field is deprecated.
         """
-        super(StructField, self).__init__(name, data_type, doc, token, internal)
-        self.deprecated = deprecated
+        super(StructField, self).__init__(name, data_type, doc, token)
         self.has_default = False
         self._default = None
 
@@ -630,9 +660,10 @@ class StructField(Field):
         return attr
 
     def __repr__(self):
-        return 'StructField(%r, %r, %r)' % (self.name,
-                                        self.data_type,
-                                        self.internal)
+        return 'StructField(%r, %r, %r, %r)' % (self.name,
+                                                self.data_type,
+                                                self.redactor,
+                                                self.omission_group)
 
 
 class UnionField(Field):
@@ -645,16 +676,16 @@ class UnionField(Field):
                  data_type,
                  doc,
                  token,
-                 internal,
                  catch_all=False):
-        super(UnionField, self).__init__(name, data_type, doc, token, internal)
+        super(UnionField, self).__init__(name, data_type, doc, token)
         self.catch_all = catch_all
 
     def __repr__(self):
-        return 'UnionField(%r, %r, %r, %r)' % (self.name,
-                                           self.data_type,
-                                           self.catch_all,
-                                           self.internal)
+        return 'UnionField(%r, %r, %r, %r, %r)' % (self.name,
+                                                   self.data_type,
+                                                   self.catch_all,
+                                                   self.redactor,
+                                                   self.omission_group)
 
 
 class UserDefined(Composite):
@@ -756,12 +787,9 @@ class UserDefined(Composite):
                 return True
         return False
 
-    def has_internal_fields(self):
-        """Returns whether at least one field is internal."""
-        for field in self.fields:
-            if field.internal:
-                return True
-        return False
+    def get_omission_groups(self):
+        """Returns all unique omission groups for objects fields."""
+        return {field.omission_group.group_name for field in self.fields if field.omission_group}
 
     @property
     def name(self):
@@ -799,6 +827,9 @@ class UserDefined(Composite):
                         d[key] = inner_d['.tag']
                     else:
                         make_compact(inner_d)
+                if isinstance(d[key], list):
+                    for item in d[key]:
+                        make_compact(item)
 
         for example in examples.values():
             if (isinstance(example.value, dict) and
@@ -1542,6 +1573,83 @@ class TagRef(object):
         return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
 
 
+class Annotation(object):
+    """
+    Used when a field is annotated for redaction or omission.
+    """
+    def __init__(self, name, namespace, token):
+        self.name = name
+        self.namespace = namespace
+        self._token = token
+
+    def __repr__(self):
+        return 'Annotation(%r, %r)' % (self.name, self.namespace)
+
+
+class Deprecate(Annotation):
+    """
+    Used when a field is annotated for deprecation.
+    """
+    def __init__(self, name, namespace, token):
+        super(Deprecate, self).__init__(name, namespace, token)
+
+    def __repr__(self):
+        return 'Deprecate(%r, %r)' % (self.name)
+
+class Omit(Annotation):
+    """
+    Used when a field is annotated for redaction.
+    """
+    def __init__(self, name, namespace, token, group_name):
+        super(Omit, self).__init__(name, namespace, token)
+        self.group_name = group_name
+
+    def __repr__(self):
+        return 'Omit(%r, %r)' % (self.name, self.group_name)
+
+
+class Preview(Annotation):
+    """
+    Used when a field is annotated for previewing.
+    """
+    def __init__(self, name, namespace, token):
+        super(Preview, self).__init__(name, namespace, token)
+
+    def __repr__(self):
+        return 'Preview(%r)' % self.name
+
+
+class Redact(Annotation):
+    """
+    Used when a field is annotated for redaction.
+    """
+    def __init__(self, name, namespace, token, regex):
+        super(Redact, self).__init__(name, namespace, token)
+        self.regex = regex
+
+
+class RedactBlot(Redact):
+    """
+    Used when a field is annotated to be blotted.
+    """
+    def __init__(self, name, namespace, token, regex=None):
+        super(RedactBlot, self).__init__(name, namespace, token, regex)
+
+    def __repr__(self):
+        return 'RedactBlot(%r, %r)' % (self.name, self.regex)
+
+
+class RedactHash(Redact):
+    """
+    Used when a field is annotated to be hashed.
+    """
+    def __init__(self, name, namespace, token, regex=None):
+        super(RedactHash, self).__init__(name, namespace, token, regex)
+
+    def __repr__(self):
+        return 'RedactHash(%r, %r)' % (self.name, self.regex)
+
+
 class Alias(Composite):
     """
     NOTE: The categorization of aliases as a composite type is arbitrary.
@@ -1569,6 +1677,19 @@ class Alias(Composite):
         self.raw_doc = None
         self.doc = None
         self.data_type = None
+        self.redactor = None
+
+    def set_annotations(self, annotations):
+        for annotation in annotations:
+            if isinstance(annotation, Redact):
+                # Make sure we don't set multiple conflicting annotations on one alias
+                if self.redactor:
+                    raise InvalidSpec("Redactor already set as %r" %
+                                      self.redactor, self._token.lineno)
+                self.redactor = annotation
+            else:
+                raise InvalidSpec("Aliases only support 'Redact', not %r" %
+                                  annotation, self._token.lineno)
 
     def set_attributes(self, doc, data_type):
         """
