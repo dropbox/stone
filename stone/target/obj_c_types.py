@@ -646,7 +646,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
         with self.block_func(
                 func='serialize',
                 args=fmt_func_args_declaration([('instance', 'id')]),
-                return_type='NSDictionary *',
+                return_type='nullable NSDictionary *',
                 class_func=True):
             func_call = fmt_func_call(
                 caller=fmt_serial_class(data_type_name),
@@ -673,7 +673,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             func='serialize',
             args=fmt_func_args_declaration([(
                 'instance', '{} *'.format(obj_name))]),
-            return_type='NSDictionary *',
+            return_type='nullable NSDictionary *',
             class_func=True)
         deserial_signature = fmt_signature(
             func='deserialize',
@@ -978,7 +978,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                         self.emit(
                             'jsonDict[@".tag"] = @"{}";'.format(fmt_var(tag)))
                 self.emit()
-            self.emit('return jsonDict;')
+            self.emit('return [jsonDict count] > 0 ? jsonDict : nil;')
         self.emit()
 
     def _generate_struct_deserializer(self, struct):
@@ -1116,7 +1116,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     )
 
             self.emit()
-            self.emit('return jsonDict;')
+            self.emit('return [jsonDict count] > 0 ? jsonDict : nil;')
 
         self.emit()
 
