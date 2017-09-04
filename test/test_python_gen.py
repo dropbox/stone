@@ -11,6 +11,8 @@ import subprocess
 import sys
 import unittest
 
+import pytz
+
 import stone.target.python_rsrc.stone_validators as bv
 
 from stone.target.python_rsrc.stone_serializers import (
@@ -19,6 +21,8 @@ from stone.target.python_rsrc.stone_serializers import (
     _strftime as stone_strftime,
 )
 
+_TZ_UTC = pytz.utc
+_TZ_AMSTERDAM = pytz.timezone(str('Europe/Amsterdam'))
 
 class TestDropInModules(unittest.TestCase):
     """
@@ -117,39 +121,37 @@ class TestDropInModules(unittest.TestCase):
         b.validate(b'\x00')
 
     def test_timestamp_validator(self):
-        class UTC(datetime.tzinfo):
-            def utcoffset(self, dt):  # pylint: disable=unused-argument,useless-suppression
-                return datetime.timedelta(0)
-
-            def tzname(self, dt):  # pylint: disable=unused-argument,useless-suppression
-                return 'UTC'
-
-            def dst(self, dt):  # pylint: disable=unused-argument,useless-suppression
-                return datetime.timedelta(0)
-
-        class PST(datetime.tzinfo):
-            def utcoffset(self, dt):  # pylint: disable=unused-argument,useless-suppression
-                return datetime.timedelta(-8)
-
-            def tzname(self, dt):  # pylint: disable=unused-argument,useless-suppression
-                return 'PST'
-
-            def dst(self, dt):  # pylint: disable=unused-argument,useless-suppression
-                return datetime.timedelta(0)
-
         t = bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000')
         self.assertRaises(bv.ValidationError, lambda: t.validate('abcd'))
         now = datetime.datetime.utcnow()
         t.validate(now)
-        then = datetime.datetime(1776, 7, 4, 12, 0, 0)
+        then = datetime.datetime(1776, 7, 4, 15, 11, 23)
         t.validate(then)
         new_then = json_decode(t, json_encode(t, then))
         self.assertEqual(then, new_then)
         # Accept a tzinfo only if it's UTC
-        t.validate(now.replace(tzinfo=UTC()))
+        t.validate(now.replace(tzinfo=_TZ_UTC))
         # Do not accept a non-UTC tzinfo
-        self.assertRaises(bv.ValidationError,
-                          lambda: t.validate(now.replace(tzinfo=PST())))
+        self.assertRaises(bv.ValidationError, lambda: t.validate(now.replace(tzinfo=_TZ_AMSTERDAM)))
+
+    def test_iso8601timestamp_validator(self):
+        t = bv.Iso8601Timestamp('%Y-%m-%dT%H:%M:%SZ', input_re=r'^(?P<year>-?(?:[1-9][0-9]*)?[0-9]{4})-(?P<month>1[0-2]|0[1-9])-(?P<day>3[01]|0[1-9]|[12][0-9])T(?P<hour>2[0-3]|[01][0-9]):(?P<minute>[0-5][0-9]):(?P<second>[0-5][0-9])(?P<ms>\.[0-9]+)?(?P<timezone>Z|[+-](?:2[0-3]|[01][0-9]):[0-5][0-9])?$')  # noqa: E501
+        self.assertRaises(bv.ValidationError, lambda: t.validate('abcd'))
+        then = datetime.datetime(1776, 7, 4, 15, 11, 23).replace(tzinfo=_TZ_UTC)
+        t.validate(then)
+        new_then = json_decode(t, json_encode(t, then))
+        self.assertEqual(then, new_then)
+
+        then_cxt = then.astimezone(_TZ_AMSTERDAM)
+        self.assertEqual(then, then_cxt)
+        t.validate(then_cxt)
+        new_then_cxt = json_decode(t, json_encode(t, then_cxt))
+        self.assertEqual(then_cxt, new_then_cxt)
+        self.assertEqual(new_then, new_then_cxt)
+
+        # Do not accept a timezone-naive datetime
+        now = datetime.datetime.utcnow().replace(tzinfo=None)
+        self.assertRaises(bv.ValidationError, lambda: t.validate(now))
 
     def test_list_validator(self):
         l = bv.List(bv.String(), min_items=1, max_items=10)
@@ -214,10 +216,13 @@ class TestDropInModules(unittest.TestCase):
         # encoded as a true/false in JSON when an integer is the data type.
         self.assertEqual(json_encode(bv.UInt32(), True), json.dumps(1))
         self.assertEqual(json_encode(bv.Boolean(), True), json.dumps(True))
-        f = '%a, %d %b %Y %H:%M:%S +0000'
+        f = '%a, %d %b %Y %H:%M:%S %z'
         now = datetime.datetime.utcnow()
-        self.assertEqual(json_encode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), now),
+        now_w_tz = now.replace(tzinfo=_TZ_UTC)
+        self.assertEqual(json_encode(bv.Timestamp(f), now),
                          json.dumps(now.strftime(f)))
+        self.assertEqual(json_encode(bv.Iso8601Timestamp(f), now_w_tz),
+                         json.dumps(now_w_tz.strftime(f)))
         b = b'\xff' * 5
         self.assertEqual(json_encode(bv.Bytes(), b),
                          json.dumps(base64.b64encode(b).decode('ascii')))
@@ -382,17 +387,19 @@ class TestDropInModules(unittest.TestCase):
         f = '%a, %d %b %Y %H:%M:%S +0000'
         now = datetime.datetime.utcnow().replace(microsecond=0)
         self.assertEqual(json_decode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'),
-                                     json.dumps(now.strftime(f))),
-                         now)
+                json.dumps(now.strftime(f))), now)
+        self.assertEqual(json_decode(bv.Iso8601Timestamp('%a, %d %b %Y %H:%M:%S %z'),
+                json.dumps(now.strftime(f))), now.replace(tzinfo=_TZ_UTC))
         # Try decoding timestamp with bad type
         self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), '1'))
+                lambda: json_decode(bv.Timestamp('%a, %d %b %Y %H:%M:%S +0000'), '1'))
+        self.assertRaises(bv.ValidationError,
+                lambda: json_decode(bv.Iso8601Timestamp('%a, %d %b %Y %H:%M:%S %z'), 'asdf'))
         b = b'\xff' * 5
         self.assertEqual(json_decode(bv.Bytes(),
-                                     json.dumps(base64.b64encode(b).decode('ascii'))),
-                         b)
+                json.dumps(base64.b64encode(b).decode('ascii'))), b)
         self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Bytes(), json.dumps(1)))
+                lambda: json_decode(bv.Bytes(), json.dumps(1)))
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps(None)), None)
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps('abc')), 'abc')
 
@@ -401,7 +408,7 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_decode(bv.Void(), json.dumps(12345), strict=False), None)
         # Check that an error is raised if strict is True and there's a non-null value
         self.assertRaises(bv.ValidationError,
-                          lambda: json_decode(bv.Void(), json.dumps(12345), strict=True))
+                lambda: json_decode(bv.Void(), json.dumps(12345), strict=True))
 
     def test_json_decoder_struct(self):
         class S(object):
