@@ -297,15 +297,15 @@ class ApiRoute(object):
 
     def __init__(self,
                  name,
-                 token):
+                 ast_node):
         # type: (str, AstRouteDef) -> None
         """
         :param str name: Designated name of the endpoint.
-        :param token: Raw route definition from the parser.
-        :type token: stone.stone.parser.AstRouteDef
+        :param ast_node: Raw route definition from the parser.
+        :type ast_node: stone.stone.parser.AstRouteDef
         """
         self.name = name
-        self._token = token
+        self._ast_node = ast_node
 
         # These attributes are set later by set_attributes()
         self.deprecated = None  # type: typing.Optional[DeprecationInfo]

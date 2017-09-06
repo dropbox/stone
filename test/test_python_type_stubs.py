@@ -59,11 +59,11 @@ def _make_namespace_with_alias():
     # type: (...) -> ApiNamespace
     ns = ApiNamespace('ns_with_alias')
 
-    struct1 = Struct(name='Struct1', namespace=ns, token=None)
+    struct1 = Struct(name='Struct1', namespace=ns, ast_node=None)
     struct1.set_attributes(None, [StructField('f1', Boolean(), None, None)])
     ns.add_data_type(struct1)
 
-    alias = Alias(name='AliasToStruct1', namespace=ns, token=None)
+    alias = Alias(name='AliasToStruct1', namespace=ns, ast_node=None)
     alias.set_attributes(doc=None, data_type=struct1)
     ns.add_alias(alias)
 
@@ -73,11 +73,11 @@ def _make_namespace_with_many_structs():
     # type: (...) -> ApiNamespace
     ns = ApiNamespace('ns_with_many_structs')
 
-    struct1 = Struct(name='Struct1', namespace=ns, token=None)
+    struct1 = Struct(name='Struct1', namespace=ns, ast_node=None)
     struct1.set_attributes(None, [StructField('f1', Boolean(), None, None)])
     ns.add_data_type(struct1)
 
-    struct2 = Struct(name='Struct2', namespace=ns, token=None)
+    struct2 = Struct(name='Struct2', namespace=ns, ast_node=None)
     struct2.set_attributes(
         doc=None,
         fields=[
@@ -94,7 +94,7 @@ def _make_namespace_with_nested_types():
     # type: (...) -> ApiNamespace
     ns = ApiNamespace('ns_w_nested_types')
 
-    struct = Struct(name='NestedTypes', namespace=ns, token=None)
+    struct = Struct(name='NestedTypes', namespace=ns, ast_node=None)
     struct.set_attributes(
         doc=None,
         fields=[
@@ -104,7 +104,7 @@ def _make_namespace_with_nested_types():
                     List(UInt64())
                 ),
                 doc=None,
-                token=None,
+                ast_node=None,
             ),
             StructField(
                 name='ListOfNullables',
@@ -112,7 +112,7 @@ def _make_namespace_with_nested_types():
                     Nullable(UInt64())
                 ),
                 doc=None,
-                token=None,
+                ast_node=None,
             )
         ]
     )
@@ -124,7 +124,7 @@ def _make_namespace_with_a_union():
     # type: (...) -> ApiNamespace
     ns = ApiNamespace('ns_with_a_union')
 
-    u1 = Union(name='Union', namespace=ns, token=None, closed=True)
+    u1 = Union(name='Union', namespace=ns, ast_node=None, closed=True)
     u1.set_attributes(
         doc=None,
         fields=[
@@ -132,20 +132,20 @@ def _make_namespace_with_a_union():
                 name="first",
                 doc=None,
                 data_type=Void(),
-                token=None
+                ast_node=None
             ),
             UnionField(
                 name="last",
                 doc=None,
                 data_type=Void(),
-                token=None
+                ast_node=None
             ),
         ],
     )
     ns.add_data_type(u1)
 
     # A more interesting case with non-void variants.
-    shape_union = Union(name='Shape', namespace=ns, token=None, closed=True)
+    shape_union = Union(name='Shape', namespace=ns, ast_node=None, closed=True)
     shape_union.set_attributes(
         doc=None,
         fields=[
@@ -153,13 +153,13 @@ def _make_namespace_with_a_union():
                 name="point",
                 doc=None,
                 data_type=Void(),
-                token=None
+                ast_node=None
             ),
             UnionField(
                 name="circle",
                 doc=None,
                 data_type=Float64(),
-                token=None
+                ast_node=None
             ),
         ],
     )
@@ -171,7 +171,7 @@ def _make_namespace_with_empty_union():
     # type: (...) -> ApiNamespace
     ns = ApiNamespace('ns_with_empty_union')
 
-    union = Union(name='EmptyUnion', namespace=ns, token=None, closed=True)
+    union = Union(name='EmptyUnion', namespace=ns, ast_node=None, closed=True)
     union.set_attributes(
         doc=None,
         fields=[],

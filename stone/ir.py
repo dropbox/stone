@@ -558,21 +558,21 @@ class Field(object):
                  name,
                  data_type,
                  doc,
-                 token):
+                 ast_node):
         """
         Creates a new Field.
 
         :param str name: Name of the field.
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
-        :param token: Raw field definition from the parser.
-        :type token: stone.frontend.ast.AstField
+        :param ast_node: Raw field definition from the parser.
+        :type ast_node: stone.frontend.ast.AstField
         """
         self.name = name
         self.data_type = data_type
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
-        self._token = token
+        self._ast_node = ast_node
 
     def __repr__(self):
         return 'Field(%r, %r)' % (self.name,
@@ -588,7 +588,7 @@ class StructField(Field):
                  name,
                  data_type,
                  doc,
-                 token,
+                 ast_node,
                  deprecated=False):
         """
         Creates a new Field.
@@ -596,11 +596,11 @@ class StructField(Field):
         :param str name: Name of the field.
         :param Type data_type: The type of variable for of this field.
         :param str doc: Documentation for the field.
-        :param token: Raw field definition from the parser.
-        :type token: stone.frontend.ast.AstField
+        :param ast_node: Raw field definition from the parser.
+        :type ast_node: stone.frontend.ast.AstField
         :param bool deprecated: Whether the field is deprecated.
         """
-        super(StructField, self).__init__(name, data_type, doc, token)
+        super(StructField, self).__init__(name, data_type, doc, ast_node)
         self.deprecated = deprecated
         self.has_default = False
         self._default = None
@@ -643,9 +643,9 @@ class UnionField(Field):
                  name,
                  data_type,
                  doc,
-                 token,
+                 ast_node,
                  catch_all=False):
-        super(UnionField, self).__init__(name, data_type, doc, token)
+        super(UnionField, self).__init__(name, data_type, doc, ast_node)
         self.catch_all = catch_all
 
     def __repr__(self):
@@ -661,7 +661,7 @@ class UserDefined(Composite):
 
     DEFAULT_EXAMPLE_LABEL = 'default'
 
-    def __init__(self, name, namespace, token):
+    def __init__(self, name, namespace, ast_node):
         """
         When this is instantiated, the type is treated as a forward reference.
         Only when :meth:`set_attributes` is called is the type considered to
@@ -670,13 +670,13 @@ class UserDefined(Composite):
         :param str name: Name of type.
         :param stone.api.Namespace namespace: The namespace this type is
             defined in.
-        :param token: Raw type definition from the parser.
-        :type token: stone.frontend.ast.AstTypeDef
+        :param ast_node: Raw type definition from the parser.
+        :type ast_node: stone.frontend.ast.AstTypeDef
         """
         super(UserDefined, self).__init__()
         self._name = name
         self.namespace = namespace
-        self._token = token
+        self._ast_node = ast_node
         self._is_forward_ref = True
 
         self.raw_doc = None
@@ -708,10 +708,10 @@ class UserDefined(Composite):
         # Check that no two fields share the same name.
         for field in self.fields:
             if field.name in self._fields_by_name:
-                orig_lineno = self._fields_by_name[field.name]._token.lineno
+                orig_lineno = self._fields_by_name[field.name]._ast_node.lineno
                 raise InvalidSpec("Field '%s' already defined on line %s." %
                                   (field.name, orig_lineno),
-                                  field._token.lineno)
+                                  field._ast_node.lineno)
             self._fields_by_name[field.name] = field
 
         # Check that the fields for this type do not match any of the fields of
@@ -720,11 +720,11 @@ class UserDefined(Composite):
         while cur_type:
             for field in self.fields:
                 if field.name in cur_type._fields_by_name:
-                    lineno = cur_type._fields_by_name[field.name]._token.lineno
+                    lineno = cur_type._fields_by_name[field.name]._ast_node.lineno
                     raise InvalidSpec(
                         "Field '%s' already defined in parent '%s' on line %d."
                         % (field.name, cur_type.name, lineno),
-                        field._token.lineno)
+                        field._ast_node.lineno)
             cur_type = cur_type.parent_type
 
         # Indicate that the attributes of the type have been populated.
@@ -808,14 +808,14 @@ class UserDefined(Composite):
 class Example(object):
     """An example of a struct or union type."""
 
-    def __init__(self, label, text, value, token=None):
+    def __init__(self, label, text, value, ast_node=None):
         assert isinstance(label, six.text_type), type(label)
         self.label = label
         assert isinstance(text, (six.text_type, type(None))), type(text)
         self.text = doc_unwrap(text) if text else text
         assert isinstance(value, (six.text_type, OrderedDict)), type(value)
         self.value = value
-        self._token = token
+        self._ast_node = ast_node
 
     def __repr__(self):
         return 'Example({!r}, {!r}, {!r})'.format(
@@ -976,7 +976,7 @@ class Struct(UserDefined):
         if self.parent_type:
             raise InvalidSpec(
                 "'%s' enumerates subtypes so it cannot extend another struct."
-                % self.name, self._token.lineno, self._token.path)
+                % self.name, self._ast_node.lineno, self._ast_node.path)
 
         # Require that if this struct enumerates subtypes, its parent (and thus
         # the entire hierarchy above this struct) does as well.
@@ -984,12 +984,12 @@ class Struct(UserDefined):
             raise InvalidSpec(
                 "'%s' cannot enumerate subtypes if parent '%s' does not." %
                 (self.name, self.parent_type.name),
-                self._token.lineno, self._token.path)
+                self._ast_node.lineno, self._ast_node.path)
 
         enumerated_subtype_names = set()  # Set[str]
         for subtype_field in subtype_fields:
-            path = subtype_field._token.path
-            lineno = subtype_field._token.lineno
+            path = subtype_field._ast_node.path
+            lineno = subtype_field._ast_node.lineno
 
             # Require that a subtype only has a single type tag.
             if subtype_field.data_type.name in enumerated_subtype_names:
@@ -1012,8 +1012,8 @@ class Struct(UserDefined):
                 raise InvalidSpec(
                     "Field '%s' already defined on line %d." %
                     (subtype_field.name, lineno),
-                    orig_field._token.lineno,
-                    orig_field._token.path)
+                    orig_field._ast_node.lineno,
+                    orig_field._ast_node.path)
 
             # Walk up parent tree hierarchy to ensure no field conflicts.
             # Checks for conflicts with subtype tags and regular fields.
@@ -1024,7 +1024,7 @@ class Struct(UserDefined):
                     raise InvalidSpec(
                         "Field '%s' already defined in parent '%s' (%s:%d)."
                         % (subtype_field.name, cur_type.name,
-                           orig_field._token.path, orig_field._token.lineno),
+                           orig_field._ast_node.path, orig_field._ast_node.lineno),
                         lineno, path)
                 cur_type = cur_type.parent_type
 
@@ -1043,7 +1043,7 @@ class Struct(UserDefined):
                 raise InvalidSpec(
                     "'%s' does not enumerate all subtypes, missing '%s'" %
                     (self.name, subtype.name),
-                    self._token.lineno)
+                    self._ast_node.lineno)
 
     def get_all_subtypes_with_tags(self):
         """
@@ -1247,7 +1247,7 @@ class Struct(UserDefined):
                 ex_val[field.name] = get_json_val(
                     field.data_type, field.default)
 
-        return Example(example.label, example.text, ex_val, token=example)
+        return Example(example.label, example.text, ex_val, ast_node=example)
 
     def _compute_example_enumerated_subtypes(self, label):
         """
@@ -1288,8 +1288,8 @@ class Union(UserDefined):
 
     composite_type = 'union'
 
-    def __init__(self, name, namespace, token, closed):
-        super(Union, self).__init__(name, namespace, token)
+    def __init__(self, name, namespace, ast_node, closed):
+        super(Union, self).__init__(name, namespace, ast_node)
         self.closed = closed
 
     # TODO: Why is this a different signature than the parent? Is this
@@ -1481,7 +1481,7 @@ class Union(UserDefined):
                 if inner_ex_val is not None:
                     ex_val[field.name] = inner_ex_val
 
-            return Example(example.label, example.text, ex_val, token=example)
+            return Example(example.label, example.text, ex_val, ast_node=example)
 
         else:
             # Try to fallback to a union member with tag matching the label
@@ -1540,7 +1540,7 @@ class Alias(Composite):
     It fit here better than as a primitive or user-defined type.
     """
 
-    def __init__(self, name, namespace, token):
+    def __init__(self, name, namespace, ast_node):
         """
         When this is instantiated, the type is treated as a forward reference.
         Only when :meth:`set_attributes` is called is the type considered to
@@ -1549,13 +1549,13 @@ class Alias(Composite):
         :param str name: Name of type.
         :param stone.api.Namespace namespace: The namespace this type is
             defined in.
-        :param token: Raw type definition from the parser.
-        :type token: stone.frontend.ast.AstTypeDef
+        :param ast_node: Raw type definition from the parser.
+        :type ast_node: stone.frontend.ast.AstTypeDef
         """
         super(Alias, self).__init__()
         self._name = name
         self.namespace = namespace
-        self._token = token
+        self._ast_node = ast_node
 
         # Populated by :meth:`set_attributes`
         self.raw_doc = None
@@ -1582,7 +1582,7 @@ class Alias(Composite):
             if cur_data_type == self:
                 raise InvalidSpec(
                     "Alias '%s' is part of a cycle." % self.name,
-                    self._token.lineno, self._token.path)
+                    self._ast_node.lineno, self._ast_node.path)
 
     @property
     def name(self):

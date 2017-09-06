@@ -131,12 +131,12 @@ class IRGenerator(object):
 
         raw_api = []
         for partial_ast in self._partial_asts:
-            namespace_token = self._extract_namespace_token(partial_ast)
-            namespace = self.api.ensure_namespace(namespace_token.name)
+            namespace_ast_node = self._extract_namespace_ast_node(partial_ast)
+            namespace = self.api.ensure_namespace(namespace_ast_node.name)
             base_name = self._get_base_name(namespace.name, namespace.name)
-            self._item_by_canonical_name[base_name] = namespace_token
-            if namespace_token.doc is not None:
-                namespace.add_doc(namespace_token.doc)
+            self._item_by_canonical_name[base_name] = namespace_ast_node
+            if namespace_ast_node.doc is not None:
+                namespace.add_doc(namespace_ast_node.doc)
             raw_api.append((namespace, partial_ast))
             self._add_data_types_and_routes_to_api(namespace, partial_ast)
 
@@ -152,13 +152,13 @@ class IRGenerator(object):
 
         return self.api
 
-    def _extract_namespace_token(self, desc):
+    def _extract_namespace_ast_node(self, desc):
         """
         Checks that the namespace is declared first in the spec, and that only
         one namespace is declared.
 
         Args:
-            desc (List[stone.stone.parser.ASTNode]): All tokens in a spec
+            desc (List[stone.stone.parser.ASTNode]): All AST nodes in a spec
                 file in the order they were defined.
 
         Return:
@@ -183,7 +183,7 @@ class IRGenerator(object):
 
         Args:
             namespace (stone.api.Namespace): Namespace for definitions.
-            desc (List[stone.stone.parser._Element]): All tokens in a spec
+            desc (List[stone.stone.parser._Element]): All AST nodes in a spec
                 file in the order they were defined. Should not include a
                 namespace declaration.
         """
@@ -286,8 +286,8 @@ class IRGenerator(object):
             existing_dt = env[item.name]
             raise InvalidSpec(
                 'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._token.path,
-                existing_dt._token.lineno), item.lineno, item.path)
+                (quote(item.name), existing_dt._ast_node.path,
+                existing_dt._ast_node.lineno), item.lineno, item.path)
 
         namespace = self.api.ensure_namespace(env.namespace_name)
         alias = Alias(item.name, namespace, item)
@@ -300,19 +300,21 @@ class IRGenerator(object):
             existing_dt = env[item.name]
             raise InvalidSpec(
                 'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._token.path,
-                 existing_dt._token.lineno), item.lineno, item.path)
+                (quote(item.name), existing_dt._ast_node.path,
+                 existing_dt._ast_node.lineno), item.lineno, item.path)
         namespace = self.api.ensure_namespace(env.namespace_name)
         if isinstance(item, AstStructDef):
             try:
-                api_type = Struct(name=item.name, namespace=namespace, token=item)
+                api_type = Struct(name=item.name, namespace=namespace,
+                                  ast_node=item)
             except ParameterError as e:
                 raise InvalidSpec(
                     'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
                     item.lineno, item.path)
         elif isinstance(item, AstUnionDef):
             api_type = Union(
-                name=item.name, namespace=namespace, token=item, closed=item.closed)
+                name=item.name, namespace=namespace, ast_node=item,
+                closed=item.closed)
         else:
             raise AssertionError('Unknown type definition %r' % type(item))
 
@@ -328,8 +330,8 @@ class IRGenerator(object):
             env = self._get_or_create_env(namespace.name)
 
             for alias in namespace.aliases:
-                data_type = self._resolve_type(env, alias._token.type_ref)
-                alias.set_attributes(alias._token.doc, data_type)
+                data_type = self._resolve_type(env, alias._ast_node.type_ref)
+                alias.set_attributes(alias._ast_node.doc, data_type)
 
             for data_type in namespace.data_types:
                 if not data_type._is_forward_ref:
@@ -352,7 +354,7 @@ class IRGenerator(object):
         Converts a forward reference of a struct into a complete definition.
         """
         parent_type = None
-        extends = data_type._token.extends
+        extends = data_type._ast_node.extends
         if extends:
             # A parent type must be fully defined and not just a forward
             # reference.
@@ -365,29 +367,29 @@ class IRGenerator(object):
                 raise InvalidSpec(
                     'A struct cannot extend an alias. '
                     'Use the canonical name instead.',
-                    data_type._token.lineno, data_type._token.path)
+                    data_type._ast_node.lineno, data_type._ast_node.path)
             if isinstance(parent_type, Nullable):
                 raise InvalidSpec(
                     'A struct cannot extend a nullable type.',
-                    data_type._token.lineno, data_type._token.path)
+                    data_type._ast_node.lineno, data_type._ast_node.path)
             if not isinstance(parent_type, Struct):
                 raise InvalidSpec(
                     'A struct can only extend another struct: '
                     '%s is not a struct.' % quote(parent_type.name),
-                    data_type._token.lineno, data_type._token.path)
+                    data_type._ast_node.lineno, data_type._ast_node.path)
         api_type_fields = []
-        for stone_field in data_type._token.fields:
+        for stone_field in data_type._ast_node.fields:
             api_type_field = self._create_struct_field(env, stone_field)
             api_type_fields.append(api_type_field)
         data_type.set_attributes(
-            data_type._token.doc, api_type_fields, parent_type)
+            data_type._ast_node.doc, api_type_fields, parent_type)
 
     def _populate_union_type_attributes(self, env, data_type):
         """
         Converts a forward reference of a union into a complete definition.
         """
         parent_type = None
-        extends = data_type._token.extends
+        extends = data_type._ast_node.extends
         if extends:
             # A parent type must be fully defined and not just a forward
             # reference.
@@ -396,19 +398,19 @@ class IRGenerator(object):
                 raise InvalidSpec(
                     'A union cannot extend an alias. '
                     'Use the canonical name instead.',
-                    data_type._token.lineno, data_type._token.path)
+                    data_type._ast_node.lineno, data_type._ast_node.path)
             if isinstance(parent_type, Nullable):
                 raise InvalidSpec(
                     'A union cannot extend a nullable type.',
-                    data_type._token.lineno, data_type._token.path)
+                    data_type._ast_node.lineno, data_type._ast_node.path)
             if not isinstance(parent_type, Union):
                 raise InvalidSpec(
                     'A union can only extend another union: '
                     '%s is not a union.' % quote(parent_type.name),
-                    data_type._token.lineno, data_type._token.path)
+                    data_type._ast_node.lineno, data_type._ast_node.path)
 
         api_type_fields = []
-        for stone_field in data_type._token.fields:
+        for stone_field in data_type._ast_node.fields:
             if stone_field.name == 'other':
                 raise InvalidSpec(
                     "Union cannot define an 'other' field because it is "
@@ -426,17 +428,17 @@ class IRGenerator(object):
                 raise InvalidSpec(
                     "Union cannot be closed since parent type '%s' is open." % (
                         parent_type.name),
-                    data_type._token.lineno, data_type._token.path)
+                    data_type._ast_node.lineno, data_type._ast_node.path)
         else:
             if not parent_type or parent_type.closed:
                 # Create a catch-all field
                 catch_all_field = UnionField(
                     name='other', data_type=Void(), doc=None,
-                    token=data_type._token, catch_all=True)
+                    ast_node=data_type._ast_node, catch_all=True)
                 api_type_fields.append(catch_all_field)
 
         data_type.set_attributes(
-            data_type._token.doc, api_type_fields, parent_type, catch_all_field)
+            data_type._ast_node.doc, api_type_fields, parent_type, catch_all_field)
 
     def _populate_field_defaults(self):
         """
@@ -451,22 +453,23 @@ class IRGenerator(object):
                     continue
 
                 for field in data_type.fields:
-                    if not field._token.has_default:
+                    if not field._ast_node.has_default:
                         continue
 
-                    if isinstance(field._token.default, AstTagRef):
-                        default_value = TagRef(field.data_type, field._token.default.tag)
+                    if isinstance(field._ast_node.default, AstTagRef):
+                        default_value = TagRef(
+                            field.data_type, field._ast_node.default.tag)
                     else:
-                        default_value = field._token.default
-                    if not (field._token.type_ref.nullable and default_value is None):
+                        default_value = field._ast_node.default
+                    if not (field._ast_node.type_ref.nullable and default_value is None):
                         # Verify that the type of the default value is correct for this field
                         try:
                             field.data_type.check(default_value)
                         except ValueError as e:
                             raise InvalidSpec(
                                 'Field %s has an invalid default: %s' %
-                                (quote(field._token.name), e),
-                                field._token.lineno, field._token.path)
+                                (quote(field._ast_node.name), e),
+                                field._ast_node.lineno, field._ast_node.path)
                     field.set_default(default_value)
 
     def _populate_route_attributes(self):
@@ -484,23 +487,23 @@ class IRGenerator(object):
         """
         Converts a single forward reference of a route into a complete definition.
         """
-        arg_dt = self._resolve_type(env, route._token.arg_type_ref)
-        result_dt = self._resolve_type(env, route._token.result_type_ref)
-        error_dt = self._resolve_type(env, route._token.error_type_ref)
+        arg_dt = self._resolve_type(env, route._ast_node.arg_type_ref)
+        result_dt = self._resolve_type(env, route._ast_node.result_type_ref)
+        error_dt = self._resolve_type(env, route._ast_node.error_type_ref)
 
-        if route._token.deprecated:
-            assert route._token.deprecated[0]
-            new_route_name = route._token.deprecated[1]
+        if route._ast_node.deprecated:
+            assert route._ast_node.deprecated[0]
+            new_route_name = route._ast_node.deprecated[1]
             if new_route_name:
                 if new_route_name not in env:
                     raise InvalidSpec(
                         'Undefined route %s.' % quote(new_route_name),
-                        route._token.lineno, route._token.path)
+                        route._ast_node.lineno, route._ast_node.path)
                 new_route = env[new_route_name]
                 if not isinstance(new_route, ApiRoute):
                     raise InvalidSpec(
                         '%s must be a route.' % quote(new_route_name),
-                        route._token.lineno, route._token.path)
+                        route._ast_node.lineno, route._ast_node.path)
                 deprecated = DeprecationInfo(new_route)
             else:
                 deprecated = DeprecationInfo()
@@ -508,7 +511,7 @@ class IRGenerator(object):
             deprecated = None
 
         attr_by_name = {}
-        for attr in route._token.attrs:
+        for attr in route._ast_node.attrs:
             attr_by_name[attr.name] = attr
 
         try:
@@ -516,11 +519,11 @@ class IRGenerator(object):
         except KeyError as e:
             raise InvalidSpec(
                 "Route does not define attr key '%s'." % e.args[0],
-                route._token.lineno, route._token.path)
+                route._ast_node.lineno, route._ast_node.path)
 
         route.set_attributes(
             deprecated=deprecated,
-            doc=route._token.doc,
+            doc=route._ast_node.doc,
             arg_data_type=arg_dt,
             result_data_type=result_dt,
             error_data_type=error_dt,
@@ -559,7 +562,7 @@ class IRGenerator(object):
             name=stone_field.name,
             data_type=data_type,
             doc=stone_field.doc,
-            token=stone_field,
+            ast_node=stone_field,
             deprecated=stone_field.deprecated,
         )
         return api_type_field
@@ -579,7 +582,7 @@ class IRGenerator(object):
         if isinstance(stone_field, AstVoidField):
             api_type_field = UnionField(
                 name=stone_field.name, data_type=Void(), doc=stone_field.doc,
-                token=stone_field)
+                ast_node=stone_field)
         else:
             data_type = self._resolve_type(env, stone_field.type_ref)
             if isinstance(data_type, Void):
@@ -589,7 +592,7 @@ class IRGenerator(object):
                                   stone_field.lineno, stone_field.path)
             api_type_field = UnionField(
                 name=stone_field.name, data_type=data_type,
-                doc=stone_field.doc, token=stone_field)
+                doc=stone_field.doc, ast_node=stone_field)
         return api_type_field
 
     def _instantiate_data_type(self, data_type_class, data_type_args, loc):
@@ -774,11 +777,11 @@ class IRGenerator(object):
             existing_dt = env[item.name]
             raise InvalidSpec(
                 'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._token.path,
-                 existing_dt._token.lineno), item.lineno, item.path)
+                (quote(item.name), existing_dt._ast_node.path,
+                 existing_dt._ast_node.lineno), item.lineno, item.path)
         route = ApiRoute(
             name=item.name,
-            token=item,
+            ast_node=item,
         )
         env[route.name] = route
         return route
@@ -801,11 +804,11 @@ class IRGenerator(object):
             env = self._get_or_create_env(namespace.name)
             for data_type in namespace.data_types:
                 if not (isinstance(data_type, Struct) and
-                        data_type._token.subtypes):
+                        data_type._ast_node.subtypes):
                     continue
 
                 subtype_fields = []
-                for subtype_field in data_type._token.subtypes[0]:
+                for subtype_field in data_type._ast_node.subtypes[0]:
                     subtype_name = subtype_field.type_ref.name
                     lineno = subtype_field.type_ref.lineno
                     path = subtype_field.type_ref.path
@@ -823,7 +826,7 @@ class IRGenerator(object):
                         subtype_field.name, subtype, None, subtype_field)
                     subtype_fields.append(f)
                 data_type.set_enumerated_subtypes(subtype_fields,
-                                                  data_type._token.subtypes[1])
+                                                  data_type._ast_node.subtypes[1])
 
             # In an enumerated subtypes tree, regular structs may only exist at
             # the leaves. In other words, no regular struct may inherit from a
@@ -839,8 +842,8 @@ class IRGenerator(object):
                         raise InvalidSpec(
                             "Subtype '%s' cannot be extended." %
                             subtype_field.data_type.name,
-                            subtype_field.data_type._token.lineno,
-                            subtype_field.data_type._token.path)
+                            subtype_field.data_type._ast_node.lineno,
+                            subtype_field.data_type._ast_node.path)
 
     def _populate_examples(self):
         """Construct every possible example for every type.
@@ -852,7 +855,7 @@ class IRGenerator(object):
         """
         for namespace in self.api.namespaces.values():
             for data_type in namespace.data_types:
-                for example in data_type._token.examples.values():
+                for example in data_type._ast_node.examples.values():
                     data_type._add_example(example)
 
         for namespace in self.api.namespaces.values():
@@ -873,21 +876,21 @@ class IRGenerator(object):
                     self._validate_doc_refs_helper(
                         env,
                         data_type.doc,
-                        (data_type._token.lineno + 1, data_type._token.path),
+                        (data_type._ast_node.lineno + 1, data_type._ast_node.path),
                         data_type)
                 for field in data_type.fields:
                     if field.doc:
                         self._validate_doc_refs_helper(
                             env,
                             field.doc,
-                            (field._token.lineno + 1, field._token.path),
+                            (field._ast_node.lineno + 1, field._ast_node.path),
                             data_type)
             for route in namespace.routes:
                 if route.doc:
                     self._validate_doc_refs_helper(
                         env,
                         route.doc,
-                        (route._token.lineno + 1, route._token.path))
+                        (route._ast_node.lineno + 1, route._ast_node.path))
 
     def _validate_doc_refs_helper(self, env, doc, loc, type_context=None):
         """
@@ -1009,8 +1012,8 @@ class IRGenerator(object):
             route = stone_cfg.routes[0]
             raise InvalidSpec(
                 'No routes can be defined in the stone_cfg namespace.',
-                route._token.lineno,
-                route._token.path,
+                route._ast_node.lineno,
+                route._ast_node.path,
             )
 
         if not stone_cfg.data_types:
@@ -1021,8 +1024,8 @@ class IRGenerator(object):
                 raise InvalidSpec(
                     "Only a struct named 'Route' can be defined in the "
                     "stone_cfg namespace.",
-                    data_type._token.lineno,
-                    data_type._token.path,
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
                 )
 
         # TODO: are we always guaranteed at least one data type?
