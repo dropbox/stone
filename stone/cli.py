@@ -14,9 +14,12 @@ import sys
 import traceback
 
 from .cli_helpers import parse_route_attr_filter
-from .compiler import Compiler, GeneratorException
-from .lang.exception import InvalidSpec
-from .lang.tower import TowerOfStone
+from .compiler import (
+    BackendException,
+    Compiler,
+)
+from .frontend.exception import InvalidSpec
+from .frontend.frontend import specs_to_ir
 
 _MYPY = False
 if _MYPY:
@@ -30,8 +33,8 @@ if _MYPY:
 import importlib
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
-# These generators come by default
-_builtin_generators = (
+# These backends come by default
+_builtin_backends = (
     'obj_c_client',
     'obj_c_types',
     'obj_c_tests',
@@ -48,9 +51,9 @@ _builtin_generators = (
 
 # The parser for command line arguments
 _cmdline_description = (
-    'Write your APIs in Stone. Use generators to translate your specification '
+    'Write your APIs in Stone. Use backends to translate your specification '
     'into a target language or format. The following describes arguments to '
-    'the Stone CLI. To specify arguments that are specific to a generator, '
+    'the Stone CLI. To specify arguments that are specific to a backend, '
     'add "--" followed by arguments. For example, "stone python_client . '
     'example.spec -- -h".'
 )
@@ -61,14 +64,14 @@ _cmdline_parser.add_argument(
     action='count',
     help='Print debugging statements.',
 )
-_generator_help = (
-    'Either the name of a built-in generator or the path to a generator '
-    'module. Paths to generator modules must end with a .stoneg.py extension. '
-    'The following generators are built-in: ' + ', '.join(_builtin_generators))
+_backend_help = (
+    'Either the name of a built-in backend or the path to a backend '
+    'module. Paths to backend modules must end with a .stoneg.py extension. '
+    'The following backends are built-in: ' + ', '.join(_builtin_backends))
 _cmdline_parser.add_argument(
-    'generator',
+    'backend',
     type=six.text_type,
-    help=_generator_help,
+    help=_backend_help,
 )
 _cmdline_parser.add_argument(
     'output',
@@ -107,7 +110,7 @@ _cmdline_parser.add_argument(
     action='append',
     type=str,
     default=[],
-    help=('Route attributes that the generator will have access to and '
+    help=('Route attributes that the backend will have access to and '
           'presumably expose in generated code. Use ":all" to select all '
           'attributes defined in stone_cfg.Route. Note that you can filter '
           '(-f) by attributes that are not listed here.'),
@@ -120,7 +123,7 @@ _filter_ns_group.add_argument(
     action='append',
     type=str,
     default=[],
-    help='If set, generators will only see the specified namespaces as having routes.',
+    help='If set, backends will only see the specified namespaces as having routes.',
 )
 _filter_ns_group.add_argument(
     '-b',
@@ -128,7 +131,7 @@ _filter_ns_group.add_argument(
     action='append',
     type=str,
     default=[],
-    help='If set, generators will not see any routes for the specified namespaces.',
+    help='If set, backends will not see any routes for the specified namespaces.',
 )
 
 
@@ -137,10 +140,10 @@ def main():
 
     if '--' in sys.argv:
         cli_args = sys.argv[1:sys.argv.index('--')]
-        generator_args = sys.argv[sys.argv.index('--') + 1:]
+        backend_args = sys.argv[sys.argv.index('--') + 1:]
     else:
         cli_args = sys.argv[1:]
-        generator_args = []
+        backend_args = []
 
     args = _cmdline_parser.parse_args(cli_args)
     debug = False
@@ -227,11 +230,9 @@ def main():
         else:
             route_filter = None
 
-        # TODO: Needs version
-        tower = TowerOfStone(specs, debug=debug)
-
         try:
-            api = tower.parse()
+            # TODO: Needs version
+            api = specs_to_ir(specs, debug=debug)
         except InvalidSpec as e:
             print('%s:%s: error: %s' % (e.path, e.lineno, e.msg), file=sys.stderr)
             if debug:
@@ -302,47 +303,47 @@ def main():
                   attr, file=sys.stderr)
             sys.exit(1)
 
-    if args.generator in _builtin_generators:
-        generator_module = __import__(
-            'stone.target.%s' % args.generator, fromlist=[''])
-    elif not os.path.exists(args.generator):
-        print("error: Generator '%s' cannot be found." % args.generator,
+    if args.backend in _builtin_backends:
+        backend_module = __import__(
+            'stone.backends.%s' % args.backend, fromlist=[''])
+    elif not os.path.exists(args.backend):
+        print("error: Backend '%s' cannot be found." % args.backend,
               file=sys.stderr)
         sys.exit(1)
-    elif not os.path.isfile(args.generator):
-        print("error: Generator '%s' must be a file." % args.generator,
+    elif not os.path.isfile(args.backend):
+        print("error: Backend '%s' must be a file." % args.backend,
               file=sys.stderr)
         sys.exit(1)
-    elif not Compiler.is_stone_generator(args.generator):
-        print("error: Generator '%s' must have a .stoneg.py extension." %
-              args.generator, file=sys.stderr)
+    elif not Compiler.is_stone_backend(args.backend):
+        print("error: Backend '%s' must have a .stoneg.py extension." %
+              args.backend, file=sys.stderr)
         sys.exit(1)
     else:
-        # A bit hacky, but we add the folder that the generator is in to our
-        # python path to support the case where the generator imports other
+        # A bit hacky, but we add the folder that the backend is in to our
+        # python path to support the case where the backend imports other
         # files in its local directory.
-        new_python_path = os.path.dirname(args.generator)
+        new_python_path = os.path.dirname(args.backend)
         if new_python_path not in sys.path:
             sys.path.append(new_python_path)
         try:
-            generator_module = imp.load_source('user_generator', args.generator)
+            backend_module = imp.load_source('user_backend', args.backend)
         except:
-            print("error: Importing generator '%s' module raised an exception:" %
-                  args.generator, file=sys.stderr)
+            print("error: Importing backend '%s' module raised an exception:" %
+                  args.backend, file=sys.stderr)
             raise
 
     c = Compiler(
         api,
-        generator_module,
-        generator_args,
+        backend_module,
+        backend_args,
         args.output,
         clean_build=args.clean_build,
     )
     try:
         c.build()
-    except GeneratorException as e:
+    except BackendException as e:
         print('%s: error: %s raised an exception:\n%s' %
-              (args.generator, e.generator_name, e.traceback),
+              (args.backend, e.backend_name, e.traceback),
               file=sys.stderr)
         sys.exit(1)
 

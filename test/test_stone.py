@@ -8,18 +8,16 @@ import datetime
 import textwrap
 import unittest
 
-from stone.lang.parser import (
-    StoneNamespace,
-    StoneAlias,
-    StoneParser,
-    StoneVoidField,
-    StoneTagRef,
+from stone.frontend.ast import (
+    AstNamespace,
+    AstAlias,
+    AstVoidField,
+    AstTagRef,
 )
-from stone.lang.tower import (
-    InvalidSpec,
-    TowerOfStone,
-)
-from stone.data_type import (
+from stone.frontend.exception import InvalidSpec
+from stone.frontend.frontend import specs_to_ir
+from stone.frontend.parser import ParserFactory
+from stone.ir import (
     Alias,
     Nullable,
     String,
@@ -33,14 +31,14 @@ class TestStone(unittest.TestCase):
     """
 
     def setUp(self):
-        self.parser = StoneParser(debug=False)
+        self.parser_factory = ParserFactory(debug=False)
 
     def test_namespace_decl(self):
         text = textwrap.dedent("""\
             namespace files
             """)
-        out = self.parser.parse(text)
-        self.assertIsInstance(out[0], StoneNamespace)
+        out = self.parser_factory.get_parser().parse(text)
+        self.assertIsInstance(out[0], AstNamespace)
         self.assertEqual(out[0].name, 'files')
 
         # test starting with newlines
@@ -49,8 +47,8 @@ class TestStone(unittest.TestCase):
 
             namespace files
             """)
-        out = self.parser.parse(text)
-        self.assertIsInstance(out[0], StoneNamespace)
+        out = self.parser_factory.get_parser().parse(text)
+        self.assertIsInstance(out[0], AstNamespace)
         self.assertEqual(out[0].name, 'files')
 
     def test_comments(self):
@@ -73,9 +71,9 @@ class TestStone(unittest.TestCase):
 
             # footer comment
             """)
-        out = self.parser.parse(text)
-        self.assertIsInstance(out[0], StoneNamespace)
-        self.assertIsInstance(out[1], StoneAlias)
+        out = self.parser_factory.get_parser().parse(text)
+        self.assertIsInstance(out[0], AstNamespace)
+        self.assertIsInstance(out[1], AstAlias)
         self.assertEqual(out[2].name, 'S')
         self.assertEqual(out[3].name, 'S2')
 
@@ -87,18 +85,18 @@ class TestStone(unittest.TestCase):
             alias F = Float64(max_value=3.2e1)
             alias Numbers = List(UInt64)
             """)
-        out = self.parser.parse(text)
-        self.assertIsInstance(out[1], StoneAlias)
+        out = self.parser_factory.get_parser().parse(text)
+        self.assertIsInstance(out[1], AstAlias)
         self.assertEqual(out[1].name, 'T')
         self.assertEqual(out[1].type_ref.name, 'String')
         self.assertEqual(out[1].type_ref.args[1]['min_length'], 3)
 
-        self.assertIsInstance(out[2], StoneAlias)
+        self.assertIsInstance(out[2], AstAlias)
         self.assertEqual(out[2].name, 'F')
         self.assertEqual(out[2].type_ref.name, 'Float64')
         self.assertEqual(out[2].type_ref.args[1]['max_value'], 3.2e1)
 
-        self.assertIsInstance(out[3], StoneAlias)
+        self.assertIsInstance(out[3], AstAlias)
         self.assertEqual(out[3].name, 'Numbers')
         self.assertEqual(out[3].type_ref.name, 'List')
         self.assertEqual(out[3].type_ref.args[0][0].name, 'UInt64')
@@ -112,7 +110,7 @@ class TestStone(unittest.TestCase):
             struct QuotaInfo
                 quota UInt64
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].fields[0].name, 'quota')
         self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
@@ -125,7 +123,7 @@ class TestStone(unittest.TestCase):
                 "The space quota info for a user."
                 quota UInt64
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
         self.assertEqual(out[1].fields[0].name, 'quota')
@@ -140,7 +138,7 @@ class TestStone(unittest.TestCase):
                 quota UInt64
                     "The user's total quota allocation (bytes)."
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
         self.assertEqual(out[1].fields[0].name, 'quota')
@@ -156,7 +154,7 @@ class TestStone(unittest.TestCase):
                 quota UInt64
                     "The user's total quota allocation (bytes)."
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertEqual(out[1].doc, 'The space quota info for a user.')
         self.assertEqual(out[1].fields[0].name, 'quota')
@@ -174,7 +172,7 @@ class TestStone(unittest.TestCase):
                 example default
                     quota=64000
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertIn('default', out[1].examples)
 
@@ -191,7 +189,7 @@ class TestStone(unittest.TestCase):
                 example pro
                     quota=100000000000
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'QuotaInfo')
         self.assertIn('default', out[1].examples)
         self.assertIn('pro', out[1].examples)
@@ -206,7 +204,7 @@ class TestStone(unittest.TestCase):
             struct S2 extends S1
                 f2 String
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'S1')
         self.assertEqual(out[2].name, 'S2')
         self.assertEqual(out[2].extends.name, 'S1')
@@ -222,7 +220,7 @@ class TestStone(unittest.TestCase):
                 f3 Float64 = -5e-3
                 f4 Float64 = -5.1e-3
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'S')
         self.assertEqual(out[1].fields[0].name, 'n1')
         self.assertTrue(out[1].fields[0].has_default)
@@ -243,9 +241,8 @@ class TestStone(unittest.TestCase):
             struct S2 extends S?
                 f2 String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual("Reference cannot be nullable.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
@@ -264,14 +261,14 @@ class TestStone(unittest.TestCase):
                 editor
                     "Read and write permission."
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'Role')
         self.assertEqual(out[1].doc, 'The role a user may have in a shared folder.')
-        self.assertIsInstance(out[1].fields[0], StoneVoidField)
+        self.assertIsInstance(out[1].fields[0], AstVoidField)
         self.assertEqual(out[1].fields[0].name, 'owner')
-        self.assertIsInstance(out[1].fields[1], StoneVoidField)
+        self.assertIsInstance(out[1].fields[1], AstVoidField)
         self.assertEqual(out[1].fields[1].name, 'viewer')
-        self.assertIsInstance(out[1].fields[2], StoneVoidField)
+        self.assertIsInstance(out[1].fields[2], AstVoidField)
         self.assertEqual(out[1].fields[2].name, 'editor')
 
         # TODO: Test a union that includes a struct.
@@ -285,7 +282,7 @@ class TestStone(unittest.TestCase):
                 B
                     "Variant B"
             """)
-        self.parser.parse(text)
+        self.parser_factory.get_parser().parse(text)
 
         # test with inheritance
         text = textwrap.dedent("""\
@@ -297,7 +294,7 @@ class TestStone(unittest.TestCase):
             union U2 extends U1
                 t2 String
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'U1')
         self.assertEqual(out[2].name, 'U2')
         self.assertEqual(out[2].extends.name, 'U1')
@@ -314,20 +311,20 @@ class TestStone(unittest.TestCase):
                 path String
                 mode UploadMode = add
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[2].name, 'Upload')
-        self.assertIsInstance(out[2].fields[1].default, StoneTagRef)
+        self.assertIsInstance(out[2].fields[1].default, AstTagRef)
         self.assertEqual(out[2].fields[1].default.tag, 'add')
 
     def test_route_decl(self):
 
+        # Test route definition with no docstring
         text = textwrap.dedent("""\
             namespace users
 
             route GetAccountInfo(Void, Void, Void)
             """)
-        # Test route definition with no docstring
-        self.parser.parse(text)
+        self.parser_factory.get_parser().parse(text)
 
         text = textwrap.dedent("""\
             namespace users
@@ -338,7 +335,7 @@ class TestStone(unittest.TestCase):
             route GetAccountInfo(AccountInfo, Void, Void)
                 "Gets the account info for a user"
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'AccountInfo')
         self.assertEqual(out[2].name, 'GetAccountInfo')
         self.assertEqual(out[2].arg_type_ref.name, 'AccountInfo')
@@ -359,7 +356,7 @@ class TestStone(unittest.TestCase):
                 3
                 "
             """)
-        out = self.parser.parse(text)
+        out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].doc, '0\n\n1\n\n2\n\n3\n')
 
         # Test deprecation
@@ -368,9 +365,8 @@ class TestStone(unittest.TestCase):
 
             route old_route (Void, Void, Void) deprecated
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        r = t.api.namespaces['test'].route_by_name['old_route']
+        api = specs_to_ir([('test.stone', text)])
+        r = api.namespaces['test'].route_by_name['old_route']
         self.assertIsNotNone(r.deprecated)
         self.assertIsNone(r.deprecated.by)
 
@@ -381,10 +377,9 @@ class TestStone(unittest.TestCase):
             route old_route (Void, Void, Void) deprecated by new_route
             route new_route (Void, Void, Void)
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        r_old = t.api.namespaces['test'].route_by_name['old_route']
-        r_new = t.api.namespaces['test'].route_by_name['new_route']
+        api = specs_to_ir([('test.stone', text)])
+        r_old = api.namespaces['test'].route_by_name['old_route']
+        r_new = api.namespaces['test'].route_by_name['new_route']
         self.assertIsNotNone(r.deprecated)
         self.assertEqual(r_old.deprecated.by, r_new)
 
@@ -395,10 +390,9 @@ class TestStone(unittest.TestCase):
             route test/old_route (Void, Void, Void) deprecated by test/new_route
             route test/new_route (Void, Void, Void)
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        r_old = t.api.namespaces['test'].route_by_name['test/old_route']
-        r_new = t.api.namespaces['test'].route_by_name['test/new_route']
+        api = specs_to_ir([('test.stone', text)])
+        r_old = api.namespaces['test'].route_by_name['test/old_route']
+        r_new = api.namespaces['test'].route_by_name['test/new_route']
         self.assertIsNotNone(r.deprecated)
         self.assertEqual(r_old.deprecated.by, r_new)
 
@@ -408,9 +402,8 @@ class TestStone(unittest.TestCase):
 
             route old_route (Void, Void, Void) deprecated by unk_route
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual("Undefined route 'unk_route'.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
@@ -423,9 +416,8 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual("'S' must be a route.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
@@ -454,10 +446,9 @@ class TestStone(unittest.TestCase):
 
             route d (Void, Void, Void)
             """)
-        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
-        t.parse()
-        assert ['ns_a', 'ns_b'] == list(t.api.namespaces.keys())
-        ns_b = t.api.namespaces['ns_b']
+        api = specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
+        assert ['ns_a', 'ns_b'] == list(api.namespaces.keys())
+        ns_b = api.namespaces['ns_b']
         assert [dt.name for dt in ns_b.data_types] == ['x', 'y', 'z']
         assert [dt.name for dt in ns_b.routes] == ['a', 'b', 'c']
 
@@ -475,11 +466,12 @@ class TestStone(unittest.TestCase):
             struct AccountInfo
                 email String
             """)
-        out = self.parser.parse(text)
-        msg, lineno = self.parser.lexer.errors[0]
+        parser = self.parser_factory.get_parser()
+        out = parser.parse(text)
+        msg, lineno = parser.lexer.errors[0]
         self.assertEqual(msg, "Illegal character '%'.")
         self.assertEqual(lineno, 4)
-        msg, lineno = self.parser.lexer.errors[1]
+        msg, lineno = parser.lexer.errors[1]
         self.assertEqual(msg, "Illegal character '%'.")
         self.assertEqual(lineno, 8)
         # Check that despite lexing errors, parser marched on successfully.
@@ -492,9 +484,8 @@ class TestStone(unittest.TestCase):
                 # Indent below is only 3 spaces
                f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Indent is not divisible by 4.", cm.exception.msg)
 
     def test_parsing_errors(self):
@@ -505,8 +496,9 @@ class TestStone(unittest.TestCase):
             strct AccountInfo
                 email String
             """)
-        self.parser.parse(text)
-        msg, lineno, _ = self.parser.errors[0]
+        parser = self.parser_factory.get_parser()
+        parser.parse(text)
+        msg, lineno, _ = parser.errors[0]
         self.assertEqual(msg, "Unexpected ID with value 'strct'.")
         self.assertEqual(lineno, 4)
 
@@ -515,9 +507,8 @@ class TestStone(unittest.TestCase):
 
             route test_route(Blah, Blah, Blah)
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
 
     def test_name_clash(self):
@@ -528,9 +519,8 @@ class TestStone(unittest.TestCase):
             struct TestNamespaceTest
                 str String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Name of user-defined type 'TestNamespaceTest' conflicts "
             "with name of namespace 'test_namespace_test'", cm.exception.msg)
 
@@ -540,9 +530,8 @@ class TestStone(unittest.TestCase):
 
             route test_namespace_test(Void, Void, Void)
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Name of route 'test_namespace_test' conflicts "
             "with name of namespace 'test_namespace_test'", cm.exception.msg)
 
@@ -552,9 +541,8 @@ class TestStone(unittest.TestCase):
 
             alias TestNamespaceTest = String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Name of alias 'TestNamespaceTest' conflicts "
             "with name of namespace 'test_namespace_test'", cm.exception.msg)
 
@@ -567,9 +555,8 @@ class TestStone(unittest.TestCase):
 
             route test_struct_test(Void, Void, Void)
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Name of route 'test_struct_test' conflicts "
             "with name of user-defined type 'TestStructTest'", cm.exception.msg)
 
@@ -581,9 +568,8 @@ class TestStone(unittest.TestCase):
 
             route test_alias_test(Void, Void, Void)
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Name of route 'test_alias_test' conflicts "
             "with name of alias 'TestAliasTest'", cm.exception.msg)
 
@@ -615,30 +601,29 @@ class TestStone(unittest.TestCase):
             struct W extends T
                 g String
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        api = specs_to_ir([('test.stone', text)])
 
-        E_dt = t.api.namespaces['test'].data_type_by_name['E']
+        E_dt = api.namespaces['test'].data_type_by_name['E']
         self.assertFalse(E_dt.has_documented_type_or_fields())
         self.assertFalse(E_dt.has_documented_fields())
 
-        S_dt = t.api.namespaces['test'].data_type_by_name['S']
+        S_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertTrue(S_dt.has_documented_type_or_fields())
         self.assertFalse(S_dt.has_documented_fields())
 
-        T_dt = t.api.namespaces['test'].data_type_by_name['T']
+        T_dt = api.namespaces['test'].data_type_by_name['T']
         self.assertTrue(T_dt.has_documented_type_or_fields())
         self.assertTrue(T_dt.has_documented_fields())
 
-        U_dt = t.api.namespaces['test'].data_type_by_name['U']
+        U_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertTrue(U_dt.has_documented_type_or_fields())
         self.assertFalse(U_dt.has_documented_fields())
 
-        V_dt = t.api.namespaces['test'].data_type_by_name['V']
+        V_dt = api.namespaces['test'].data_type_by_name['V']
         self.assertTrue(V_dt.has_documented_type_or_fields())
         self.assertTrue(V_dt.has_documented_fields())
 
-        W_dt = t.api.namespaces['test'].data_type_by_name['W']
+        W_dt = api.namespaces['test'].data_type_by_name['W']
         self.assertFalse(W_dt.has_documented_type_or_fields())
         self.assertFalse(W_dt.has_documented_fields())
         self.assertFalse(W_dt.has_documented_type_or_fields(), True)
@@ -653,9 +638,8 @@ class TestStone(unittest.TestCase):
                 "This is a test
                 of docstrings"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        test_ns = t.api.namespaces['test']
+        api = specs_to_ir([('test.stone', text)])
+        test_ns = api.namespaces['test']
         self.assertIsInstance(test_ns.aliases[0], Alias)
         self.assertEqual(test_ns.aliases[0].name, 'R')
         self.assertIsInstance(test_ns.aliases[0].data_type, String)
@@ -668,9 +652,8 @@ class TestStone(unittest.TestCase):
 
             alias R = String(min_length=1)?
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        test_ns = t.api.namespaces['test']
+        api = specs_to_ir([('test.stone', text)])
+        test_ns = api.namespaces['test']
         self.assertIsInstance(test_ns.aliases[0], Alias)
         self.assertEqual(test_ns.aliases[0].name, 'R')
         self.assertIsInstance(test_ns.aliases[0].data_type, Nullable)
@@ -683,9 +666,8 @@ class TestStone(unittest.TestCase):
             alias T = String
             alias R = T
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        test_ns = t.api.namespaces['test']
+        api = specs_to_ir([('test.stone', text)])
+        test_ns = api.namespaces['test']
         self.assertIsInstance(test_ns.alias_by_name['T'], Alias)
         self.assertIsInstance(test_ns.alias_by_name['R'], Alias)
         self.assertIsInstance(test_ns.alias_by_name['R'].data_type, Alias)
@@ -698,8 +680,7 @@ class TestStone(unittest.TestCase):
             alias R = T
             alias T = String
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        api = specs_to_ir([('test.stone', text)])
 
         # Try re-definition
         text = textwrap.dedent("""\
@@ -708,9 +689,8 @@ class TestStone(unittest.TestCase):
             alias A = String
             alias A = UInt64
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Symbol 'A' already defined (test.stone:3).",
                       cm.exception.msg)
 
@@ -722,9 +702,8 @@ class TestStone(unittest.TestCase):
             alias B = C
             alias C = A
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("Alias 'C' is part of a cycle.",
                       cm.exception.msg)
 
@@ -735,9 +714,8 @@ class TestStone(unittest.TestCase):
             alias T = String(min_length=1)
             alias R = T(min_length=1)
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('Attributes cannot be specified for instantiated type',
                       cm.exception.msg)
 
@@ -749,9 +727,8 @@ class TestStone(unittest.TestCase):
                 f String
             alias R = S?
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        test_ns = t.api.namespaces['test']
+        api = specs_to_ir([('test.stone', text)])
+        test_ns = api.namespaces['test']
         S_dt = test_ns.data_type_by_name['S']
         self.assertIsInstance(test_ns.alias_by_name['R'].data_type, Nullable)
         self.assertEqual(test_ns.alias_by_name['R'].data_type.data_type, S_dt)
@@ -765,9 +742,8 @@ class TestStone(unittest.TestCase):
 
             alias R = S(min_length=1)
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('Attributes cannot be specified for instantiated type',
                       cm.exception.msg)
 
@@ -785,11 +761,10 @@ class TestStone(unittest.TestCase):
 
             alias S = test1.S
             """)
-        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
-        t.parse()
-        test1_ns = t.api.namespaces['test1']
+        api = specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
+        test1_ns = api.namespaces['test1']
         S_dt = test1_ns.data_type_by_name['S']
-        test2_ns = t.api.namespaces['test2']
+        test2_ns = api.namespaces['test2']
         self.assertEqual(test2_ns.alias_by_name['S'].data_type, S_dt)
 
         # Try extending an alias-ed struct
@@ -804,9 +779,8 @@ class TestStone(unittest.TestCase):
             struct T extends Z
                 f2 String
             """)
-        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
         self.assertIn('A struct cannot extend an alias. Use the canonical name instead.',
                       cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 8)
@@ -823,9 +797,8 @@ class TestStone(unittest.TestCase):
             union T extends Z
                 f2 String
             """)
-        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
         self.assertIn(
             'A union cannot extend an alias. Use the canonical name instead.',
             cm.exception.msg)
@@ -839,9 +812,8 @@ class TestStone(unittest.TestCase):
             struct S
                 option_a
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual("Struct field 'option_a' cannot have a Void type.",
                          cm.exception.msg)
 
@@ -853,9 +825,8 @@ class TestStone(unittest.TestCase):
                 a UInt64
                 a String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('already defined', cm.exception.msg)
 
         # Test duplicate field name -- earlier being in a parent type
@@ -871,9 +842,8 @@ class TestStone(unittest.TestCase):
             struct C extends B
                 a String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('already defined in parent', cm.exception.msg)
 
         # Test extending from wrong type
@@ -886,9 +856,8 @@ class TestStone(unittest.TestCase):
             struct B extends A
                 b UInt64
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('struct can only extend another struct', cm.exception.msg)
 
     def test_union_semantics(self):
@@ -900,9 +869,8 @@ class TestStone(unittest.TestCase):
                 a UInt64
                 a String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('already defined', cm.exception.msg)
 
         # Test duplicate field name -- earlier being in a parent type
@@ -918,12 +886,11 @@ class TestStone(unittest.TestCase):
             union_closed C extends B
                 a String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('already defined in parent', cm.exception.msg)
 
-        # Test catch-all in generator
+        # Test catch-all
         text = textwrap.dedent("""\
             namespace test
 
@@ -931,9 +898,8 @@ class TestStone(unittest.TestCase):
                 a
                 b
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        A_dt = t.api.namespaces['test'].data_type_by_name['A']
+        api = specs_to_ir([('test.stone', text)])
+        A_dt = api.namespaces['test'].data_type_by_name['A']
         # Test both ways catch-all is exposed
         self.assertEqual(A_dt.catch_all_field, A_dt._fields_by_name['other'])
         self.assertTrue(A_dt._fields_by_name['other'].catch_all)
@@ -948,9 +914,8 @@ class TestStone(unittest.TestCase):
             union_closed B extends A
                 b
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Union cannot be closed since parent type 'A' is open.",
             cm.exception.msg)
@@ -963,9 +928,8 @@ class TestStone(unittest.TestCase):
             union A
                 other
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Union cannot define an 'other' field because it is reserved as "
             "the catch-all field for open unions.",
@@ -982,9 +946,8 @@ class TestStone(unittest.TestCase):
             union B extends A
                 b UInt64
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('union can only extend another union', cm.exception.msg)
 
     def test_map_semantics(self):
@@ -994,9 +957,8 @@ class TestStone(unittest.TestCase):
             alias M = Map(String, Int32)
         """)
 
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        m_alias = t.api.namespaces['test'].alias_by_name['M']
+        api = specs_to_ir([('test.stone', text)])
+        m_alias = api.namespaces['test'].alias_by_name['M']
         self.assertIsInstance(m_alias, Alias)
         self.assertIsInstance(m_alias.data_type, Map)
 
@@ -1006,10 +968,8 @@ class TestStone(unittest.TestCase):
 
             alias M = Map(String, Map(String, Int32))
         """)
-
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        m_alias = t.api.namespaces['test'].alias_by_name['M']
+        api = specs_to_ir([('test.stone', text)])
+        m_alias = api.namespaces['test'].alias_by_name['M']
         self.assertIsInstance(m_alias.data_type.value_data_type, Map)
 
         # Map type errors with 0 args
@@ -1020,30 +980,25 @@ class TestStone(unittest.TestCase):
         """)
 
         # map type errors with only 1 args
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec):
-            t.parse()
+            specs_to_ir([('test.stone', text)])
 
         text = textwrap.dedent("""\
             namespace test
 
             alias M = Map(String)
         """)
-
         # map type errors with more than two args
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec):
-            t.parse()
+            specs_to_ir([('test.stone', text)])
 
         text = textwrap.dedent("""\
             namespace test
 
             alias M = Map(String, String, String)
         """)
-
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec):
-            t.parse()
+            specs_to_ir([('test.stone', text)])
 
         # map type errors when key data type is not a String
         text = textwrap.dedent("""\
@@ -1051,10 +1006,8 @@ class TestStone(unittest.TestCase):
 
             alias M = Map(Int32, String)
         """)
-
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec):
-            t.parse()
+            specs_to_ir([('test.stone', text)])
 
     def test_enumerated_subtypes(self):
 
@@ -1073,8 +1026,7 @@ class TestStone(unittest.TestCase):
             struct Folder extends Resource
                 icon String
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
         # Test reference to non-struct
         text = textwrap.dedent("""\
@@ -1084,9 +1036,8 @@ class TestStone(unittest.TestCase):
                 union
                     file String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('must be a struct', cm.exception.msg)
 
         # Test reference to undefined type
@@ -1097,9 +1048,8 @@ class TestStone(unittest.TestCase):
                 union
                     file File
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('Undefined', cm.exception.msg)
 
         # Test reference to non-subtype
@@ -1113,9 +1063,8 @@ class TestStone(unittest.TestCase):
             struct File
                 size UInt64
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('not a subtype of', cm.exception.msg)
 
         # Test subtype listed more than once
@@ -1130,9 +1079,8 @@ class TestStone(unittest.TestCase):
             struct File extends Resource
                 size UInt64
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn('only be specified once', cm.exception.msg)
 
         # Test missing subtype
@@ -1149,9 +1097,8 @@ class TestStone(unittest.TestCase):
             struct Folder extends Resource
                 icon String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("missing 'Folder'", cm.exception.msg)
 
         # Test name conflict with field
@@ -1166,9 +1113,8 @@ class TestStone(unittest.TestCase):
             struct File extends Resource
                 size UInt64
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("already defined on", cm.exception.msg)
 
         # Test if a leaf and its parent do not enumerate subtypes, but its
@@ -1187,9 +1133,8 @@ class TestStone(unittest.TestCase):
             struct C extends B
                 "No enumerated subtypes."
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("cannot be extended", cm.exception.msg)
 
     def unused_enumerated_subtypes_tests(self):
@@ -1213,9 +1158,8 @@ class TestStone(unittest.TestCase):
             struct C extends B
                 d String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test name conflict with union field in parent
@@ -1234,9 +1178,8 @@ class TestStone(unittest.TestCase):
             struct C extends B
                 d String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test non-leaf with no enumerated subtypes
@@ -1258,9 +1201,8 @@ class TestStone(unittest.TestCase):
             struct D extends C
                 e String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertIn("cannot enumerate subtypes if parent", cm.exception.msg)
 
     def test_nullable(self):
@@ -1271,9 +1213,8 @@ class TestStone(unittest.TestCase):
             alias A = String?
             alias B = A?
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             'Cannot mark reference to nullable type as nullable.',
             cm.exception.msg)
@@ -1287,9 +1228,8 @@ class TestStone(unittest.TestCase):
             struct S
                 f A?
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             'Cannot mark reference to nullable type as nullable.',
             cm.exception.msg)
@@ -1304,9 +1244,8 @@ class TestStone(unittest.TestCase):
             struct T extends S?
                 g String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             'Reference cannot be nullable.',
             cm.exception.msg)
@@ -1321,8 +1260,7 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
         # Test extending after...
         text = textwrap.dedent("""\
@@ -1334,8 +1272,7 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
         # Test field ref to later-defined struct
         text = textwrap.dedent("""\
@@ -1349,8 +1286,7 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
         # Test self-reference
         text = textwrap.dedent("""\
@@ -1359,8 +1295,7 @@ class TestStone(unittest.TestCase):
             struct S
                 s S?
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
         # Test forward union ref
         text = textwrap.dedent("""\
@@ -1372,14 +1307,13 @@ class TestStone(unittest.TestCase):
             union U
                 a
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        self.assertTrue(t.api.namespaces['test'].data_types[0].fields[0].has_default)
+        api = specs_to_ir([('test.stone', text)])
+        self.assertTrue(api.namespaces['test'].data_types[0].fields[0].has_default)
         self.assertEqual(
-            t.api.namespaces['test'].data_types[0].fields[0].default.union_data_type,
-            t.api.namespaces['test'].data_types[1])
+            api.namespaces['test'].data_types[0].fields[0].default.union_data_type,
+            api.namespaces['test'].data_types[1])
         self.assertEqual(
-            t.api.namespaces['test'].data_types[0].fields[0].default.tag_name, 'a')
+            api.namespaces['test'].data_types[0].fields[0].default.tag_name, 'a')
 
     def test_import(self):
         # Test field reference to another namespace
@@ -1397,17 +1331,15 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
-        t.parse()
+        specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
 
         # Test incorrectly importing the current namespace
         text = textwrap.dedent("""\
             namespace test
             import test
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             'Cannot import current namespace.',
             cm.exception.msg)
@@ -1417,9 +1349,8 @@ class TestStone(unittest.TestCase):
             namespace test
             import missingns
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Namespace 'missingns' is not defined in any spec.",
             cm.exception.msg)
@@ -1439,8 +1370,7 @@ class TestStone(unittest.TestCase):
             struct T
                 g String
             """)
-        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
-        t.parse()
+        specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
 
         # Test extending aliased struct from another namespace
         ns1_text = textwrap.dedent("""\
@@ -1459,9 +1389,8 @@ class TestStone(unittest.TestCase):
             struct T
                 g String
             """)
-        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         self.assertEqual(
             'A struct cannot extend an alias. Use the canonical name instead.',
             cm.exception.msg)
@@ -1481,8 +1410,7 @@ class TestStone(unittest.TestCase):
             union U
                 a
             """)
-        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
-        t.parse()
+        specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
 
         # Try circular import
         ns1_text = textwrap.dedent("""\
@@ -1501,9 +1429,8 @@ class TestStone(unittest.TestCase):
             struct T
                 s ns1.S
             """)
-        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         self.assertIn(
             "Circular import of namespaces 'ns2' and 'ns1' detected.",
             cm.exception.msg)
@@ -1518,8 +1445,7 @@ class TestStone(unittest.TestCase):
                 a
                 b
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
         # Test union field doc referencing other field
         text = textwrap.dedent("""\
@@ -1530,8 +1456,7 @@ class TestStone(unittest.TestCase):
                     ":field:`b`"
                 b
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
     def test_namespace(self):
         # Test that namespace docstrings are combined
@@ -1553,10 +1478,9 @@ class TestStone(unittest.TestCase):
             struct S2
                 f String
             """)
-        t = TowerOfStone([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
-        t.parse()
+        api = specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
         self.assertEqual(
-            t.api.namespaces['ns1'].doc,
+            api.namespaces['ns1'].doc,
             'This is a docstring for ns1.\nThis is another docstring for ns1.\n')
 
     def test_examples(self):
@@ -1571,9 +1495,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_types[0]
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_types[0]
         self.assertTrue(s_dt.get_examples()['default'], {'f': 'A'})
 
         # Test example with bad type
@@ -1586,9 +1509,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = 5
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'f': integer is not a valid string",
             cm.exception.msg)
@@ -1604,10 +1526,9 @@ class TestStone(unittest.TestCase):
                 example true
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
             # This raises an unexpected token error.
-            t.parse()
+            specs_to_ir([('test.stone', text)])
 
         # Test error case where two examples share the same label
         text = textwrap.dedent("""\
@@ -1621,9 +1542,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "ZZZZZZ4"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Example with label 'default' already defined on line 6.",
             cm.exception.msg)
@@ -1639,9 +1559,8 @@ class TestStone(unittest.TestCase):
                     f = "ZZZZZZ3"
                     f = "ZZZZZZ4"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Example with label 'default' defines field 'f' more than once.",
             cm.exception.msg)
@@ -1655,9 +1574,8 @@ class TestStone(unittest.TestCase):
                 example default
                 example other
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_types[0]
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_types[0]
         self.assertIn('default', s_dt.get_examples())
         self.assertIn('other', s_dt.get_examples())
         self.assertNotIn('missing', s_dt.get_examples())
@@ -1671,9 +1589,8 @@ class TestStone(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Missing field 'f' in example.",
             cm.exception.msg)
@@ -1690,9 +1607,8 @@ class TestStone(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Missing field 't' in example.",
             cm.exception.msg)
@@ -1707,9 +1623,8 @@ class TestStone(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_types[0]
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_types[0]
         # Example should have no keys
         self.assertEqual(s_dt.get_examples()['default'].value['f'], 'S')
 
@@ -1722,9 +1637,8 @@ class TestStone(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_types[0]
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_types[0]
         # Example should have no keys
         self.assertEqual(len(s_dt.get_examples()['default'].value), 0)
 
@@ -1738,9 +1652,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = null
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_types[0]
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_types[0]
         # Example should have no keys
         self.assertEqual(len(s_dt.get_examples()['default'].value), 0)
 
@@ -1754,9 +1667,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = null
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'f': null is not a valid string",
             cm.exception.msg)
@@ -1777,9 +1689,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'t': {'f': 'A'}})
 
@@ -1799,9 +1710,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'t': {'f': 'A'}})
 
@@ -1821,9 +1731,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {})
 
@@ -1858,9 +1767,8 @@ class TestStone(unittest.TestCase):
                 example other
                     g = "C"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'t': {'f': 'B', 'r': {'g': 'C'}}})
 
@@ -1877,9 +1785,8 @@ class TestStone(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Reference to example for 'T' with label 'missing' does not exist.",
             cm.exception.msg)
@@ -1897,9 +1804,8 @@ class TestStone(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Missing field 't' in example.",
             cm.exception.msg)
@@ -1918,9 +1824,8 @@ class TestStone(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 't': example must reference label of 'T'",
             cm.exception.msg)
@@ -1939,9 +1844,8 @@ class TestStone(unittest.TestCase):
                     f = "A"
                     s = null
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value, {'f': 'A'})
 
         # Test examples with inheritance trees
@@ -1962,8 +1866,7 @@ class TestStone(unittest.TestCase):
                     b = "B"
                     c = "C"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
+        specs_to_ir([('test.stone', text)])
 
         text = textwrap.dedent("""\
             namespace test
@@ -1981,9 +1884,8 @@ class TestStone(unittest.TestCase):
                     b = "B"
                     c = "C"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Missing field 'a' in example.",
             cm.exception.msg)
@@ -1998,9 +1900,8 @@ class TestStone(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             'Example for union must specify exactly one tag.',
             cm.exception.msg)
@@ -2017,9 +1918,8 @@ class TestStone(unittest.TestCase):
                     a = "A"
                     b = "B"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             'Example for union must specify exactly one tag.',
             cm.exception.msg)
@@ -2034,9 +1934,8 @@ class TestStone(unittest.TestCase):
                 example default
                     z = "Z"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Unknown tag 'z' in example.",
             cm.exception.msg)
@@ -2051,9 +1950,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = default
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'a': reference is not a valid string",
             cm.exception.msg)
@@ -2068,9 +1966,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = null
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'a': null is not a valid string",
             cm.exception.msg)
@@ -2085,9 +1982,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = null
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value, {'.tag': 'a'})
         self.assertEqual(u_dt.get_examples(compact=True)['default'].value, 'a')
 
@@ -2103,9 +1999,8 @@ class TestStone(unittest.TestCase):
                 example default
                     b = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
                          {'.tag': 'b', 'b': 'A'})
         self.assertEqual(u_dt.get_examples()['a'].value, {'.tag': 'a'})
@@ -2125,9 +2020,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        v_dt = t.api.namespaces['test'].data_type_by_name['V']
+        api = specs_to_ir([('test.stone', text)])
+        v_dt = api.namespaces['test'].data_type_by_name['V']
         self.assertEqual(v_dt.get_examples()['default'].value,
                          {'.tag': 'a', 'a': 'A'})
 
@@ -2154,9 +2048,8 @@ class TestStone(unittest.TestCase):
                 example opt
                     f = "O"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
                          {'.tag': 's', 'f': 'F'})
         self.assertEqual(u_dt.get_examples()['opt'].value,
@@ -2178,9 +2071,8 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Reference to example for 'S' with label 'missing' does not exist.",
             cm.exception.msg)
@@ -2199,9 +2091,8 @@ class TestStone(unittest.TestCase):
                 a
                 b
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'u': {'.tag': 'a'}})
         self.assertEqual(s_dt.get_examples(compact=True)['default'].value,
@@ -2230,9 +2121,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "F"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'u': {'.tag': 'b', 'f': 'F'}})
 
@@ -2249,9 +2139,8 @@ class TestStone(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'u': {'.tag': 'a'}})
         self.assertEqual(s_dt.get_examples(compact=True)['default'].value,
@@ -2270,9 +2159,8 @@ class TestStone(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Field 'u' has an invalid default: invalid reference to non-void option 'a'",
             cm.exception.msg)
@@ -2290,9 +2178,8 @@ class TestStone(unittest.TestCase):
 
                 example default
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Field 'u' has an invalid default: invalid reference to unknown tag 'c'",
             cm.exception.msg)
@@ -2307,9 +2194,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = false
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'a': example of void type must be null",
             cm.exception.msg)
@@ -2327,9 +2213,8 @@ class TestStone(unittest.TestCase):
                     And I guess it's kind of long."
                     a = "Hello, World."
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         example = s_dt.get_examples()['default']
         self.assertEqual(
             example.text,
@@ -2348,9 +2233,8 @@ class TestStone(unittest.TestCase):
                     And I guess it's kind of long."
                     b = "Hi, World."
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         example = u_dt.get_examples()['default']
         self.assertEqual(
             example.text,
@@ -2369,9 +2253,8 @@ class TestStone(unittest.TestCase):
             struct T
                 f String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Missing field 't' in example.",
             cm.exception.msg)
@@ -2396,9 +2279,8 @@ class TestStone(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Example for struct with enumerated subtypes must only specify one subtype tag.",
             cm.exception.msg)
@@ -2423,9 +2305,8 @@ class TestStone(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Example of struct with enumerated subtypes must be a reference "
             "to a subtype's example.",
@@ -2451,9 +2332,8 @@ class TestStone(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Unknown subtype tag 'z' in example.",
             cm.exception.msg)
@@ -2482,9 +2362,8 @@ class TestStone(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        r_dt = t.api.namespaces['test'].data_type_by_name['R']
+        api = specs_to_ir([('test.stone', text)])
+        r_dt = api.namespaces['test'].data_type_by_name['R']
         self.assertEqual(r_dt.get_examples()['default'].value,
                          {'.tag': 's', 'a': 'A', 'b': 'B'})
         self.assertEqual(list(r_dt.get_examples()['default'].value.keys())[0],
@@ -2509,9 +2388,8 @@ class TestStone(unittest.TestCase):
             struct T extends R
                 c String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Reference to example for 'S' with label 'default' does not exist.",
             cm.exception.msg)
@@ -2528,9 +2406,8 @@ class TestStone(unittest.TestCase):
                 example default
                     l = "a"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'l': string is not a valid list",
             cm.exception.msg)
@@ -2545,9 +2422,8 @@ class TestStone(unittest.TestCase):
                 example default
                     l = ["a", "b", "c"]
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'l': ['a', 'b', 'c']})
 
@@ -2563,9 +2439,8 @@ class TestStone(unittest.TestCase):
                     l = ["a", "b", "c"]
                     l2 = null
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'l': ['a', 'b', 'c']})
 
@@ -2579,9 +2454,8 @@ class TestStone(unittest.TestCase):
                 example default
                     l = ["a", null, "c"]
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'l': ['a', None, 'c']})
 
@@ -2601,9 +2475,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'l': reference is not a valid list",
             cm.exception.msg)
@@ -2628,9 +2501,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'l': [{'f': 'A'}, {'f': 'A'}],
                           'l2': [{'f': 'A'}]})
@@ -2651,9 +2523,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'l': [{'f': 'A'}, None]})
 
@@ -2667,9 +2538,8 @@ class TestStone(unittest.TestCase):
                 example default
                     l = [["a", "b"], [], ["z"]]
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['S']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'l': [['a', 'b'], [], ["z"]]})
 
@@ -2683,9 +2553,8 @@ class TestStone(unittest.TestCase):
                 example default
                     l = [["a", "b"], [], ["z"]]
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'l': list has more than 1 item(s)",
             cm.exception.msg)
@@ -2700,9 +2569,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = "hi"
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'a': string is not a valid list",
             cm.exception.msg)
@@ -2717,9 +2585,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = ["hello", "world"]
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {".tag": "a", 'a': ["hello", "world"]})
 
@@ -2743,9 +2610,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        s_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(s_dt.get_examples()['default'].value,
                          {'.tag': 'a', 'a': [{'f': 'A'}, {'f': 'A'}]})
         self.assertEqual(s_dt.get_examples()['default_b'].value,
@@ -2767,9 +2633,8 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
                          {'.tag': 'a', 'a': [[{'f': 'A'}]]})
 
@@ -2783,9 +2648,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = [["hello", "world"]]
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
                          {'.tag': 'a', 'a': [['hello', 'world']]})
 
@@ -2799,9 +2663,8 @@ class TestStone(unittest.TestCase):
                 example default
                     a = 42
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Bad example for field 'a': integer is not a valid list",
             cm.exception.msg)
@@ -2825,9 +2688,8 @@ class TestStone(unittest.TestCase):
                 example special
                     a = 100
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(u_dt.get_examples()['default'].value,
                          {'.tag': 'a', 'a': [[{'a': 42}, {'a': 100}]]})
 
@@ -2851,9 +2713,8 @@ class TestStone(unittest.TestCase):
                 example special
                     y = 100
             """)
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        u_dt = t.api.namespaces['test'].data_type_by_name['U']
+        api = specs_to_ir([('test.stone', text)])
+        u_dt = api.namespaces['test'].data_type_by_name['U']
         self.assertEqual(
             u_dt.get_examples()['default'].value,
             {'.tag': 'a', 'a': [[{'.tag': 'x'}, {'.tag': 'y', 'y': 100}, {'.tag': 'x'}]]})
@@ -2870,9 +2731,8 @@ class TestStone(unittest.TestCase):
                 m = {"one": 1, "two": 2}
         """)
 
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s = api.namespaces['test'].data_type_by_name['S']
         self.assertIsInstance(s.get_examples()['default'].value, dict)
 
         # complex stone example
@@ -2890,9 +2750,8 @@ class TestStone(unittest.TestCase):
                     arg = {"key": {"one": 1}, "another_key" : {"two" : 2, "three": 3}}
         """)
 
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s = api.namespaces['test'].data_type_by_name['S']
         self.assertIsInstance(s.get_examples()['default'].value, dict)
 
         # map of structs
@@ -2912,9 +2771,8 @@ class TestStone(unittest.TestCase):
                     m = {"key": example_ref, "another_key": example_ref}
         """)
 
-        t = TowerOfStone([('test.stone', text)])
-        t.parse()
-        s = t.api.namespaces['test'].data_type_by_name['S']
+        api = specs_to_ir([('test.stone', text)])
+        s = api.namespaces['test'].data_type_by_name['S']
         self.assertIsInstance(s.get_examples()['default'].value, dict)
 
         # error when example doesn't match definition
@@ -2928,9 +2786,8 @@ class TestStone(unittest.TestCase):
                 m = {"one": 1}
         """)
 
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec):
-            t.parse()
+            specs_to_ir([('test.stone', text)])
 
     def test_name_conflicts(self):
         # Test name conflict in same file
@@ -2943,9 +2800,8 @@ class TestStone(unittest.TestCase):
             struct S
                 g String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
@@ -2960,9 +2816,8 @@ class TestStone(unittest.TestCase):
 
             route S (Void, Void, Void)
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
@@ -2978,9 +2833,8 @@ class TestStone(unittest.TestCase):
             union S
                 g String
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
@@ -2995,9 +2849,8 @@ class TestStone(unittest.TestCase):
 
             alias S = UInt64
             """)
-        t = TowerOfStone([('test.stone', text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Symbol 'S' already defined (test.stone:3).",
             cm.exception.msg)
@@ -3017,9 +2870,8 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
             """)
-        t = TowerOfStone([('test1.stone', text1), ('test2.stone', text2)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
         self.assertEqual(
             "Symbol 'S' already defined (test1.stone:3).",
             cm.exception.msg)
@@ -3046,16 +2898,15 @@ class TestStone(unittest.TestCase):
                     f4 = "2015-05-12T15:50:38Z"
             route r1(ns1.S1, ns1.S2, S3)
             """)
-        t = TowerOfStone([('ns1.stone', text1), ('ns2.stone', text2)])
-        t.parse()
-        self.assertEqual(t.api.namespaces['ns2'].get_imported_namespaces(),
-                         [t.api.namespaces['ns1']])
-        xs = t.api.namespaces['ns2'].get_route_io_data_types()
+        api = specs_to_ir([('ns1.stone', text1), ('ns2.stone', text2)])
+        self.assertEqual(api.namespaces['ns2'].get_imported_namespaces(),
+                         [api.namespaces['ns1']])
+        xs = api.namespaces['ns2'].get_route_io_data_types()
         xs = sorted(xs, key=lambda x: x.name.lower())
         self.assertEqual(len(xs), 3)
 
-        ns1 = t.api.namespaces['ns1']
-        ns2 = t.api.namespaces['ns2']
+        ns1 = api.namespaces['ns1']
+        ns2 = api.namespaces['ns2']
 
         self.assertEqual(xs[0].namespace, ns1)
         self.assertEqual(xs[1].namespace, ns1)
@@ -3079,9 +2930,8 @@ class TestStone(unittest.TestCase):
             alias A = S2
             route r(S1, List(S4?)?, A)
             """)
-        t = TowerOfStone([('ns1.stone', text)])
-        t.parse()
-        ns1 = t.api.namespaces['ns1']
+        api = specs_to_ir([('ns1.stone', text)])
+        ns1 = api.namespaces['ns1']
 
         # Check that all data types are defined
         self.assertIn('S1', ns1.data_type_by_name)
@@ -3124,8 +2974,7 @@ class TestStone(unittest.TestCase):
 
             route r(Void, S, Void)
             """).replace('+', ' ')
-        t = TowerOfStone([('ns1.stone', text)])
-        t.parse()
+        specs_to_ir([('ns1.stone', text)])
 
         text = textwrap.dedent("""\
             namespace test
@@ -3143,8 +2992,7 @@ class TestStone(unittest.TestCase):
 
             route r(Void, S, Void)
             """).replace('+', ' ')
-        t = TowerOfStone([('ns1.stone', text)])
-        t.parse()
+        specs_to_ir([('ns1.stone', text)])
 
         text = textwrap.dedent("""\
             namespace test
@@ -3162,8 +3010,7 @@ class TestStone(unittest.TestCase):
 
             route r(Void, S, Void)
             """)
-        t = TowerOfStone([('ns1.stone', text)])
-        t.parse()
+        specs_to_ir([('ns1.stone', text)])
 
     def test_route_attrs_schema(self):
 
@@ -3176,9 +3023,8 @@ class TestStone(unittest.TestCase):
 
             route r(Void, Void, Void)
             """)
-        t = TowerOfStone([('stone_cfg.stone', stone_cfg_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('stone_cfg.stone', stone_cfg_text)])
         self.assertEqual(
             'No routes can be defined in the stone_cfg namespace.',
             cm.exception.msg)
@@ -3198,10 +3044,9 @@ class TestStone(unittest.TestCase):
                 attrs
                     f1 = 3
             """)
-        t = TowerOfStone([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([
+                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         self.assertEqual(
             'integer is not a valid string',
             cm.exception.msg)
@@ -3219,10 +3064,9 @@ class TestStone(unittest.TestCase):
             namespace test
             route r1(Void, Void, Void)
             """)
-        t = TowerOfStone([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([
+                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         self.assertEqual(
             "Route does not define attr key 'f1'.",
             cm.exception.msg)
@@ -3240,10 +3084,9 @@ class TestStone(unittest.TestCase):
             namespace test
             route r1(Void, Void, Void)
             """)
-        t = TowerOfStone([
+        api = specs_to_ir([
             ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        t.parse()
-        ns1 = t.api.namespaces['test']
+        ns1 = api.namespaces['test']
         self.assertEquals(ns1.route_by_name['r1'].attrs['f1'], 'yay')
 
         # Test missing attribute for route attribute with optional
@@ -3257,10 +3100,9 @@ class TestStone(unittest.TestCase):
             namespace test
             route r1(Void, Void, Void)
             """)
-        t = TowerOfStone([
+        api = specs_to_ir([
             ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        t.parse()
-        test = t.api.namespaces['test']
+        test = api.namespaces['test']
         self.assertEquals(test.route_by_name['r1'].attrs['f1'], None)
 
         # Test unknown route attributes
@@ -3276,10 +3118,9 @@ class TestStone(unittest.TestCase):
                 attrs
                     f2 = 3
             """)
-        t = TowerOfStone([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([
+                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         self.assertEqual(
             "Route attribute 'f2' is not defined in 'stone_cfg.Route'.",
             cm.exception.msg)
@@ -3293,9 +3134,8 @@ class TestStone(unittest.TestCase):
                 attrs
                     f1 = 3
             """)
-        t = TowerOfStone([('test.stone', test_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('test.stone', test_text)])
         self.assertEqual(
             "Route attribute 'f1' is not defined in 'stone_cfg.Route'.",
             cm.exception.msg)
@@ -3335,10 +3175,9 @@ class TestStone(unittest.TestCase):
                     f8 = "World"
                     f9 = "World"
             """)
-        t = TowerOfStone([
+        api = specs_to_ir([
             ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        t.parse()
-        test = t.api.namespaces['test']
+        test = api.namespaces['test']
         attrs = test.route_by_name['r1'].attrs
         self.assertEquals(attrs['f1'], True)
         self.assertEquals(attrs['f2'], b'asdf')
@@ -3370,10 +3209,9 @@ class TestStone(unittest.TestCase):
                     f1 = "1"
                     f1 = "2"
             """)
-        t = TowerOfStone([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([
+                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         self.assertEqual(
             "Attribute 'f1' defined more than once.",
             cm.exception.msg)
@@ -3400,9 +3238,8 @@ class TestStone(unittest.TestCase):
                 attrs
                     f1 = a
             """)
-        t = TowerOfStone([
+        specs_to_ir([
             ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        t.parse()
 
         # Try union type with bad attribute
         stone_cfg_text = textwrap.dedent("""\
@@ -3424,10 +3261,9 @@ class TestStone(unittest.TestCase):
                 attrs
                     f1 = 3
             """)
-        t = TowerOfStone([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([
+                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         self.assertEqual(
             "Expected union tag as value.",
             cm.exception.msg)
@@ -3454,10 +3290,9 @@ class TestStone(unittest.TestCase):
                 attrs
                     f1 = b
             """)
-        t = TowerOfStone([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([
+                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         self.assertEqual(
             "invalid reference to non-void option 'b'",
             cm.exception.msg)
@@ -3511,8 +3346,7 @@ class TestStone(unittest.TestCase):
 
             route r(Void, Photo, E)
             """)
-        t = TowerOfStone([('ns1.stone', text)])
-        t.parse()
+        specs_to_ir([('ns1.stone', text)])
 
         text = textwrap.dedent("""\
             namespace test
@@ -3527,10 +3361,8 @@ class TestStone(unittest.TestCase):
                         a String
                         b Int64
             """)
-        t = TowerOfStone([('ns1.stone', text)])
-
         with self.assertRaises(InvalidSpec) as cm:
-            t.parse()
+            specs_to_ir([('ns1.stone', text)])
         self.assertEqual(
             "Symbol 'T' already defined (ns1.stone:3).",
             cm.exception.msg)

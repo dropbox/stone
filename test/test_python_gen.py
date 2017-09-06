@@ -11,9 +11,9 @@ import subprocess
 import sys
 import unittest
 
-import stone.target.python_rsrc.stone_validators as bv
+import stone.backends.python_rsrc.stone_validators as bv
 
-from stone.target.python_rsrc.stone_serializers import (
+from stone.backends.python_rsrc.stone_serializers import (
     json_encode,
     json_decode,
     _strftime as stone_strftime,

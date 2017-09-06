@@ -7,32 +7,31 @@ Stone
 .. image:: https://travis-ci.org/dropbox/stone.svg?branch=master
     :target: https://travis-ci.org/dropbox/stone
 
-Define an API once in Stone. Use code generators to translate your
-specification into objects and functions in the programming languages of your
-choice.
+Define an API once in Stone. Use backends, i.e. code generators, to translate
+your specification into objects and functions in the programming languages of
+your choice.
 
 Stone is made up of several components:
 
     1. A language for specifying APIs.
     2. A command-line tool (``stone``) that takes an API specification and
-       generator module, and generates output.
-    3. Builtin generators: Python, Swift (more coming soon)
-    4. A Python interface for defining new generators.
+       backend module (a target language generator like Python), and generates
+       output.
+    3. Builtin backends: Javascript, Python, Obj-C, Swift, Typescript
+       (more coming soon)
+    4. A Python interface for defining new backends.
     5. A JSON-compatible serialization format.
 
-Stone is in active use for the `Dropbox v2 API
-<http://www.dropbox.com/developers>`_. Right now, the only available generator
-is for Python, but we're working on releasing the other ones we have
-internally: Swift, C#, Java, Go, JavaScript, and HTML documentation.
+Index:
 
     * Introduction
         * Motivation_
         * Installation_
     * `Language Reference <docs/lang_ref.rst>`_
-    * `Builtin Generators <docs/builtin_generators.rst>`_
+    * `Builtin Backends <docs/builtin_backends.rst>`_
     * `Managing Specs <docs/managing_specs.rst>`_
     * `Evolving a Spec <docs/evolve_spec.rst>`_
-    * `Writing a Generator <docs/generator_ref.rst>`_
+    * `Backend Reference <docs/backend_ref.rst>`_
     * `JSON Serializer <docs/json_serializer.rst>`_
     * `Network Protocol <docs/network_protocol.rst>`_
 
@@ -74,6 +73,9 @@ types to map to JSON. For cases where serialization efficiency
 available in the Python generator). It's possible also to define your own
 serialization scheme, but at that point, you may consider using something like
 `Protobuf <https://github.com/google/protobuf>`_.
+
+Stone is in active use for the `Dropbox v2 API
+<http://www.dropbox.com/developers>`_.
 
 Assumptions
 -----------

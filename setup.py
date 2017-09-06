@@ -45,10 +45,12 @@ dist = setup(
     entry_points={
         'console_scripts': ['stone=stone.cli:main'],
     },
-    packages=['stone',
-              'stone.lang',
-              'stone.target',
-              'stone.target.python_rsrc'],
+    packages=[
+        'stone',
+        'stone.frontend',
+        'stone.backends',
+        'stone.backends.python_rsrc',
+    ],
     zip_safe=False,
     author_email='kelkabany@dropbox.com',
     author='Ken Elkabany',

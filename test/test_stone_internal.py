@@ -7,7 +7,7 @@ import unittest
 from stone.api import (
     ApiNamespace,
 )
-from stone.data_type import (
+from stone.ir import (
     Boolean,
     Float32,
     Float64,
@@ -23,16 +23,16 @@ from stone.data_type import (
     UInt64,
     Void,
 )
-from stone.data_type import (
+from stone.ir import (
     Struct,
     StructField,
     Union,
     UnionField,
 )
-from stone.lang.parser import (
-    StoneExample,
-    StoneExampleField,
-    StoneExampleRef,
+from stone.frontend.ast import (
+    AstExample,
+    AstExampleField,
+    AstExampleRef,
 )
 
 
@@ -49,7 +49,7 @@ class TestStoneInternal(unittest.TestCase):
 
         s = String(min_length=1, max_length=5)
         s.check_example(
-            StoneExampleField(
+            AstExampleField(
                 path='test.stone',
                 lineno=1,
                 lexpos=0,
@@ -59,7 +59,7 @@ class TestStoneInternal(unittest.TestCase):
 
         with self.assertRaises(InvalidSpec) as cm:
             s.check_example(
-                StoneExampleField(
+                AstExampleField(
                     path='test.stone',
                     lineno=1,
                     lexpos=0,
@@ -75,7 +75,7 @@ class TestStoneInternal(unittest.TestCase):
         l = List(String(min_length=1), min_items=1, max_items=3)
 
         l.check_example(
-            StoneExampleField(
+            AstExampleField(
                 path='test.stone',
                 lineno=1,
                 lexpos=0,
@@ -85,7 +85,7 @@ class TestStoneInternal(unittest.TestCase):
 
         with self.assertRaises(InvalidSpec) as cm:
             l.check_example(
-                StoneExampleField(
+                AstExampleField(
                     path='test.stone',
                     lineno=1,
                     lexpos=0,
@@ -101,7 +101,7 @@ class TestStoneInternal(unittest.TestCase):
         l = List(List(String(min_length=1), min_items=1))
 
         l.check_example(
-            StoneExampleField(
+            AstExampleField(
                 path='test.stone',
                 lineno=1,
                 lexpos=0,
@@ -111,7 +111,7 @@ class TestStoneInternal(unittest.TestCase):
 
         with self.assertRaises(InvalidSpec) as cm:
             l.check_example(
-                StoneExampleField(
+                AstExampleField(
                     path='test.stone',
                     lineno=1,
                     lexpos=0,
@@ -127,7 +127,7 @@ class TestStoneInternal(unittest.TestCase):
         m = Map(String(), String())
         # valid example
         m.check_example(
-            StoneExampleField(
+            AstExampleField(
                 path='test.stone',
                 lineno=1,
                 lexpos=0,
@@ -139,7 +139,7 @@ class TestStoneInternal(unittest.TestCase):
         # does not conform to declared type
         with self.assertRaises(InvalidSpec):
             m.check_example(
-                StoneExampleField(
+                AstExampleField(
                     path='test.stone',
                     lineno=1,
                     lexpos=0,
@@ -162,21 +162,21 @@ class TestStoneInternal(unittest.TestCase):
         )
 
         s._add_example(
-            StoneExample(
+            AstExample(
                 'test.stone',
                 lineno=1,
                 lexpos=0,
                 label='default',
                 text='Default example',
                 fields={
-                    'a': StoneExampleField(
+                    'a': AstExampleField(
                         path='test.stone',
                         lineno=2,
                         lexpos=0,
                         name='a',
                         value=132,
                     ),
-                    'b': StoneExampleField(
+                    'b': AstExampleField(
                         path='test.stone',
                         lineno=2,
                         lexpos=0,
@@ -347,46 +347,52 @@ class TestStoneInternal(unittest.TestCase):
         # add an example that doesn't fit the definition of a struct
         with self.assertRaises(InvalidSpec) as cm:
             quota_info._add_example(
-                StoneExample(path=None,
-                             lineno=None,
-                             lexpos=None,
-                             label='default',
-                             text=None,
-                             fields={'bad_field': StoneExampleField(
-                                 None,
-                                 None,
-                                 None,
-                                 'bad_field',
-                                 'xyz123')}))
+                AstExample(
+                    path=None,
+                    lineno=None,
+                    lexpos=None,
+                    label='default',
+                    text=None,
+                    fields={
+                        'bad_field': AstExampleField(
+                            None,
+                            None,
+                            None,
+                            'bad_field',
+                            'xyz123')}))
         self.assertIn('has unknown field', cm.exception.msg)
 
         quota_info._add_example(
-            StoneExample(path=None,
-                         lineno=None,
-                         lexpos=None,
-                         label='default',
-                         text=None,
-                         fields={'quota': StoneExampleField(
-                             None,
-                             None,
-                             None,
-                             'quota',
-                             64000)}))
+            AstExample(
+                path=None,
+                lineno=None,
+                lexpos=None,
+                label='default',
+                text=None,
+                fields={
+                    'quota': AstExampleField(
+                        None,
+                        None,
+                        None,
+                        'quota',
+                        64000)}))
 
         # set null for a required field
         with self.assertRaises(InvalidSpec) as cm:
             quota_info._add_example(
-                StoneExample(path=None,
-                             lineno=None,
-                             lexpos=None,
-                             label='null',
-                             text=None,
-                             fields={'quota': StoneExampleField(
-                                 None,
-                                 None,
-                                 None,
-                                 'quota',
-                                 None)}))
+                AstExample(
+                    path=None,
+                    lineno=None,
+                    lexpos=None,
+                    label='null',
+                    text=None,
+                    fields={
+                        'quota': AstExampleField(
+                            None,
+                            None,
+                            None,
+                            'quota',
+                            None)}))
         self.assertEqual(
             "Bad example for field 'quota': null is not a valid integer",
             cm.exception.msg)
@@ -410,28 +416,29 @@ class TestStoneInternal(unittest.TestCase):
         )
 
         account_info._add_example(
-            StoneExample(path=None,
-                         lineno=None,
-                         lexpos=None,
-                         label='default',
-                         text=None,
-                         fields={
-                             'account_id': StoneExampleField(
-                                 None,
-                                 None,
-                                 None,
-                                 'account_id',
-                                 'xyz123'),
-                             'quota_info': StoneExampleField(
-                                 None,
-                                 None,
-                                 None,
-                                 'quota_info',
-                                 StoneExampleRef(
-                                     None,
-                                     None,
-                                     None,
-                                     'default'))})
+            AstExample(
+                path=None,
+                lineno=None,
+                lexpos=None,
+                label='default',
+                text=None,
+                fields={
+                    'account_id': AstExampleField(
+                        None,
+                        None,
+                        None,
+                        'account_id',
+                        'xyz123'),
+                    'quota_info': AstExampleField(
+                        None,
+                        None,
+                        None,
+                        'quota_info',
+                        AstExampleRef(
+                            None,
+                            None,
+                            None,
+                            'default'))})
         )
 
         account_info._compute_examples()
@@ -455,17 +462,19 @@ class TestStoneInternal(unittest.TestCase):
             ],
         )
         update_parent_rev._add_example(
-            StoneExample(path=None,
-                         lineno=None,
-                         lexpos=None,
-                         label='default',
-                         text=None,
-                         fields={'parent_rev': StoneExampleField(
-                             None,
-                             None,
-                             None,
-                             'parent_rev',
-                             'xyz123')}))
+            AstExample(
+                path=None,
+                lineno=None,
+                lexpos=None,
+                label='default',
+                text=None,
+                fields={
+                    'parent_rev': AstExampleField(
+                        None,
+                        None,
+                        None,
+                        'parent_rev',
+                        'xyz123')}))
 
         # test variants with only tags, as well as those with structs.
         conflict = Union(
@@ -490,17 +499,19 @@ class TestStoneInternal(unittest.TestCase):
         )
 
         conflict._add_example(
-            StoneExample(path=None,
-                         lineno=None,
-                         lexpos=None,
-                         label='default',
-                         text=None,
-                         fields={'update_if_matching_parent_rev': StoneExampleField(
-                             None,
-                             None,
-                             None,
-                             'update_if_matching_parent_rev',
-                             StoneExampleRef(None, None, None, 'default'))}))
+            AstExample(
+                path=None,
+                lineno=None,
+                lexpos=None,
+                label='default',
+                text=None,
+                fields={
+                    'update_if_matching_parent_rev': AstExampleField(
+                        None,
+                        None,
+                        None,
+                        'update_if_matching_parent_rev',
+                        AstExampleRef(None, None, None, 'default'))}))
 
         conflict._compute_examples()
 

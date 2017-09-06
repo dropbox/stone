@@ -11,8 +11,8 @@ Using Namespaces
 Whenever possible, group related routes and their associated data types into
 namespaces. This organizes your API into logical groups.
 
-Code generators should translate your namespaces into logical groups in the
-target language. For example, the Python generator creates a separate Python
+Code backends should translate your namespaces into logical groups in the
+target language. For example, the Python backend creates a separate Python
 module for each namespace.
 
 Splitting a Namespace Across Files
@@ -22,7 +22,7 @@ If a spec is growing large and unwieldy with thousands of lines, it might make
 sense to split the namespace across multiple spec files.
 
 All you need to do is create multiple ``.stone`` files with the same
-`Namespace <lang_ref.rst#namespace>`_ definition. Code generators cannot
+`Namespace <lang_ref.rst#namespace>`_ definition. Code backends cannot
 distinguish between spec files--only namespaces--so no code will be affected.
 
 When splitting a namespace across multiple spec files, each file should use the

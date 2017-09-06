@@ -6,10 +6,14 @@ if MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 import unittest
-from mock import Mock
+try:
+    # Works for Py 3.3+
+    from unittest.mock import Mock
+except ImportError:
+    from mock import Mock
 
 from stone.api import Api, ApiNamespace
-from stone.data_type import (
+from stone.ir import (
     Alias,
     Boolean,
     List,
@@ -24,22 +28,21 @@ from stone.data_type import (
     UnionField,
     Void,
     Float64)
-from stone.target.python_type_stubs import PythonTypeStubsGenerator
+from stone.backends.python_type_stubs import PythonTypeStubsBackend
 
 ISO_8601_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
-def _make_generator():
-    # type: () -> PythonTypeStubsGenerator
-    generator = PythonTypeStubsGenerator(
+def _make_backend():
+    # type: () -> PythonTypeStubsBackend
+    return PythonTypeStubsBackend(
         target_folder_path=Mock(),
         args=Mock()
     )
-    return generator
 
-def _mock_emit(generator):
-    # type: (PythonTypeStubsGenerator) -> typing.List[str]
+def _mock_emit(backend):
+    # type: (PythonTypeStubsBackend) -> typing.List[str]
     """
-    Mock out PythonTypeStubsGenerator's .emit function, and return a list containing all params
+    Mock out PythonTypeStubsBackend's .emit function, and return a list containing all params
     emit was called with.
     """
     recorded_emits = []  # type: typing.List[str]
@@ -47,8 +50,8 @@ def _mock_emit(generator):
     def record_emit(s):
         recorded_emits.append(s)
 
-    orig_append = generator._append_output
-    generator._append_output = Mock(wraps=orig_append, side_effect=record_emit)  # type: ignore
+    orig_append = backend._append_output
+    backend._append_output = Mock(wraps=orig_append, side_effect=record_emit)  # type: ignore
 
     return recorded_emits
 
@@ -202,9 +205,9 @@ class TestPythonTypeStubs(unittest.TestCase):
 
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text
-        generator = _make_generator()
-        emitted = _mock_emit(generator)
-        generator._generate_base_namespace_module(ns)
+        backend = _make_backend()
+        emitted = _mock_emit(backend)
+        backend._generate_base_namespace_module(ns)
 
         result = "".join(emitted)
         return result

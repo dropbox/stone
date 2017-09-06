@@ -105,8 +105,8 @@ Mapping to Target Languages
 ---------------------------
 
 Code generators map the primitive types of Stone to types in a target language.
-For more information, consult the appropriate guide in `Builtin Generators
-<builtin_generators.rst>`_.
+For more information, consult the appropriate guide in `Builtin Backends
+<builtin_backends.rst>`_.
 
 Alias
 =====
@@ -252,7 +252,7 @@ Examples let you include realistic samples of data in definitions. This gives
 spec readers a concrete idea of what typical values will look like. Also,
 examples help demonstrate how distinct fields might interact with each other.
 
-Generators have access to examples, which is useful when automatically
+Backends have access to examples, which is useful when automatically
 generating documentation.
 
 An example is declared by using the ``example`` keyword followed by a label.
@@ -342,7 +342,7 @@ option, and relying on your application logic to enforce that only one is set.
 
 Another advantage is that for languages that support tagged unions (Swift is
 a recent adopter), the compiler can check that the application code handles all
-possible cases and that accesses are safe. Generators will take advantage of
+possible cases and that accesses are safe. Backends will take advantage of
 such features when they are available in the target language.
 
 Like a struct, a documentation string can follow the union declaration and/or
@@ -645,7 +645,7 @@ documentation would be redundant, as is often the case when a struct field
 
 Documentation is accessible to generators. Code generators will inject
 documentation into the language objects that represent routes, structs, and
-unions. Generators for API documentation will find documentation strings
+unions. Backends for API documentation will find documentation strings
 especially useful.
 
 .. _doc-refs:
@@ -679,11 +679,11 @@ link
     last space is considered the URI. The rest is treated as the title. For
     this reason, you should ensure that your URIs are
     `percent encoded <http://en.wikipedia.org/wiki/Percent-encoding>`_.
-    Generators should convert this to a hyperlink understood by the target
+    Backends should convert this to a hyperlink understood by the target
     language.
 val
     A value. Supported values include ``null``, ``true``, ``false``, integers,
-    floats, and strings. Generators should convert the value to the native
+    floats, and strings. Backends should convert the value to the native
     representation of the value for the target language.
 
 Grammar

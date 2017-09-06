@@ -5,7 +5,7 @@ from collections import OrderedDict
 from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 import six
 
-from stone.data_type import (
+from stone.ir import (
     doc_unwrap,
     is_alias,
     is_composite_type,
@@ -17,7 +17,7 @@ _MYPY = False
 if _MYPY:
     import typing  # pylint: disable=import-error,useless-suppression
 
-    from stone.data_type import (  # noqa: F401 # pylint: disable=unused-import
+    from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
         Alias,
         DataType,
         List as DataTypeList,
@@ -26,7 +26,7 @@ if _MYPY:
         Struct,
     )
 
-    from stone.lang.parser import StoneRouteDef  # noqa: F401 # pylint: disable=unused-import
+    from stone.frontend.ast import AstRouteDef  # noqa: F401 # pylint: disable=unused-import
 
     # TODO: This can be changed back to a single declaration with a
     # unicode literal after <https://github.com/python/mypy/pull/2516>
@@ -298,11 +298,11 @@ class ApiRoute(object):
     def __init__(self,
                  name,
                  token):
-        # type: (str, StoneRouteDef) -> None
+        # type: (str, AstRouteDef) -> None
         """
         :param str name: Designated name of the endpoint.
         :param token: Raw route definition from the parser.
-        :type token: stone.stone.parser.StoneRouteDef
+        :type token: stone.stone.parser.AstRouteDef
         """
         self.name = name
         self._token = token
