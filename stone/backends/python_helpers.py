@@ -2,8 +2,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import pprint
 
+from stone.ir import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
-    ApiNamespace,  # noqa: F401 # pylint: disable=unused-import
     Boolean,
     Bytes,
     Float32,

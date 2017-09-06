@@ -12,9 +12,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import six
 
 from stone.frontend.ast import AstTypeRef
-from stone.ir import DataType, _BoundedInteger, _BoundedFloat
+from stone.ir import DataType
 from stone.ir import List, String, Timestamp
 from stone.ir import Struct, Union, Void
+from stone.ir.data_types import _BoundedInteger, _BoundedFloat
 from stone.backend import CodeBackend
 
 
