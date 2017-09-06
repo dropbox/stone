@@ -11,19 +11,6 @@ Define an API once in Stone. Use backends, i.e. code generators, to translate
 your specification into objects and functions in the programming languages of
 your choice.
 
-Stone is made up of several components:
-
-    1. A language for specifying APIs.
-    2. A command-line tool (``stone``) that takes an API specification and
-       backend module (a target language generator like Python), and generates
-       output.
-    3. Builtin backends: Javascript, Python, Obj-C, Swift, Typescript
-       (more coming soon)
-    4. A Python interface for defining new backends.
-    5. A JSON-compatible serialization format.
-
-Index:
-
     * Introduction
         * Motivation_
         * Installation_
@@ -34,6 +21,22 @@ Index:
     * `Backend Reference <docs/backend_ref.rst>`_
     * `JSON Serializer <docs/json_serializer.rst>`_
     * `Network Protocol <docs/network_protocol.rst>`_
+
+Overview
+========
+
+.. image:: docs/overview.png
+
+Stone is made up of several components:
+
+    1. A language for specifying APIs.
+    2. A command-line tool (``stone``) that takes an API specification and
+       backend module (a target language generator like Python), and generates
+       output.
+    3. Builtin backends: Javascript, Python, Obj-C, Swift, Typescript
+       (more coming soon)
+    4. A Python interface for defining new backends.
+    5. A JSON-compatible serialization format.
 
 Motivation
 ==========
