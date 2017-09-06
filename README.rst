@@ -29,14 +29,35 @@ Overview
 
 Stone is made up of several components:
 
-    1. A language for specifying APIs.
-    2. A command-line tool (``stone``) that takes an API specification and
-       backend module (a target language generator like Python), and generates
-       output.
-    3. Builtin backends: Javascript, Python, Obj-C, Swift, Typescript
-       (more coming soon)
-    4. A Python interface for defining new backends.
-    5. A JSON-compatible serialization format.
+Language
+--------
+
+A language for writing API specifications, "specs" for short.
+
+Command-Line Interface
+----------------------
+
+The CLI (``stone``) generates code based on the provided specs, backend,
+and additional arguments.
+
+Backends
+--------
+
+There are builtin backends that come with Stone: Javascript, Python, Obj-C,
+Swift, and Typescript.
+
+There are other backends we've written that aren't part of the Stone package
+because they aren't sufficiently general, and can't realistically be re-used
+for non-Dropbox APIs: Go and Java.
+
+Stone includes a Python interface for defining new backends based on its
+intermediate representation of specs. This gives you the freedom to generate
+to any target.
+
+JSON Serialization
+------------------
+
+Stone defines a JSON-compatible serialization scheme.
 
 Motivation
 ==========
