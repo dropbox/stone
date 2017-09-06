@@ -5,7 +5,7 @@ from collections import OrderedDict
 from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
 import six
 
-from stone.ir import (
+from .data_types import (
     doc_unwrap,
     is_alias,
     is_composite_type,
@@ -17,7 +17,7 @@ _MYPY = False
 if _MYPY:
     import typing  # pylint: disable=import-error,useless-suppression
 
-    from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
+    from .data_types import (  # noqa: F401 # pylint: disable=unused-import
         Alias,
         DataType,
         List as DataTypeList,
@@ -35,6 +35,7 @@ if _MYPY:
         NamespaceDict = typing.Dict[typing.Text, 'ApiNamespace']
     else:
         NamespaceDict = typing.Dict[typing.Text, b'ApiNamespace']
+
 
 class Api(object):
     """
@@ -78,6 +79,7 @@ class Api(object):
         # type: (Struct) -> None
         assert self.route_schema is None
         self.route_schema = route_schema
+
 
 class _ImportReason(object):
     """

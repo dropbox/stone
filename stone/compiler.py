@@ -42,7 +42,7 @@ class Compiler(object):
         """
         Creates a Compiler.
 
-        :param stone.api.Api api: A Stone description of the API.
+        :param stone.ir.Api api: A Stone description of the API.
         :param backend_module: Python module that contains at least one
             top-level class definition that descends from a
             :class:`stone.backend.Backend`.

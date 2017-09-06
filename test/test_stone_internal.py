@@ -4,10 +4,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 
-from stone.api import (
-    ApiNamespace,
-)
 from stone.ir import (
+    ApiNamespace,
     Boolean,
     Float32,
     Float64,

@@ -8,11 +8,9 @@ _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
-from stone.api import (  # noqa: F401 # pylint: disable=unused-import
+from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
     Api,
     ApiNamespace,
-)
-from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
     Alias,
     DataType,
     List,

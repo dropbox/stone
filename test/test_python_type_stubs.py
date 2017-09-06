@@ -12,9 +12,10 @@ try:
 except ImportError:
     from mock import Mock
 
-from stone.api import Api, ApiNamespace
 from stone.ir import (
     Alias,
+    Api,
+    ApiNamespace,
     Boolean,
     List,
     Map,

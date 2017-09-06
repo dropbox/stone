@@ -16,17 +16,15 @@ if _MYPY:
 import importlib
 re = importlib.import_module(str('re'))  # type: typing.Any
 
-from ..api import (
+from ..ir import (
+    Alias,
     Api,
     ApiNamespace,
     ApiRoute,
-    DeprecationInfo,
-)
-from ..ir import (
-    Alias,
     Boolean,
     Bytes,
     DataType,
+    DeprecationInfo,
     Float32,
     Float64,
     Int32,

@@ -28,7 +28,7 @@ def specs_to_ir(specs, version='0.1b1', debug=False):
 
     :raises: InvalidSpec
 
-    :returns: stone.api.Api
+    :returns: stone.ir.Api
     """
 
     parser_factory = ParserFactory(debug=debug)

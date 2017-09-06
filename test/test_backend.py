@@ -4,11 +4,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 
-from stone.api import (
+from stone.ir import (
     ApiNamespace,
     ApiRoute,
-)
-from stone.ir import (
     List,
     Boolean,
     String,

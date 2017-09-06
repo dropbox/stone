@@ -1,6 +1,6 @@
-from stone.api import ApiNamespace
 from stone.ir import (
     Alias,
+    ApiNamespace,
     DataType,
     List,
     Map,

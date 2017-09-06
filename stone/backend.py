@@ -13,7 +13,7 @@ from stone.ir import (
 
 _MYPY = False
 if _MYPY:
-    from stone.api import Api  # noqa: F401 # pylint: disable=unused-import
+    from stone.ir import Api  # noqa: F401 # pylint: disable=unused-import
     import typing  # pylint: disable=import-error,useless-suppression
 
     # Generic Dict key-val types

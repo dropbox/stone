@@ -4,8 +4,6 @@ fed to the backends.
 
 The goal of this module is to define all data types that are common to the
 languages and serialization formats we want to support.
-
-TODO: Merge api.py into this.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
@@ -19,8 +17,8 @@ import numbers
 import re
 import six
 
-from .frontend.exception import InvalidSpec
-from .frontend.ast import (
+from ..frontend.exception import InvalidSpec
+from ..frontend.ast import (
     AstExampleField,
     AstExampleRef,
     AstTagRef,
@@ -668,7 +666,7 @@ class UserDefined(Composite):
         be fully defined.
 
         :param str name: Name of type.
-        :param stone.api.Namespace namespace: The namespace this type is
+        :param stone.ir.Namespace namespace: The namespace this type is
             defined in.
         :param ast_node: Raw type definition from the parser.
         :type ast_node: stone.frontend.ast.AstTypeDef
@@ -1547,7 +1545,7 @@ class Alias(Composite):
         be fully defined.
 
         :param str name: Name of type.
-        :param stone.api.Namespace namespace: The namespace this type is
+        :param stone.ir.ApiNamespace namespace: The namespace this type is
             defined in.
         :param ast_node: Raw type definition from the parser.
         :type ast_node: stone.frontend.ast.AstTypeDef

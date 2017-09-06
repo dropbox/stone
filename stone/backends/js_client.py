@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-    from stone.api import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
+    from stone.ir import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 
 # Hack to get around some of Python 2's standard library modules that
 # accept ascii-encodable unicode literals in lieu of strs, but where

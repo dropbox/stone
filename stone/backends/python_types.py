@@ -20,8 +20,10 @@ if _MYPY:
 import importlib
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
-from stone.api import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
+    ApiNamespace,  # noqa: F401 # pylint: disable=unused-import
+    Struct,
+    Union,
     is_alias,
     is_boolean_type,
     is_bytes_type,
@@ -38,8 +40,6 @@ from stone.ir import (
     is_void_type,
     unwrap_aliases,
     unwrap_nullable,
-    Struct,
-    Union,
 )
 from stone.ir import DataType  # noqa: F401 # pylint: disable=unused-import
 from stone.backend import CodeBackend
