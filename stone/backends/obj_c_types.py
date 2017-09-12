@@ -73,8 +73,14 @@ _cmdline_parser.add_argument(
 _cmdline_parser.add_argument(
     '-d',
     '--documentation',
-    type=bool,
+    action='store_false',
     help=('Sets whether documentation is generated.'), )
+_cmdline_parser.add_argument(
+    '-e',
+    '--exclude-from-analysis',
+    action='store_true',
+    help=('Sets whether generated code should marked for exclusion ' +
+        'from analysis.'), )
 
 
 class ObjCTypesBackend(ObjCBaseBackend):
@@ -239,9 +245,15 @@ class ObjCTypesBackend(ObjCBaseBackend):
             'DB{}Objects.m'.format(fmt_camel_upper(namespace.name)))
         with self.output_to_relative_path(file_path):
             self.emit_raw(base_file_comment)
+
             description = '/// Arguments, results, and errors for the `{}` namespace.'.format(
                 fmt_camel_upper(namespace.name))
             self.emit(description)
+
+            if self.args.exclude_from_analysis:
+                self.emit()
+                self.emit('#ifndef __clang_analyzer__')
+
             for data_type in namespace.linearize_data_types():
                 if is_struct_type(data_type):
                     # struct implementation
@@ -249,6 +261,9 @@ class ObjCTypesBackend(ObjCBaseBackend):
                 elif is_union_type(data_type):
                     # union implementation
                     self._generate_union_class_m(data_type)
+
+            if self.args.exclude_from_analysis:
+                self.emit('#endif')
 
     def _generate_struct_class_m(self, struct):
         """Defines an Obj C implementation file that represents a struct in Stone."""
