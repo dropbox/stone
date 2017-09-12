@@ -10,7 +10,8 @@ try:
     # Works for Py 3.3+
     from unittest.mock import Mock
 except ImportError:
-    from mock import Mock
+    # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
+    from mock import Mock  # type: ignore
 
 from stone.ir import (
     Alias,
