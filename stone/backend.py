@@ -292,7 +292,7 @@ class Backend(object):
 
     @classmethod
     def process_doc(cls, doc, handler):
-        # type: (str, typing.Callable[[str, str], str]) -> str
+        # type: (str, typing.Callable[[str, str], str]) -> typing.Text
         """
         Helper for parsing documentation references in Stone docstrings and
         replacing them with more suitable annotations for the generated output.
