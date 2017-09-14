@@ -11,16 +11,16 @@ Define an API once in Stone. Use backends, i.e. code generators, to translate
 your specification into objects and functions in the programming languages of
 your choice.
 
-    * Introduction
-        * Motivation_
-        * Installation_
-    * `Language Reference <docs/lang_ref.rst>`_
-    * `Builtin Backends <docs/builtin_backends.rst>`_
-    * `Managing Specs <docs/managing_specs.rst>`_
-    * `Evolving a Spec <docs/evolve_spec.rst>`_
-    * `Backend Reference <docs/backend_ref.rst>`_
-    * `JSON Serializer <docs/json_serializer.rst>`_
-    * `Network Protocol <docs/network_protocol.rst>`_
+* Introduction
+    * Motivation_
+    * Installation_
+* `Language Reference <docs/lang_ref.rst>`_
+* `Builtin Backends <docs/builtin_backends.rst>`_
+* `Managing Specs <docs/managing_specs.rst>`_
+* `Evolving a Spec <docs/evolve_spec.rst>`_
+* `Backend Reference <docs/backend_ref.rst>`_
+* `JSON Serializer <docs/json_serializer.rst>`_
+* `Network Protocol <docs/network_protocol.rst>`_
 
 Overview
 ========

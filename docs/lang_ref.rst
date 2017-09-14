@@ -12,7 +12,7 @@ Choosing a Filename
 ===================
 
 All specification files must have a ``.stone`` extension. We recommend that the
-name of the file be the same as the `namespace <#ns>`_ defined in the spec. If
+name of the file be the same as the `namespace`_ defined in the spec. If
 multiple files are part of the same namespace, we recommend that they all share
 the same prefix: the namespace name followed by an underscore.
 
@@ -25,8 +25,6 @@ can occupy an entire line or be added after non-comments on a line.
 Use comments to explain a section of the spec to a reader of the spec. Unlike
 `documentation strings <#documentation>`_, comments are not accessible to
 generators and will not appear in generated output.
-
-.. _ns:
 
 Namespace
 =========
@@ -54,8 +52,8 @@ table of all such types and the arguments they take:
 Type                    Arguments (**bold** are required  Notes
                         and positional)
 ======================= ================================= =====================
-Bytes                   --                                An array of bytes.
-Boolean                 --
+Bytes                                                     An array of bytes.
+Boolean                 
 Float{32,64}            * min_value
                         * max_value
 Int{32,64}, UInt{32,64} * min_value
@@ -78,7 +76,7 @@ Timestamp               * **format**: Specified as a      This is used by the
                           string understood by            JSON-serializer since
                           strptime().                     it has no native
                                                           timestamp data type.
-Void                    --
+Void                    
 ======================= ================================= =====================
 
 Positional arguments (bold in the above table) are always required and appear
@@ -314,6 +312,7 @@ Maps are expressed with curly braces::
 
         example default
             similar_colors = {"blue": ["aqua", "azure"], "red": ["crimson"], "green": []}
+
 Union
 =====
 
@@ -373,6 +372,8 @@ Note: We defaulted unions to being open because it's preferable for a
 specification writer to forget to close a union than forget to open one. The
 latter case is backwards-incompatible change for clients.
 
+.. _union-inheritance:
+
 Inheritance
 -----------
 
@@ -385,6 +386,8 @@ union inheritance allows the parent type to substitute the child type rather
 than the reverse. That's because the selected tag will always be known by the
 child type, but a child's tag won't necessarily be known by the parent. In most
 languages, this relationship cannot be natively modeled.
+
+.. _union-examples:
 
 Examples
 --------

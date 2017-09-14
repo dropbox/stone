@@ -163,7 +163,7 @@ The serialization of ``U`` with tag ``coord`` is::
     }
 
 Nullable
-^^^^^^^^
+--------
 
 Note that ``coord`` references a nullable type. If it's unset, then the
 serialization only includes the tag::
@@ -178,7 +178,7 @@ In these cases, we prescribe that the deserializer should return a null
 or unset value.
 
 Compact Form
-^^^^^^^^^^^^
+------------
 
 Deserializers should support an additional representation of void union
 members: the tag itself as a string. For example, tag ``singularity`` could

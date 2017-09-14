@@ -337,8 +337,7 @@ has_documented_fields(include_inherited_fields=False)
     Returns whether at least one field is documented.
 
 get_examples()
-    Returns an `OrderedDict
-    <https://docs.python.org/2/library/collections.html#collections.OrderedDict>`_
+    Returns an `OrderedDict`_
     mapping labels to ``Example`` objects.
 
 UnionField

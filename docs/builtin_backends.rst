@@ -7,12 +7,12 @@ objects in your programming language of choice.
 
 Stone includes backends for an assortment of languages, including:
 
-    * `Python <#python-guide>`_
-    * Python `Type Stubs <https://www.python.org/dev/peps/pep-0484/#id42>`_
-    * Javascript
-    * Objective-C
-    * Swift
-    * Typescript
+* `Python <#python-guide>`_
+* Python `Type Stubs <https://www.python.org/dev/peps/pep-0484/#id42>`_
+* Javascript
+* Objective-C
+* Swift
+* Typescript
 
 If you're looking to write your own backend, see `Backend Reference
 <backend_ref.rst>`_. We would love to see a contribution of a PHP or Ruby
