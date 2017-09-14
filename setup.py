@@ -47,9 +47,10 @@ dist = setup(
     },
     packages=[
         'stone',
-        'stone.frontend',
         'stone.backends',
         'stone.backends.python_rsrc',
+        'stone.frontend',
+        'stone.ir',
     ],
     zip_safe=False,
     author_email='kelkabany@dropbox.com',
