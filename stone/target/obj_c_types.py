@@ -73,7 +73,7 @@ _cmdline_parser.add_argument(
 _cmdline_parser.add_argument(
     '-d',
     '--documentation',
-    action='store_false',
+    action='store_true',
     help=('Sets whether documentation is generated.'), )
 _cmdline_parser.add_argument(
     '-e',
@@ -128,6 +128,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
             rsrc_output_folder)
 
         jazzy_cfg = None
+
         if self.args.documentation:
             jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
             with open(jazzy_cfg_path) as jazzy_file:
