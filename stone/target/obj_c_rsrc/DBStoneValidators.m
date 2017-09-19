@@ -11,9 +11,9 @@
                                 pattern:(NSString *)pattern {
 
   void (^validator)(NSString *) = ^(NSString *value) {
-    __unused NSString *message =
+    __unused NSString *nullableMessage =
         [NSString stringWithFormat:@"\"%@\" must not be `nil`.", value];
-    NSAssert(value != nil, message);
+    NSAssert(value != nil, nullableMessage);
 
     __unused NSUInteger length = [value length];
 
