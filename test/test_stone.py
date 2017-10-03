@@ -3906,6 +3906,48 @@ class TestStone(unittest.TestCase):
         self.assertEqual(cm.exception.lineno, 9)
         self.assertEqual(cm.exception.path, 'ns1.stone')
 
+    def test_annotations(self):
+        # Test omission tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation InternalOnly = Omitted("internal")
+
+            struct S
+
+                f String
+                    @InternalOnly
+                    "Test field with one omit tag."
+
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        s = api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s.all_fields[0].name, 'f')
+        self.assertEqual(s.all_fields[0].omitted_caller, 'internal')
+
+        # Test applying two omission tags to one field
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation InternalOnly = Omitted("internal")
+            annotation AlphaOnly = Omitted("alpha_only")
+
+            struct S
+
+                f String
+                    @AlphaOnly
+                    @InternalOnly
+                    "Test field with two omit tags."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Omitted caller already set as 'alpha_only'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
 
 if __name__ == '__main__':
     unittest.main()

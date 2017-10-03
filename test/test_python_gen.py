@@ -14,6 +14,7 @@ import unittest
 import stone.backends.python_rsrc.stone_validators as bv
 
 from stone.backends.python_rsrc.stone_serializers import (
+    CallerPermissionsInterface,
     json_encode,
     json_decode,
     _strftime as stone_strftime,
@@ -152,17 +153,17 @@ class TestDropInModules(unittest.TestCase):
                           lambda: t.validate(now.replace(tzinfo=PST())))
 
     def test_list_validator(self):
-        l = bv.List(bv.String(), min_items=1, max_items=10)
+        l1 = bv.List(bv.String(), min_items=1, max_items=10)
         # Not a valid list type
-        self.assertRaises(bv.ValidationError, lambda: l.validate('a'))
+        self.assertRaises(bv.ValidationError, lambda: l1.validate('a'))
         # Too short
-        self.assertRaises(bv.ValidationError, lambda: l.validate([]))
+        self.assertRaises(bv.ValidationError, lambda: l1.validate([]))
         # Too long
-        self.assertRaises(bv.ValidationError, lambda: l.validate([1] * 11))
+        self.assertRaises(bv.ValidationError, lambda: l1.validate([1] * 11))
         # Not a valid string type
-        self.assertRaises(bv.ValidationError, lambda: l.validate([1]))
+        self.assertRaises(bv.ValidationError, lambda: l1.validate([1]))
         # Passes
-        l.validate(['a'])
+        l1.validate(['a'])
 
     def test_map_validator(self):
         m = bv.Map(bv.String(pattern="^foo.*"), bv.String(pattern=".*bar$"))
@@ -254,6 +255,19 @@ class TestDropInModules(unittest.TestCase):
             def get_d(self):
                 return self._d
 
+            @classmethod
+            def _is_tag_present(cls, tag, cp):
+                assert cp
+                if tag in cls._tagmap:
+                    return True
+
+                return False
+
+            @classmethod
+            def _get_val_data_type(cls, tag, cp):
+                assert cp
+                return cls._tagmap[tag]
+
         U.b = U('b')
 
         # Test primitive variant
@@ -278,16 +292,16 @@ class TestDropInModules(unittest.TestCase):
         u = U('d', [1, 2, 3, 'a'])
         # lists should be re-validated during serialization
         self.assertRaises(bv.ValidationError, lambda: json_encode(bv.Union(U), u))
-        l = [1, 2, 3, 4]
+        l1 = [1, 2, 3, 4]
         u = U('d', [1, 2, 3, 4])
         self.assertEqual(json_encode(bv.Union(U), u, old_style=True),
-                         json.dumps({'d': l}))
+                         json.dumps({'d': l1}))
 
         # Test a nullable union
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), None),
                          json.dumps(None))
         self.assertEqual(json_encode(bv.Nullable(bv.Union(U)), u, old_style=True),
-                         json.dumps({'d': l}))
+                         json.dumps({'d': l1}))
 
         # Test nullable primitive variant
         u = U('e', None)
@@ -338,6 +352,19 @@ class TestDropInModules(unittest.TestCase):
 
             def get_t(self):
                 return self._t
+
+            @classmethod
+            def _is_tag_present(cls, tag, cp):
+                assert cp
+                if tag in cls._tagmap:
+                    return True
+
+                return False
+
+            @classmethod
+            def _get_val_data_type(cls, tag, cp):
+                assert cp
+                return cls._tagmap[tag]
 
         s = S()
         s.f = S2()
@@ -471,6 +498,19 @@ class TestDropInModules(unittest.TestCase):
             def get_d(self):
                 return self._value
 
+            @classmethod
+            def _is_tag_present(cls, tag, cp):
+                assert cp
+                if tag in cls._tagmap:
+                    return True
+
+                return False
+
+            @classmethod
+            def _get_val_data_type(cls, tag, cp):
+                assert cp
+                return cls._tagmap[tag]
+
         U.b = U('b')
 
         # TODO: When run with Python 3, pylint thinks `u` is a `datetime`
@@ -498,9 +538,9 @@ class TestDropInModules(unittest.TestCase):
                           lambda: json_decode(bv.Union(U), json.dumps({'c': [1, 2, 3]})))
 
         # Test list variant
-        l = [1, 2, 3, 4]
-        u = json_decode(bv.Union(U), json.dumps({'d': l}), old_style=True)
-        self.assertEqual(u.get_d(), l)
+        l1 = [1, 2, 3, 4]
+        u = json_decode(bv.Union(U), json.dumps({'d': l1}), old_style=True)
+        self.assertEqual(u.get_d(), l1)
 
         # Test map variant
         m = {'one': 'two', 'three': 'four'}
@@ -565,6 +605,19 @@ class TestDropInModules(unittest.TestCase):
 
             def get_t(self):
                 return self._value
+
+            @classmethod
+            def _is_tag_present(cls, tag, cp):
+                assert cp
+                if tag in cls._tagmap:
+                    return True
+
+                return False
+
+            @classmethod
+            def _get_val_data_type(cls, tag, cp):
+                assert cp
+                return cls._tagmap[tag]
 
         # Test that validation error references outer and inner struct
         with self.assertRaises(bv.ValidationError):
@@ -1452,6 +1505,1606 @@ class TestCustomStrftime(unittest.TestCase):
             assert nextday[prevday] == day, str(testdate)
             prevday = day
             testdate = testdate + one_day
+
+
+class CallerPermissionsTest(CallerPermissionsInterface):
+    def __init__(self, permissions):
+        self._permissions = permissions
+
+    @property
+    def permissions(self):
+        return self._permissions
+
+
+test_tagged_spec = """\
+namespace ns3
+
+struct A
+    "Sample struct doc."
+    a String
+        "Sample field doc."
+
+struct B extends A
+    h String
+
+union_closed U
+    "Sample union doc."
+    t0
+        "Sample field doc."
+
+union UOpen extends U
+    t4
+
+struct Resource
+    union
+        file File
+
+    name String
+
+struct File extends Resource
+    size UInt64
+"""
+
+test_tagged_patched_spec = """\
+namespace ns3
+
+import ns4
+
+patch struct A
+
+    b Int64
+        @ns4.InternalOnly
+        "A patched, internal-only field."
+
+    c String?
+        @ns4.InternalOnly
+
+    d List(X)
+        @ns4.InternalOnly
+
+    e Map(String, String?)
+        @ns4.InternalOnly
+
+    f X
+        @ns4.InternalOnly
+
+    g Int64
+        @ns4.AlphaOnly
+
+struct X
+
+    a String
+
+    b String
+        @ns4.InternalOnly
+
+patch struct B
+
+    x String
+        @ns4.InternalOnly
+
+    y String
+        @ns4.AlphaOnly
+
+patch union_closed U
+
+    t1 String
+        @ns4.InternalOnly
+
+    t2 List(X)
+        @ns4.AlphaOnly
+
+    t3 List(X)
+
+    t_void
+        @ns4.TestVoidField
+
+patch union UOpen
+
+    t5 String
+        @ns4.InternalOnly
+
+    t6 String
+        @ns4.AlphaOnly
+
+patch struct Resource
+
+    x X
+        @ns4.InternalOnly
+
+patch struct File
+
+    y String
+        @ns4.InternalOnly
+"""
+
+test_tagged_spec_2 = """\
+namespace ns4
+
+annotation InternalOnly = Omitted("internal")
+annotation AlphaOnly = Omitted("alpha")
+annotation TestVoidField = Omitted("test_void_field")
+"""
+
+
+class TestTaggedGeneratedPython(unittest.TestCase):
+
+    def setUp(self):
+
+        # Sanity check: stone must be importable for the compiler to work
+        __import__('stone')
+
+        # Compile spec by calling out to stone
+        p = subprocess.Popen(
+            [sys.executable,
+             '-m',
+             'stone.cli',
+             'python_types',
+             'output',
+             '-'],
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        _, stderr = p.communicate(
+            input=(test_tagged_spec + test_tagged_patched_spec +
+                test_tagged_spec_2).encode('utf-8'))
+        if p.wait() != 0:
+            raise AssertionError('Could not execute stone tool: %s' %
+                                 stderr.decode('utf-8'))
+
+        sys.path.append('output')
+        self.ns4 = __import__('ns4')
+        self.ns3 = __import__('ns3')
+        self.sv = __import__('stone_validators')
+        self.ss = __import__('stone_serializers')
+        self.encode = self.ss.json_encode
+        self.compat_obj_encode = self.ss.json_compat_obj_encode
+        self.decode = self.ss.json_decode
+        self.compat_obj_decode = self.ss.json_compat_obj_decode
+
+        self.default_cp = CallerPermissionsTest([])
+        self.internal_cp = CallerPermissionsTest(['internal'])
+        self.alpha_cp = CallerPermissionsTest(['alpha'])
+        self.internal_and_alpha_cp = CallerPermissionsTest(['internal', 'alpha'])
+
+    def test_struct_child_decoding(self):
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'g': 4,
+        }
+
+        # test full super-type
+        a = self.decode(
+            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(a, self.ns3.A)
+        self.assertEqual(a.a, 'A')
+        self.assertEqual(a.b, 1)
+        self.assertEqual(a.c, 'C')
+        self.assertEqual(a.d[0].a, 'A')
+        self.assertEqual(a.d[0].b, 'B')
+        self.assertEqual(a.e, {})
+        self.assertEqual(a.f.a, 'A')
+        self.assertEqual(a.f.b, 'B')
+        self.assertEqual(a.g, 4)
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+        }
+
+        # test internal-only type
+        a = self.decode(
+            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            caller_permissions=self.internal_cp)
+        self.assertIsInstance(a, self.ns3.A)
+        self.assertEqual(a.a, 'A')
+        self.assertEqual(a.b, 1)
+        self.assertEqual(a.c, 'C')
+        self.assertEqual(a.d[0].a, 'A')
+        self.assertEqual(a.d[0].b, 'B')
+        self.assertEqual(a.e, {})
+        self.assertEqual(a.f.a, 'A')
+        self.assertEqual(a.f.b, 'B')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.g
+
+        json_data = {
+            'a': 'A',
+            'g': 4,
+        }
+
+        # test alpha-only type
+        a = self.decode(
+            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            caller_permissions=self.alpha_cp)
+        self.assertIsInstance(a, self.ns3.A)
+        self.assertEqual(a.a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.b
+        # optional field, so doesn't raise error
+        self.assertEqual(a.c, None)
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.d
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.e
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.f
+        self.assertEqual(a.g, 4)
+
+        json_data = {
+            'a': 'A',
+        }
+
+        # test external-only type
+        a = self.decode(
+            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            caller_permissions=self.default_cp)
+        self.assertIsInstance(a, self.ns3.A)
+        self.assertEqual(a.a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.b
+        # optional field, so doesn't raise error
+        self.assertEqual(a.c, None)
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.d
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.e
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.f
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.g
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'g': 4,
+        }
+
+        # test internal-only type raises
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.A),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("unknown field 'g'", str(cm.exception))
+
+        # test alpha-only type raises
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.A),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertIn("unknown field", str(cm.exception))
+
+        # test external-only type raises
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.A),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertIn("unknown field", str(cm.exception))
+
+        json_data = {
+            'a': 'A',
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+        }
+
+        # test missing required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.A),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("missing required field 'b'", str(cm.exception))
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+        }
+
+        # test missing nested required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.A),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("d: missing required field 'b'", str(cm.exception))
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+        }
+
+        # test missing optional internal field for internal caller
+        a = self.decode(
+            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            caller_permissions=self.internal_cp)
+        self.assertIsInstance(a, self.ns3.A)
+        self.assertEqual(a.a, 'A')
+        self.assertEqual(a.b, 1)
+        # optional field, so doesn't raise error
+        self.assertEqual(a.c, None)
+        self.assertEqual(a.d[0].a, 'A')
+        self.assertEqual(a.d[0].b, 'B')
+        self.assertEqual(a.e, {})
+        self.assertEqual(a.f.a, 'A')
+        self.assertEqual(a.f.b, 'B')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            a.g
+
+    def test_struct_parent_decoding(self):
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'g': 4,
+            'h': 'H',
+            'x': 'X',
+            'y': 'Y',
+        }
+
+        # test full super-type
+        b = self.decode(
+            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(b, self.ns3.B)
+        self.assertEqual(b.a, 'A')
+        self.assertEqual(b.b, 1)
+        self.assertEqual(b.c, 'C')
+        self.assertEqual(b.d[0].a, 'A')
+        self.assertEqual(b.d[0].b, 'B')
+        self.assertEqual(b.e, {})
+        self.assertEqual(b.f.a, 'A')
+        self.assertEqual(b.f.b, 'B')
+        self.assertEqual(b.g, 4)
+        self.assertEqual(b.h, 'H')
+        self.assertEqual(b.x, 'X')
+        self.assertEqual(b.y, 'Y')
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'h': 'H',
+            'x': 'X',
+        }
+
+        # test internal-only type
+        b = self.decode(
+            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            caller_permissions=self.internal_cp)
+        self.assertIsInstance(b, self.ns3.B)
+        self.assertEqual(b.a, 'A')
+        self.assertEqual(b.b, 1)
+        self.assertEqual(b.c, 'C')
+        self.assertEqual(b.d[0].a, 'A')
+        self.assertEqual(b.d[0].b, 'B')
+        self.assertEqual(b.e, {})
+        self.assertEqual(b.f.a, 'A')
+        self.assertEqual(b.f.b, 'B')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.g
+        self.assertEqual(b.h, 'H')
+        self.assertEqual(b.x, 'X')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.y
+
+        json_data = {
+            'a': 'A',
+            'g': 4,
+            'h': 'H',
+            'y': 'Y',
+        }
+
+        # test alpha-only type
+        b = self.decode(
+            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            caller_permissions=self.alpha_cp)
+        self.assertIsInstance(b, self.ns3.B)
+        self.assertEqual(b.a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.b
+        # optional field, so doesn't raise error
+        self.assertEqual(b.c, None)
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.d
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.e
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.f
+        self.assertEqual(b.g, 4)
+        self.assertEqual(b.h, 'H')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.x
+        self.assertEqual(b.y, 'Y')
+
+        json_data = {
+            'a': 'A',
+            'h': 'H',
+        }
+
+        # test external-only type
+        b = self.decode(
+            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            caller_permissions=self.default_cp)
+        self.assertIsInstance(b, self.ns3.B)
+        self.assertEqual(b.a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.b
+        # optional field, so doesn't raise error
+        self.assertEqual(b.c, None)
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.d
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.e
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.f
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.g
+        self.assertEqual(b.h, 'H')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.x
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.y
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'g': 4,
+            'h': 'H',
+            'x': 'X',
+            'y': 'Y',
+        }
+
+        # test internal-only type raises
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.B),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertIn("unknown field", str(cm.exception))
+
+        # test alpha-only type raises
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.B),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertIn("unknown field", str(cm.exception))
+
+        # test external-only type raises
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.B),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertIn("unknown field", str(cm.exception))
+
+        json_data = {
+            'a': 'A',
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'h': 'H',
+            'x': 'X',
+        }
+
+        # test missing required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.B),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("missing required field 'b'", str(cm.exception))
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'c': 'C',
+            'd': [
+                {
+                    'a': 'A',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'h': 'H',
+            'x': 'X',
+        }
+
+        # test missing nested required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Struct(self.ns3.B),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("d: missing required field 'b'", str(cm.exception))
+
+        json_data = {
+            'a': 'A',
+            'b': 1,
+            'd': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+            'e': {},
+            'f': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'h': 'H',
+            'x': 'X',
+        }
+
+        # test missing optional internal field for internal caller
+        b = self.decode(
+            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            caller_permissions=self.internal_cp)
+        self.assertIsInstance(b, self.ns3.B)
+        self.assertEqual(b.a, 'A')
+        self.assertEqual(b.b, 1)
+        # optional field, so doesn't raise error
+        self.assertEqual(b.c, None)
+        self.assertEqual(b.d[0].a, 'A')
+        self.assertEqual(b.d[0].b, 'B')
+        self.assertEqual(b.e, {})
+        self.assertEqual(b.f.a, 'A')
+        self.assertEqual(b.f.b, 'B')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            b.g
+        self.assertEqual(b.h, 'H')
+        self.assertEqual(b.x, 'X')
+
+    def test_union_closed_parent_decoding(self):
+        # test all tags
+        json_data = {
+            '.tag': 't0',
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.U)
+        self.assertTrue(u.is_t0())
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.U)
+        self.assertTrue(u.is_t1())
+        self.assertEqual(u.get_t1(), 't1_str')
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ]
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.U)
+        self.assertTrue(u.is_t2())
+        self.assertEqual(u.get_t2()[0].a, 'A')
+        self.assertEqual(u.get_t2()[0].b, 'B')
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        # test internal tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.U),
+                json.dumps(json_data),
+                caller_permissions=self.default_cp)
+        self.assertEqual("unknown tag 't1'", str(cm.exception))
+
+        # test internal tag raises for alpha caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.U),
+                json.dumps(json_data),
+                caller_permissions=self.alpha_cp)
+        self.assertEqual("unknown tag 't1'", str(cm.exception))
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ]
+        }
+
+        # test alpha tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.U),
+                json.dumps(json_data),
+                caller_permissions=self.default_cp)
+        self.assertEqual("unknown tag 't2'", str(cm.exception))
+
+        # test alpha tag raises for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.U),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("unknown tag 't2'", str(cm.exception))
+
+        json_data = {
+            '.tag': 't3',
+            't3': [
+                {
+                    'a': 'A',
+                },
+            ]
+        }
+
+        # test missing required internal field for external caller
+        u = self.decode(
+            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            caller_permissions=self.default_cp)
+        self.assertIsInstance(u, self.ns3.U)
+        self.assertTrue(u.is_t3())
+        self.assertEqual(u.get_t3()[0].a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=expression-not-assigned
+            u.get_t3()[0].b
+
+        # test missing required internal field for alpha caller
+        u = self.decode(
+            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            caller_permissions=self.alpha_cp)
+        self.assertIsInstance(u, self.ns3.U)
+        self.assertTrue(u.is_t3())
+        self.assertEqual(u.get_t3()[0].a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=expression-not-assigned
+            u.get_t3()[0].b
+
+        # test missing required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.U),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("t3: missing required field 'b'", str(cm.exception))
+
+    def test_union_open_child_decoding(self):
+        # test all tags
+        json_data = {
+            '.tag': 't0',
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t0())
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t1())
+        self.assertEqual(u.get_t1(), 't1_str')
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ]
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t2())
+        self.assertEqual(u.get_t2()[0].a, 'A')
+        self.assertEqual(u.get_t2()[0].b, 'B')
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        # test internal tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.UOpen),
+                json.dumps(json_data),
+                caller_permissions=self.default_cp)
+        self.assertEqual("unknown tag 't1'", str(cm.exception))
+
+        # test internal tag raises for alpha caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.UOpen),
+                json.dumps(json_data),
+                caller_permissions=self.alpha_cp)
+        self.assertEqual("unknown tag 't1'", str(cm.exception))
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ]
+        }
+
+        # test alpha tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.UOpen),
+                json.dumps(json_data),
+                caller_permissions=self.default_cp)
+        self.assertEqual("unknown tag 't2'", str(cm.exception))
+
+        # test alpha tag raises for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.UOpen),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("unknown tag 't2'", str(cm.exception))
+
+        json_data = {
+            '.tag': 't3',
+            't3': [
+                {
+                    'a': 'A',
+                },
+            ]
+        }
+
+        # test missing required internal field for external caller
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.default_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t3())
+        self.assertEqual(u.get_t3()[0].a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=expression-not-assigned
+            u.get_t3()[0].b
+
+        # test missing required internal field for alpha caller
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.alpha_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t3())
+        self.assertEqual(u.get_t3()[0].a, 'A')
+        with self.assertRaises(AttributeError):
+            # pylint: disable=expression-not-assigned
+            u.get_t3()[0].b
+
+        # test missing required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.UOpen),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("t3: missing required field 'b'", str(cm.exception))
+
+        json_data = {
+            '.tag': 't4',
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t4())
+
+        json_data = {
+            '.tag': 't5',
+            't5': 't5_str'
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t5())
+        self.assertEqual(u.get_t5(), 't5_str')
+
+        json_data = {
+            '.tag': 't6',
+            't6': 't6_str'
+        }
+
+        u = self.decode(
+            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(u, self.ns3.UOpen)
+        self.assertTrue(u.is_t6())
+        self.assertEqual(u.get_t6(), 't6_str')
+
+        # test alpha tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.UOpen),
+                json.dumps(json_data),
+                caller_permissions=self.default_cp)
+        self.assertEqual("unknown tag 't6'", str(cm.exception))
+
+        # test alpha tag raises for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.Union(self.ns3.UOpen),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("unknown tag 't6'", str(cm.exception))
+
+    def test_enumerated_subtype_decoding(self):
+        json_data = {
+            '.tag': 'file',
+            'name': 'File1',
+            'size': 5,
+            'x': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'y': 'Y',
+        }
+
+        # test full super-type
+        f = self.decode(
+            self.sv.StructTree(self.ns3.File), json.dumps(json_data),
+            caller_permissions=self.internal_and_alpha_cp)
+        self.assertIsInstance(f, self.ns3.File)
+        self.assertEqual(f.name, 'File1')
+        self.assertEqual(f.size, 5)
+        self.assertEqual(f.x.a, 'A')
+        self.assertEqual(f.x.b, 'B')
+        self.assertEqual(f.y, 'Y')
+
+        # test raises with interal field for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.StructTree(self.ns3.File),
+                json.dumps(json_data),
+                caller_permissions=self.default_cp)
+        self.assertIn("unknown field", str(cm.exception))
+
+        json_data = {
+            '.tag': 'file',
+            'name': 'File1',
+            'size': 5,
+            'y': 'Y',
+        }
+
+        # test raises with missing required interal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.StructTree(self.ns3.File),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("missing required field 'x'", str(cm.exception))
+
+        json_data = {
+            '.tag': 'file',
+            'name': 'File1',
+            'size': 5,
+            'x': {
+                'a': 'A',
+                'b': 'B',
+            },
+        }
+
+        # test raises with missing required interal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.StructTree(self.ns3.File),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("missing required field 'y'", str(cm.exception))
+
+        json_data = {
+            '.tag': 'file',
+            'name': 'File1',
+            'size': 5,
+            'x': {
+                'a': 'A',
+            },
+            'y': 'Y',
+        }
+
+        # test raises with missing required interal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.decode(
+                self.sv.StructTree(self.ns3.File),
+                json.dumps(json_data),
+                caller_permissions=self.internal_cp)
+        self.assertEqual("x: missing required field 'b'", str(cm.exception))
+
+        json_data = {
+            '.tag': 'file',
+            'name': 'File1',
+            'size': 5,
+        }
+
+        # test external-only type
+        f = self.decode(
+            self.sv.StructTree(self.ns3.File), json.dumps(json_data),
+            caller_permissions=self.default_cp)
+        self.assertIsInstance(f, self.ns3.File)
+        self.assertEqual(f.name, 'File1')
+        self.assertEqual(f.size, 5)
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            f.x
+        with self.assertRaises(AttributeError):
+            # pylint: disable=pointless-statement
+            f.y
+
+    def test_struct_child_encoding(self):
+        json_data = {
+            'a': 'A', 'b': 1, 'c': 'C', 'd': [{'a': 'A', 'b': 'B'}],
+            'e': {}, 'f': {'a': 'A', 'b': 'B'}, 'g': 4,
+        }
+
+        # test full super-type
+        ai = self.ns3.A(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4)
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        # test missing required internal field for internal and alpha caller
+        ai = self.ns3.A(
+            a='A', c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4)
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'b'", str(cm.exception))
+
+        # test missing nested required internal field for internal and alpha caller
+        ai = self.ns3.A(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4)
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("d: missing required field 'b'", str(cm.exception))
+
+        # test missing required alpha field for internal and alpha caller
+        ai = self.ns3.A(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'))
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'g'", str(cm.exception))
+
+        json_data = {
+            'a': 'A',
+        }
+
+        # test internal and alpha stripped out for external caller
+        ai = self.ns3.A(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4)
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.default_cp), json_data)
+
+        json_data = {
+            'a': 'A', 'g': 4,
+        }
+
+        # test internal stripped out for alpha caller
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.alpha_cp), json_data)
+
+        json_data = {
+            'a': 'A', 'b': 1, 'c': 'C', 'd': [{'a': 'A', 'b': 'B'}],
+            'e': {}, 'f': {'a': 'A', 'b': 'B'},
+        }
+
+        # test alpha stripped out for internal caller
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.internal_cp), json_data)
+
+    def test_struct_parent_encoding(self):
+        json_data = {
+            'a': 'A', 'b': 1, 'c': 'C', 'd': [{'a': 'A', 'b': 'B'}],
+            'e': {}, 'f': {'a': 'A', 'b': 'B'}, 'g': 4, 'h': 'H',
+            'x': 'X', 'y': 'Y',
+        }
+
+        # test full super-type
+        bi = self.ns3.B(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
+            x='X', y='Y')
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        # test missing required internal field for internal and alpha caller
+        bi = self.ns3.B(
+            a='A', c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
+            x='X', y='Y')
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'b'", str(cm.exception))
+
+        # test missing required internal field in child
+        # for internal and alpha caller
+        bi = self.ns3.B(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
+            y='Y')
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'x'", str(cm.exception))
+
+        # test missing nested required internal field for internal and alpha caller
+        bi = self.ns3.B(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
+            x='X', y='Y')
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("d: missing required field 'b'", str(cm.exception))
+
+        # test missing required alpha field for internal and alpha caller
+        bi = self.ns3.B(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), h='H',
+            x='X', y='Y')
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'g'", str(cm.exception))
+
+        # test missing required alpha field in child
+        # for internal and alpha caller
+        bi = self.ns3.B(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
+            x='X')
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'y'", str(cm.exception))
+
+        json_data = {
+            'a': 'A', 'h': 'H',
+        }
+
+        # test internal and alpha stripped out for external caller
+        bi = self.ns3.B(
+            a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
+            e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
+            x='X', y='Y')
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.default_cp), json_data)
+
+        json_data = {
+            'a': 'A', 'g': 4, 'h': 'H', 'y': 'Y',
+        }
+
+        # test internal stripped out for alpha caller
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.alpha_cp), json_data)
+
+        json_data = {
+            'a': 'A', 'b': 1, 'c': 'C', 'd': [{'a': 'A', 'b': 'B'}],
+            'e': {}, 'f': {'a': 'A', 'b': 'B'}, 'h': 'H', 'x': 'X',
+        }
+
+        # test alpha stripped out for internal caller
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_cp), json_data)
+
+    def test_union_closed_parent_encoding(self):
+        # test all tags
+        json_data = {
+            '.tag': 't0',
+        }
+
+        ui = self.ns3.U.t0
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        ui = self.ns3.U.t1('t1_str')
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ]
+        }
+
+        ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't3',
+            't3': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+        }
+
+        ui = self.ns3.U.t3([self.ns3.X(a='A', b='B')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        ui = self.ns3.U.t1('t1_str')
+
+        # test internal tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.default_cp)
+        self.assertEqual("caller does not have access to 't1' tag", str(cm.exception))
+
+        ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
+
+        # test alpha tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.default_cp)
+        self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
+
+        ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
+
+        # test alpha tag raises for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_cp)
+        self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
+
+        json_data = {
+            '.tag': 't3',
+            't3': [
+                {
+                    'a': 'A',
+                },
+            ]
+        }
+
+        # test missing required internal field for external caller
+        ui = self.ns3.U.t3([self.ns3.X(a='A')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.default_cp), json_data)
+
+        # test missing required internal field for alpha caller
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.alpha_cp), json_data)
+
+        # test missing required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_cp)
+        self.assertEqual("t3: missing required field 'b'", str(cm.exception))
+
+    def test_union_open_child_encoding(self):
+        # test all tags
+        json_data = {
+            '.tag': 't0',
+        }
+
+        ui = self.ns3.UOpen.t0
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        ui = self.ns3.UOpen.t1('t1_str')
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ]
+        }
+
+        ui = self.ns3.UOpen.t2([self.ns3.X(a='A', b='B')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't3',
+            't3': [
+                {
+                    'a': 'A',
+                    'b': 'B',
+                },
+            ],
+        }
+
+        ui = self.ns3.U.t3([self.ns3.X(a='A', b='B')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't4',
+        }
+
+        ui = self.ns3.UOpen.t4
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't5',
+            't5': 't5_str'
+        }
+
+        ui = self.ns3.UOpen.t5('t5_str')
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't6',
+            't6': 't6_str'
+        }
+
+        ui = self.ns3.UOpen.t6('t6_str')
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        json_data = {
+            '.tag': 't1',
+            't1': 't1_str'
+        }
+
+        ui = self.ns3.UOpen.t1('t1_str')
+
+        # test internal tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.default_cp)
+        self.assertEqual("caller does not have access to 't1' tag", str(cm.exception))
+
+        ui = self.ns3.UOpen.t2([self.ns3.X(a='A', b='B')])
+
+        # test alpha tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.default_cp)
+        self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
+
+        ui = self.ns3.UOpen.t2([self.ns3.X(a='A', b='B')])
+
+        # test alpha tag raises for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_cp)
+        self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
+
+        ui = self.ns3.UOpen.t5('t5_str')
+
+        # test internal child tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.default_cp)
+        self.assertEqual("caller does not have access to 't5' tag", str(cm.exception))
+
+        ui = self.ns3.UOpen.t6('t6_str')
+
+        # test alpha child tag raises for external caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.default_cp)
+        self.assertEqual("caller does not have access to 't6' tag", str(cm.exception))
+
+        # test alpha child tag raises for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_cp)
+        self.assertEqual("caller does not have access to 't6' tag", str(cm.exception))
+
+        json_data = {
+            '.tag': 't3',
+            't3': [
+                {
+                    'a': 'A',
+                },
+            ]
+        }
+
+        # test missing required internal field for external caller
+        ui = self.ns3.UOpen.t3([self.ns3.X(a='A')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.default_cp), json_data)
+
+        # test missing required internal field for alpha caller
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.alpha_cp), json_data)
+
+        # test missing required internal field for internal caller
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+                caller_permissions=self.internal_cp)
+        self.assertEqual("t3: missing required field 'b'", str(cm.exception))
+
+    def test_enumerated_subtype_encoding(self):
+        json_data = {
+            '.tag': 'file',
+            'name': 'File1',
+            'size': 5,
+            'x': {
+                'a': 'A',
+                'b': 'B',
+            },
+            'y': 'Y',
+        }
+
+        # test full super-type
+        fi = self.ns3.File(
+            name='File1', size=5, x=self.ns3.X(a='A', b='B'), y='Y')
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+                caller_permissions=self.internal_and_alpha_cp), json_data)
+
+        # test missing required internal parent field for internal and alpha caller
+        fi = self.ns3.File(
+            name='File1', size=5, y='Y')
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'x'", str(cm.exception))
+
+        # test missing required internal child field for internal and alpha caller
+        fi = self.ns3.File(
+            name='File1', size=5, x=self.ns3.X(a='A', b='B'))
+
+        with self.assertRaises(self.sv.ValidationError) as cm:
+            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+                caller_permissions=self.internal_and_alpha_cp)
+        self.assertEqual("missing required field 'y'", str(cm.exception))
+
+        json_data = {
+            '.tag': 'file',
+            'name': 'File1',
+            'size': 5,
+        }
+
+        fi = self.ns3.File(
+            name='File1', size=5, x=self.ns3.X(a='A', b='B'), y='Y')
+
+        # test internal stripped out for external caller
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+                caller_permissions=self.default_cp), json_data)
 
 
 if __name__ == '__main__':

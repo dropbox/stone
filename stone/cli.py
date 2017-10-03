@@ -327,7 +327,7 @@ def main():
             sys.path.append(new_python_path)
         try:
             backend_module = imp.load_source('user_backend', args.backend)
-        except:
+        except Exception:
             print("error: Importing backend '%s' module raised an exception:" %
                   args.backend, file=sys.stderr)
             raise

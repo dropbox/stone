@@ -705,6 +705,82 @@ to inject corresponding examples as well.
 
 .. _doc:
 
+Annotations
+======
+
+Annotations are special decorator tags that can be applied to fields in a
+Stone spec. Each annotation corresponds to an action that Stone will perform
+on the field.
+
+Currently, Stone supports the following annotations:
+
+Omission
+----------
+
+Omission is the server-side notion of changing the API interface depending on the caller.
+
+Currently, this is only supported in our Python SDK.
+
+"Omitted" annotations are annotations that associate a field with a particular
+set of caller permissions. "Caller permissions" are simply a list of raw string tags that
+the server determines apply to a particular caller.
+
+If the value of the Omitted annotation for a particular field is contained within the caller
+permissions list that the server passes to Stone at serialization time, the nullability of the
+field will be enforced. If not, then the field's nullability is ignored, and it will be stripped
+out at serialization time.
+
+This is useful in the case of maintaining a public/private interface for your API endpoints.
+Omitted annotations help to reduce server code redundancies and complicated public/private Stone
+object hierarchies.
+
+From the client's perspective, there is only one interface, be it public, private or any other
+arbitrary caller type that is defined in the Stone spec. It is the server's job to manage these
+different interfaces, depending on caller type.
+
+``public/people.stone``::
+
+    namespace people
+
+    struct Person
+        "Describes a member of society."
+
+        name String
+            "Given name followed by surname."
+
+        example default
+            name = "Stephen Cobbe"
+
+``private/people.stone``::
+
+    namespace people
+
+    annotation InternalOnly = Omitted("internal")
+
+    patch struct Person
+
+        sensitive_id UInt64
+            @InternalOnly
+            "A sensitive ID that should not be revealed publicly."
+
+        example default
+            sensitive_id = 1234
+
+In this example, the field `sensitive_id` will only be returned for callers that have the
+"internal" permission in the permissions list that the server passes into Stone at serialization time.
+
+This helps to streamline server logic. Endpoint handlers can simply compute the full
+public/private super-type, and then rely on the serialization layer to strip out the appropriate
+fields, depending on the caller type.
+
+For expensive fields, endpoint handler logic can be forked based on caller type with the understanding
+that nullability will be selectively enforced, depending on caller type.
+
+Note: as a simplifying assumption, fields can be tagged with at most one caller type.
+
+
+.. _doc:
+
 Documentation
 =============
 
