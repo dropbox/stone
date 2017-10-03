@@ -455,6 +455,16 @@ class Struct(Composite):
         self.validate_fields_only(val)
         return val
 
+    def validate_with_permissions(self, val, caller_permissions):
+        """
+        For a val to pass validation, val must be of the correct type and have
+        all required permissioned fields present. Should only be called
+        for callers with extra permissions.
+        """
+        self.validate(val)
+        self.validate_fields_only_with_permissions(val, caller_permissions)
+        return val
+
     def validate_fields_only(self, val):
         """
         To pass field validation, no required field should be missing.
@@ -465,10 +475,26 @@ class Struct(Composite):
         FIXME(kelkabany): Since the definition object does not maintain a list
         of which fields are required, all fields are scanned.
         """
-        for field_name, _ in self.definition._all_fields_:
+        for field_name in self.definition._all_field_names_:
             if not hasattr(val, field_name):
                 raise ValidationError("missing required field '%s'" %
                                       field_name)
+
+    def validate_fields_only_with_permissions(self, val, caller_permissions):
+        """
+        To pass field validation, no required field should be missing.
+        This method assumes that the contents of each field have already been
+        validated on assignment, so it's merely a presence check.
+        Should only be called for callers with extra permissions.
+        """
+        self.validate_fields_only(val)
+
+        # check if type has been patched
+        for extra_permission in caller_permissions.permissions:
+            all_field_names = '_all_{}_field_names_'.format(extra_permission)
+            for field_name in getattr(self.definition, all_field_names, set()):
+                if not hasattr(val, field_name):
+                    raise ValidationError("missing required field '%s'" % field_name)
 
     def validate_type_only(self, val):
         """

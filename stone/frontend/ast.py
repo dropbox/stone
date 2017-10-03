@@ -65,6 +65,10 @@ class AstAlias(ASTNode):
         self.name = name
         self.type_ref = type_ref
         self.doc = doc
+        self.annotations = []
+
+    def set_annotations(self, annotations):
+        self.annotations = annotations
 
     def __repr__(self):
         return 'AstAlias({!r}, {!r})'.format(self.name, self.type_ref)
@@ -228,18 +232,54 @@ class AstTagRef(ASTNode):
             self.tag,
         )
 
+class AstAnnotationRef(ASTNode):
+
+    def __init__(self, path, lineno, lexpos, annotation, ns):
+        """
+        Args:
+            annotation (str): Name of the referenced annotation.
+        """
+        super(AstAnnotationRef, self).__init__(path, lineno, lexpos)
+        self.annotation = annotation
+        self.ns = ns
+
+    def __repr__(self):
+        return 'AstAnnotationRef({!r}, {!r})'.format(
+            self.annotation, self.ns
+        )
+
+class AstAnnotationDef(ASTNode):
+
+    def __init__(self, path, lineno, lexpos, name, annotation_type, args, kwargs):
+        """
+        Args:
+            name (str): Name of the defined annotation.
+            annotation_type (str): Type of annotation to define.
+            args (str): Arguments to define annotation.
+            kwargs (str): Keyword Arguments to define annotation.
+        """
+        super(AstAnnotationDef, self).__init__(path, lineno, lexpos)
+        self.name = name
+        self.annotation_type = annotation_type
+        self.args = args
+        self.kwargs = kwargs
+
+    def __repr__(self):
+        return 'AstAnnotationDef({!r}, {!r}, {!r}, {!r})'.format(
+            self.name, self.annotation_type, self.args, self.kwargs
+        )
+
 class AstField(ASTNode):
     """
     Represents both a field of a struct and a field of a union.
     TODO(kelkabany): Split this into two different classes.
     """
 
-    def __init__(self, path, lineno, lexpos, name, type_ref, deprecated):
+    def __init__(self, path, lineno, lexpos, name, type_ref):
         """
         Args:
             name (str): The name of the field.
             type_ref (AstTypeRef): The data type of the field.
-            deprecated (bool): Whether the field is deprecated.
         """
         super(AstField, self).__init__(path, lineno, lexpos)
         self.name = name
@@ -247,7 +287,7 @@ class AstField(ASTNode):
         self.doc = None
         self.has_default = False
         self.default = None
-        self.deprecated = deprecated
+        self.annotations = []
 
     def set_doc(self, docstring):
         self.doc = docstring
@@ -256,10 +296,14 @@ class AstField(ASTNode):
         self.has_default = True
         self.default = default
 
+    def set_annotations(self, annotations):
+        self.annotations = annotations
+
     def __repr__(self):
-        return 'AstField({!r}, {!r})'.format(
+        return 'AstField({!r}, {!r}, {!r})'.format(
             self.name,
             self.type_ref,
+            self.annotations,
         )
 
 class AstVoidField(ASTNode):
@@ -268,16 +312,21 @@ class AstVoidField(ASTNode):
         super(AstVoidField, self).__init__(path, lineno, lexpos)
         self.name = name
         self.doc = None
+        self.annotations = []
 
     def set_doc(self, docstring):
         self.doc = docstring
+
+    def set_annotations(self, annotations):
+        self.annotations = annotations
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return 'AstVoidField({!r})'.format(
+        return 'AstVoidField({!r}, {!r})'.format(
             self.name,
+            self.annotations,
         )
 
 class AstSubtypeField(ASTNode):

@@ -49,17 +49,17 @@ class TestBackend(unittest.TestCase):
         a1.set_attributes(None, [StructField('f1', Boolean(), None, None)])
         a2 = Struct('A2', None, ns)
         a2.set_attributes(None, [StructField('f2', Boolean(), None, None)])
-        l = List(a1)
+        l1 = List(a1)
         s = String()
         route = ApiRoute('test/route', None)
-        route.set_attributes(None, None, l, a2, s, None)
+        route.set_attributes(None, None, l1, a2, s, None)
         ns.add_route(route)
 
         # Test that only user-defined types are returned.
         route_io = ns.get_route_io_data_types()
         self.assertIn(a1, route_io)
         self.assertIn(a2, route_io)
-        self.assertNotIn(l, route_io)
+        self.assertNotIn(l1, route_io)
         self.assertNotIn(s, route_io)
 
     def test_code_backend_helpers(self):

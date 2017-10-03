@@ -70,9 +70,9 @@ class TestStoneInternal(unittest.TestCase):
         # Test list
         #
 
-        l = List(String(min_length=1), min_items=1, max_items=3)
+        l1 = List(String(min_length=1), min_items=1, max_items=3)
 
-        l.check_example(
+        l1.check_example(
             AstExampleField(
                 path='test.stone',
                 lineno=1,
@@ -82,7 +82,7 @@ class TestStoneInternal(unittest.TestCase):
             ))
 
         with self.assertRaises(InvalidSpec) as cm:
-            l.check_example(
+            l1.check_example(
                 AstExampleField(
                     path='test.stone',
                     lineno=1,
@@ -96,9 +96,9 @@ class TestStoneInternal(unittest.TestCase):
         # Test list of lists
         #
 
-        l = List(List(String(min_length=1), min_items=1))
+        l1 = List(List(String(min_length=1), min_items=1))
 
-        l.check_example(
+        l1.check_example(
             AstExampleField(
                 path='test.stone',
                 lineno=1,
@@ -108,7 +108,7 @@ class TestStoneInternal(unittest.TestCase):
             ))
 
         with self.assertRaises(InvalidSpec) as cm:
-            l.check_example(
+            l1.check_example(
                 AstExampleField(
                     path='test.stone',
                     lineno=1,

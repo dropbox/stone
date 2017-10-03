@@ -19,11 +19,12 @@ if _MYPY:
 
     from .data_types import (  # noqa: F401 # pylint: disable=unused-import
         Alias,
+        Annotation,
         DataType,
         List as DataTypeList,
         Nullable,
-        UserDefined,
         Struct,
+        UserDefined,
     )
 
     from stone.frontend.ast import AstRouteDef  # noqa: F401 # pylint: disable=unused-import
@@ -90,6 +91,7 @@ class _ImportReason(object):
         # type: () -> None
         self.alias = False
         self.data_type = False
+        self.annotation = False
 
 
 class ApiNamespace(object):
@@ -107,6 +109,8 @@ class ApiNamespace(object):
         self.data_type_by_name = {}     # type: typing.Dict[str, UserDefined]
         self.aliases = []               # type: typing.List[Alias]
         self.alias_by_name = {}         # type: typing.Dict[str, Alias]
+        self.annotations = []           # type: typing.List[Annotation]
+        self.annotation_by_name = {}    # type: typing.Dict[str, Annotation]
         self._imported_namespaces = {}  # type: typing.Dict[ApiNamespace, _ImportReason]
 
     def add_doc(self, docstring):
@@ -141,11 +145,17 @@ class ApiNamespace(object):
         self.aliases.append(alias)
         self.alias_by_name[alias.name] = alias
 
+    def add_annotation(self, annotation):
+        # type: (Annotation) -> None
+        self.annotations.append(annotation)
+        self.annotation_by_name[annotation.name] = annotation
+
     def add_imported_namespace(self,
                                namespace,
                                imported_alias=False,
-                               imported_data_type=False):
-        # type: (ApiNamespace, bool, bool) -> None
+                               imported_data_type=False,
+                               imported_annotation=False):
+        # type: (ApiNamespace, bool, bool, bool) -> None
         """
         Keeps track of namespaces that this namespace imports.
 
@@ -155,6 +165,8 @@ class ApiNamespace(object):
                 in the imported namespace.
             imported_data_type (bool): Set if this namespace references a
                 data type in the imported namespace.
+            imported_annotation (bool): Set if this namespace references a
+                annotation in the imported namespace.
         """
         assert self.name != namespace.name, \
             'Namespace cannot import itself.'
@@ -163,6 +175,8 @@ class ApiNamespace(object):
             reason.alias = True
         if imported_data_type:
             reason.data_type = True
+        if imported_annotation:
+            reason.annotation = True
 
     def linearize_data_types(self):
         # type: () -> typing.List[UserDefined]
@@ -286,6 +300,7 @@ class ApiNamespace(object):
         self.routes.sort(key=lambda route: route.name)
         self.data_types.sort(key=lambda data_type: data_type.name)
         self.aliases.sort(key=lambda alias: alias.name)
+        self.annotations.sort(key=lambda annotation: annotation.name)
 
     def __repr__(self):
         # type: () -> str

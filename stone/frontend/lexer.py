@@ -149,6 +149,11 @@ class Lexer(object):
         'Q',
     )
 
+    # Annotation notation
+    tokens += (
+        'AT',
+    )
+
     # Regular expression rules for simple tokens
     t_DOT = r'\.'
     t_LPAR = r'\('
@@ -161,11 +166,13 @@ class Lexer(object):
     t_LBRACE = r'\{'
     t_RBRACE = r'\}'
     t_COLON = r'\:'
+    t_AT = r'@'
 
     # TODO(kelkabany): Use scoped/conditional lexing to restrict where keywords
     # are identified as such.
     KEYWORDS = [
         'alias',
+        'annotation',
         'attrs',
         'by',
         'deprecated',
@@ -183,10 +190,11 @@ class Lexer(object):
     ]
 
     RESERVED = {
+        'annotation': 'ANNOTATION',
+        'attrs': 'ATTRS',
         'deprecated': 'DEPRECATED',
         'by': 'BY',
         'extends': 'EXTENDS',
-        'attrs': 'ATTRS',
         'import': 'IMPORT',
         'patch': 'PATCH',
         'route': 'ROUTE',

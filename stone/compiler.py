@@ -118,7 +118,7 @@ class Compiler(object):
 
                 try:
                     backend.generate(api)
-                except:
+                except Exception:
                     # Wrap this exception so that it isn't thought of as a bug
                     # in the stone parser, but rather a bug in the backend.
                     # Remove the last char of the traceback b/c it's a newline.
