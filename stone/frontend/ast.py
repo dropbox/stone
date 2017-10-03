@@ -130,6 +130,23 @@ class AstStructDef(AstTypeDef):
             self.fields,
         )
 
+class AstStructPatch(ASTNode):
+
+    def __init__(self, path, lineno, lexpos, name, fields, examples):
+        super(AstStructPatch, self).__init__(path, lineno, lexpos)
+        self.name = name
+        assert isinstance(fields, list)
+        self.fields = fields
+
+        assert isinstance(examples, (OrderedDict, type(None))), type(examples)
+        self.examples = examples
+
+    def __repr__(self):
+        return 'AstStructPatch({!r}, {!r})'.format(
+            self.name,
+            self.fields,
+        )
+
 class AstUnionDef(AstTypeDef):
 
     def __init__(self, path, lineno, lexpos, name, extends, doc, fields,
@@ -148,6 +165,25 @@ class AstUnionDef(AstTypeDef):
         return 'AstUnionDef({!r}, {!r}, {!r}, {!r})'.format(
             self.name,
             self.extends,
+            self.fields,
+            self.closed,
+        )
+
+class AstUnionPatch(ASTNode):
+
+    def __init__(self, path, lineno, lexpos, name, fields, examples, closed):
+        super(AstUnionPatch, self).__init__(path, lineno, lexpos)
+        self.name = name
+        assert isinstance(fields, list)
+        self.fields = fields
+
+        assert isinstance(examples, (OrderedDict, type(None))), type(examples)
+        self.examples = examples
+        self.closed = closed
+
+    def __repr__(self):
+        return 'AstUnionPatch({!r}, {!r}, {!r})'.format(
+            self.name,
             self.fields,
             self.closed,
         )

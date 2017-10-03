@@ -54,10 +54,12 @@ from .ast import (
     AstNamespace,
     AstRouteDef,
     AstStructDef,
+    AstStructPatch,
     AstTagRef,
     AstTypeDef,
     AstTypeRef,
     AstUnionDef,
+    AstUnionPatch,
     AstVoidField,
 )
 
@@ -123,6 +125,8 @@ class IRGenerator(object):
 
         self._item_by_canonical_name = {}
 
+        self._patch_data_by_canonical_name = {}
+
     def generate_IR(self):
         """Parses the text of each spec and returns an API description. Returns
         None if an error was encountered during parsing."""
@@ -139,6 +143,7 @@ class IRGenerator(object):
             self._add_data_types_and_routes_to_api(namespace, partial_ast)
 
         self._add_imports_to_env(raw_api)
+        self._merge_patches()
         self._populate_type_attributes()
         self._populate_field_defaults()
         self._populate_enumerated_subtypes()
@@ -193,6 +198,10 @@ class IRGenerator(object):
                 api_type = self._create_type(env, item)
                 namespace.add_data_type(api_type)
                 self._check_canonical_name_available(item, namespace.name)
+            elif isinstance(item, AstStructPatch) or isinstance(item, AstUnionPatch):
+                # Handle patches later.
+                base_name = self._get_base_name(item.name, namespace.name)
+                self._patch_data_by_canonical_name[base_name] = (item, namespace)
             elif isinstance(item, AstRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
@@ -211,7 +220,7 @@ class IRGenerator(object):
     def _check_canonical_name_available(self, item, namespace_name):
         base_name = self._get_base_name(item.name, namespace_name)
 
-        if base_name not in self._item_by_canonical_name.keys():
+        if base_name not in self._item_by_canonical_name:
             self._item_by_canonical_name[base_name] = item
         else:
             stored_item = self._item_by_canonical_name[base_name]
@@ -318,6 +327,77 @@ class IRGenerator(object):
 
         env[item.name] = api_type
         return api_type
+
+    def _merge_patches(self):
+        """Injects object patches into their original object definitions."""
+        for patched_item, patched_namespace in self._patch_data_by_canonical_name.values():
+            patched_item_base_name = self._get_base_name(patched_item.name, patched_namespace.name)
+            if patched_item_base_name not in self._item_by_canonical_name:
+                raise InvalidSpec('Patch {} must correspond to a pre-existing data_type.'.format(
+                    quote(patched_item.name)), patched_item.lineno, patched_item.path)
+
+            existing_item = self._item_by_canonical_name[patched_item_base_name]
+
+            self._check_patch_type_mismatch(patched_item, existing_item)
+
+            if isinstance(patched_item, (AstStructPatch, AstUnionPatch)):
+                self._check_field_names_unique(existing_item, patched_item)
+                existing_item.fields += patched_item.fields
+                self._inject_patched_examples(existing_item, patched_item)
+            else:
+                raise AssertionError('Unknown Patch Object Type {}'.format(
+                    patched_item.__class__.__name__))
+
+    def _check_patch_type_mismatch(self, patched_item, existing_item):
+        """Enforces that each patch has a corresponding, already-defined data type."""
+        def raise_mismatch_error(patched_item, existing_item, data_type_name):
+            error_msg = ('Type mismatch. Patch {} corresponds to pre-existing '
+                'data_type {} ({}:{}) that has type other than {}.')
+            raise InvalidSpec(error_msg.format(
+                quote(patched_item.name),
+                quote(existing_item.name),
+                existing_item.path,
+                existing_item.lineno,
+                quote(data_type_name)), patched_item.lineno, patched_item.path)
+
+        if isinstance(patched_item, AstStructPatch):
+            if not isinstance(existing_item, AstStructDef):
+                raise_mismatch_error(patched_item, existing_item, 'struct')
+        elif isinstance(patched_item, AstUnionPatch):
+            if not isinstance(existing_item, AstUnionDef):
+                raise_mismatch_error(patched_item, existing_item, 'union')
+            else:
+                if existing_item.closed != patched_item.closed:
+                    raise_mismatch_error(
+                        patched_item, existing_item,
+                        'union_closed' if existing_item.closed else 'union')
+        else:
+            raise AssertionError(
+                'Unknown Patch Object Type {}'.format(patched_item.__class__.__name__))
+
+    def _check_field_names_unique(self, existing_item, patched_item):
+        """Enforces that patched fields don't already exist."""
+        existing_fields_by_name = {f.name: f for f in existing_item.fields}
+        for patched_field in patched_item.fields:
+            if patched_field.name in existing_fields_by_name.keys():
+                existing_field = existing_fields_by_name[patched_field.name]
+                raise InvalidSpec('Patched field {} overrides pre-existing field in {} ({}:{}).'
+                    .format(quote(patched_field.name),
+                            quote(patched_item.name),
+                            existing_field.path,
+                            existing_field.lineno), patched_field.lineno, patched_field.path)
+
+    def _inject_patched_examples(self, existing_item, patched_item):
+        """Injects patched examples into original examples."""
+        for key, _ in patched_item.examples.items():
+            patched_example = patched_item.examples[key]
+            existing_examples = existing_item.examples
+            if key in existing_examples:
+                existing_examples[key].fields.update(patched_example.fields)
+            else:
+                error_msg = 'Example defined in patch {} must correspond to a pre-existing example.'
+                raise InvalidSpec(error_msg.format(
+                    quote(patched_item.name)), patched_example.lineno, patched_example.path)
 
     def _populate_type_attributes(self):
         """

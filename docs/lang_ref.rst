@@ -636,6 +636,75 @@ is prohibited to make generating languages like Python possible.
 
 .. _doc:
 
+Patch
+======
+
+You can split the definition of a struct or union across multiple files using the
+``patch`` keyword.
+
+For example, we can define ``Person`` across two different files, starting with
+``public/people.stone``::
+
+    namespace people
+
+    struct Person
+        "Describes a member of society."
+
+        name String
+            "Given name followed by surname."
+
+Now in ``private/people.stone``, we can define additional fields::
+
+    namespace people
+
+    patch struct Person
+        age UInt64
+            "The number of years, rounded down."
+
+Only data types that have been fully-defined elsewhere can be patched. Note that patching
+can only be used to add additional fields, not mutate existing fields.
+
+Patching can inject both required and optional fields. For required fields, it is necessary
+to inject corresponding examples as well.
+
+``public/people.stone``::
+
+    namespace people
+
+    struct Person
+        "Describes a member of society."
+
+        name String
+            "Given name followed by surname."
+
+        example default
+            name = "Stephen Cobbe"
+
+        example child
+            name = "Ken Elkabany"
+
+        example adult
+            name = "Qiming Yuan"
+
+``private/people.stone``::
+
+    namespace people
+
+    patch struct Person
+        age UInt64
+            "The number of years, rounded down."
+
+        example default
+            age = 30
+
+        example child
+            name = 12
+
+        example adult
+            name = 45
+
+.. _doc:
+
 Documentation
 =============
 
