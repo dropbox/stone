@@ -920,13 +920,23 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                          if pattern else 'nil'),
                     ]))
 
-        if validator:
-            validator = fmt_func_call(
-                caller='DBStoneValidators', callee=validator)
-            if nullable:
+        if nullable:
+            if validator:
+                validator = fmt_func_call(
+                    caller='DBStoneValidators', callee=validator)
                 validator = fmt_func_call(
                     caller='DBStoneValidators',
                     callee='nullableValidator',
+                    args=validator)
+        else:
+            if validator:
+                validator = fmt_func_call(
+                    caller='DBStoneValidators', callee=validator)
+            else:
+                validator = 'nil'
+            validator = fmt_func_call(
+                    caller='DBStoneValidators',
+                    callee='nonnullValidator',
                     args=validator)
         return validator
 
