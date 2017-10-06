@@ -12,6 +12,7 @@ from stone.ir import (
     is_bytes_type,
     is_float_type,
     is_integer_type,
+    is_iso8601timestamp_type,
     is_list_type,
     is_map_type,
     is_nullable_type,
@@ -60,6 +61,8 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
         timestamp_override = override_dict.get(Timestamp, None)
         if timestamp_override:
             return timestamp_override(ns, data_type, override_dict)
+        return 'datetime.datetime'
+    elif is_iso8601timestamp_type(data_type):
         return 'datetime.datetime'
     elif is_alias(data_type):
         alias_type = cast(Alias, data_type)

@@ -17,6 +17,11 @@ import numbers
 import re
 import six
 
+try:
+    import dateutil.parser  # type: ignore
+except ImportError:
+    dateutil = None  # type: ignore
+
 from ..frontend.exception import InvalidSpec
 from ..frontend.ast import (
     AstExampleField,
@@ -447,6 +452,49 @@ class Timestamp(Primitive):
                 msg = msg.decode('utf-8')
             raise InvalidSpec(msg, attr_field.lineno, attr_field.path)
         return datetime.datetime.strptime(attr_field.value, self.format)
+
+class Iso8601Timestamp(Primitive):
+
+    def __init__(self, output_fmt, input_re=None):
+        super(Iso8601Timestamp, self).__init__()
+        if dateutil is None:
+            name = self.__class__.__name__
+            raise RuntimeError('{} requires python-dateutil which is not available'.format(name))
+        if not isinstance(output_fmt, six.string_types):
+            raise ParameterError('output_fmt must be a string')
+        self.output_format = output_fmt
+        if isinstance(input_re, six.string_types):
+            input_re = re.compile(input_re)
+        if input_re is not None and not hasattr(input_re, 'search'):
+            raise ParameterError('if provided, input_re must be a string or a regex object')
+        self.input_re = input_re
+
+    def check(self, val):
+        if not isinstance(val, six.string_types):
+            raise ValueError('timestamp must be specified as a string')
+        self._parse(val)
+
+    def check_example(self, ex_field):
+        try:
+            self.check(ex_field.value)
+        except (TypeError, ValueError) as e:
+            raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
+
+    def check_attr_repr(self, attr_field):
+        try:
+            return self._parse(attr_field.value)
+        except (TypeError, ValueError) as exc:
+            msg = exc.args[0]
+            if isinstance(msg, six.binary_type):
+                # For Python 2 compatibility.
+                msg = msg.decode('utf-8')
+            raise InvalidSpec(msg, attr_field.lineno, attr_field.path)
+
+    def _parse(self, val):
+        if self.input_re is not None and not self.input_re.search(val):
+            raise ValueError('{} does not match {}'.format(val, self.input_re.pattern))
+        # Raises a TypeError if val cannot be parsed
+        return dateutil.parser.parse(val)
 
 class List(Composite):
 
@@ -1679,6 +1727,8 @@ def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
 def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
+def is_iso8601timestamp_type(data_type):
+    return isinstance(data_type, Iso8601Timestamp)
 def is_list_type(data_type):
     return isinstance(data_type, List)
 def is_map_type(data_type):
