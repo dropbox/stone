@@ -21,10 +21,12 @@ from .ast import (
     AstImport,
     AstRouteDef,
     AstStructDef,
+    AstStructPatch,
     AstSubtypeField,
     AstTagRef,
     AstTypeRef,
     AstUnionDef,
+    AstUnionPatch,
     AstVoidField,
 )
 
@@ -141,7 +143,9 @@ class ParserFactory(object):
     def p_definition(self, p):
         """definition : alias
                       | struct
+                      | struct_patch
                       | union
+                      | union_patch
                       | route"""
         p[0] = p[1]
 
@@ -343,6 +347,16 @@ class ParserFactory(object):
             fields=p[8],
             examples=p[9])
 
+    def p_struct_patch(self, p):
+        """struct_patch : PATCH STRUCT ID NL INDENT field_list examples DEDENT"""
+        p[0] = AstStructPatch(
+            path=self.path,
+            lineno=p.lineno(1),
+            lexpos=p.lexpos(1),
+            name=p[3],
+            fields=p[6],
+            examples=p[7])
+
     def p_inheritance(self, p):
         """inheritance : EXTENDS type_ref
                        | empty"""
@@ -469,6 +483,17 @@ class ParserFactory(object):
             fields=p[7],
             examples=p[8],
             closed=p[1][0] == 'union_closed')
+
+    def p_union_patch(self, p):
+        """union_patch : PATCH uniont ID NL INDENT field_list examples DEDENT"""
+        p[0] = AstUnionPatch(
+            path=self.path,
+            lineno=p[2][1],
+            lexpos=p[2][2],
+            name=p[3],
+            fields=p[6],
+            examples=p[7],
+            closed=p[2][0] == 'union_closed')
 
     def p_uniont(self, p):
         """uniont : UNION
