@@ -858,14 +858,15 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
     def _generate_validator(self, field):
         """Emits validator if data type has associated validator."""
         validator = self._determine_validator_type(field.data_type,
-                                                   fmt_var(field.name))
+                                                   fmt_var(field.name),
+                                                   field.has_default)
         value = fmt_var(
             field.name) if not field.has_default else '{} ?: {}'.format(
                 fmt_var(field.name), fmt_default_value(field))
         if validator:
             self.emit('{}({});'.format(validator, value))
 
-    def _determine_validator_type(self, data_type, value):
+    def _determine_validator_type(self, data_type, value, has_default):
         """Returns validator string for given data type, else None."""
         data_type, nullable = unwrap_nullable(data_type)
 
@@ -873,7 +874,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
 
         if is_list_type(data_type):
             item_validator = self._determine_validator_type(
-                data_type.data_type, value)
+                data_type.data_type, value, False)
             item_validator = item_validator if item_validator else 'nil'
 
             validator = '{}:{}'.format(
@@ -887,7 +888,7 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                 ]))
         elif is_map_type(data_type):
             item_validator = self._determine_validator_type(
-                data_type.value_data_type, value)
+                data_type.value_data_type, value, False)
             item_validator = item_validator if item_validator else 'nil'
 
             validator = '{}:{}'.format(
@@ -934,10 +935,13 @@ class ObjCTypesGenerator(ObjCBaseGenerator):
                     caller='DBStoneValidators', callee=validator)
             else:
                 validator = 'nil'
-            validator = fmt_func_call(
-                    caller='DBStoneValidators',
-                    callee='nonnullValidator',
-                    args=validator)
+            if not has_default:
+                validator = fmt_func_call(
+                        caller='DBStoneValidators',
+                        callee='nonnullValidator',
+                        args=validator)
+            else:
+                validator = None
         return validator
 
     def _generate_struct_serializer(self, struct):
