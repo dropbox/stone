@@ -533,9 +533,9 @@ class ObjCBackend(ObjCBaseBackend):
         """Returns a deprecation tag / message, if route is deprecated."""
         result = ''
         if route.deprecated:
-            msg = '{} is deprecated.'.format(route.name)
+            msg = '{} is deprecated.'.format(fmt_var(route.name))
             if route.deprecated.by:
-                msg += ' Use {}.'.format(route.deprecated.by.name)
+                msg += ' Use {}.'.format(fmt_var(route.deprecated.by.name))
             result = ' __deprecated_msg("{}")'.format(msg)
         return result
 
