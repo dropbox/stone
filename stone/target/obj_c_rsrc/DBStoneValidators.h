@@ -22,8 +22,8 @@ NS_ASSUME_NONNULL_BEGIN
 /// Validator for `NSArray` objects. Enforces minimum number of items and/or maximum minimum number of items. Method
 /// requires a validator block that can validate each item in the array.
 + (void (^_Nonnull)(NSArray<T> *))arrayValidator:(nullable NSNumber *)minItems
-                                maxItems:(nullable NSNumber *)maxItems
-                           itemValidator:(void (^_Nullable)(T))itemValidator;
+                                        maxItems:(nullable NSNumber *)maxItems
+                                   itemValidator:(void (^_Nullable)(T))itemValidator;
 
 /// Validator for `NSDictionary` objects. Enforces minimum number of items and/or maximum minimum number of items.
 /// Method
@@ -34,6 +34,8 @@ NS_ASSUME_NONNULL_BEGIN
 + (void (^_Nonnull)(T))nullableValidator:(void (^_Nonnull)(T))internalValidator;
 
 + (void (^_Nonnull)(id))nonnullValidator:(void (^_Nullable)(id))internalValidator;
+
++ (void)raiseIllegalStateErrorWithMessage:(NSString *)message;
 
 @end
 
