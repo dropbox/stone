@@ -228,7 +228,7 @@ class ObjCBaseBackend(CodeBackend):
             data_type, _ = unwrap_nullable(data_type)
             if is_list_type(data_type):
                 while is_list_type(data_type):
-                    data_type = data_type.data_type
+                    data_type, _ = unwrap_nullable(data_type.data_type)
 
             if not is_void_type(data_type) and is_user_defined_type(data_type):
                 result.append(data_type)
