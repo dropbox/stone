@@ -24,16 +24,23 @@ from ..ir import (
     Boolean,
     Bytes,
     DataType,
+    Deprecated,
     DeprecationInfo,
     Float32,
     Float64,
     Int32,
     Int64,
+    is_alias,
+    is_user_defined_type,
+    is_void_type,
     List,
     Map,
     Nullable,
     Omitted,
+    Preview,
     ParameterError,
+    RedactedBlot,
+    RedactedHash,
     String,
     Struct,
     StructField,
@@ -77,7 +84,11 @@ doc_ref_val_re = re.compile(
 
 # Defined Annotations
 ANNOTATION_CLASS_BY_STRING = {
+    'Deprecated': Deprecated,
     'Omitted': Omitted,
+    'Preview': Preview,
+    'RedactedBlot': RedactedBlot,
+    'RedactedHash': RedactedHash,
 }
 
 
@@ -157,6 +168,7 @@ class IRGenerator(object):
         self._populate_route_attributes()
         self._populate_examples()
         self._validate_doc_refs()
+        self._validate_annotations()
 
         self.api.normalize()
 
@@ -323,7 +335,7 @@ class IRGenerator(object):
         namespace = self.api.ensure_namespace(env.namespace_name)
 
         if item.annotation_type not in ANNOTATION_CLASS_BY_STRING:
-            raise InvalidSpec('Unknown Annotation type %s.' %
+            raise InvalidSpec("Unknown Annotation type '%s'." %
                               item.annotation_type, item.lineno, item.path)
 
         annotation_class = ANNOTATION_CLASS_BY_STRING[item.annotation_type]
@@ -1131,20 +1143,56 @@ class IRGenerator(object):
                     'Unknown doc reference tag %s.' % quote(tag),
                     *loc)
 
-    def _validate_object_can_be_annotated(self, annotated_object):
+    def _validate_annotations(self):
         """
-        Validates that object type can be annotated and object does not have
+        Validates that all annotations are attached to proper types and that no field
+        has conflicting inherited or direct annotations. We need to go through all reference
+        chains to make sure we don't override a redactor set on a parent alias or type
+        """
+        for namespace in self.api.namespaces.values():
+            for data_type in namespace.data_types:
+                for field in data_type.fields:
+                    if field.redactor:
+                        self._validate_field_can_be_tagged_with_redactor(field)
+
+            for alias in namespace.aliases:
+                if alias.redactor:
+                    self._validate_object_can_be_tagged_with_redactor(alias)
+
+    def _validate_field_can_be_tagged_with_redactor(self, field):
+        """
+        Validates that the field type can be annotated and that alias does not have
+        conflicting annotations.
+        """
+        if is_alias(field.data_type):
+            raise InvalidSpec(
+                "Redactors can only be applied to alias definitions, not "
+                "to alias references.",
+                field._ast_node.lineno, field._ast_node.path)
+
+        self._validate_object_can_be_tagged_with_redactor(field)
+
+    def _validate_object_can_be_tagged_with_redactor(self, annotated_object):
+        """
+        Validates that the object type can be annotated and object does not have
         conflicting annotations.
         """
         data_type = annotated_object.data_type
         name = annotated_object.name
         loc = annotated_object._ast_node.lineno, annotated_object._ast_node.path
-        while isinstance(data_type, Alias) or isinstance(data_type, Nullable):
-            if hasattr(data_type, 'Omitted_group') and data_type.Omitted_group:
-                raise InvalidSpec('An Omitted group has already been defined for %s by %s' %
-                                  (name, data_type.name), *loc)
+        curr_data_type = data_type
 
-            data_type = data_type.data_type
+        while isinstance(curr_data_type, Alias) or isinstance(curr_data_type, Nullable):
+            # aliases have redactors assocaited with the type itself
+            if hasattr(curr_data_type, 'redactor') and curr_data_type.redactor:
+                raise InvalidSpec("A redactor has already been defined for '%s' by '%s'." %
+                                  (str(name), str(curr_data_type.name)), *loc)
+
+            curr_data_type = curr_data_type.data_type
+
+        if hasattr(annotated_object, 'redactor') and annotated_object.redactor:
+            if is_user_defined_type(curr_data_type) or is_void_type(curr_data_type):
+                raise InvalidSpec("Redactors can't be applied to user-defined or void types.", *loc)
 
     def _validate_stone_cfg(self):
         """

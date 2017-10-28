@@ -23,6 +23,8 @@ from stone.ir import (
     is_integer_type,
     is_void_type,
     Nullable,
+    RedactedBlot,
+    RedactedHash,
     String,
     Map
 )
@@ -3907,6 +3909,26 @@ class TestStone(unittest.TestCase):
         self.assertEqual(cm.exception.path, 'ns1.stone')
 
     def test_annotations(self):
+        # Test non-existant annotation
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation NonExistant = NonExistant()
+
+            struct S
+
+                f String
+                    @NonExistant
+                    "Test field with two non-existant tag."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Unknown Annotation type 'NonExistant'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
         # Test omission tag
         text = textwrap.dedent("""\
             namespace test
@@ -3917,7 +3939,7 @@ class TestStone(unittest.TestCase):
 
                 f String
                     @InternalOnly
-                    "Test field with one omit tag."
+                    "Test field with one omitted tag."
 
             """)
         api = specs_to_ir([('test.stone', text)])
@@ -3938,13 +3960,353 @@ class TestStone(unittest.TestCase):
                 f String
                     @AlphaOnly
                     @InternalOnly
-                    "Test field with two omit tags."
+                    "Test field with two omitted tags."
 
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual(
             "Omitted caller already set as 'alpha_only'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
+        # Test deprecated tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Deprecated = Deprecated()
+
+            struct S
+
+                f String
+                    @Deprecated
+                    "Test field with one deprecated tag."
+
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        s = api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s.all_fields[0].name, 'f')
+        self.assertEqual(s.all_fields[0].deprecated, True)
+        self.assertIn('Field is deprecated.', s.all_fields[0].doc)
+
+        # Test applying two deprecated tags to one field
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Deprecated = Deprecated()
+
+            struct S
+
+                f String
+                    @Deprecated
+                    @Deprecated
+                    "Test field with two deprecated tags."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Deprecated value already set as 'True'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
+
+        # Test preview tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Preview = Preview()
+
+            struct S
+
+                f String
+                    @Preview
+                    "Test field with one preview tag."
+
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        s = api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s.all_fields[0].name, 'f')
+        self.assertEqual(s.all_fields[0].preview, True)
+        self.assertIn('Field is in preview mode - do not rely on in production.',
+                      s.all_fields[0].doc)
+
+        # Test applying two preview tags to one field
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Preview = Preview()
+
+            struct S
+
+                f String
+                    @Preview
+                    @Preview
+                    "Test field with two preview tags."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Preview value already set as 'True'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
+
+        # Test applying both preview and deprecated (preview then deprecated)
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Preview = Preview()
+            annotation Deprecated = Deprecated()
+
+            struct S
+
+                f String
+                    @Preview
+                    @Deprecated
+                    "Test field with deprecated and preview tags."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertIn(
+            "'Deprecated' and 'Preview' can't both be set.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
+        # Test applying both preview and deprecated (deprecated then preview)
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Preview = Preview()
+            annotation Deprecated = Deprecated()
+
+            struct S
+
+                f String
+                    @Deprecated
+                    @Preview
+                    "Test field with deprecated and preview tags."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertIn(
+            "'Deprecated' and 'Preview' can't both be set.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
+        # Test redacted blot tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedBlot("test_regex")
+
+            struct S
+
+                f String
+                    @FieldRedactor
+                    "Test field with one redacted blot tag."
+
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        s = api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s.all_fields[0].name, 'f')
+        self.assertTrue(isinstance(s.all_fields[0].redactor, RedactedBlot))
+        self.assertEqual(s.all_fields[0].redactor.regex, "test_regex")
+
+        # Test applying two redacted blot tags to one field
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedBlot("test_regex")
+            annotation AnotherFieldRedactor = RedactedBlot("another_test_regex")
+
+            struct S
+
+                f String
+                    @FieldRedactor
+                    @AnotherFieldRedactor
+                    "Test field with two redacted blot tags."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertIn(
+            "Redactor already set as \"RedactedBlot",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
+        # Test redacted hash tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            struct S
+
+                f UInt32
+                    @FieldRedactor
+                    "Test field with one redacted hash tag."
+
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        s = api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual(s.all_fields[0].name, 'f')
+        self.assertTrue(isinstance(s.all_fields[0].redactor, RedactedHash))
+        self.assertEqual(s.all_fields[0].redactor.regex, "test_regex")
+
+        # Test applying two redacted blot tags to one field
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+            annotation AnotherFieldRedactor = RedactedHash("another_test_regex")
+
+            struct S
+
+                f String
+                    @FieldRedactor
+                    @AnotherFieldRedactor
+                    "Test field with two redacted hash tags."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertIn(
+            "Redactor already set as \"RedactedHash",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
+        # Test redacted blot tag on alias
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedBlot("test_regex")
+
+            alias TestAlias = UInt32
+                @FieldRedactor
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        alias = api.namespaces['test'].alias_by_name['TestAlias']
+        self.assertTrue(isinstance(alias.redactor, RedactedBlot))
+        self.assertEqual(alias.redactor.regex, "test_regex")
+
+        # Test redacted hash tag on alias
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            alias TestAlias = String
+                @FieldRedactor
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        alias = api.namespaces['test'].alias_by_name['TestAlias']
+        self.assertTrue(isinstance(alias.redactor, RedactedHash))
+        self.assertEqual(alias.redactor.regex, "test_regex")
+
+        # Test deprecated tag (non-redact) tag on alias
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Deprecated = Deprecated()
+
+            alias TestAlias = String
+                @Deprecated
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertIn(
+            "Aliases only support 'Redacted', not",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 5)
+
+        # Test applying redactor tag to non-String/numeric field
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            struct T
+                f String
+
+            struct S
+
+                f T?
+                    @FieldRedactor
+                    "Test field with non-String type."
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Redactors can't be applied to user-defined or void types.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 10)
+
+        # Test applying redactor tag to non-String/numeric alias
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            struct T
+                f String
+
+            alias B = T
+            alias A = B
+                @FieldRedactor
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Redactors can't be applied to user-defined or void types.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 9)
+
+        # Test applying redactor tag to alias to alias which already has redactor tag
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            alias B = String
+                @FieldRedactor
+
+            alias A = B
+                @FieldRedactor
+
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "A redactor has already been defined for 'A' by 'B'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 8)
+
+        # Test applying redactor tag to alias field
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            alias A = String
+
+            struct T
+                f A
+                    @FieldRedactor
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Redactors can only be applied to alias definitions, not to alias references.",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 8)
 

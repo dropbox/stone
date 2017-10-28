@@ -710,7 +710,7 @@ Annotations
 
 Annotations are special decorator tags that can be applied to fields in a
 Stone spec. Each annotation corresponds to an action that Stone will perform
-on the field.
+on the field. Annotations can be stacked on top of one another in most cases.
 
 Currently, Stone supports the following annotations:
 
@@ -718,8 +718,6 @@ Omission
 ----------
 
 Omission is the server-side notion of changing the API interface depending on the caller.
-
-Currently, this is only supported in our Python SDK.
 
 "Omitted" annotations are annotations that associate a field with a particular
 set of caller permissions. "Caller permissions" are simply a list of raw string tags that
@@ -777,6 +775,94 @@ For expensive fields, endpoint handler logic can be forked based on caller type 
 that nullability will be selectively enforced, depending on caller type.
 
 Note: as a simplifying assumption, fields can be tagged with at most one caller type.
+
+Redaction
+----------
+
+Redaction is the act of removing sensitive data during serialization for the purpose of logging.
+
+"Redacted" annotations are annotations that associate a field with a particular
+type of redaction, either blotting out (e.g "***") or hashing. The redacting action is performed
+during serialization in the context of logging. This keeps sensitive information outside of logs.
+Currently, only string and numeric typed fields are eligible for redaction.
+
+Redacted annotations accept an optional regular expression string which selectively applies the
+redacting action to the part of the value to be redacted. If no regex is supplied, the entire
+value is redacted.
+
+In general, redaction is done at the field level. Aliases, however, can be marked at their definition
+with a redactor tag. In this case, any field of that alias type will be redacted, so redaction will be
+done at the type level.
+
+::
+    namespace people
+
+    annotation NameRedactor = RedactedBlot("test_regex")
+    annotation IdRedactor = RedactedHash()
+
+    alias Name = String
+        @NameRedactor
+
+    struct Person
+        "Describes a member of society."
+
+        name Name
+            "Given name followed by surname."
+
+        sensitive_id UInt64
+            @IdRedactor
+            "A sensitive ID that should not be revealed publicly."
+
+        example default
+            name = "Stephen Cobbe"
+
+Deprecation
+----------
+
+Deprecation here is the act of marking a field as deprecated (as opposted to marking a route as deprecated).
+
+Deprecated fields have special warnings injected into their documentation, and can be used to generate
+compile-time warnings if the field is referenced.
+
+::
+
+    namespace people
+
+    annotation Deprecated = Deprecated()
+
+    struct Person
+        "Describes a member of society."
+
+        name String
+            @Deprecated
+            "Given name followed by surname."
+
+        example default
+            name = "Stephen Cobbe"
+
+Previewing
+----------
+
+Previewing here is the act of marking a field as in preview-mode (as opposted to marking a route as in preview-mode).
+
+Preview fields have special warnings injected into their documentation, and can be used to generate
+compile-time warnings if the field is referenced.
+
+::
+
+    namespace people
+
+    annotation Preview = Preview()
+
+    struct Person
+        "Describes a member of society."
+
+        name String
+            @Preview
+            "Given name followed by surname."
+
+        example default
+            name = "Stephen Cobbe"
 
 
 .. _doc:

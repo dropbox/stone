@@ -14,6 +14,7 @@ from __future__ import absolute_import, unicode_literals
 
 from abc import ABCMeta, abstractmethod
 import datetime
+import hashlib
 import math
 import numbers
 import re
@@ -616,3 +617,51 @@ class Nullable(Validator):
 
     def get_default(self):
         return None
+
+class Redactor(object):
+    def __init__(self, regex):
+        """
+        Args:
+            regex: What parts of the field to redact.
+        """
+        self.regex = regex
+
+    @abstractmethod
+    def apply(self, val):
+        """Redacts information from annotated field.
+        Returns: A redacted version of the string provided.
+        """
+        pass
+
+    def _get_matches(self, val):
+        if not self.regex:
+            return None
+        try:
+            return re.search(self.regex, val)
+        except TypeError:
+            return None
+
+
+class HashRedactor(Redactor):
+    def apply(self, val):
+        matches = self._get_matches(val)
+
+        try:
+            hashed = hashlib.md5(str(val).encode('utf-8')).hexdigest()
+        except [AttributeError, ValueError]:
+            hashed = None
+
+        if matches:
+            blotted = '***'.join(matches.groups())
+            if hashed:
+                return '{} ({})'.format(hashed, blotted)
+            return blotted
+        return hashed
+
+
+class BlotRedactor(Redactor):
+    def apply(self, val):
+        matches = self._get_matches(val)
+        if matches:
+            return '***'.join(matches.groups())
+        return '********'
