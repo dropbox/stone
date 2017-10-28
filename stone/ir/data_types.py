@@ -571,20 +571,50 @@ class Field(object):
         self.raw_doc = doc
         self.doc = doc_unwrap(doc)
         self._ast_node = ast_node
+        self.redactor = None
         self.omitted_caller = None
+        self.deprecated = None
+        self.preview = None
 
     def set_annotations(self, annotations):
         if not annotations:
             return
 
         for annotation in annotations:
-            if isinstance(annotation, Omitted):
+            if isinstance(annotation, Deprecated):
+                if self.deprecated:
+                    raise InvalidSpec("Deprecated value already set as %r." %
+                                      str(self.deprecated), self._ast_node.lineno)
+                if self.preview:
+                    raise InvalidSpec("'Deprecated' and 'Preview' can\'t both be set.",
+                                      self._ast_node.lineno)
+                self.deprecated = True
+                self.doc = 'Field is deprecated. {}'.format(self.doc)
+            elif isinstance(annotation, Omitted):
                 if self.omitted_caller:
                     raise InvalidSpec("Omitted caller already set as %r." %
                                       str(self.omitted_caller), self._ast_node.lineno)
                 self.omitted_caller = annotation.omitted_caller
                 self.doc = 'Field is only returned for "{}" callers. {}'.format(
                     str(self.omitted_caller), self.doc)
+            elif isinstance(annotation, Preview):
+                if self.preview:
+                    raise InvalidSpec("Preview value already set as %r." %
+                                      str(self.preview), self._ast_node.lineno)
+
+                if self.deprecated:
+                    raise InvalidSpec("'Deprecated' and 'Preview' can\'t both be set.",
+                                      self._ast_node.lineno)
+                self.preview = True
+                self.doc = 'Field is in preview mode - do not rely on in production. {}'.format(
+                    self.doc
+                )
+            elif isinstance(annotation, Redacted):
+                # Make sure we don't set multiple conflicting annotations on one field
+                if self.redactor:
+                    raise InvalidSpec("Redactor already set as %r." %
+                                      str(self.redactor), self._ast_node.lineno)
+                self.redactor = annotation
             else:
                 raise InvalidSpec(
                     'Annotation %r not recognized for field.' % annotation, self._ast_node.lineno)
@@ -1561,20 +1591,58 @@ class Annotation(object):
         self.namespace = namespace
         self._ast_node = ast_node
 
+
+class Deprecated(Annotation):
+    """
+    Used when a field is annotated for deprecation.
+    """
     def __repr__(self):
-        return 'Annotation(%r, %r)' % (self.name, self.namespace)
+        return 'Deprecated(%r, %r)' % (self.name, self.namespace)
 
 
 class Omitted(Annotation):
     """
     Used when a field is annotated for omission.
     """
-    def __init__(self, name, namespace, token, omitted_caller):
-        super(Omitted, self).__init__(name, namespace, token)
+    def __init__(self, name, namespace, ast_node, omitted_caller):
+        super(Omitted, self).__init__(name, namespace, ast_node)
         self.omitted_caller = omitted_caller
 
     def __repr__(self):
-        return 'Omitted(%r, %r)' % (self.name, self.omitted_caller)
+        return 'Omitted(%r, %r, %r)' % (self.name, self.namespace, self.omitted_caller)
+
+
+class Preview(Annotation):
+    """
+    Used when a field is annotated for previewing.
+    """
+    def __repr__(self):
+        return 'Preview(%r, %r)' % (self.name, self.namespace)
+
+
+class Redacted(Annotation):
+    """
+    Used when a field is annotated for redaction.
+    """
+    def __init__(self, name, namespace, ast_node, regex=None):
+        super(Redacted, self).__init__(name, namespace, ast_node)
+        self.regex = regex
+
+
+class RedactedBlot(Redacted):
+    """
+    Used when a field is annotated to be blotted.
+    """
+    def __repr__(self):
+        return 'RedactedBlot(%r, %r, %r)' % (self.name, self.namespace, self.regex)
+
+
+class RedactedHash(Redacted):
+    """
+    Used when a field is annotated to be hashed.
+    """
+    def __repr__(self):
+        return 'RedactedHash(%r, %r, %r)' % (self.name, self.namespace, self.regex)
 
 
 class Alias(Composite):
@@ -1604,11 +1672,19 @@ class Alias(Composite):
         self.raw_doc = None
         self.doc = None
         self.data_type = None
+        self.redactor = None
 
     def set_annotations(self, annotations):
         for annotation in annotations:
-            raise InvalidSpec("Aliases don't support %r" %
-                              annotation, self._ast_node.lineno)
+            if isinstance(annotation, Redacted):
+                # Make sure we don't set multiple conflicting annotations on one alias
+                if self.redactor:
+                    raise InvalidSpec("Redactor already set as %r" %
+                                      str(self.redactor), self._ast_node.lineno)
+                self.redactor = annotation
+            else:
+                raise InvalidSpec("Aliases only support 'Redacted', not %r" %
+                                  str(annotation), self._ast_node.lineno)
 
     def set_attributes(self, doc, data_type):
         """

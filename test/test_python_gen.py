@@ -1521,6 +1521,7 @@ namespace ns3
 
 struct A
     "Sample struct doc."
+
     a String
         "Sample field doc."
 
@@ -1550,33 +1551,44 @@ namespace ns3
 
 import ns4
 
+alias TestAlias = String
+    @ns4.TestFullHashRedactor
+
 patch struct A
 
     b Int64
+        @ns4.TestFullHashRedactor
+        @ns4.Deprecated
         @ns4.InternalOnly
         "A patched, internal-only field."
 
     c String?
+        @ns4.Preview
         @ns4.InternalOnly
+        @ns4.TestFullBlotRedactor
 
     d List(X)
         @ns4.InternalOnly
 
     e Map(String, String?)
+        @ns4.TestFullBlotRedactor
         @ns4.InternalOnly
 
     f X
         @ns4.InternalOnly
 
     g Int64
+        @ns4.TestFullBlotRedactor
         @ns4.AlphaOnly
 
 struct X
 
     a String
+        @ns4.TestPartialBlotRedactor
 
     b String
         @ns4.InternalOnly
+        @ns4.TestPartialHashRedactor
 
 patch struct B
 
@@ -1585,10 +1597,12 @@ patch struct B
 
     y String
         @ns4.AlphaOnly
+        @ns4.TestFullHashRedactor
 
 patch union_closed U
 
     t1 String
+        @ns4.TestPartialHashRedactor
         @ns4.InternalOnly
 
     t2 List(X)
@@ -1596,12 +1610,15 @@ patch union_closed U
 
     t3 List(X)
 
+    t9 List(String)
+        @ns4.TestFullBlotRedactor
+
     t_void
         @ns4.TestVoidField
 
 patch union UOpen
 
-    t5 String
+    t5 TestAlias
         @ns4.InternalOnly
 
     t6 String
@@ -1615,6 +1632,7 @@ patch struct Resource
 patch struct File
 
     y String
+        @ns4.TestPartialHashRedactor
         @ns4.InternalOnly
 """
 
@@ -1624,10 +1642,19 @@ namespace ns4
 annotation InternalOnly = Omitted("internal")
 annotation AlphaOnly = Omitted("alpha")
 annotation TestVoidField = Omitted("test_void_field")
+
+annotation Deprecated = Deprecated()
+annotation Preview = Preview()
+
+
+annotation TestFullHashRedactor = RedactedHash()
+annotation TestFullBlotRedactor = RedactedBlot()
+annotation TestPartialHashRedactor = RedactedHash("()(\\-hash\\-)()")
+annotation TestPartialBlotRedactor = RedactedBlot("()(\\-blot\\-)()")
 """
 
 
-class TestTaggedGeneratedPython(unittest.TestCase):
+class TestAnnotationsGeneratedPython(unittest.TestCase):
 
     def setUp(self):
 
@@ -1666,7 +1693,7 @@ class TestTaggedGeneratedPython(unittest.TestCase):
         self.alpha_cp = CallerPermissionsTest(['alpha'])
         self.internal_and_alpha_cp = CallerPermissionsTest(['internal', 'alpha'])
 
-    def test_struct_child_decoding(self):
+    def test_struct_parent_decoding(self):
         json_data = {
             'a': 'A',
             'b': 1,
@@ -1913,7 +1940,7 @@ class TestTaggedGeneratedPython(unittest.TestCase):
             # pylint: disable=pointless-statement
             a.g
 
-    def test_struct_parent_decoding(self):
+    def test_struct_child_decoding(self):
         json_data = {
             'a': 'A',
             'b': 1,
@@ -3105,6 +3132,124 @@ class TestTaggedGeneratedPython(unittest.TestCase):
         self.assertEqual(
             self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
                 caller_permissions=self.default_cp), json_data)
+
+    def test_struct_parent_encoding_with_redaction(self):
+        json_data = {
+            'a': 'A', 'b': 'c4ca4238a0b923820dcc509a6f75849b', 'c': '********', 'd':
+            [{'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'}],
+            'e': '********',
+            'f': {'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'},
+            'g': '********',
+        }
+
+        # test full super-type
+        ai = self.ns3.A(
+            a='A', b=1, c='C', d=[self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST')],
+            e={'e1': 'e2'}, f=self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST'), g=4)
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+        json_data = {
+            'a': 'A', 'b': 'c4ca4238a0b923820dcc509a6f75849b', 'c': '********', 'd':
+            [{'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'}],
+            'e': '********',
+            'f': {'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'},
+        }
+
+        # test internal type
+        ai = self.ns3.A(
+            a='A', b=1, c='C', d=[self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST')],
+            e={'e1': 'e2'}, f=self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST'), g=4)
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.internal_cp, should_redact=True), json_data)
+
+        json_data = {
+            'a': 'A',
+            'g': '********',
+        }
+
+        # test alpha type
+        ai = self.ns3.A(
+            a='A', b=1, c='C', d=[self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST')],
+            e={'e1': 'e2'}, f=self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST'), g=4)
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+                caller_permissions=self.alpha_cp, should_redact=True), json_data)
+
+    def test_struct_child_encoding_with_redaction(self):
+        json_data = {
+            'a': 'A', 'b': 'c4ca4238a0b923820dcc509a6f75849b', 'c': '********', 'd':
+            [{'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'}],
+            'e': '********',
+            'f': {'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'},
+            'g': '********', 'h': 'H', 'x': 'X', 'y': '57cec4137b614c87cb4e24a3d003a3e0',
+        }
+
+        # test full super-type
+        bi = self.ns3.B(
+            a='A', b=1, c='C', d=[self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST')],
+            e={'e1': 'e2'}, f=self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST'), g=4, h='H',
+            x='X', y='Y')
+
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+    def test_union_closed_parent_encoding_with_redaction(self):
+        # test all tags
+        json_data = {
+            '.tag': 't0',
+        }
+
+        ui = self.ns3.U.t0
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+        json_data = {
+            '.tag': 't1',
+            't1': 'c983987c3b0629b9906c5c7d353409fe'
+        }
+
+        ui = self.ns3.U.t1('t1_str')
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': '********',
+                    'b': '9d5ed678fe57bcca610140957afab571',
+                },
+            ]
+        }
+
+        ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+        json_data = {
+            '.tag': 't3',
+            't3': [
+                {
+                    'a': '********',
+                    'b': '9d5ed678fe57bcca610140957afab571',
+                },
+            ],
+        }
+
+        ui = self.ns3.U.t3([self.ns3.X(a='A', b='B')])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
 
 if __name__ == '__main__':

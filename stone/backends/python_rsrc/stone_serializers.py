@@ -227,8 +227,8 @@ class StoneSerializerBase(StoneEncoderInterface):
 # ------------------------------------------------------------------------
 class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 
-    def __init__(self, caller_permissions, alias_validators, for_msgpack, old_style):
-        # type: (CallerPermissionsInterface, typing.Mapping[bv.Validator, typing.Callable[[typing.Any], None]], bool, bool) -> None # noqa: E501
+    def __init__(self, caller_permissions, alias_validators, for_msgpack, old_style, should_redact):
+        # type: (CallerPermissionsInterface, typing.Mapping[bv.Validator, typing.Callable[[typing.Any], None]], bool, bool, bool) -> None # noqa: E501
         """
         Args:
             alias_validators (``typing.Mapping``, optional): Passed
@@ -237,11 +237,14 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                 Defaults to ``False``.
             old_style (bool, optional): See the like-named property.
                 Defaults to ``False``.
+            should_redact (bool, optional): Whether to perform redaction on
+                marked fields. Defaults to ``False``.
         """
         super(StoneToPythonPrimitiveSerializer, self).__init__(
             caller_permissions, alias_validators=alias_validators)
         self._for_msgpack = for_msgpack
         self._old_style = old_style
+        self.should_redact = should_redact
 
     @property
     def for_msgpack(self):
@@ -261,6 +264,13 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         Dropbox's old or new API styles.
         """
         return self._old_style
+
+    def encode_sub(self, validator, value):
+        if self.should_redact and hasattr(validator, '_redact'):
+            return validator._redact.apply(value)
+
+        # Encode value normally
+        return super(StoneToPythonPrimitiveSerializer, self).encode_sub(validator, value)
 
     def encode_list(self, validator, value):
         validated_value = validator.validate(value)
@@ -426,7 +436,8 @@ class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
 # These interfaces are preserved for backward compatibility and symmetry with deserialization
 # functions.
 
-def json_encode(data_type, obj, caller_permissions=None, alias_validators=None, old_style=False):
+def json_encode(data_type, obj, caller_permissions=None, alias_validators=None, old_style=False,
+                should_redact=False):
     """Encodes an object into JSON based on its type.
 
     Args:
@@ -481,11 +492,11 @@ def json_encode(data_type, obj, caller_permissions=None, alias_validators=None, 
     """
     for_msgpack = False
     serializer = StoneToJsonSerializer(
-        caller_permissions, alias_validators, for_msgpack, old_style)
+        caller_permissions, alias_validators, for_msgpack, old_style, should_redact)
     return serializer.encode(data_type, obj)
 
 def json_compat_obj_encode(data_type, obj, caller_permissions=None, alias_validators=None,
-                           old_style=False, for_msgpack=False):
+                           old_style=False, for_msgpack=False, should_redact=False):
     """Encodes an object into a JSON-compatible dict based on its type.
 
     Args:
@@ -501,7 +512,7 @@ def json_compat_obj_encode(data_type, obj, caller_permissions=None, alias_valida
     See json_encode() for additional information about validation.
     """
     serializer = StoneToPythonPrimitiveSerializer(
-        caller_permissions, alias_validators, for_msgpack, old_style)
+        caller_permissions, alias_validators, for_msgpack, old_style, should_redact)
     return serializer.encode(data_type, obj)
 
 # --------------------------------------------------------------
