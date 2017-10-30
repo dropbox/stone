@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
+from stone.ir.api import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
     Boolean,
     Bytes,
@@ -128,3 +130,16 @@ def fmt_tag(cur_namespace, tag, val):
         return val
     else:
         raise RuntimeError('Unknown doc ref tag %r' % tag)
+
+def generate_imports_for_referenced_namespaces(backend, namespace):
+    # type: (Backend, ApiNamespace) -> None
+
+    imported_namespaces = namespace.get_imported_namespaces()
+    if not imported_namespaces:
+        return
+
+    for ns in imported_namespaces:
+        backend.emit("import {namespace_name} from '{namespace_name}.ts'".format(
+            namespace_name=ns.name
+        ))
+    backend.emit()

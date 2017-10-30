@@ -31,6 +31,7 @@ from stone.ir import (
     Void,
     Float64)
 from stone.backends.python_type_stubs import PythonTypeStubsBackend
+from test.backend_test_util import _mock_emit
 
 ISO_8601_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -40,22 +41,6 @@ def _make_backend():
         target_folder_path=Mock(),
         args=Mock()
     )
-
-def _mock_emit(backend):
-    # type: (PythonTypeStubsBackend) -> typing.List[str]
-    """
-    Mock out PythonTypeStubsBackend's .emit function, and return a list containing all params
-    emit was called with.
-    """
-    recorded_emits = []  # type: typing.List[str]
-
-    def record_emit(s):
-        recorded_emits.append(s)
-
-    orig_append = backend._append_output
-    backend._append_output = Mock(wraps=orig_append, side_effect=record_emit)  # type: ignore
-
-    return recorded_emits
 
 def _make_namespace_with_alias():
     # type: (...) -> ApiNamespace
