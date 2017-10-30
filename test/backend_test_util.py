@@ -1,3 +1,7 @@
+MYPY = False
+if MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
+
 try:
     # Works for Py 3.3+
     from unittest.mock import Mock

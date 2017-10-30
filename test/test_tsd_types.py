@@ -6,7 +6,7 @@ from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
 
 MYPY = False
 if MYPY:
-    pass
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 import os
 import unittest
@@ -30,19 +30,19 @@ from test.backend_test_util import _mock_emit
 
 
 def _make_backend(target_folder_path, template_path):
-    # type: () -> TSDTypesBackend
+    # type: (typing.Text, typing.Text) -> TSDTypesBackend
 
     args = Mock()
     args.__iter__ = Mock(return_value=iter([template_path, "-i=0"]))
 
     return TSDTypesBackend(
-        target_folder_path=target_folder_path,
+        target_folder_path=str(target_folder_path),
         args=args
     )
 
 
 def _make_namespace(ns_name="accounts"):
-    # type: (...) -> ApiNamespace
+    # type: (typing.Text) -> ApiNamespace
     ns = ApiNamespace(ns_name)
     struct = _make_struct('User', 'exists', ns)
     ns.add_data_type(struct)
@@ -50,13 +50,14 @@ def _make_namespace(ns_name="accounts"):
 
 
 def _make_struct(struct_name, struct_field_name, namespace):
+    # type: (typing.Text, typing.Text, ApiNamespace) -> Struct
     struct = Struct(name=struct_name, namespace=namespace, ast_node=None)
     struct.set_attributes(None, [StructField(struct_field_name, Boolean(), None, None)])
     return struct
 
 
 def _evaluate_namespace(backend, namespace_list):
-    # type: (Backend, List[ApiNamespace]) -> typing.Text
+    # type: (TSDTypesBackend, typing.List[ApiNamespace]) -> typing.Text
 
     emitted = _mock_emit(backend)
     filename = "types.ts"
@@ -77,7 +78,7 @@ class TestTSDTypes(unittest.TestCase):
 
     def test__generate_types_single_ns(self):
         # type: () -> None
-        backend = _make_backend(target_folder_path="output", template_path=None)
+        backend = _make_backend(target_folder_path="output", template_path="")
         ns = _make_namespace()
         result = _evaluate_namespace(backend, [ns])
         expected = textwrap.dedent("""
@@ -94,7 +95,7 @@ class TestTSDTypes(unittest.TestCase):
 
     def test__generate_types_multiple_ns(self):
         # type: () -> None
-        backend = _make_backend(target_folder_path="output", template_path=None)
+        backend = _make_backend(target_folder_path="output", template_path="")
         ns1 = _make_namespace("accounts")
         ns2 = _make_namespace("files")
         result = _evaluate_namespace(backend, [ns1, ns2])
