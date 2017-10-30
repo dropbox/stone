@@ -234,11 +234,6 @@ class TestTSDTypesE2E(unittest.TestCase):
     def _compare_ns_types(self, filename, expected_namespace_types):
         with open(filename, 'r') as f:
             generated_types = f.read()
-            print ("GEN")
-            print(generated_types)
-            print ("EXP")
-            print(expected_namespace_types)
-            print ("END")
             self.assertEqual(generated_types, expected_namespace_types)
 
     def test_tsd_types_file_output(self):
