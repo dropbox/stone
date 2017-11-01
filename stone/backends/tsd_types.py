@@ -154,7 +154,7 @@ class TSDTypesBackend(CodeBackend):
             with open(template_path, 'r') as template_file:
                 return template_file.read()
         else:
-            exit('TypeScript template file does not exist.')
+            raise AssertionError('TypeScript template file does not exist.')
 
     def _generate_base_namespace_module(self, namespace_list, filename,
                                         template, extra_args,
@@ -168,7 +168,7 @@ class TSDTypesBackend(CodeBackend):
             # /*TYPES*/
             t_match = re.search("/\\*TYPES\\*/", template)
             if not t_match:
-                exit('Missing /*TYPES*/ in TypeScript template file.')
+                raise AssertionError('Missing /*TYPES*/ in TypeScript template file.')
 
             t_start = t_match.start()
             t_end = t_match.end()

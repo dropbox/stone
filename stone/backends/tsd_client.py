@@ -81,12 +81,13 @@ class TSDClientBackend(CodeBackend):
                 with open(template_path, 'r') as template_file:
                     template = template_file.read()
             else:
-                exit('TypeScript template file does not exist.')
+                raise AssertionError('TypeScript template file does not exist.')
 
             # /*ROUTES*/
             r_match = re.search("/\\*%s\\*/" % (template_string), template)
             if not r_match:
-                exit('Missing /*%s*/ in TypeScript template file.' % template_string)
+                raise AssertionError(
+                    'Missing /*%s*/ in TypeScript template file.' % template_string)
 
             r_start = r_match.start()
             r_end = r_match.end()
