@@ -31,6 +31,9 @@ from ..ir import (
     Int32,
     Int64,
     is_alias,
+    is_list_type,
+    is_map_type,
+    is_nullable_type,
     is_user_defined_type,
     is_void_type,
     List,
@@ -1191,6 +1194,19 @@ class IRGenerator(object):
             curr_data_type = curr_data_type.data_type
 
         if hasattr(annotated_object, 'redactor') and annotated_object.redactor:
+            if is_map_type(curr_data_type) or is_list_type(curr_data_type):
+                while True:
+                    if is_map_type(curr_data_type):
+                        curr_data_type = curr_data_type.value_data_type
+                    else:
+                        curr_data_type = curr_data_type.data_type
+
+                    should_continue = (is_map_type(curr_data_type) or is_list_type(curr_data_type)
+                        or is_nullable_type(curr_data_type))
+
+                    if should_continue is False:
+                        break
+
             if is_user_defined_type(curr_data_type) or is_void_type(curr_data_type):
                 raise InvalidSpec("Redactors can't be applied to user-defined or void types.", *loc)
 

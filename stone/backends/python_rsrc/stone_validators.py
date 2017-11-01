@@ -649,7 +649,8 @@ class HashRedactor(Redactor):
         val_to_hash = str(val) if isinstance(val, int) or isinstance(val, float) else val
 
         try:
-            hashed = hashlib.md5(val_to_hash.encode('utf-8')).hexdigest()
+            # add string literal to ensure unicode
+            hashed = hashlib.md5(val_to_hash.encode('utf-8')).hexdigest() + ''
         except [AttributeError, ValueError]:
             hashed = None
 

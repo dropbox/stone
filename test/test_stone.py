@@ -4310,6 +4310,46 @@ class TestStone(unittest.TestCase):
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 8)
 
+        # Test applying redactor tag list with user-defined object
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            struct S
+                f String
+
+            struct T
+                f List(S)
+                    @FieldRedactor
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Redactors can't be applied to user-defined or void types.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 9)
+
+        # Test applying redactor tag to map with user-defined object
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation FieldRedactor = RedactedHash("test_regex")
+
+            struct S
+                f String
+
+            struct T
+                f Map(String, S)
+                    @FieldRedactor
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Redactors can't be applied to user-defined or void types.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 9)
+
 
 if __name__ == '__main__':
     unittest.main()

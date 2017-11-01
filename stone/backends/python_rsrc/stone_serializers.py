@@ -267,7 +267,12 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 
     def encode_sub(self, validator, value):
         if self.should_redact and hasattr(validator, '_redact'):
-            return validator._redact.apply(value)
+            if isinstance(value, list):
+                return [validator._redact.apply(v) for v in value]
+            elif isinstance(value, dict):
+                return {k: validator._redact.apply(v) for k, v in value.items()}
+            else:
+                return validator._redact.apply(value)
 
         # Encode value normally
         return super(StoneToPythonPrimitiveSerializer, self).encode_sub(validator, value)

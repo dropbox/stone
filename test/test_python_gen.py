@@ -1556,7 +1556,7 @@ alias TestAlias = String
 
 patch struct A
 
-    b Int64
+    b Float64
         @ns4.TestFullHashRedactor
         @ns4.Deprecated
         @ns4.InternalOnly
@@ -1610,9 +1610,6 @@ patch union_closed U
 
     t3 List(X)
 
-    t9 List(String)
-        @ns4.TestFullBlotRedactor
-
     t_void
         @ns4.TestVoidField
 
@@ -1634,6 +1631,18 @@ patch struct File
     y String
         @ns4.TestPartialHashRedactor
         @ns4.InternalOnly
+
+struct S2
+    a List(String)
+        @ns4.TestFullBlotRedactor
+    b Map(String, String)
+        @ns4.TestFullHashRedactor
+
+union U2
+    t1 List(String)
+        @ns4.TestFullHashRedactor
+    t2 Map(String, String)
+        @ns4.TestFullBlotRedactor
 """
 
 test_tagged_spec_2 = """\
@@ -3135,9 +3144,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
     def test_struct_parent_encoding_with_redaction(self):
         json_data = {
-            'a': 'A', 'b': 'c4ca4238a0b923820dcc509a6f75849b', 'c': '********', 'd':
+            'a': 'A', 'b': 'e4c2e8edac362acab7123654b9e73432', 'c': '********', 'd':
             [{'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'}],
-            'e': '********',
+            'e': {'e1': '********'},
             'f': {'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'},
             'g': '********',
         }
@@ -3152,9 +3161,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
         json_data = {
-            'a': 'A', 'b': 'c4ca4238a0b923820dcc509a6f75849b', 'c': '********', 'd':
+            'a': 'A', 'b': 'e4c2e8edac362acab7123654b9e73432', 'c': '********', 'd':
             [{'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'}],
-            'e': '********',
+            'e': {'e1': '********'},
             'f': {'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'},
         }
 
@@ -3183,9 +3192,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
     def test_struct_child_encoding_with_redaction(self):
         json_data = {
-            'a': 'A', 'b': 'c4ca4238a0b923820dcc509a6f75849b', 'c': '********', 'd':
+            'a': 'A', 'b': 'e4c2e8edac362acab7123654b9e73432', 'c': '********', 'd':
             [{'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'}],
-            'e': '********',
+            'e': {'e1': '********'},
             'f': {'a': '***-blot-***', 'b': '3ac5041d7a9d0f27e045f0b15034f186 (***-hash-***)'},
             'g': '********', 'h': 'H', 'x': 'X', 'y': '57cec4137b614c87cb4e24a3d003a3e0',
         }
@@ -3249,6 +3258,41 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         ui = self.ns3.U.t3([self.ns3.X(a='A', b='B')])
         self.assertEqual(
             self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+    def test_encoding_collections_with_redaction(self):
+        # test that we correctly redact elements in a list/map in a struct
+        json_data = {
+            'a': ['********'],
+            'b': {
+                'key': '74e710825309d622d0b920390ef03edf',
+            }
+        }
+
+        s = self.ns3.S2(a=['test_str'], b={'key': 'test_str'})
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Struct(self.ns3.S2), s,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+        # test that we correctly redact elements in a list/map in a union
+        json_data = {
+            '.tag': 't1',
+            't1': ['74e710825309d622d0b920390ef03edf'],
+        }
+
+        ui = self.ns3.U2.t1(['test_str'])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U2), ui,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
+        json_data = {
+            '.tag': 't2',
+            't2': {'key': '********'},
+        }
+
+        ui = self.ns3.U2.t2({'key': 'test_str'})
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U2), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
     def test_encoding_unicode_with_redaction(self):
