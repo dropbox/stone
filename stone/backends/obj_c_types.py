@@ -773,7 +773,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
     def _generate_hash_func_helper(self, data_type, field):
         _, nullable = unwrap_nullable(field.data_type)
         if nullable:
-            with self.block('if (self.{})'.format(fmt_var(field.name))):
+            with self.block('if (self.{} != nil)'.format(fmt_var(field.name))):
                 self._generate_hash_check(data_type, field)
         else:
             self._generate_hash_check(data_type, field)
@@ -937,9 +937,9 @@ class ObjCTypesBackend(ObjCBaseBackend):
                 validator = 'nil'
             if not has_default:
                 validator = fmt_func_call(
-                        caller='DBStoneValidators',
-                        callee='nonnullValidator',
-                        args=validator)
+                    caller='DBStoneValidators',
+                    callee='nonnullValidator',
+                    args=validator)
             else:
                 validator = None
         return validator
