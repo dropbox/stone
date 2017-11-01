@@ -3251,6 +3251,24 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
+    def test_encoding_unicode_with_redaction(self):
+        unicode_val = u"Unicode val'`~$%&\u53c9\u71d2"
+
+        json_data = {
+            '.tag': 't2',
+            't2': [
+                {
+                    'a': '********',
+                    'b': '89e514e90912003ff11d79560a750510',
+                },
+            ]
+        }
+
+        ui = self.ns3.U.t2([self.ns3.X(a=unicode_val, b=unicode_val)])
+        self.assertEqual(
+            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+                caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
+
 
 if __name__ == '__main__':
     unittest.main()

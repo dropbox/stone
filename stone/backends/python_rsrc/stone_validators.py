@@ -646,8 +646,10 @@ class HashRedactor(Redactor):
     def apply(self, val):
         matches = self._get_matches(val)
 
+        val_to_hash = str(val) if isinstance(val, int) or isinstance(val, float) else val
+
         try:
-            hashed = hashlib.md5(str(val).encode('utf-8')).hexdigest()
+            hashed = hashlib.md5(val_to_hash.encode('utf-8')).hexdigest()
         except [AttributeError, ValueError]:
             hashed = None
 
