@@ -114,15 +114,23 @@ interface UserMessage {
 \tlocale: string;
 }
 
-type Timestamp = string;
 """
+
+_timestamp_definition = "type Timestamp = string;"
 
 
 class TSDTypesBackend(CodeBackend):
     """
-    Generates a single TypeScript definition file with all of the types defined if a
-    filename is provided in input arguments. Otherwise generates one file for each
-    namespace with the corresponding typescript definitions.
+    Generates a single TypeScript definition file with all of the types defined, organized
+    as namespaces, if a filename is provided in input arguments. Otherwise generates one
+    declaration file for each namespace with the corresponding typescript definitions.
+
+    If a single output file is generated, a top level type definition will be added for the
+    Timestamp data type. Otherwise, each namespace will have the type definition for Timestamp.
+
+    Also, note that namespace definitions are emitted as declaration files. Hence any template
+    provided as argument must not have a top level declare statement. If namespaces are emitted
+    into a single file, the template file can be used to wrap them around a declare statement.
     """
 
     cmdline_parser = _cmdline_parser
@@ -132,6 +140,9 @@ class TSDTypesBackend(CodeBackend):
     # Instance var of the current namespace being generated
     cur_namespace = None  # type: typing.Optional[ApiNamespace]
 
+    # Instance var to denote if one file is output for each namespace.
+    split_by_namespace = False
+
     def generate(self, api):
         extra_args = self._parse_extra_args(api, self.args.extra_arg)
         template = self._read_template()
@@ -140,11 +151,12 @@ class TSDTypesBackend(CodeBackend):
                                                  template, extra_args,
                                                  exclude_error_types=self.args.exclude_error_types)
         else:
+            self.split_by_namespace = True
             for namespace in api.namespaces.values():
-                filename = '{}.ts'.format(namespace.name)
+                filename = '{}.d.ts'.format(namespace.name)
                 self._generate_base_namespace_module(
                     [namespace], filename, template,
-                    extra_args, generate_imports=True,
+                    extra_args,
                     exclude_error_types=self.args.exclude_error_types)
 
     def _read_template(self):
@@ -156,10 +168,17 @@ class TSDTypesBackend(CodeBackend):
         else:
             raise AssertionError('TypeScript template file does not exist.')
 
+    def _get_data_types(self, namespace):
+        return namespace.data_types + namespace.aliases
+
     def _generate_base_namespace_module(self, namespace_list, filename,
                                         template, extra_args,
-                                        generate_imports=False,
                                         exclude_error_types=False):
+
+        # Skip namespaces that do not contain types.
+        if all([len(self._get_data_types(ns)) == 0 for ns in namespace_list]):
+            return
+
         spaces_per_indent = self.args.spaces_per_indent
         indent_level = self.args.indent_level
 
@@ -188,37 +207,52 @@ class TSDTypesBackend(CodeBackend):
                         .replace('\t', ' ' * spaces_per_indent)
                     )
                     self.emit_raw(indented_types_header + '\n')
+
+                if not self.split_by_namespace:
+                    self.emit(_timestamp_definition)
                     self.emit()
 
                 for namespace in namespace_list:
-                    self._generate_types(namespace, spaces_per_indent, extra_args,
-                                         generate_imports=generate_imports)
+                    self._generate_types(namespace, spaces_per_indent, extra_args)
             self.emit_raw(template[t_end + 1:temp_end] +
                           ("\n" if not temp_ends_with_newline else ''))
 
-    def _generate_types(self, namespace, spaces_per_indent, extra_args,
-                        generate_imports=False):
+    def _generate_types(self, namespace, spaces_per_indent, extra_args):
         self.cur_namespace = namespace
         # Count aliases as data types too!
-        data_types = namespace.data_types + namespace.aliases
+        data_types = self._get_data_types(namespace)
         # Skip namespaces that do not contain types.
         if len(data_types) == 0:
             return
 
-        if generate_imports:
+        if self.split_by_namespace:
             generate_imports_for_referenced_namespaces(backend=self, namespace=namespace)
 
         if namespace.doc:
             self._emit_tsdoc_header(namespace.doc)
-        self.emit_wrapped_text('namespace %s {' % namespace.name)
+
+        self.emit_wrapped_text(self._get_top_level_declaration(namespace.name))
 
         with self.indent(dent=spaces_per_indent):
             for data_type in data_types:
                 self._generate_type(data_type, spaces_per_indent,
                                     extra_args.get(data_type, []))
 
+        if self.split_by_namespace:
+            with self.indent(dent=spaces_per_indent):
+                # TODO(Pranay): May avoid adding an unused definition if needed.
+                self.emit(_timestamp_definition)
+
         self.emit('}')
         self.emit()
+
+    def _get_top_level_declaration(self, name):
+        if self.split_by_namespace:
+            # Use module for when emitting declaration files.
+            return "declare module '%s' {" % name
+        else:
+            # Use namespace for organizing code with-in the file.
+            return "namespace %s {" % name
 
     def _parse_extra_args(self, api, extra_args_raw):
         """
@@ -303,7 +337,7 @@ class TSDTypesBackend(CodeBackend):
         Generates a TypeScript type for a stone alias.
         """
         namespace = alias_type.namespace
-        self.emit('type %s = %s;' % (fmt_type_name(alias_type, namespace),
+        self.emit('export type %s = %s;' % (fmt_type_name(alias_type, namespace),
                                      fmt_type_name(alias_type.data_type, namespace)))
         self.emit()
 
@@ -316,7 +350,7 @@ class TSDTypesBackend(CodeBackend):
             self._emit_tsdoc_header(struct_type.doc)
         parent_type = struct_type.parent_type
         extends_line = ' extends %s' % fmt_type_name(parent_type, namespace) if parent_type else ''
-        self.emit('interface %s%s {' % (fmt_type_name(struct_type, namespace), extends_line))
+        self.emit('export interface %s%s {' % (fmt_type_name(struct_type, namespace), extends_line))
         with self.indent(dent=indent_spaces):
 
             for param_name, param_type, param_docstring in extra_parameters:
@@ -362,7 +396,7 @@ class TSDTypesBackend(CodeBackend):
                 self._emit_tsdoc_header('Reference to the %s polymorphic type. Contains a .tag '
                                         'property to let you discriminate between possible '
                                         'subtypes.' % fmt_type_name(struct_type, namespace))
-                self.emit('interface %s extends %s {' %
+                self.emit('export interface %s extends %s {' %
                           (fmt_polymorphic_type_reference(struct_type, namespace),
                            fmt_type_name(struct_type, namespace)))
 
@@ -386,7 +420,7 @@ class TSDTypesBackend(CodeBackend):
                         self._emit_tsdoc_header('Reference to the %s type, identified by the '
                                                 'value of the .tag property.' %
                                                 fmt_type_name(struct_type, namespace))
-                        self.emit('interface %s extends %s {' %
+                        self.emit('export interface %s extends %s {' %
                                   (fmt_polymorphic_type_reference(struct_type, namespace),
                                    fmt_type_name(struct_type, namespace)))
 
@@ -418,7 +452,7 @@ class TSDTypesBackend(CodeBackend):
                 self._emit_tsdoc_header(variant.doc)
             variant_name = '%s%s' % (union_type_name, fmt_pascal(variant.name))
             variant_type_names.append(variant_name)
-            self.emit('interface %s {' % variant_name)
+            self.emit('export interface %s {' % variant_name)
             with self.indent(dent=indent_spaces):
                 # Since field contains non-alphanumeric character, we need to enclose
                 # it in quotation marks.
@@ -430,7 +464,7 @@ class TSDTypesBackend(CodeBackend):
 
         if union_type.doc:
             self._emit_tsdoc_header(union_type.doc)
-        self.emit('type %s = %s;' % (union_type_name, ' | '.join(variant_type_names)))
+        self.emit('export type %s = %s;' % (union_type_name, ' | '.join(variant_type_names)))
         self.emit()
 
     def _docf(self, tag, val):
