@@ -139,7 +139,7 @@ def generate_imports_for_referenced_namespaces(backend, namespace):
         return
 
     for ns in imported_namespaces:
-        backend.emit("import {namespace_name} from '{namespace_name}.ts'".format(
+        backend.emit("///<reference path='{namespace_name}.d.ts' />".format(
             namespace_name=ns.name
         ))
     backend.emit()

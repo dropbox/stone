@@ -2,8 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import textwrap
 
-from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
-
 MYPY = False
 if MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -60,12 +58,12 @@ def _evaluate_namespace(backend, namespace_list):
     # type: (TSDTypesBackend, typing.List[ApiNamespace]) -> typing.Text
 
     emitted = _mock_emit(backend)
-    filename = "types.ts"
+    filename = "types.d.ts"
+    backend.split_by_namespace = False
     backend._generate_base_namespace_module(namespace_list=namespace_list,
                                             filename=filename,
                                             extra_args={},
                                             template="""/*TYPES*/""",
-                                            generate_imports=False,
                                             exclude_error_types=True)
     result = "".join(emitted)
     return result
@@ -83,7 +81,33 @@ class TestTSDTypes(unittest.TestCase):
         result = _evaluate_namespace(backend, [ns])
         expected = textwrap.dedent("""
         namespace accounts {
-          interface User {
+          export interface User {
+            exists: boolean;
+          }
+
+        }
+
+
+        """)
+        self.assertEqual(result, expected)
+
+    def test__generate_types_empty_ns(self):
+        # type: () -> None
+        backend = _make_backend(target_folder_path="output", template_path="")
+        empty_ns = ApiNamespace("empty_namespace")
+        result = _evaluate_namespace(backend, [empty_ns])
+        expected = textwrap.dedent("")
+        self.assertEqual(result, expected)
+
+    def test__generate_types_with_empty_ns(self):
+        # type: () -> None
+        backend = _make_backend(target_folder_path="output", template_path="")
+        ns = _make_namespace()
+        empty_ns = ApiNamespace("empty_namespace")
+        result = _evaluate_namespace(backend, [ns, empty_ns])
+        expected = textwrap.dedent("""
+        namespace accounts {
+          export interface User {
             exists: boolean;
           }
 
@@ -101,14 +125,14 @@ class TestTSDTypes(unittest.TestCase):
         result = _evaluate_namespace(backend, [ns1, ns2])
         expected = textwrap.dedent("""
         namespace accounts {
-          interface User {
+          export interface User {
             exists: boolean;
           }
 
         }
 
         namespace files {
-          interface User {
+          export interface User {
             exists: boolean;
           }
 
@@ -142,7 +166,6 @@ interface UserMessage {
   locale: string;
 }
 
-type Timestamp = string;
 """
 
 test_spec = """\
@@ -158,11 +181,11 @@ struct B extends ns2.BaseS
 """
 
 test_types = """
-namespace ns {
+declare namespace ns {
   /**
    * Sample struct doc.
    */
-  interface A {
+  export interface A {
     /**
      * Sample field doc.
      */
@@ -170,10 +193,10 @@ namespace ns {
     b: number;
   }
 
-  interface B extends ns2.BaseS {
+  export interface B extends ns2.BaseS {
     c: string;
   }
-
+%s
 }
 """
 
@@ -189,29 +212,32 @@ alias AliasedBaseU = BaseU
 """
 
 test_ns2_types = """
-namespace ns2 {
+declare namespace ns2 {
   /**
    * This is a test.
    */
-  interface BaseS {
+  export interface BaseS {
     z: number;
   }
 
-  interface BaseUZ {
+  export interface BaseUZ {
     '.tag': 'z';
   }
 
-  interface BaseUX {
+  export interface BaseUX {
     '.tag': 'x';
     x: string;
   }
 
-  type BaseU = BaseUZ | BaseUX;
+  export type BaseU = BaseUZ | BaseUX;
 
-  type AliasedBaseU = BaseU;
-
+  export type AliasedBaseU = BaseU;
+%s
 }
 """
+
+timestamp_definition = "\n" + "  type Timestamp = string;"
+
 
 class TestTSDTypesE2E(unittest.TestCase):
 
@@ -232,7 +258,7 @@ class TestTSDTypesE2E(unittest.TestCase):
         # Clear output of stone tool after all tests.
         shutil.rmtree('output')
 
-    def _compare_ns_types(self, filename, expected_namespace_types):
+    def _verify_output_generated(self, filename, expected_namespace_types):
         with open(filename, 'r') as f:
             generated_types = f.read()
             self.assertEqual(generated_types, expected_namespace_types)
@@ -261,9 +287,12 @@ class TestTSDTypesE2E(unittest.TestCase):
                                  stderr.decode('utf-8'))
 
         # one file must be generated per namespace
-        self._compare_ns_types('output/ns.ts', """\nimport ns2 from 'ns2.ts'\n""" +
-                                               test_types + "\n\n")
-        self._compare_ns_types('output/ns2.ts', test_ns2_types + "\n\n")
+        expected_ns_output = """\n///<reference path='ns2.d.ts' />\n""" + (
+            test_types % timestamp_definition) + "\n\n"
+        self._verify_output_generated('output/ns.d.ts', expected_ns_output)
+
+        expected_ns2_output = (test_ns2_types % timestamp_definition) + "\n\n"
+        self._verify_output_generated('output/ns2.d.ts', expected_ns2_output)
 
     def test_tsd_types_modules_output(self):
         # Sanity check: stone must be importable for the compiler to work
@@ -290,8 +319,10 @@ class TestTSDTypesE2E(unittest.TestCase):
             raise AssertionError('Could not execute stone tool: %s' %
                                  stderr.decode('utf-8'))
 
-        self._compare_ns_types('output/{}'.format(output_file_name), error_types + "\n" +
-                               test_types + test_ns2_types + "\n\n")
+        expected_output = error_types + "\ntype Timestamp = string;\n" + (
+            test_types.replace('declare ', '') % "") + (
+            test_ns2_types.replace('declare ', '') % "") + "\n\n"
+        self._verify_output_generated('output/{}'.format(output_file_name), expected_output)
 
 
 if __name__ == '__main__':
