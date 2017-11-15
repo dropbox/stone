@@ -156,6 +156,9 @@ class SpecHelper:
     types are available as either a declaration or a namespace.
     """
 
+    def __init__(self):
+        pass
+
     _error_types = """
 /**
  * An Error object returned from a route.
