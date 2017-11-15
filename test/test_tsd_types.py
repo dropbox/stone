@@ -80,6 +80,8 @@ class TestTSDTypes(unittest.TestCase):
         ns = _make_namespace()
         result = _evaluate_namespace(backend, [ns])
         expected = textwrap.dedent("""
+        type Timestamp = string;
+
         namespace accounts {
           export interface User {
             exists: boolean;
@@ -106,6 +108,8 @@ class TestTSDTypes(unittest.TestCase):
         empty_ns = ApiNamespace("empty_namespace")
         result = _evaluate_namespace(backend, [ns, empty_ns])
         expected = textwrap.dedent("""
+        type Timestamp = string;
+
         namespace accounts {
           export interface User {
             exists: boolean;
@@ -124,6 +128,8 @@ class TestTSDTypes(unittest.TestCase):
         ns2 = _make_namespace("files")
         result = _evaluate_namespace(backend, [ns1, ns2])
         expected = textwrap.dedent("""
+        type Timestamp = string;
+
         namespace accounts {
           export interface User {
             exists: boolean;
@@ -143,7 +149,14 @@ class TestTSDTypes(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-error_types = """
+class SpecHelper:
+    """
+    A helper class which exposes two namespace definitions
+    and its corresponding type definitions for testing. The
+    types are available as either a declaration or a namespace.
+    """
+
+    _error_types = """
 /**
  * An Error object returned from a route.
  */
@@ -168,7 +181,7 @@ interface UserMessage {
 
 """
 
-test_spec = """\
+    _ns_spec = """\
 namespace ns
 import ns2
 struct A
@@ -180,8 +193,7 @@ struct B extends ns2.BaseS
     c Bytes
 """
 
-test_types = """
-declare namespace ns {
+    _ns_spec_types = """{
   /**
    * Sample struct doc.
    */
@@ -200,7 +212,7 @@ declare namespace ns {
 }
 """
 
-test_ns2_spec = """\
+    _ns2_spec = """\
 namespace ns2
 struct BaseS
     "This is a test."
@@ -209,10 +221,9 @@ union_closed BaseU
     z
     x String
 alias AliasedBaseU = BaseU
-"""
+    """
 
-test_ns2_types = """
-declare namespace ns2 {
+    _ns2_spec_types = """{
   /**
    * This is a test.
    */
@@ -236,7 +247,35 @@ declare namespace ns2 {
 }
 """
 
-timestamp_definition = "\n" + "  type Timestamp = string;"
+    _timestamp_mapping = 'type Timestamp = string'
+
+    _timestamp_def_formatted = "\n" + "  " + _timestamp_mapping + ";"
+
+    @classmethod
+    def get_ns_spec(cls):
+        return cls._ns_spec
+
+    @classmethod
+    def get_ns_types_as_declaration(cls):
+        types = """\nimport * as ns2 from 'ns2';\n""" + (
+            ("\ndeclare module 'ns' " + cls._ns_spec_types) % cls._timestamp_def_formatted) + "\n\n"
+        return types.replace('namespace', 'declare module')
+
+    @classmethod
+    def get_ns2_spec(cls):
+        return cls._ns2_spec
+
+    @classmethod
+    def get_ns2_types_as_declaration(cls):
+        return (("\ndeclare module 'ns2' " + cls._ns2_spec_types
+                 ) % cls._timestamp_def_formatted) + "\n\n"
+
+    @classmethod
+    def get_all_types_as_namespace(cls):
+        types = cls._error_types + "\n" + cls._timestamp_mapping + ";\n" + (
+            ("\nnamespace ns " + cls._ns_spec_types) % "") + (
+            ("\nnamespace ns2 " + cls._ns2_spec_types) % "") + "\n\n"
+        return types
 
 
 class TestTSDTypesE2E(unittest.TestCase):
@@ -258,12 +297,12 @@ class TestTSDTypesE2E(unittest.TestCase):
         # Clear output of stone tool after all tests.
         shutil.rmtree('output')
 
-    def _verify_output_generated(self, filename, expected_namespace_types):
+    def _verify_generated_output(self, filename, expected_namespace_types):
         with open(filename, 'r') as f:
             generated_types = f.read()
             self.assertEqual(generated_types, expected_namespace_types)
 
-    def test_tsd_types_file_output(self):
+    def test_tsd_types_declarations_output(self):
         # Sanity check: stone must be importable for the compiler to work
         __import__('stone')
 
@@ -281,20 +320,19 @@ class TestTSDTypesE2E(unittest.TestCase):
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
         _, stderr = p.communicate(
-            input=(test_spec + test_ns2_spec).encode('utf-8'))
+            input=(SpecHelper.get_ns_spec() + SpecHelper.get_ns2_spec()).encode('utf-8'))
         if p.wait() != 0:
             raise AssertionError('Could not execute stone tool: %s' %
                                  stderr.decode('utf-8'))
 
         # one file must be generated per namespace
-        expected_ns_output = """\n///<reference path='ns2.d.ts' />\n""" + (
-            test_types % timestamp_definition) + "\n\n"
-        self._verify_output_generated('output/ns.d.ts', expected_ns_output)
+        expected_ns_output = SpecHelper.get_ns_types_as_declaration()
+        self._verify_generated_output('output/ns.d.ts', expected_ns_output)
 
-        expected_ns2_output = (test_ns2_types % timestamp_definition) + "\n\n"
-        self._verify_output_generated('output/ns2.d.ts', expected_ns2_output)
+        expected_ns2_output = SpecHelper.get_ns2_types_as_declaration()
+        self._verify_generated_output('output/ns2.d.ts', expected_ns2_output)
 
-    def test_tsd_types_modules_output(self):
+    def test_tsd_types_namespace_output(self):
         # Sanity check: stone must be importable for the compiler to work
         __import__('stone')
 
@@ -314,15 +352,13 @@ class TestTSDTypesE2E(unittest.TestCase):
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
         _, stderr = p.communicate(
-            input=(test_spec + test_ns2_spec).encode('utf-8'))
+            input=(SpecHelper.get_ns_spec() + SpecHelper.get_ns2_spec()).encode('utf-8'))
         if p.wait() != 0:
             raise AssertionError('Could not execute stone tool: %s' %
                                  stderr.decode('utf-8'))
 
-        expected_output = error_types + "\ntype Timestamp = string;\n" + (
-            test_types.replace('declare ', '') % "") + (
-            test_ns2_types.replace('declare ', '') % "") + "\n\n"
-        self._verify_output_generated('output/{}'.format(output_file_name), expected_output)
+        expected_output = SpecHelper.get_all_types_as_namespace()
+        self._verify_generated_output('output/{}'.format(output_file_name), expected_output)
 
 
 if __name__ == '__main__':

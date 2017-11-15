@@ -121,15 +121,16 @@ _timestamp_definition = "type Timestamp = string;"
 
 class TSDTypesBackend(CodeBackend):
     """
-    Generates a single TypeScript definition file with all of the types defined if a
-    filename is provided in input arguments. Otherwise generates one file for each
-    namespace with the corresponding typescript definitions.
+    Generates a single TypeScript definition file with all of the types defined, organized
+    as namespaces, if a filename is provided in input arguments. Otherwise generates one
+    declaration file for each namespace with the corresponding typescript definitions.
 
     If a single output file is generated, a top level type definition will be added for the
     Timestamp data type. Otherwise, each namespace will have the type definition for Timestamp.
 
     Also, note that namespace definitions are emitted as declaration files. Hence any template
-    provided as argument must not have a top level declare statement.
+    provided as argument must not have a top level declare statement. If namespaces are emitted
+    into a single file, the template file can be used to wrap them around a declare statement.
     """
 
     cmdline_parser = _cmdline_parser
@@ -206,6 +207,8 @@ class TSDTypesBackend(CodeBackend):
                         .replace('\t', ' ' * spaces_per_indent)
                     )
                     self.emit_raw(indented_types_header + '\n')
+
+                if not self.split_by_namespace:
                     self.emit(_timestamp_definition)
                     self.emit()
 
@@ -228,8 +231,7 @@ class TSDTypesBackend(CodeBackend):
         if namespace.doc:
             self._emit_tsdoc_header(namespace.doc)
 
-        self.emit_wrapped_text('%snamespace %s {' % (
-            'declare ' if self.split_by_namespace else '', namespace.name))
+        self.emit_wrapped_text(self._get_top_level_declaration(namespace.name))
 
         with self.indent(dent=spaces_per_indent):
             for data_type in data_types:
@@ -243,6 +245,14 @@ class TSDTypesBackend(CodeBackend):
 
         self.emit('}')
         self.emit()
+
+    def _get_top_level_declaration(self, name):
+        if self.split_by_namespace:
+            # Use module for when emitting declaration files.
+            return "declare module '%s' {" % name
+        else:
+            # Use namespace for organizing code with-in the file.
+            return "namespace %s {" % name
 
     def _parse_extra_args(self, api, extra_args_raw):
         """
