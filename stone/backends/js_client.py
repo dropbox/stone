@@ -64,7 +64,7 @@ class JavascriptClientBackend(CodeBackend):
 
             self.emit()
 
-            self.emit('module.exports = routes;')
+            self.emit('export { routes };')
 
     def _generate_route(self, route_schema, namespace, route):
         function_name = fmt_func(namespace.name + '_' + route.name)
