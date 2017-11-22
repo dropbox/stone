@@ -113,25 +113,31 @@ catch-all. Since it is, it deserializes the message to an ``A`` object.
 Union
 =====
 
-Let's use the following example to illustrate how a union is serialized::
+Similar to an enumerated subtype struct, recipients should check the ``.tag``
+key to determine the union variant.
+
+Let's use the following example to illustrate how a union is serialized based
+on the selected variant::
 
     union U
         singularity
         number Int64
         coord Coordinate?
+        infinity Infinity
 
     struct Coordinate
         x Int64
         y Int64
+
+    union Infinity
+        positive
+        negative
 
 The serialization of ``U`` with tag ``singularity`` is::
 
     {
      ".tag": "singularity"
     }
-
-The ``.tag`` key makes it easy for a recipient to immediately determine the
-selected union member.
 
 For a union member of primitive type (``number`` in the example), the
 serialization is as follows::
@@ -145,9 +151,9 @@ Note that ``number`` is used as the value for ``.tag`` and as a key to hold
 the value. This same pattern is used for union members with types that are
 other unions or structs with enumerated subtypes.
 
-Union members that are structs that do no enumerate subtypes (``coord`` in the
-example) serialize as the struct with the addition of a ``.tag`` key. For
-example, the serialization of ``Coordinate`` is::
+Union members that are ordinary structs (``coord`` in the example) serialize
+as the struct with the addition of a ``.tag`` key. For example, the
+serialization of ``Coordinate`` is::
 
     {
      "x": 1,
@@ -161,6 +167,17 @@ The serialization of ``U`` with tag ``coord`` is::
      "x": 1,
      "y": 2
     }
+
+The serialization of ``U`` with tag ``infinity`` is nested::
+
+    {
+     ".tag": "infinity",
+     "infinity": {
+      ".tag": "positive"
+     }
+    }
+
+The same rule applies for members that are enumerated subtypes.
 
 Nullable
 --------
