@@ -19,10 +19,14 @@ except ImportError:
     from mock import Mock  # type: ignore
 
 from stone.ir import (
+    Alias,
     ApiNamespace,
     Boolean,
     Struct,
-    StructField)
+    StructField,
+    Union,
+    UnionField,
+    Void)
 from stone.backends.tsd_types import TSDTypesBackend
 from test.backend_test_util import _mock_emit
 
@@ -42,7 +46,7 @@ def _make_backend(target_folder_path, template_path):
 def _make_namespace(ns_name="accounts"):
     # type: (typing.Text) -> ApiNamespace
     ns = ApiNamespace(ns_name)
-    struct = _make_struct('User', 'exists', ns)
+    struct = _make_struct('User', 'exists_since', ns)
     ns.add_data_type(struct)
     return ns
 
@@ -54,12 +58,13 @@ def _make_struct(struct_name, struct_field_name, namespace):
     return struct
 
 
-def _evaluate_namespace(backend, namespace_list):
-    # type: (TSDTypesBackend, typing.List[ApiNamespace]) -> typing.Text
+def _evaluate_namespace(backend, namespace_list, use_camel_case=False):
+    # type: (TSDTypesBackend, typing.List[ApiNamespace], bool) -> typing.Text
 
     emitted = _mock_emit(backend)
     filename = "types.d.ts"
     backend.split_by_namespace = False
+    backend.use_camel_case = use_camel_case
     backend._generate_base_namespace_module(namespace_list=namespace_list,
                                             filename=filename,
                                             extra_args={},
@@ -84,7 +89,7 @@ class TestTSDTypes(unittest.TestCase):
 
         namespace accounts {
           export interface User {
-            exists: boolean;
+            exists_since: boolean;
           }
 
         }
@@ -112,7 +117,7 @@ class TestTSDTypes(unittest.TestCase):
 
         namespace accounts {
           export interface User {
-            exists: boolean;
+            exists_since: boolean;
           }
 
         }
@@ -132,15 +137,69 @@ class TestTSDTypes(unittest.TestCase):
 
         namespace accounts {
           export interface User {
-            exists: boolean;
+            exists_since: boolean;
           }
 
         }
 
         namespace files {
           export interface User {
-            exists: boolean;
+            exists_since: boolean;
           }
+
+        }
+
+
+        """)
+        self.assertEqual(result, expected)
+
+    def test__generate_types_with_camel_casing(self):
+        # type: () -> None
+        backend = _make_backend(target_folder_path="output", template_path="")
+        ns = _make_namespace()
+
+        struct = _make_struct('UserAddress', 'street_number', ns)
+        ns.add_data_type(struct)
+
+        alias = Alias('UserHomeAddress', ns, ast_node=None)
+        alias.set_attributes(doc=None, data_type=struct)
+        ns.add_alias(alias)
+
+        union = Union('UserLocation', ns, ast_node=None, closed=False)
+
+        union.set_attributes(
+            doc=None,
+            fields=[
+                UnionField(
+                    name="zip_code",
+                    doc=None,
+                    data_type=Void(),
+                    ast_node=None
+                )
+            ],
+        )
+        ns.add_data_type(union)
+
+        result = _evaluate_namespace(backend, [ns], use_camel_case=True)
+        expected = textwrap.dedent("""
+        type Timestamp = string;
+
+        namespace accounts {
+          export interface User {
+            existsSince: boolean;
+          }
+
+          export interface UserAddress {
+            streetNumber: boolean;
+          }
+
+          export interface UserLocationZipCode {
+            '.tag': 'zip_code';
+          }
+
+          export type UserLocation = UserLocationZipCode;
+
+          export type UserHomeAddress = UserAddress;
 
         }
 
@@ -189,9 +248,9 @@ namespace ns
 import ns2
 struct A
     "Sample struct doc."
-    a String
+    client_name String
         "Sample field doc."
-    b Int64
+    client_id Int64
 struct B extends ns2.BaseS
     c Bytes
 """
@@ -204,8 +263,8 @@ struct B extends ns2.BaseS
     /**
      * Sample field doc.
      */
-    a: string;
-    b: number;
+    clientName: string;
+    clientId: number;
   }
 
   export interface B extends ns2.BaseS {
@@ -318,7 +377,8 @@ class TestTSDTypesE2E(unittest.TestCase):
              self.stone_output_directory,
              '--',
              self.template_file_name,
-             '--exclude_error_types',
+             '--exclude-error-types',
+             '--use-camel-case',
              '-i=0'],
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
@@ -351,6 +411,7 @@ class TestTSDTypesE2E(unittest.TestCase):
              '--',
              self.template_file_name,
              output_file_name,
+             '--use-camel-case',
              '-i=0'],
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
