@@ -40,6 +40,17 @@ _base_type_table = {
 }
 
 
+def fmt_name_case(name, use_camel_case):
+    # type: (str, bool) -> str
+    """
+    Camel case for variable names is the preferred style in typescript.
+    To keep generated code backwards compatible, camel casing is only enabled behind a flag.
+    """
+    if use_camel_case:
+        return fmt_camel(name)
+    return name
+
+
 def fmt_error_type(data_type, inside_namespace=None):
     """
     Converts the error type into a TypeScript type.
@@ -47,6 +58,7 @@ def fmt_error_type(data_type, inside_namespace=None):
     occurs in, or None if this parameter is not relevant.
     """
     return 'Error<%s>' % fmt_type(data_type, inside_namespace)
+
 
 def fmt_type_name(data_type, inside_namespace=None):
     """
@@ -65,6 +77,7 @@ def fmt_type_name(data_type, inside_namespace=None):
             fmted_type += '<' + fmt_type(data_type.data_type, inside_namespace) + '>'
         return fmted_type
 
+
 def fmt_polymorphic_type_reference(data_type, inside_namespace=None):
     """
     Produces a TypeScript type name for the meta-type that refers to the given
@@ -76,6 +89,7 @@ def fmt_polymorphic_type_reference(data_type, inside_namespace=None):
     #       can defer emitting these types until the end, and emit them in a
     #       nested namespace (e.g., files.references.MetadataReference).
     return fmt_type_name(data_type, inside_namespace) + "Reference"
+
 
 def fmt_type(data_type, inside_namespace=None):
     """
@@ -95,17 +109,21 @@ def fmt_type(data_type, inside_namespace=None):
     else:
         return fmt_type_name(data_type, inside_namespace)
 
+
 def fmt_union(type_strings):
     """
     Returns a union type of the given types.
     """
     return '|'.join(type_strings) if len(type_strings) > 1 else type_strings[0]
 
+
 def fmt_func(name):
     return fmt_camel(name)
 
+
 def fmt_var(name):
     return fmt_camel(name)
+
 
 def fmt_tag(cur_namespace, tag, val):
     """
@@ -130,6 +148,7 @@ def fmt_tag(cur_namespace, tag, val):
         return val
     else:
         raise RuntimeError('Unknown doc ref tag %r' % tag)
+
 
 def generate_imports_for_referenced_namespaces(backend, namespace):
     # type: (Backend, ApiNamespace) -> None
