@@ -196,10 +196,9 @@ class PythonClientBackend(CodeBackend):
                 extra_request_args = [('download_path',
                                        'str',
                                        'Path on local machine to save file.')]
-            if response_binary_body:
+            if response_binary_body and not download_to_file:
                 extra_return_arg = ':class:`requests.models.Response`'
-                if not download_to_file:
-                    footer = DOCSTRING_CLOSE_RESPONSE
+                footer = DOCSTRING_CLOSE_RESPONSE
 
             if route.doc:
                 func_docstring = self.process_doc(route.doc, self._docf)
