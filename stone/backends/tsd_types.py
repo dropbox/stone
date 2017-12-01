@@ -32,7 +32,6 @@ from stone.backends.helpers import (
     fmt_pascal,
 )
 from stone.backends.tsd_helpers import (
-    fmt_name_case,
     fmt_polymorphic_type_reference,
     fmt_tag,
     fmt_type,
@@ -55,16 +54,10 @@ _cmdline_parser.add_argument(
           'all of the emitted types.'),
 )
 _cmdline_parser.add_argument(
-    '--exclude-error-types',
+    '--exclude_error_types',
     default=False,
     action='store_true',
     help='If true, the output will exclude the interface for Error type.',
-)
-_cmdline_parser.add_argument(
-    '--use-camel-case',
-    default=False,
-    action='store_true',
-    help='If true, field names will be emitted in camelCase style.',
 )
 _cmdline_parser.add_argument(
     '-e',
@@ -150,13 +143,9 @@ class TSDTypesBackend(CodeBackend):
     # Instance var to denote if one file is output for each namespace.
     split_by_namespace = False
 
-    # To ensure backwards compatibility, although ts style guide recommends camelCase.
-    use_camel_case = False
-
     def generate(self, api):
         extra_args = self._parse_extra_args(api, self.args.extra_arg)
         template = self._read_template()
-        self.use_camel_case = self.args.use_camel_case
         if self.args.filename:
             self._generate_base_namespace_module(api.namespaces.values(), self.args.filename,
                                                  template, extra_args,
@@ -349,7 +338,7 @@ class TSDTypesBackend(CodeBackend):
         """
         namespace = alias_type.namespace
         self.emit('export type %s = %s;' % (fmt_type_name(alias_type, namespace),
-                                            fmt_type_name(alias_type.data_type, namespace)))
+                                     fmt_type_name(alias_type.data_type, namespace)))
         self.emit()
 
     def _generate_struct_type(self, struct_type, indent_spaces, extra_parameters):
@@ -367,8 +356,7 @@ class TSDTypesBackend(CodeBackend):
             for param_name, param_type, param_docstring in extra_parameters:
                 if param_docstring:
                     self._emit_tsdoc_header(param_docstring)
-                self.emit('%s: %s;' % (fmt_name_case(param_name, self.use_camel_case),
-                                       param_type))
+                self.emit('%s: %s;' % (param_name, param_type))
 
             for field in struct_type.fields:
                 doc = field.doc
@@ -384,8 +372,7 @@ class TSDTypesBackend(CodeBackend):
                 if doc:
                     self._emit_tsdoc_header(doc)
                 # Translate nullable types into optional properties.
-                cased_name = fmt_name_case(field.name, self.use_camel_case)
-                field_name = '%s?' % cased_name if optional else cased_name
+                field_name = '%s?' % field.name if optional else field.name
                 self.emit('%s: %s;' % (field_name, field_ts_type))
 
         self.emit('}')
@@ -471,8 +458,7 @@ class TSDTypesBackend(CodeBackend):
                 # it in quotation marks.
                 self.emit("'.tag': '%s';" % variant.name)
                 if is_void_type(variant.data_type) is False:
-                    self.emit("%s: %s;" % (fmt_name_case(variant.name, self.use_camel_case),
-                                           fmt_type(variant.data_type, namespace)))
+                    self.emit("%s: %s;" % (variant.name, fmt_type(variant.data_type, namespace)))
             self.emit('}')
             self.emit()
 
