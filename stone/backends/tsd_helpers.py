@@ -131,7 +131,7 @@ def fmt_tag(cur_namespace, tag, val):
     else:
         raise RuntimeError('Unknown doc ref tag %r' % tag)
 
-def generate_imports_for_referenced_namespaces(backend, namespace):
+def generate_imports_for_referenced_namespaces(backend, namespace, module_name_prefix):
     # type: (Backend, ApiNamespace) -> None
 
     imported_namespaces = namespace.get_imported_namespaces()
@@ -139,7 +139,10 @@ def generate_imports_for_referenced_namespaces(backend, namespace):
         return
 
     for ns in imported_namespaces:
-        backend.emit("import * as {namespace_name} from '{namespace_name}';".format(
-            namespace_name=ns.name
-        ))
+        backend.emit(
+            "import * as {namespace_name} from '{module_name_prefix}{namespace_name}';".format(
+                module_name_prefix=module_name_prefix,
+                namespace_name=ns.name
+            )
+        )
     backend.emit()
