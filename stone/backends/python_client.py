@@ -85,6 +85,15 @@ _cmdline_parser.add_argument(
     type=str,
     help='The output Python package of the python_types backend.',
 )
+_cmdline_parser.add_argument(
+    '-e',
+    '--error-class-path',
+    default='.exceptions.ApiError',
+    type=str,
+    help=(
+        "The path to the class that's raised when a route returns an error. "
+        "The class name is inserted into the doc for route methods."),
+)
 
 
 class PythonClientBackend(CodeBackend):
@@ -428,12 +437,14 @@ class PythonClientBackend(CodeBackend):
                 self.emit(':rtype: {}'.format(rtype))
 
         if not is_void_type(error_data_type) and error_data_type.fields:
-            self.emit(':raises: :class:`dropbox.exceptions.ApiError`')
+            self.emit(':raises: :class:`{}`'.format(self.args.error_class_path))
             self.emit()
-            # To provide more clarity to a dev who reads the docstring, state
-            # the error class that will be returned in the reason field of an
-            # ApiError object.
-            self.emit('If this raises, ApiError.reason is of type:')
+            # To provide more clarity to a dev who reads the docstring, suggest
+            # the route's error class. This is confusing, however, because we
+            # don't know where the error object that's raised will store
+            # the more detailed route error defined in stone.
+            error_class_name = self.args.error_class_path.rsplit('.', 1)[-1]
+            self.emit('If this raises, {} will contain:'.format(error_class_name))
             with self.indent():
                 self.emit(self._format_type_in_doc(namespace, error_data_type))
 
