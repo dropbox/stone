@@ -169,7 +169,7 @@ class Bytes(Primitive):
 
     def check_example(self, ex_field):
         if not isinstance(ex_field.value, (bytes, six.text_type)):
-            raise InvalidSpec("'%s' is not valid bytes",
+            raise InvalidSpec("'%s' is not valid bytes" % ex_field.value,
                               ex_field.lineno, ex_field.path)
 
     def check_attr_repr(self, attr_field):
