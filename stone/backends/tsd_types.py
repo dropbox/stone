@@ -459,17 +459,37 @@ class TSDTypesBackend(CodeBackend):
         variant_type_names = []
         if parent_type:
             variant_type_names.append(fmt_type_name(parent_type, namespace))
+
+        def _is_struct_without_enumerated_subtypes(data_type):
+            """
+            :param data_type: any data type.
+            :return: True if the given data type is a struct which has no enumerated subtypes.
+            """
+            return is_struct_type(data_type) and (
+                not data_type.has_enumerated_subtypes())
+
         for variant in union_type.fields:
             if variant.doc:
                 self._emit_tsdoc_header(variant.doc)
             variant_name = '%s%s' % (union_type_name, fmt_pascal(variant.name))
             variant_type_names.append(variant_name)
-            self.emit('export interface %s {' % variant_name)
+
+            is_struct_without_enumerated_subtypes = _is_struct_without_enumerated_subtypes(
+                variant.data_type)
+
+            if is_struct_without_enumerated_subtypes:
+                self.emit('export interface %s extends %s {' % (
+                    variant_name, fmt_type(variant.data_type, namespace)))
+            else:
+                self.emit('export interface %s {' % variant_name)
+
             with self.indent(dent=indent_spaces):
                 # Since field contains non-alphanumeric character, we need to enclose
                 # it in quotation marks.
                 self.emit("'.tag': '%s';" % variant.name)
-                if is_void_type(variant.data_type) is False:
+                if is_void_type(variant.data_type) is False and (
+                    not is_struct_without_enumerated_subtypes
+                ):
                     self.emit("%s: %s;" % (variant.name, fmt_type(variant.data_type, namespace)))
             self.emit('}')
             self.emit()

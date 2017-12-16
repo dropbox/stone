@@ -250,12 +250,124 @@ alias AliasedBaseU = BaseU
 }
 """
 
+    _ns3_union_spec = """\
+namespace ns3
+struct A
+    union
+        a1 A1
+        a2 A2
+    a String
+struct A1 extends A
+    b Boolean
+struct A2 extends A
+    c Boolean
+union M
+    e Boolean
+    f String
+union B
+    w Boolean
+    x A
+    y M
+    z A2
+"""
+
+    _ns3_union_spec_types = """{
+  export interface A {
+    a: string;
+  }
+
+  /**
+   * Reference to the A polymorphic type. Contains a .tag property to let you
+   * discriminate between possible subtypes.
+   */
+  export interface AReference extends A {
+    /**
+     * Tag identifying the subtype variant.
+     */
+    '.tag': "a1"|"a2";
+  }
+
+  export interface A1 extends A {
+    b: boolean;
+  }
+
+  /**
+   * Reference to the A1 type, identified by the value of the .tag property.
+   */
+  export interface A1Reference extends A1 {
+    /**
+     * Tag identifying this subtype variant. This field is only present when
+     * needed to discriminate between multiple possible subtypes.
+     */
+    '.tag': 'a1';
+  }
+
+  export interface A2 extends A {
+    c: boolean;
+  }
+
+  /**
+   * Reference to the A2 type, identified by the value of the .tag property.
+   */
+  export interface A2Reference extends A2 {
+    /**
+     * Tag identifying this subtype variant. This field is only present when
+     * needed to discriminate between multiple possible subtypes.
+     */
+    '.tag': 'a2';
+  }
+
+  export interface BW {
+    '.tag': 'w';
+    w: boolean;
+  }
+
+  export interface BX {
+    '.tag': 'x';
+    x: A1Reference|A2Reference|AReference;
+  }
+
+  export interface BY {
+    '.tag': 'y';
+    y: M;
+  }
+
+  export interface BZ extends A2 {
+    '.tag': 'z';
+  }
+
+  export interface BOther {
+    '.tag': 'other';
+  }
+
+  export type B = BW | BX | BY | BZ | BOther;
+
+  export interface ME {
+    '.tag': 'e';
+    e: boolean;
+  }
+
+  export interface MF {
+    '.tag': 'f';
+    f: string;
+  }
+
+  export interface MOther {
+    '.tag': 'other';
+  }
+
+  export type M = ME | MF | MOther;
+%s
+}
+"""
+
     _timestamp_mapping = 'type Timestamp = string'
 
     _timestamp_def_formatted = "\n" + "  " + _timestamp_mapping + ";"
 
     @classmethod
     def get_ns_spec(cls):
+        """Returns a test namespace which imports another namespace (`ns2`)."""
         return cls._ns_spec
 
     @classmethod
@@ -266,6 +378,7 @@ alias AliasedBaseU = BaseU
 
     @classmethod
     def get_ns2_spec(cls):
+        """Returns a simple namespace."""
         return cls._ns2_spec
 
     @classmethod
@@ -279,6 +392,21 @@ alias AliasedBaseU = BaseU
             ("\nnamespace ns " + cls._ns_spec_types) % "") + (
             ("\nnamespace ns2 " + cls._ns2_spec_types) % "") + "\n\n"
         return types
+
+    @classmethod
+    def get_ns3_spec_for_union(cls):
+        """
+        Returns a test namespace which has a union field with all possible types of
+        members a union can have. It includes (1) primitive, (2) struct, (3) enumerated
+        subtypes, and (4) a union. This spec is useful in validating the auto-generated
+        code for a union type defined in a namespace.
+        """
+        return cls._ns3_union_spec
+
+    @classmethod
+    def get_ns3_types_as_declaration(cls):
+        return (("\ndeclare module 'ns3' " + cls._ns3_union_spec_types
+                 ) % cls._timestamp_def_formatted) + "\n\n"
 
 
 class TestTSDTypesE2E(unittest.TestCase):
@@ -362,6 +490,37 @@ class TestTSDTypesE2E(unittest.TestCase):
 
         expected_output = SpecHelper.get_all_types_as_namespace()
         self._verify_generated_output('output/{}'.format(output_file_name), expected_output)
+
+    def test_tsd_types_for_union(self):
+        """
+        Test tsd types generated for a union which has all possible data types as
+        members including primitive, struct, enumerated sub types and unions.
+        """
+        # Sanity check: stone must be importable for the compiler to work
+        __import__('stone')
+
+        # Compile spec by calling out to stone
+        p = subprocess.Popen(
+            [sys.executable,
+             '-m',
+             'stone.cli',
+             'tsd_types',
+             self.stone_output_directory,
+             '--',
+             self.template_file_name,
+             '--exclude_error_types',
+             '-i=0'],
+            stdin=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+        _, stderr = p.communicate(
+            input=(SpecHelper.get_ns3_spec_for_union()).encode('utf-8'))
+        if p.wait() != 0:
+            raise AssertionError('Could not execute stone tool: %s' %
+                                 stderr.decode('utf-8'))
+
+        # one file must be generated per namespace
+        expected_ns_output = SpecHelper.get_ns3_types_as_declaration()
+        self._verify_generated_output('output/ns3.d.ts', expected_ns_output)
 
 
 if __name__ == '__main__':
