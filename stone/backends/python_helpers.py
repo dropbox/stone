@@ -103,7 +103,7 @@ def generate_imports_for_referenced_namespaces(
             for ns in imported_namespaces:
                 backend.emit(ns.name + ',')
         backend.emit(')')
-    backend.emit('except (SystemError, ValueError):')
+    backend.emit('except (ImportError, SystemError, ValueError):')
     # Fallback if imported from outside a package.
     with backend.indent():
         for ns in imported_namespaces:
@@ -119,7 +119,7 @@ _validators_import_template = """\
 try:
     from . import stone_validators as bv
     from . import stone_base as bb
-except (SystemError, ValueError):
+except (ImportError, SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
     import stone_validators as bv{type_ignore_comment}
