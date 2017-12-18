@@ -115,7 +115,7 @@ Three additional modules are copied into the target directory. The first,
 their expected Stone types. You will not need to explicitly import this module,
 but the auto-generated Python classes depend on it. The second,
 ``stone_serializers.py``, contains a pair of ``json_encode()`` and
-`json_decode()`` functions. You will need to import this module to serialize
+``json_decode()`` functions. You will need to import this module to serialize
 your objects. The last is ``stone_base.py`` which shouldn't be used directly.
 
 In the following sections, we'll interact with the classes generated in
@@ -227,7 +227,7 @@ enumerated subtypes. Expanding on our example from the language reference,
 assume the following spec::
 
     struct Resource
-        union*
+        union
             file File
             folder Folder
 
