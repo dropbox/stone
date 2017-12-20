@@ -11,7 +11,7 @@ intricacies of your API.
 Choosing a Filename
 ===================
 
-All specification files must have a ``.stone`` extension. We recommend that the
+All specification files end with a ``.stone`` extension. We recommend that the
 name of the file be the same as the `namespace`_ defined in the spec. If
 multiple files are part of the same namespace, we recommend that they all share
 the same prefix: the namespace name followed by an underscore.
@@ -213,7 +213,7 @@ type inline::
                 carnivore
 
 The inline definition is identical to a top-level definition, except that the
-name is omitted as its already specified as the type for the field.
+name is omitted as it's already specified as the type for the field.
 
 Defaults
 --------
