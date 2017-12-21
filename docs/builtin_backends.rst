@@ -268,6 +268,10 @@ module for the namespace will have a module-level variable for each route::
     >>> eval
     Route('eval', False, ...)
 
+Route attributes specified in the spec are available as a dict in the ``attrs``
+member variable. Route deprecation is stored in the ``deprecated`` member
+variable.
+
 Serialization
 -------------
 
