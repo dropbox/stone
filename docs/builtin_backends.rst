@@ -289,3 +289,74 @@ To deserialize, we can use ``json_decode``::
 
 There's also ``json_compat_obj_encode`` and ``json_compat_obj_decode`` for
 converting to and from Python primitive types rather than JSON strings.
+
+Route Functions
+---------------
+
+To generate functions that represent routes, use the ``python_client``
+generator::
+
+    $ stone python_client . calc.stone -- -m client -c Client -t myservice
+
+``-m`` specifies the name of the Python module to generate, in this case
+``client.py``. The important contents of the file look as follows::
+
+    class Client(object):
+        __metaclass__ = ABCMeta
+
+        @abstractmethod
+        def request(self, route, namespace, arg, arg_binary=None):
+            pass
+
+        # ------------------------------------------
+        # Routes in calc namespace
+
+        def calc_eval(self,
+                      left,
+                      right,
+                      op=calc.Operator.add):
+            """
+            :type op: :class:`myservice.calc.Operator`
+            :type left: long
+            :type right: long
+            :rtype: :class:`myservice.calc.Result`
+            :raises: :class:`.exceptions.ApiError`
+
+            If this raises, ApiError will contain:
+                :class:`myservice.calc.EvalError`
+            """
+            arg = calc.Expression(left,
+                                  right,
+                                  op)
+            r = self.request(
+                calc.eval,
+                'calc',
+                arg,
+                None,
+            )
+            return r
+
+``-c`` specified the name of the abstract class to generate. Using this class,
+you'll likely want to inherit the class and implement the request function. For
+example, an API that goes over HTTP might have the following client::
+
+    import requests  # use the popular HTTP library
+
+    from .stone_serializers import json_decode, json_encode
+    from .exceptions import ApiError  # You must implement this
+
+    class MyServiceClient(Client):
+
+        def request(self, route, namespace, arg, arg_binary=None):
+            url = 'https://api.myservice.xyz/{}/{}'.format(
+                    namespace, route.name)
+            r = requests.get(
+                url,
+                headers={'Content-Type': 'application/json'},
+                data=json_encode(route.arg_type, arg))
+            if r.status_code != 200:
+                raise ApiError(...)
+            return json_decode(route.result_type, r.content)
+
+Note that care is taken to ensure that that the return type and exception type
+match those that were specified in the automatically generated documentation.
