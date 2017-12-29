@@ -329,7 +329,7 @@ class PythonTypesBackend(CodeBackend):
         parent_omitted_callers = data_type.parent_type.get_all_omitted_callers() if \
             data_type.parent_type else set([])
 
-        for omitted_caller in child_omitted_callers | parent_omitted_callers:
+        for omitted_caller in sorted(child_omitted_callers | parent_omitted_callers, key=str):
             is_public = omitted_caller is None
             map_name_prefix = '' if is_public else '_{}'.format(omitted_caller)
             caller_in_parent = data_type.parent_type and (is_public or omitted_caller
