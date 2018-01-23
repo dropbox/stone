@@ -68,6 +68,7 @@ class TestStone(unittest.TestCase):
                 "Doc"
                 # inner comment
                 f1 UInt64 # partial line comment
+            #    f2 UInt64
                 # trailing comment
 
             struct S2 # struct def following comment
@@ -81,6 +82,68 @@ class TestStone(unittest.TestCase):
         self.assertIsInstance(out[1], AstAlias)
         self.assertEqual(out[2].name, 'S')
         self.assertEqual(out[3].name, 'S2')
+
+    def test_line_continuations(self):
+        line_continuation_err = 'Line continuation must increment indent by 1.'
+
+        # Test continuation in various contexts
+        text = textwrap.dedent("""\
+            namespace test
+
+            alias U64 = UInt64(
+                min_value=0, max_value=10)
+
+            struct S
+                val UInt64(
+                    min_value=0,
+                    max_value=10)
+                val2 UInt64(
+            # this
+                # is
+
+                    # a
+                    min_value=0
+                        # stress
+                            # test
+                    )
+
+            route r(
+                S,
+                S,
+                S
+                )
+                "Test route."
+            """)
+        specs_to_ir([('test.stone', text)])
+
+        # Try over indenting
+        text = textwrap.dedent("""\
+                    namespace test
+
+                    struct S
+                        val UInt64(
+                        # comment to throw it off
+                                min_value=0)
+                    """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(line_continuation_err, cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Try under indenting
+        text = textwrap.dedent("""\
+                            namespace test
+
+                            struct S
+                                val UInt64(
+                                # comment to throw it off
+                                # x2
+                                min_value=0)
+                            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(line_continuation_err, cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
 
     def test_type_args(self):
         text = textwrap.dedent("""\

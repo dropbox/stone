@@ -920,6 +920,17 @@ val
     floats, and strings. Backends should convert the value to the native
     representation of the value for the target language.
 
+Line Continuations
+==================
+
+Implicit line continuations are supported for expressions in between
+parentheses as long as they are at an additional indentation. For example::
+
+    route binary_op(
+        BinaryOpArg,
+        Result,
+        BinaryOpError)
+
 Grammar
 =======
 
