@@ -34,6 +34,7 @@ class Lexer(object):
     def __init__(self):
         self.lex = None
         self.tokens_queue = None
+        # The current indentation "level" rather than a count of spaces.
         self.cur_indent = None
         self._logger = logging.getLogger('stone.stone.lexer')
         self.last_token = None
@@ -68,13 +69,14 @@ class Lexer(object):
                 self.last_token = self.tokens_queue.pop(0)
             else:
                 if r is None and self.cur_indent > 0:
-                    if self.last_token and self.last_token.type not in ('NEWLINE', 'LINE'):
-                        newline_token = self._create_token('NEWLINE', '\n', self.lex.lineno,
-                                                           self.lex.lexpos)
+                    if (self.last_token and
+                            self.last_token.type not in ('NEWLINE', 'LINE')):
+                        newline_token = _create_token(
+                            'NEWLINE', '\n', self.lex.lineno, self.lex.lexpos)
                         self.tokens_queue.append(newline_token)
-                    dedent_count = self.cur_indent // 4
-                    dedent_token = self._create_token('DEDENT', '\t', self.lex.lineno,
-                                                      self.lex.lexpos)
+                    dedent_count = self.cur_indent
+                    dedent_token = _create_token(
+                        'DEDENT', '\t', self.lex.lineno, self.lex.lexpos)
                     self.tokens_queue.extend([dedent_token] * dedent_count)
 
                     self.cur_indent = 0
@@ -82,18 +84,6 @@ class Lexer(object):
                 else:
                     self.last_token = r
         return self.last_token
-
-    def _create_token(self, token_type, value, lineno, lexpos):
-        """
-        Helper for creating ply.lex.LexToken objects. Unfortunately, LexToken
-        does not have a constructor defined to make settings these values easy.
-        """
-        token = lex.LexToken()
-        token.type = token_type
-        token.value = value
-        token.lineno = lineno
-        token.lexpos = lexpos
-        return token
 
     def test(self, data):
         """Logs all tokens for human inspection. Useful for debugging."""
@@ -273,9 +263,11 @@ class Lexer(object):
                 else:
                     new_str += c
         # remove current indentation
-        new_str = '\n'.join([line.replace(' ' * self.cur_indent, '')
-                             for line in new_str.splitlines()])
-        t.value = new_str
+        indentation_str = ' ' * _indent_level_to_spaces_count(self.cur_indent)
+        lines_without_indentation = [
+            line.replace(indentation_str, '', 1)
+            for line in new_str.splitlines()]
+        t.value = '\n'.join(lines_without_indentation)
         return t
 
     # Ignore comments.
@@ -299,7 +291,7 @@ class Lexer(object):
             is_partial_line_comment = (not is_full_line_comment and
                                        token.lexer.lexdata[i] != ' ')
             if is_full_line_comment or is_partial_line_comment:
-                newline_token = self._create_token('NEWLINE', '\n',
+                newline_token = _create_token('NEWLINE', '\n',
                     token.lineno, token.lexpos + len(token.value) - 1)
                 newline_token.lexer = token.lexer
                 dent_tokens = self._create_tokens_for_next_line_dent(
@@ -319,7 +311,7 @@ class Lexer(object):
     def t_WSIGNORE_comment(self, token):
         r'[#][^\n]*\n+'
         token.lexer.lineno += token.value.count('\n')
-        newline_token = self._create_token('NEWLINE', '\n',
+        newline_token = _create_token('NEWLINE', '\n',
             token.lineno, token.lexpos + len(token.value) - 1)
         newline_token.lexer = token.lexer
         self._check_for_indent(newline_token)
@@ -353,12 +345,12 @@ class Lexer(object):
             return None
 
         dent_type = 'INDENT' if indent_delta > 0 else 'DEDENT'
-        dent_token = self._create_token(
+        dent_token = _create_token(
             dent_type, '\t', newline_token.lineno + 1,
             newline_token.lexpos + len(newline_token.value))
 
         tokens = [dent_token] * abs(indent_delta)
-        self.cur_indent += indent_delta * 4
+        self.cur_indent += indent_delta
         return MultiToken(tokens)
 
     def _check_for_indent(self, newline_token):
@@ -405,13 +397,13 @@ class Lexer(object):
             return None
 
         indent = len(line) - lstripped_line_length
-        indent_spaces = indent - self.cur_indent
-        if indent_spaces % 4 > 0:
+        if indent % 4 > 0:
             self.errors.append(
                 ('Indent is not divisible by 4.', newline_token.lexer.lineno))
             return None
 
-        return indent_spaces // 4
+        indent_delta = indent - _indent_level_to_spaces_count(self.cur_indent)
+        return indent_delta // 4
 
     # A string containing ignored characters (spaces and tabs)
     t_ignore = ' \t'
@@ -424,3 +416,19 @@ class Lexer(object):
             ('Illegal character %s.' % repr(token.value[0]).lstrip('u'),
              token.lexer.lineno))
         token.lexer.skip(1)
+
+
+def _create_token(token_type, value, lineno, lexpos):
+    """
+    Helper for creating ply.lex.LexToken objects. Unfortunately, LexToken
+    does not have a constructor defined to make settings these values easy.
+    """
+    token = lex.LexToken()
+    token.type = token_type
+    token.value = value
+    token.lineno = lineno
+    token.lexpos = lexpos
+    return token
+
+def _indent_level_to_spaces_count(indent):
+    return indent * 4
