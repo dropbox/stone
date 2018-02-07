@@ -724,7 +724,7 @@ class PythonTypesBackend(CodeBackend):
         all_omitted_callers = child_omitted_callers | parent_omitted_callers
         if len(all_omitted_callers) != 0:
             self.emit('{}._permissioned_tagmaps = {}'.format(class_name, all_omitted_callers))
-        for omitted_caller in all_omitted_callers | {None}:
+        for omitted_caller in sorted(all_omitted_callers | {None}, key=str):
             is_public = omitted_caller is None
             tagmap_name = '_tagmap' if is_public else '_{}_tagmap'.format(omitted_caller)
             caller_in_parent = data_type.parent_type and (is_public or omitted_caller
