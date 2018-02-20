@@ -104,7 +104,7 @@ class ApiNamespace(object):
         self.name = name
         self.doc = None                 # type: typing.Optional[six.text_type]
         self.routes = []                # type: typing.List[ApiRoute]
-        self.route_by_name = {}         # type: typing.Dict[str, ApiRoute]
+        self.route_by_name = {}         # type: typing.Dict[typing.Text, ApiRoute]
         self.data_types = []            # type: typing.List[UserDefined]
         self.data_type_by_name = {}     # type: typing.Dict[str, UserDefined]
         self.aliases = []               # type: typing.List[Alias]
@@ -315,7 +315,7 @@ class ApiRoute(object):
     def __init__(self,
                  name,
                  ast_node):
-        # type: (str, AstRouteDef) -> None
+        # type: (typing.Text, AstRouteDef) -> None
         """
         :param str name: Designated name of the endpoint.
         :param ast_node: Raw route definition from the parser.
