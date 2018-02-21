@@ -161,7 +161,7 @@ class PythonTypeStubsBackend(CodeBackend):
     def _generate_validator_for(self, data_type):
         # type: (DataType) -> None
         cls_name = class_name_for_data_type(data_type)
-        self.emit("{}_validator = ...  # type: stone_validators.Validator".format(
+        self.emit("{}_validator: bv.Validator = ...".format(
             cls_name
         ))
 
@@ -377,7 +377,7 @@ class PythonTypeStubsBackend(CodeBackend):
         for route in namespace.routes:
             var_name = fmt_func(route.name)
             self.emit(
-                "{var_name} = ...  # type: bb.Route".format(
+                "{var_name}: bb.Route = ...".format(
                     var_name=var_name
                 )
             )
