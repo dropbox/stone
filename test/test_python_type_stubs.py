@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import textwrap
+
 MYPY = False
 if MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -30,6 +31,7 @@ from stone.ir import (
     UnionField,
     Void,
     Float64)
+from stone.ir.api import ApiRoute
 from stone.backends.python_type_stubs import PythonTypeStubsBackend
 from test.backend_test_util import _mock_emit
 
@@ -167,6 +169,22 @@ def _make_namespace_with_empty_union():
 
     return ns
 
+def _make_namespace_with_route():
+    # type: (...) -> ApiNamespace
+    ns = ApiNamespace("_make_namespace_with_route()")
+    mock_ast_node = Mock()
+    route_one = ApiRoute(
+        name="route_one",
+        ast_node=mock_ast_node,
+    )
+    route_two = ApiRoute(
+        name="route_two",
+        ast_node=mock_ast_node,
+    )
+    ns.add_route(route_one)
+    ns.add_route(route_two)
+    return ns
+
 def _api():
     api = Api(version="1.0")
     return api
@@ -219,7 +237,8 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 @f1.deleter
                 def f1(self) -> None: ...
-
+            
+            Struct1_validator = ...  # type: stone_validators.Validator
 
             class Struct2(object):
                 def __init__(self,
@@ -256,6 +275,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @f4.deleter
                 def f4(self) -> None: ...
 
+            Struct2_validator = ...  # type: stone_validators.Validator
 
 
             from typing import (
@@ -298,6 +318,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @nullable_list.deleter
                 def nullable_list(self) -> None: ...
 
+            NestedTypes_validator = ...  # type: stone_validators.Validator
 
 
             from typing import (
@@ -322,6 +343,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 def is_last(self) -> bool: ...
 
+            Union_validator = ...  # type: stone_validators.Validator
 
             class Shape(bb.Union):
                 point = ...  # type: Shape
@@ -335,7 +357,8 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 def get_circle(self) -> float: ...
 
-
+            Shape_validator = ...  # type: stone_validators.Validator
+            
             """).format(headers=_headers)
         self.assertEqual(result, expected)
 
@@ -348,6 +371,21 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class EmptyUnion(bb.Union):
                 pass
+                
+            EmptyUnion_validator = ...  # type: stone_validators.Validator
+
+            """).format(headers=_headers)
+        self.assertEqual(result, expected)
+
+    def test__generate_routes(self):
+        # type: () -> None
+        ns = _make_namespace_with_route()
+        result = self._evaluate_namespace(ns)
+        expected = textwrap.dedent("""\
+            {headers}
+
+            route_one = ...  # type: bb.Route
+            route_two = ...  # type: bb.Route
 
             """).format(headers=_headers)
         self.assertEqual(result, expected)
@@ -372,6 +410,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @f1.deleter
                 def f1(self) -> None: ...
 
+            Struct1_validator = ...  # type: stone_validators.Validator
 
             AliasToStruct1 = Struct1
             """).format(headers=_headers)

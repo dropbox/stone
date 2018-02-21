@@ -45,6 +45,7 @@ def emit_pass_if_nothing_emitted(codegen):
     ending_lineno = codegen.lineno
     if starting_lineno == ending_lineno:
         codegen.emit("pass")
+        codegen.emit()
 
 class ImportTracker(object):
     def __init__(self):
@@ -135,6 +136,7 @@ class PythonTypeStubsBackend(CodeBackend):
         for alias in namespace.linearize_aliases():
             self._generate_alias_definition(namespace, alias)
 
+        self._generate_routes(namespace)
         self._generate_imports_needed_for_typing()
 
     def _generate_imports_for_referenced_namespaces(self, namespace):
@@ -152,7 +154,16 @@ class PythonTypeStubsBackend(CodeBackend):
         with self.indent():
             self._generate_struct_class_init(ns, data_type)
             self._generate_struct_class_properties(ns, data_type)
+
+        self._generate_validator_for(data_type)
         self.emit()
+
+    def _generate_validator_for(self, data_type):
+        # type: (DataType) -> None
+        cls_name = class_name_for_data_type(data_type)
+        self.emit("{}_validator = ...  # type: stone_validators.Validator".format(
+            cls_name
+        ))
 
     def _generate_union_class(self, ns, data_type):
         # type: (ApiNamespace, Union) -> None
@@ -162,6 +173,8 @@ class PythonTypeStubsBackend(CodeBackend):
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_variant_creators(ns, data_type)
             self._generate_union_class_get_helpers(ns, data_type)
+
+        self._generate_validator_for(data_type)
         self.emit()
 
     def _generate_union_class_vars(self, ns, data_type):
@@ -355,6 +368,22 @@ class PythonTypeStubsBackend(CodeBackend):
         assert self._pep_484_type_mapping_callbacks
         return map_stone_type_to_python_type(ns, data_type,
                                              override_dict=self._pep_484_type_mapping_callbacks)
+
+    def _generate_routes(
+            self,
+            namespace,  # type: ApiNamespace
+    ):
+        # type: (...) -> None
+        for route in namespace.routes:
+            var_name = fmt_func(route.name)
+            self.emit(
+                "{var_name} = ...  # type: bb.Route".format(
+                    var_name=var_name
+                )
+            )
+
+        if namespace.routes:
+            self.emit()
 
     def _generate_imports_needed_for_typing(self):
         # type: () -> None
