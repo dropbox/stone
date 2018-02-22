@@ -1059,22 +1059,28 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     args=fmt_func_args(deserialized_obj_args))
                 self.emit('return {};'.format(init_call))
             else:
+                def fmt_deserial_call(block_type):
+                    caller = fmt_serial_class(fmt_class_prefix(block_type))
+                    args = fmt_func_args([('value', 'valueDict')])
+                    deserialize_call = fmt_func_call(
+                        caller=caller, callee='deserialize', args=args)
+                    self.emit('return {};'.format(deserialize_call))
                 for tags, subtype in struct.get_all_subtypes_with_tags():
                     assert len(tags) == 1, tags
                     tag = tags[0]
 
                     base_string = 'if ([valueDict[@".tag"] isEqualToString:@"{}"])'
-                    with self.block(base_string.format(fmt_var(tag))):
-                        caller = fmt_serial_class(fmt_class_prefix(subtype))
-                        args = fmt_func_args([('value', 'valueDict')])
-                        deserialize_call = fmt_func_call(
-                            caller=caller, callee='deserialize', args=args)
-                        self.emit('return {};'.format(deserialize_call))
+                    with self.block(base_string.format(tag)):
+                        fmt_deserial_call(subtype)
+
                 self.emit()
-                description_str = (
-                    '[NSString stringWithFormat:@"Tag has an invalid '
-                    'value: \\\"%@\\\".", valueDict[@".tag"]]')
-                self._generate_throw_error('InvalidTag', description_str)
+                if struct.is_catch_all():
+                    fmt_deserial_call(struct)
+                else:
+                    description_str = (
+                        '[NSString stringWithFormat:@"Tag has an invalid '
+                        'value: \\\"%@\\\".", valueDict[@".tag"]]')
+                    self._generate_throw_error('InvalidTag', description_str)
         self.emit()
 
     def _generate_union_serializer(self, union):
