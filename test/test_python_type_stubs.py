@@ -237,8 +237,8 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 @f1.deleter
                 def f1(self) -> None: ...
-            
-            Struct1_validator = ...  # type: stone_validators.Validator
+
+            Struct1_validator: bv.Validator = ...
 
             class Struct2(object):
                 def __init__(self,
@@ -275,7 +275,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @f4.deleter
                 def f4(self) -> None: ...
 
-            Struct2_validator = ...  # type: stone_validators.Validator
+            Struct2_validator: bv.Validator = ...
 
 
             from typing import (
@@ -318,7 +318,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @nullable_list.deleter
                 def nullable_list(self) -> None: ...
 
-            NestedTypes_validator = ...  # type: stone_validators.Validator
+            NestedTypes_validator: bv.Validator = ...
 
 
             from typing import (
@@ -343,7 +343,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 def is_last(self) -> bool: ...
 
-            Union_validator = ...  # type: stone_validators.Validator
+            Union_validator: bv.Validator = ...
 
             class Shape(bb.Union):
                 point = ...  # type: Shape
@@ -357,8 +357,8 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 def get_circle(self) -> float: ...
 
-            Shape_validator = ...  # type: stone_validators.Validator
-            
+            Shape_validator: bv.Validator = ...
+
             """).format(headers=_headers)
         self.assertEqual(result, expected)
 
@@ -371,8 +371,8 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class EmptyUnion(bb.Union):
                 pass
-                
-            EmptyUnion_validator = ...  # type: stone_validators.Validator
+
+            EmptyUnion_validator: bv.Validator = ...
 
             """).format(headers=_headers)
         self.assertEqual(result, expected)
@@ -384,8 +384,8 @@ class TestPythonTypeStubs(unittest.TestCase):
         expected = textwrap.dedent("""\
             {headers}
 
-            route_one = ...  # type: bb.Route
-            route_two = ...  # type: bb.Route
+            route_one: bb.Route = ...
+            route_two: bb.Route = ...
 
             """).format(headers=_headers)
         self.assertEqual(result, expected)
@@ -410,7 +410,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @f1.deleter
                 def f1(self) -> None: ...
 
-            Struct1_validator = ...  # type: stone_validators.Validator
+            Struct1_validator: bv.Validator = ...
 
             AliasToStruct1 = Struct1
             """).format(headers=_headers)
