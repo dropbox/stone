@@ -244,7 +244,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def __init__(self,
                              f2: List[long] = ...,
                              f3: datetime.datetime = ...,
-                             f4: Dict[str, long] = ...) -> None: ...
+                             f4: Dict[Text, long] = ...) -> None: ...
 
                 @property
                 def f2(self) -> List[long]: ...
@@ -267,10 +267,10 @@ class TestPythonTypeStubs(unittest.TestCase):
 
 
                 @property
-                def f4(self) -> Dict[str, long]: ...
+                def f4(self) -> Dict[Text, long]: ...
 
                 @f4.setter
-                def f4(self, val: Dict[str, long]) -> None: ...
+                def f4(self, val: Dict[Text, long]) -> None: ...
 
                 @f4.deleter
                 def f4(self) -> None: ...
@@ -281,6 +281,7 @@ class TestPythonTypeStubs(unittest.TestCase):
             from typing import (
                 Dict,
                 List,
+                Text,
             )
 
             import datetime

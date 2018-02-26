@@ -206,7 +206,7 @@ class PythonTypesBackend(CodeBackend):
             raise RuntimeError('Unknown doc ref tag %r' % tag)
 
     def _python_type_mapping(self, ns, data_type):
-        # type: (ApiNamespace, DataType) -> str
+        # type: (ApiNamespace, DataType) -> typing.Text
         """Map Stone data types to their most natural equivalent in Python
         for documentation purposes."""
         return map_stone_type_to_python_type(ns, data_type)
