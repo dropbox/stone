@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import textwrap
 from contextlib import contextmanager
 
+from stone.ir.data_types import String
 from stone.typing_hacks import cast
 _MYPY = False
 if _MYPY:
@@ -326,45 +327,53 @@ class PythonTypeStubsBackend(CodeBackend):
         we need to potentially import some things.
         """
         def upon_encountering_list(ns, data_type, override_dict):
-            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> str
+            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> typing.Text
             self.import_tracker._register_typing_import("List")
-            return str("List[{}]").format(
+            return "List[{}]".format(
                 map_stone_type_to_python_type(ns, data_type, override_dict)
             )
 
         def upon_encountering_map(ns, map_data_type, override_dict):
-            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> str
+            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> typing.Text
             map_type = cast(Map, map_data_type)
             self.import_tracker._register_typing_import("Dict")
-            return str("Dict[{}, {}]").format(
+            return "Dict[{}, {}]".format(
                 map_stone_type_to_python_type(ns, map_type.key_data_type, override_dict),
                 map_stone_type_to_python_type(ns, map_type.value_data_type, override_dict)
             )
 
         def upon_encountering_nullable(ns, data_type, override_dict):
-            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> str
+            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> typing.Text
             self.import_tracker._register_typing_import("Optional")
-            return str("Optional[{}]").format(
+            return "Optional[{}]".format(
                 map_stone_type_to_python_type(ns, data_type, override_dict)
             )
 
         def upon_encountering_timestamp(
                 ns, data_type, override_dict
         ):  # pylint: disable=unused-argument
-            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> str
+            # type: (ApiNamespace, DataType, OverrideDefaultTypesDict) -> typing.Text
             self.import_tracker._register_adhoc_import("import datetime")
             return map_stone_type_to_python_type(ns, data_type)
+
+        def upon_encountering_string(
+            ns, data_type, override_dict
+        ):  # pylint: disable=unused-argument
+            # type: (...) -> typing.Text
+            self.import_tracker._register_typing_import("Text")
+            return "Text"
 
         callback_dict = {
             List: upon_encountering_list,
             Map: upon_encountering_map,
             Nullable: upon_encountering_nullable,
             Timestamp: upon_encountering_timestamp,
+            String: upon_encountering_string,
         }  # type: OverrideDefaultTypesDict
         return callback_dict
 
     def map_stone_type_to_pep484_type(self, ns, data_type):
-        # type: (ApiNamespace, DataType) -> str
+        # type: (ApiNamespace, DataType) -> typing.Text
         assert self._pep_484_type_mapping_callbacks
         return map_stone_type_to_python_type(ns, data_type,
                                              override_dict=self._pep_484_type_mapping_callbacks)

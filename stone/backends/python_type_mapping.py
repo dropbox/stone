@@ -21,6 +21,7 @@ from stone.ir import (
     is_void_type,
 )
 from stone.backends.python_helpers import class_name_for_data_type
+from stone.ir.data_types import String
 from stone.typing_hacks import cast
 
 MYPY = False
@@ -29,14 +30,17 @@ if MYPY:
     DataTypeCls = typing.Type[DataType]
 
     # Unfortunately these are codependent, so I'll weakly type the Dict in Callback
-    Callback = typing.Callable[[ApiNamespace, DataType, typing.Dict[typing.Any, typing.Any]], str]
+    Callback = typing.Callable[
+        [ApiNamespace, DataType, typing.Dict[typing.Any, typing.Any]],
+        typing.Text
+    ]
     OverrideDefaultTypesDict = typing.Dict[DataTypeCls, Callback]
 else:
     OverrideDefaultTypesDict = "OverrideDefaultTypesDict"
 
 
 def map_stone_type_to_python_type(ns, data_type, override_dict=None):
-    # type: (ApiNamespace, DataType, typing.Optional[OverrideDefaultTypesDict]) -> str
+    # type: (ApiNamespace, DataType, typing.Optional[OverrideDefaultTypesDict]) -> typing.Text
     """
     Args:
         override_dict: lets you override the default behavior for a given type by hooking into
@@ -45,6 +49,9 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
     override_dict = override_dict or {}
 
     if is_string_type(data_type):
+        string_override = override_dict.get(String, None)
+        if string_override:
+            return string_override(ns, data_type, override_dict)
         return 'str'
     elif is_bytes_type(data_type):
         return 'bytes'
