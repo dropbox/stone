@@ -414,5 +414,6 @@ class TestPythonTypeStubs(unittest.TestCase):
             Struct1_validator: bv.Validator = ...
 
             AliasToStruct1 = Struct1
+            AliasToStruct1_validator: bv.Validator = ...
             """).format(headers=_headers)
         self.assertEqual(result, expected)
