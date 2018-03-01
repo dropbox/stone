@@ -253,6 +253,7 @@ class PythonTypeStubsBackend(CodeBackend):
             self.emit('{} = {}'.format(
                 alias.name,
                 class_name_for_data_type(alias.data_type, namespace)))
+            self._generate_validator_for(alias)
 
     def _class_declaration_for_type(self, ns, data_type):
         # type: (ApiNamespace, typing.Union[Struct, Union]) -> typing.Text
