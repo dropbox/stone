@@ -1024,7 +1024,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
             if not struct.all_fields and not struct.has_enumerated_subtypes():
                 self.emit('#pragma unused(valueDict)')
 
-            if not struct.has_enumerated_subtypes():
+            def emit_struct_deserialize_logic(struct):
                 for field in struct.all_fields:
                     data_type, nullable = unwrap_nullable(field.data_type)
                     input_value = 'valueDict[@"{}"]'.format(field.name)
@@ -1058,24 +1058,26 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     callee=self._cstor_name_from_fields(struct.all_fields),
                     args=fmt_func_args(deserialized_obj_args))
                 self.emit('return {};'.format(init_call))
+
+            if not struct.has_enumerated_subtypes():
+                emit_struct_deserialize_logic(struct)
             else:
-                def fmt_deserial_call(block_type):
-                    caller = fmt_serial_class(fmt_class_prefix(block_type))
-                    args = fmt_func_args([('value', 'valueDict')])
-                    deserialize_call = fmt_func_call(
-                        caller=caller, callee='deserialize', args=args)
-                    self.emit('return {};'.format(deserialize_call))
                 for tags, subtype in struct.get_all_subtypes_with_tags():
                     assert len(tags) == 1, tags
                     tag = tags[0]
 
                     base_string = 'if ([valueDict[@".tag"] isEqualToString:@"{}"])'
                     with self.block(base_string.format(tag)):
-                        fmt_deserial_call(subtype)
+                        caller = fmt_serial_class(fmt_class_prefix(subtype))
+                        args = fmt_func_args([('value', 'valueDict')])
+                        deserialize_call = fmt_func_call(
+                            caller=caller, callee='deserialize', args=args)
+                        self.emit('return {};'.format(deserialize_call))
 
                 self.emit()
+
                 if struct.is_catch_all():
-                    fmt_deserial_call(struct)
+                    emit_struct_deserialize_logic(struct)
                 else:
                     description_str = (
                         '[NSString stringWithFormat:@"Tag has an invalid '
