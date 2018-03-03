@@ -56,6 +56,11 @@ def _make_namespace_with_alias():
     alias.set_attributes(doc=None, data_type=struct1)
     ns.add_alias(alias)
 
+    str_type = String(min_length=3)
+    str_alias = Alias(name='NotUserDefinedAlias', namespace=ns, ast_node=None)
+    str_alias.set_attributes(doc=None, data_type=str_type)
+    ns.add_alias(str_alias)
+
     return ns
 
 def _make_namespace_with_many_structs():
@@ -413,7 +418,8 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             Struct1_validator: bv.Validator = ...
 
-            AliasToStruct1 = Struct1
             AliasToStruct1_validator: bv.Validator = ...
+            AliasToStruct1 = Struct1
+            NotUserDefinedAlias_validator: bv.Validator = ...
             """).format(headers=_headers)
         self.assertEqual(result, expected)

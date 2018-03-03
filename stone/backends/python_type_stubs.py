@@ -246,6 +246,8 @@ class PythonTypeStubsBackend(CodeBackend):
 
     def _generate_alias_definition(self, namespace, alias):
         # type: (ApiNamespace, Alias) -> None
+        self._generate_validator_for(alias)
+
         unwrapped_dt, _ = unwrap_aliases(alias)
         if is_user_defined_type(unwrapped_dt):
             # If the alias is to a composite type, we want to alias the
@@ -253,7 +255,6 @@ class PythonTypeStubsBackend(CodeBackend):
             self.emit('{} = {}'.format(
                 alias.name,
                 class_name_for_data_type(alias.data_type, namespace)))
-            self._generate_validator_for(alias)
 
     def _class_declaration_for_type(self, ns, data_type):
         # type: (ApiNamespace, typing.Union[Struct, Union]) -> typing.Text
