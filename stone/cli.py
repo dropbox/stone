@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import codecs
 import imp
 import io
+import json
 import logging
 import os
 import six
@@ -105,6 +106,15 @@ _cmdline_parser.add_argument(
           'to enforce precedence.'),
 )
 _cmdline_parser.add_argument(
+    '-r',
+    '--route-whitelist-filter',
+    type=six.text_type,
+    help=('Restrict datatype generation to only the routes specified in the whitelist '
+          'and their dependencies. Input should be a JSON file mapping namespace names to '
+          'either 1) a list of routes to generate, or 2) the character *, as shorthand '
+          'for generating all routes in that namespace.'),
+)
+_cmdline_parser.add_argument(
     '-a',
     '--attribute',
     action='append',
@@ -115,7 +125,6 @@ _cmdline_parser.add_argument(
           'attributes defined in stone_cfg.Route. Note that you can filter '
           '(-f) by attributes that are not listed here.'),
 )
-
 _filter_ns_group = _cmdline_parser.add_mutually_exclusive_group()
 _filter_ns_group.add_argument(
     '-w',
@@ -219,6 +228,9 @@ def main():
                                   'namespace%s' % parts.pop(0)))
 
         if args.filter_by_route_attr:
+            if args.route_whitelist_filter is not None:
+                print('Cannot combine route whitelist filter with other filters.', file=sys.stderr)
+                sys.exit(1)
             route_filter, route_filter_errors = parse_route_attr_filter(
                 args.filter_by_route_attr, debug)
             if route_filter_errors:
@@ -230,9 +242,16 @@ def main():
         else:
             route_filter = None
 
+        if args.route_whitelist_filter:
+            with open(args.route_whitelist_filter) as f:
+                route_whitelist_filter = json.loads(f.read())
+        else:
+            route_whitelist_filter = None
+
         try:
             # TODO: Needs version
-            api = specs_to_ir(specs, debug=debug)
+            api = specs_to_ir(specs, debug=debug,
+                              route_whitelist_filter=route_whitelist_filter)
         except InvalidSpec as e:
             print('%s:%s: error: %s' % (e.path, e.lineno, e.msg), file=sys.stderr)
             if debug:
@@ -245,6 +264,9 @@ def main():
             sys.exit(1)
 
         if args.whitelist_namespace_routes:
+            if args.route_whitelist_filter is not None:
+                print('Cannot combine route whitelist filter with other filters.', file=sys.stderr)
+                sys.exit(1)
             for namespace_name in args.whitelist_namespace_routes:
                 if namespace_name not in api.namespaces:
                     print('error: Whitelisted namespace missing from spec: %s' %
@@ -256,6 +278,9 @@ def main():
                     namespace.route_by_name = {}
 
         if args.blacklist_namespace_routes:
+            if args.route_whitelist_filter is not None:
+                print('Cannot combine route whitelist filter with other filters.', file=sys.stderr)
+                sys.exit(1)
             for namespace_name in args.blacklist_namespace_routes:
                 if namespace_name not in api.namespaces:
                     print('error: Blacklisted namespace missing from spec: %s' %
@@ -266,6 +291,7 @@ def main():
                     api.namespaces[namespace_name].route_by_name = {}
 
         if route_filter:
+            assert args.route_whitelist_filter is None
             for namespace in api.namespaces.values():
                 filtered_routes = []
                 for route in namespace.routes:

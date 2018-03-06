@@ -1,8 +1,11 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from collections import defaultdict
+
 import copy
 import inspect
 import logging
+import sys
 
 _MYPY = False
 if _MYPY:
@@ -31,10 +34,14 @@ from ..ir import (
     Int32,
     Int64,
     is_alias,
+    is_field_type,
     is_list_type,
     is_map_type,
     is_nullable_type,
+    is_primitive_type,
+    is_struct_type,
     is_user_defined_type,
+    is_union_type,
     is_void_type,
     List,
     Map,
@@ -124,7 +131,7 @@ class IRGenerator(object):
         **{data_type.__name__: data_type for data_type in data_types})
 
     # FIXME: Version should not have a default.
-    def __init__(self, partial_asts, version, debug=False):
+    def __init__(self, partial_asts, version, debug=False, route_whitelist_filter=None):
         """Creates a new tower of stone.
 
         :type specs: List[Tuple[path: str, text: str]]
@@ -147,6 +154,8 @@ class IRGenerator(object):
         self._item_by_canonical_name = {}
 
         self._patch_data_by_canonical_name = {}
+
+        self._routes = route_whitelist_filter
 
     def generate_IR(self):
         """Parses the text of each spec and returns an API description. Returns
@@ -172,6 +181,8 @@ class IRGenerator(object):
         self._populate_examples()
         self._validate_doc_refs()
         self._validate_annotations()
+        if self._routes is not None:
+            self._filter_namespaces_by_route_whitelist()
 
         self.api.normalize()
 
@@ -1248,3 +1259,235 @@ class IRGenerator(object):
         # TODO: are we always guaranteed at least one data type?
         # pylint: disable=undefined-loop-variable
         return data_type
+
+    def _filter_namespaces_by_route_whitelist(self):
+        """
+        Given a parsed API in IR form, filter the user-defined datatypes
+        so that they include only the route datatypes and their direct dependencies.
+        """
+        assert self._routes is not None, "Missing route whitelist"
+        assert 'route_whitelist' in self._routes
+        assert 'datatype_whitelist' in self._routes
+
+        # Parse the route whitelist and populate any starting data types
+        route_data_types = []
+        for namespace_name, routes_names in self._routes['route_whitelist'].items():
+            # Error out if user supplied nonexistent namespace
+            if namespace_name not in self.api.namespaces:
+                print('Namespace %s is not defined!' % namespace_name, file=sys.stderr)
+                sys.exit(1)
+            namespace = self.api.namespaces[namespace_name]
+
+            # Parse namespace doc refs and add them to the starting data types
+            if namespace.doc is not None:
+                data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
+                    namespace.doc, namespace_name)
+                for d in data_types:
+                    route_data_types.append(d)
+                for ns_name, routes in routes_by_ns.items():
+                    ns = self.api.namespaces[ns_name]
+                    for r in routes:
+                        for d in ns.get_route_io_data_types_for_route(r):
+                            route_data_types.append(d)
+
+            # Parse user-specified routes and add them to the starting data types
+            # Note that this may add duplicates, but that's okay, as the recursion
+            # keeps track of visited data types.
+            if routes_names == ['*']:
+                routes_names = namespace.route_by_name.keys()
+            #     route_data_types.extend(namespace.get_route_io_data_types())
+            # else:
+            assert '*' not in routes_names
+            for route_name in routes_names:
+                if route_name not in namespace.route_by_name:
+                    print('Route %s is not defined!' % route_name, file=sys.stderr)
+                    sys.exit(1)
+                route = namespace.route_by_name[route_name]
+                route_data_types.extend(namespace.get_route_io_data_types_for_route(route))
+                if route.doc is not None:
+                    data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
+                        route.doc, namespace_name)
+                    for d in data_types:
+                        route_data_types.append(d)
+                    for ns_name, routes in routes_by_ns.items():
+                        ns = self.api.namespaces[ns_name]
+                        for r in routes:
+                            for d in ns.get_route_io_data_types_for_route(r):
+                                route_data_types.append(d)
+
+        # Parse the datatype whitelist and populate any starting data types
+        for namespace_name, datatype_names in self._routes['datatype_whitelist'].items():
+            if namespace_name not in self.api.namespaces:
+                print('Namespace %s is not defined!' % namespace_name, file=sys.stderr)
+                sys.exit(1)
+
+            # Parse namespace doc refs and add them to the starting data types
+            namespace = self.api.namespaces[namespace_name]
+            if namespace.doc is not None:
+                data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
+                    namespace.doc, namespace.name)
+                for d in data_types:
+                    route_data_types.append(d)
+                for ns_name, routes in routes_by_ns.items():
+                    ns = self.api.namespaces[ns_name]
+                    for r in routes:
+                        for d in ns.get_route_io_data_types_for_route(r):
+                            route_data_types.append(d)
+
+            for datatype_name in datatype_names:
+                if datatype_name not in self.api.namespaces[namespace_name].data_type_by_name:
+                    print('Namespace %s is not defined!' % namespace_name, file=sys.stderr)
+                    sys.exit(1)
+                data_type = self.api.namespaces[namespace_name].data_type_by_name[datatype_name]
+                route_data_types.append(data_type)
+
+        # Recurse on dependencies
+        output_types_by_ns, output_routes_by_ns = self._find_dependencies(route_data_types)
+
+        # Update the IR representation. This involves editing the data types and
+        # routes for each namespace.
+        for namespace in self.api.namespaces.values():
+            data_types = list(set(output_types_by_ns[namespace.name]))  # defaults to empty list
+            output_route_names = [r.name for r in output_routes_by_ns[namespace.name]]
+            namespace.data_types = data_types
+            namespace.data_type_by_name = {d.name: d for d in data_types}
+            if namespace.name in self._routes['route_whitelist']:
+                whitelisted_route_names = self._routes['route_whitelist'][namespace.name]
+                if whitelisted_route_names != ["*"]:
+                    route_names = list(set(whitelisted_route_names + output_route_names))
+                    route_by_names = {rname: namespace.route_by_name[rname]
+                        for rname in route_names}
+                    routes = list(route_by_names.values())
+                    namespace.routes = routes
+                    namespace.route_by_name = route_by_names
+            else:
+                route_by_names = {rname: namespace.route_by_name[rname]
+                                  for rname in output_route_names}
+                routes = list(route_by_names.values())
+                namespace.routes = routes
+                namespace.route_by_name = route_by_names
+
+    def _find_dependencies(self, data_types):
+        output_types = defaultdict(list)
+        output_routes = defaultdict(set)
+        seen = set()
+        for t in data_types:
+            self._find_dependencies_recursive(t, seen, output_types, output_routes)
+        return output_types, output_routes
+
+    def _find_dependencies_recursive(self, data_type, seen, output_types,
+                                     output_routes, type_context=None):
+        # Define a function that recursively traverses data types and populates
+        # the data structures defined above.
+        if data_type in seen:
+            # if we've visited a data type already, no need to revisit
+            return
+        elif is_primitive_type(data_type):
+            # primitive types represent leaf nodes in the tree
+            return
+        elif is_struct_type(data_type) or is_union_type(data_type):
+            # recurse on fields and parent types for structs and unions
+            # also recurse on enumerated subtypes for structs if present
+            seen.add(data_type)
+            output_types[data_type.namespace.name].append(data_type)
+            for field in data_type.all_fields:
+                self._find_dependencies_recursive(field, seen, output_types, output_routes,
+                                                  type_context=data_type)
+            if data_type.parent_type is not None:
+                self._find_dependencies_recursive(data_type.parent_type, seen, output_types,
+                                                  output_routes)
+            if data_type.doc is not None:
+                doc_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
+                    data_type.doc, data_type.namespace.name)
+                for t in doc_types:
+                    self._find_dependencies_recursive(t, seen, output_types, output_routes)
+                for namespace_name, routes in routes_by_ns.items():
+                    route_namespace = self.api.namespaces[namespace_name]
+                    for route in routes:
+                        output_routes[namespace_name].add(route)
+                        route_types = route_namespace.get_route_io_data_types_for_route(route)
+                        for route_type in route_types:
+                            self._find_dependencies_recursive(route_type, seen, output_types,
+                                                              output_routes)
+            if is_struct_type(data_type) and data_type.has_enumerated_subtypes():
+                for subtype in data_type.get_enumerated_subtypes():
+                    self._find_dependencies_recursive(subtype, seen, output_types, output_routes,
+                                                      type_context=data_type)
+        elif is_alias(data_type) or is_field_type(data_type):
+            assert (is_field_type(data_type)) == (type_context is not None)
+            seen.add(data_type)
+            self._find_dependencies_recursive(data_type.data_type, seen, output_types,
+                                              output_routes)
+            if data_type.doc is not None:
+                doc_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
+                    data_type.doc, type_context.namespace.name)
+                for t in doc_types:
+                    self._find_dependencies_recursive(t, seen, output_types, output_routes)
+                for namespace_name, routes in routes_by_ns.items():
+                    route_namespace = self.api.namespaces[namespace_name]
+                    for route in routes:
+                        output_routes[namespace_name].add(route)
+                        route_types = route_namespace.get_route_io_data_types_for_route(route)
+                        for route_type in route_types:
+                            self._find_dependencies_recursive(route_type, seen, output_types,
+                                                              output_routes)
+        elif is_list_type(data_type) or is_nullable_type(data_type):
+            # recurse on underlying field for aliases, lists, nullables, and fields
+            seen.add(data_type)
+            self._find_dependencies_recursive(data_type.data_type, seen, output_types,
+                                              output_routes)
+        elif is_map_type(data_type):
+            # recurse on key/value fields for maps
+            seen.add(data_type)
+            self._find_dependencies_recursive(data_type.key_data_type, seen, output_types,
+                                              output_routes)
+            self._find_dependencies_recursive(data_type.value_data_type, seen, output_types,
+                                              output_routes)
+        else:
+            assert False, "Unexpected type in: %s" % data_type
+
+    def _get_data_types_and_routes_from_doc_ref(self, doc, namespace_context):
+        """
+        Given a documentation string, parse it and return all references to other
+        data types and routes.
+
+        Args:
+        - doc: The documentation string to parse.
+        - namespace_context: The namespace name relative to this documentation.
+
+        Returns:
+        - a tuple of referenced data types and routes
+        """
+        assert doc is not None
+        data_types = set()
+        routes = defaultdict(set)
+
+        for match in doc_ref_re.finditer(doc):
+            tag = match.group('tag')
+            val = match.group('val')
+            supplied_namespace = self.api.namespaces[namespace_context]
+            if tag == 'field':
+                if '.' in val:
+                    type_name, __ = val.split('.', 1)
+                    doc_type = supplied_namespace.data_type_by_name[type_name]
+                    data_types.add(doc_type)
+                else:
+                    pass  # no action required, because we must be referencing the same object
+            elif tag == 'route':
+                if '.' in val:
+                    namespace_name, val = val.split('.', 1)
+                    namespace = self.api.namespaces[namespace_name]
+                    route = namespace.route_by_name[val]
+                    routes[namespace_name].add(route)
+                else:
+                    route = supplied_namespace.route_by_name[val]
+                    routes[supplied_namespace.name].add(route)
+            elif tag == 'type':
+                if '.' in val:
+                    namespace_name, val = val.split('.', 1)
+                    doc_type = self.api.namespaces[namespace_name].data_type_by_name[val]
+                    data_types.add(doc_type)
+                else:
+                    doc_type = supplied_namespace.data_type_by_name[val]
+                    data_types.add(doc_type)
+        return data_types, routes
