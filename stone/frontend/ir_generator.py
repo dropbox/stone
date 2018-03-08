@@ -5,7 +5,6 @@ from collections import defaultdict
 import copy
 import inspect
 import logging
-import sys
 
 _MYPY = False
 if _MYPY:
@@ -1274,70 +1273,43 @@ class IRGenerator(object):
         for namespace_name, routes_names in self._routes['route_whitelist'].items():
             # Error out if user supplied nonexistent namespace
             if namespace_name not in self.api.namespaces:
-                print('Namespace %s is not defined!' % namespace_name, file=sys.stderr)
-                sys.exit(1)
+                raise AssertionError('Namespace %s is not defined!' % namespace_name)
             namespace = self.api.namespaces[namespace_name]
 
             # Parse namespace doc refs and add them to the starting data types
             if namespace.doc is not None:
-                data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
-                    namespace.doc, namespace_name)
-                for d in data_types:
-                    route_data_types.append(d)
-                for ns_name, routes in routes_by_ns.items():
-                    ns = self.api.namespaces[ns_name]
-                    for r in routes:
-                        for d in ns.get_route_io_data_types_for_route(r):
-                            route_data_types.append(d)
+                route_data_types.extend(
+                    self._get_data_types_from_doc_ref(namespace.doc, namespace_name))
 
             # Parse user-specified routes and add them to the starting data types
             # Note that this may add duplicates, but that's okay, as the recursion
             # keeps track of visited data types.
             if routes_names == ['*']:
                 routes_names = namespace.route_by_name.keys()
-            #     route_data_types.extend(namespace.get_route_io_data_types())
-            # else:
             assert '*' not in routes_names
             for route_name in routes_names:
                 if route_name not in namespace.route_by_name:
-                    print('Route %s is not defined!' % route_name, file=sys.stderr)
-                    sys.exit(1)
+                    raise AssertionError('Route %s is not defined!' % route_name)
                 route = namespace.route_by_name[route_name]
                 route_data_types.extend(namespace.get_route_io_data_types_for_route(route))
                 if route.doc is not None:
-                    data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
-                        route.doc, namespace_name)
-                    for d in data_types:
-                        route_data_types.append(d)
-                    for ns_name, routes in routes_by_ns.items():
-                        ns = self.api.namespaces[ns_name]
-                        for r in routes:
-                            for d in ns.get_route_io_data_types_for_route(r):
-                                route_data_types.append(d)
+                    route_data_types.extend(
+                        self._get_data_types_from_doc_ref(route.doc, namespace_name))
 
         # Parse the datatype whitelist and populate any starting data types
         for namespace_name, datatype_names in self._routes['datatype_whitelist'].items():
             if namespace_name not in self.api.namespaces:
-                print('Namespace %s is not defined!' % namespace_name, file=sys.stderr)
-                sys.exit(1)
+                raise AssertionError('Namespace %s is not defined!' % namespace_name)
 
             # Parse namespace doc refs and add them to the starting data types
             namespace = self.api.namespaces[namespace_name]
             if namespace.doc is not None:
-                data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
-                    namespace.doc, namespace.name)
-                for d in data_types:
-                    route_data_types.append(d)
-                for ns_name, routes in routes_by_ns.items():
-                    ns = self.api.namespaces[ns_name]
-                    for r in routes:
-                        for d in ns.get_route_io_data_types_for_route(r):
-                            route_data_types.append(d)
+                route_data_types.extend(
+                    self._get_data_types_from_doc_ref(namespace.doc, namespace_name))
 
             for datatype_name in datatype_names:
                 if datatype_name not in self.api.namespaces[namespace_name].data_type_by_name:
-                    print('Namespace %s is not defined!' % namespace_name, file=sys.stderr)
-                    sys.exit(1)
+                    raise AssertionError('Datatype %s is not defined!' % datatype_name)
                 data_type = self.api.namespaces[namespace_name].data_type_by_name[datatype_name]
                 route_data_types.append(data_type)
 
@@ -1445,6 +1417,31 @@ class IRGenerator(object):
                                               output_routes)
         else:
             assert False, "Unexpected type in: %s" % data_type
+
+    def _get_data_types_from_doc_ref(self, doc, namespace_context):
+        """
+        Given a documentation string, parse it and return all references to other
+        data types. If there are references to routes, include also the data types of
+        those routes.
+
+        Args:
+        - doc: The documentation string to parse.
+        - namespace_context: The namespace name relative to this documentation.
+
+        Returns:
+        - a list of referenced data types
+        """
+        output = []
+        data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
+            doc, namespace_context)
+        for d in data_types:
+            output.append(d)
+        for ns_name, routes in routes_by_ns.items():
+            ns = self.api.namespaces[ns_name]
+            for r in routes:
+                for d in ns.get_route_io_data_types_for_route(r):
+                    output.append(d)
+        return output
 
     def _get_data_types_and_routes_from_doc_ref(self, doc, namespace_context):
         """

@@ -110,9 +110,9 @@ _cmdline_parser.add_argument(
     '--route-whitelist-filter',
     type=six.text_type,
     help=('Restrict datatype generation to only the routes specified in the whitelist '
-          'and their dependencies. Input should be a JSON file mapping namespace names to '
-          'either 1) a list of routes to generate, or 2) the character *, as shorthand '
-          'for generating all routes in that namespace.'),
+          'and their dependencies. Input should be a file containing a JSON dict with '
+          'the following form: {"route_whitelist": {}, "datatype_whitelist": {}} '
+          'where each object maps namespaces to lists of routes or datatypes to whitelist.'),
 )
 _cmdline_parser.add_argument(
     '-a',
