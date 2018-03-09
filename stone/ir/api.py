@@ -243,16 +243,23 @@ class ApiNamespace(object):
         """
         data_types = set()  # type: typing.Set[UserDefined]
         for route in self.routes:
-            for dtype in (route.arg_data_type, route.result_data_type,
-                          route.error_data_type):
-                while is_list_type(dtype) or is_nullable_type(dtype):
-                    data_list_type = dtype  # type: typing.Any
-                    dtype = data_list_type.data_type
-                if is_composite_type(dtype) or is_alias(dtype):
-                    data_user_type = dtype  # type: typing.Any
-                    data_types.add(data_user_type)
-
+            data_types |= self.get_route_io_data_types_for_route(route)
         return sorted(data_types, key=lambda dt: dt.name)
+
+    def get_route_io_data_types_for_route(self, route):
+        # type: (ApiRoute) -> typing.Set[UserDefined]
+        """
+        Given a route, returns a set of its argument/result/error datatypes.
+        """
+        data_types = set()  # type: typing.Set[UserDefined]
+        for dtype in (route.arg_data_type, route.result_data_type, route.error_data_type):
+            while is_list_type(dtype) or is_nullable_type(dtype):
+                data_list_type = dtype  # type: typing.Any
+                dtype = data_list_type.data_type
+            if is_composite_type(dtype) or is_alias(dtype):
+                data_user_type = dtype  # type: typing.Any
+                data_types.add(data_user_type)
+        return data_types
 
     def get_imported_namespaces(self, must_have_imported_data_type=False):
         # type: (bool) -> typing.List[ApiNamespace]

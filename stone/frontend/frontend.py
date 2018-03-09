@@ -10,7 +10,7 @@ logger = logging.getLogger('stone.frontend.frontend')
 
 
 # FIXME: Version should not have a default.
-def specs_to_ir(specs, version='0.1b1', debug=False):
+def specs_to_ir(specs, version='0.1b1', debug=False, route_whitelist_filter=None):
     """
     Converts a collection of Stone specifications into the intermediate
     representation used by Stone backends.
@@ -51,4 +51,5 @@ def specs_to_ir(specs, version='0.1b1', debug=False):
         else:
             partial_asts.append(partial_ast)
 
-    return IRGenerator(partial_asts, version, debug=debug).generate_IR()
+    return IRGenerator(partial_asts, version, debug=debug,
+                       route_whitelist_filter=route_whitelist_filter).generate_IR()

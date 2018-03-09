@@ -1801,6 +1801,8 @@ def is_boolean_type(data_type):
     return isinstance(data_type, Boolean)
 def is_composite_type(data_type):
     return isinstance(data_type, Composite)
+def is_field_type(data_type):
+    return isinstance(data_type, Field)
 def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
 def is_integer_type(data_type):
