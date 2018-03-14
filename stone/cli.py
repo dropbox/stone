@@ -228,9 +228,6 @@ def main():
                                   'namespace%s' % parts.pop(0)))
 
         if args.filter_by_route_attr:
-            if args.route_whitelist_filter is not None:
-                print('Cannot combine route whitelist filter with other filters.', file=sys.stderr)
-                sys.exit(1)
             route_filter, route_filter_errors = parse_route_attr_filter(
                 args.filter_by_route_attr, debug)
             if route_filter_errors:
@@ -264,9 +261,6 @@ def main():
             sys.exit(1)
 
         if args.whitelist_namespace_routes:
-            if args.route_whitelist_filter is not None:
-                print('Cannot combine route whitelist filter with other filters.', file=sys.stderr)
-                sys.exit(1)
             for namespace_name in args.whitelist_namespace_routes:
                 if namespace_name not in api.namespaces:
                     print('error: Whitelisted namespace missing from spec: %s' %
@@ -278,9 +272,6 @@ def main():
                     namespace.route_by_name = {}
 
         if args.blacklist_namespace_routes:
-            if args.route_whitelist_filter is not None:
-                print('Cannot combine route whitelist filter with other filters.', file=sys.stderr)
-                sys.exit(1)
             for namespace_name in args.blacklist_namespace_routes:
                 if namespace_name not in api.namespaces:
                     print('error: Blacklisted namespace missing from spec: %s' %
@@ -291,7 +282,6 @@ def main():
                     api.namespaces[namespace_name].route_by_name = {}
 
         if route_filter:
-            assert args.route_whitelist_filter is None
             for namespace in api.namespaces.values():
                 filtered_routes = []
                 for route in namespace.routes:
