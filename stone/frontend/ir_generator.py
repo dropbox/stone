@@ -1387,12 +1387,16 @@ class IRGenerator(object):
                                                       type_context=data_type)
         elif is_alias(data_type) or is_field_type(data_type):
             assert (is_field_type(data_type)) == (type_context is not None)
+            if is_alias(data_type):
+                namespace_context = data_type.namespace.name
+            else:
+                namespace_context = type_context.namespace.name
             seen.add(data_type)
             self._find_dependencies_recursive(data_type.data_type, seen, output_types,
                                               output_routes)
             if data_type.doc is not None:
                 doc_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
-                    data_type.doc, type_context.namespace.name)
+                    data_type.doc, namespace_context)
                 for t in doc_types:
                     self._find_dependencies_recursive(t, seen, output_types, output_routes)
                 for namespace_name, routes in routes_by_ns.items():

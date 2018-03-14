@@ -336,8 +336,11 @@ class TestStone(unittest.TestCase):
             namespace test2
                 ":type:`test.Foo`"
 
+            alias TestAlias = String
+                ":field:`Baz.a`"
+
             struct TestStruct
-                a String
+                a TestAlias
                     "test doc"
                 example default
                     a = "asdf"
