@@ -105,6 +105,7 @@ class ApiNamespace(object):
         self.doc = None                 # type: typing.Optional[six.text_type]
         self.routes = []                # type: typing.List[ApiRoute]
         self.route_by_name = {}         # type: typing.Dict[typing.Text, ApiRoute]
+        self.routes_by_name = {}        # type: typing.Dict[typing.Text, ApiRoutesByVersion]
         self.data_types = []            # type: typing.List[UserDefined]
         self.data_type_by_name = {}     # type: typing.Dict[str, UserDefined]
         self.aliases = []               # type: typing.List[Alias]
@@ -133,7 +134,9 @@ class ApiNamespace(object):
     def add_route(self, route):
         # type: (ApiRoute) -> None
         self.routes.append(route)
-        self.route_by_name[route.name] = route
+        if route.version == 1:
+            self.route_by_name[route.name] = route
+        self.routes_by_name[route.name].at_version[route.version] = route
 
     def add_data_type(self, data_type):
         # type: (UserDefined) -> None
@@ -321,14 +324,17 @@ class ApiRoute(object):
 
     def __init__(self,
                  name,
+                 version,
                  ast_node):
-        # type: (typing.Text, AstRouteDef) -> None
+        # type: (typing.Text, int, AstRouteDef) -> None
         """
         :param str name: Designated name of the endpoint.
+        :param int version: Designated version of the endpoint.
         :param ast_node: Raw route definition from the parser.
         :type ast_node: stone.stone.parser.AstRouteDef
         """
         self.name = name
+        self.version = version
         self._ast_node = ast_node
 
         # These attributes are set later by set_attributes()
@@ -364,7 +370,7 @@ class ApiRoute(object):
         self.attrs = attrs
 
     def __repr__(self):
-        return 'ApiRoute({!r})'.format(self.name)
+        return 'ApiRoute({!r}:{!r})'.format(self.name, self.version)
 
 
 class DeprecationInfo(object):
@@ -376,3 +382,15 @@ class DeprecationInfo(object):
         """
         assert by is None or isinstance(by, ApiRoute), repr(by)
         self.by = by
+
+class ApiRoutesByVersion(object):
+    """
+    Represents routes of different versions for a common name.
+    """
+
+    def __init__(self):
+        # type: () -> None
+        """
+        :param at_version: The dict mapping a version number to a route. 
+        """
+        self.at_version = {} # type: typing.Dict[int, ApiRoute]
