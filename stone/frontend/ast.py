@@ -344,10 +344,11 @@ class AstSubtypeField(ASTNode):
 
 class AstRouteDef(ASTNode):
 
-    def __init__(self, path, lineno, lexpos, name, deprecated,
+    def __init__(self, path, lineno, lexpos, name, version, deprecated,
                  arg_type_ref, result_type_ref, error_type_ref=None):
         super(AstRouteDef, self).__init__(path, lineno, lexpos)
         self.name = name
+        self.version = version
         self.deprecated = deprecated
         self.arg_type_ref = arg_type_ref
         self.result_type_ref = result_type_ref

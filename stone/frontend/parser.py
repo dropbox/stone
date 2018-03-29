@@ -546,7 +546,7 @@ class ParserFactory(object):
     #
     # An example route looks as follows:
     #
-    # route sample-route/sub-path (arg, result, error)
+    # route sample-route/sub-path:2 (arg, result, error)
     #     "This is a docstring for the route"
     #
     #     attrs
@@ -555,20 +555,20 @@ class ParserFactory(object):
     # The error type is optional.
 
     def p_route(self, p):
-        """route : ROUTE route_name route_io route_deprecation NL \
+        """route : ROUTE route_name route_version route_io route_deprecation NL \
                         INDENT docsection attrssection DEDENT
-                 | ROUTE route_name route_io route_deprecation NL"""
-        p[0] = AstRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], *p[3])
-        if len(p) > 6:
-            p[0].set_doc(p[7])
-            if p[8]:
+                 | ROUTE route_name route_version route_io route_deprecation NL"""
+        p[0] = AstRouteDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[3], p[5], *p[4])
+        if len(p) > 7:
+            p[0].set_doc(p[8])
+            if p[9]:
                 keys = set()
-                for attr in p[8]:
+                for attr in p[9]:
                     if attr.name in keys:
                         msg = "Attribute '%s' defined more than once." % attr.name
                         self.errors.append((msg, attr.lineno, attr.path))
                     keys.add(attr.name)
-                p[0].set_attrs(p[8])
+                p[0].set_attrs(p[9])
 
     def p_route_name(self, p):
         'route_name : ID route_path'
@@ -581,6 +581,14 @@ class ParserFactory(object):
         """route_path : PATH
                       | empty"""
         p[0] = p[1]
+
+    def p_route_version(self, p):
+        """route_version : COLON INTEGER
+                         | empty"""
+        if len(p) > 2:
+            p[0] = int(p[2])
+        else:
+            p[0] = 1
 
     def p_route_io(self, p):
         """route_io : LPAR type_ref COMMA type_ref RPAR
