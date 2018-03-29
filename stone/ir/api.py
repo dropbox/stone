@@ -136,6 +136,8 @@ class ApiNamespace(object):
         self.routes.append(route)
         if route.version == 1:
             self.route_by_name[route.name] = route
+        if route.name not in self.routes_by_name:
+            self.routes_by_name[route.name] = ApiRoutesByVersion()
         self.routes_by_name[route.name].at_version[route.version] = route
 
     def add_data_type(self, data_type):
