@@ -600,12 +600,12 @@ class ParserFactory(object):
 
     def p_route_deprecation(self, p):
         """route_deprecation : DEPRECATED
-                             | DEPRECATED BY route_name
+                             | DEPRECATED BY route_name route_version
                              | empty"""
-        if len(p) == 4:
-            p[0] = (True, p[3])
+        if len(p) == 5:
+            p[0] = (True, p[3], p[4])
         elif p[1]:
-            p[0] = (True, None)
+            p[0] = (True, None, None)
 
     def p_attrs_section(self, p):
         """attrssection : ATTRS NL INDENT attr_fields DEDENT
