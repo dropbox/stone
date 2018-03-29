@@ -944,6 +944,7 @@ class IRGenerator(object):
                  existing_dt._ast_node.lineno), item.lineno, item.path)
         route = ApiRoute(
             name=item.name,
+            version=item.version,
             ast_node=item,
         )
         env[route.name] = route
