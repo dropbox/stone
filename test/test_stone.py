@@ -719,6 +719,20 @@ class TestStone(unittest.TestCase):
         self.assertEqual("Undefined route 'unk_route' at version 3.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
+        # Test duplicate routes of same version
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata:2(Void, Void, Void)
+
+            route get_metadata:2(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Route get_metadata at version 2 already defined (test.stone:3).", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 5)
+
     def test_alphabetizing(self):
         text1 = textwrap.dedent("""\
             namespace ns_b
