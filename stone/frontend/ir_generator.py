@@ -255,7 +255,11 @@ class IRGenerator(object):
                                      item.__class__.__name__)
 
     def _check_canonical_name_available(self, item, namespace_name):
-        base_name = self._get_base_name(item.name, namespace_name)
+        if isinstance(item, AstRouteDef):
+            input_str = item.name + str(item.version)
+        else:
+            input_str = item.name
+        base_name = self._get_base_name(input_str, namespace_name)
 
         if base_name not in self._item_by_canonical_name:
             self._item_by_canonical_name[base_name] = item
