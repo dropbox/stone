@@ -626,7 +626,7 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Undefined route 'unk_route'.", cm.exception.msg)
+        self.assertEqual("Undefined route 'unk_route' at version 1.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Try deprecation by struct
@@ -704,6 +704,19 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual("Version number should be a positive integer without leading zeros.")
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test deprecating by a route at an undefined version
+        text = textwrap.dedent("""\
+            namespace test
+    
+            route get_metadata(Void, Void, Void) deprecated by get_metadata:3
+    
+            route get_metadata:2(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Undefined route 'unk_route' at version 3.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
     def test_alphabetizing(self):
