@@ -670,7 +670,18 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer without leading zeros.")
+        self.assertEqual("Unexpected ID with value 'beta'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test using fraction as version number
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata:1.2(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Unexpected FLOAT with value 1.2.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test using zero as version number
@@ -681,7 +692,8 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer without leading zeros.")
+        self.assertEqual("Version number should be a positive integer.",
+                         cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test using negative integer as version number
@@ -692,18 +704,8 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer without leading zeros.")
-        self.assertEqual(cm.exception.lineno, 3)
-
-        # Test using version number with leading zeroes
-        text = textwrap.dedent("""\
-            namespace test
-
-            route get_metadata:007(Void, Void, Void)
-            """)
-        with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer without leading zeros.")
+        self.assertEqual("Version number should be a positive integer.",
+                         cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test deprecating by a route at an undefined version
@@ -716,7 +718,7 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Undefined route 'unk_route' at version 3.", cm.exception.msg)
+        self.assertEqual("Undefined route 'get_metadata' at version 3.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test duplicate routes of same version
@@ -730,7 +732,7 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual(
-            "Route get_metadata at version 2 already defined (test.stone:3).", cm.exception.msg)
+            "Route 'get_metadata' at version 2 already defined (test.stone:3).", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 5)
 
     def test_alphabetizing(self):
