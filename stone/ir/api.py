@@ -393,6 +393,6 @@ class ApiRoutesByVersion(object):
     def __init__(self):
         # type: () -> None
         """
-        :param at_version: The dict mapping a version number to a route. 
+        :param at_version: The dict mapping a version number to a route.
         """
         self.at_version = {}  # type: typing.Dict[int, ApiRoute]
