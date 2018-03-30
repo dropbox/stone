@@ -255,25 +255,27 @@ class IRGenerator(object):
                                      item.__class__.__name__)
 
     def _check_canonical_name_available(self, item, namespace_name):
-        if isinstance(item, AstRouteDef):
-            input_str = item.name + str(item.version)
-        else:
-            input_str = item.name
-        base_name = self._get_base_name(input_str, namespace_name)
+        base_name = self._get_base_name(item.name, namespace_name)
 
         if base_name not in self._item_by_canonical_name:
             self._item_by_canonical_name[base_name] = item
         else:
             stored_item = self._item_by_canonical_name[base_name]
-            msg = ("Name of %s '%s' conflicts with name of "
-                   "%s '%s' (%s:%s).") % (
-                self._get_user_friendly_item_type_as_string(item),
-                item.name,
-                self._get_user_friendly_item_type_as_string(stored_item),
-                stored_item.name,
-                stored_item.path, stored_item.lineno)
 
-            raise InvalidSpec(msg, item.lineno, item.path)
+            # Allow name conflicts between routes
+            is_conflict_between_routes = isinstance(item, AstRouteDef) \
+                                         and isinstance(stored_item, AstRouteDef)
+
+            if not is_conflict_between_routes:
+                msg = ("Name of %s '%s' conflicts with name of "
+                       "%s '%s' (%s:%s).") % (
+                    self._get_user_friendly_item_type_as_string(item),
+                    item.name,
+                    self._get_user_friendly_item_type_as_string(stored_item),
+                    stored_item.name,
+                    stored_item.path, stored_item.lineno)
+
+                raise InvalidSpec(msg, item.lineno, item.path)
 
     @classmethod
     def _get_user_friendly_item_type_as_string(cls, item):
