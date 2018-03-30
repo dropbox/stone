@@ -646,9 +646,9 @@ class TestStone(unittest.TestCase):
         # Test route with version number and deprecation
         text = textwrap.dedent("""\
             namespace test
-    
+
             route get_metadata(Void, Void, Void) deprecated by get_metadata:2
-            
+
             route get_metadata:2(Void, Void, Void)
             """)
         api = specs_to_ir([('test.stone', text)])
@@ -711,9 +711,9 @@ class TestStone(unittest.TestCase):
         # Test deprecating by a route at an undefined version
         text = textwrap.dedent("""\
             namespace test
-    
+
             route get_metadata(Void, Void, Void) deprecated by get_metadata:3
-    
+
             route get_metadata:2(Void, Void, Void)
             """)
         with self.assertRaises(InvalidSpec) as cm:
