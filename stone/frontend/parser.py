@@ -586,7 +586,10 @@ class ParserFactory(object):
         """route_version : COLON INTEGER
                          | empty"""
         if len(p) > 2:
-            p[0] = int(p[2])
+            if p[2] <= 0:
+                msg = "Version number should be a positive integer."
+                self.errors.append((msg, p.lineno(2), self.path))
+            p[0] = p[2]
         else:
             p[0] = 1
 
