@@ -17,7 +17,6 @@ matrix:
         # PyPy 3k probably won't work until it acquires compatibility with
         # >= 3.4
         - python: pypy3
-        - python: "3.3"
 
         # Python 3.3 is causing some weird issues around setuptools.
         # We'll turn this off for now and see if it persists over time.
