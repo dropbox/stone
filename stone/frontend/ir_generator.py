@@ -264,7 +264,7 @@ class IRGenerator(object):
 
             # Allow name conflicts between routes
             is_conflict_between_routes = isinstance(item, AstRouteDef) \
-                                         and isinstance(stored_item, AstRouteDef)
+                and isinstance(stored_item, AstRouteDef)
 
             if not is_conflict_between_routes:
                 msg = ("Name of %s '%s' conflicts with name of "
