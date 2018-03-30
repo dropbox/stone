@@ -180,10 +180,12 @@ def _make_namespace_with_route():
     mock_ast_node = Mock()
     route_one = ApiRoute(
         name="route_one",
+        version=1,
         ast_node=mock_ast_node,
     )
     route_two = ApiRoute(
         name="route_two",
+        version=1,
         ast_node=mock_ast_node,
     )
     ns.add_route(route_one)
