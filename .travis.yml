@@ -16,7 +16,8 @@ matrix:
     allow_failures:
         # PyPy 3k probably won't work until it acquires compatibility with
         # >= 3.4
-        - python: pypy3, "3.3"
+        - python: pypy3
+        - python: "3.3"
 
 script:
     - tox
