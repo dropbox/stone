@@ -974,7 +974,7 @@ Union::
 
 Route::
 
-    Route ::= 'route' Identifier '(' TypeRef ',' TypeRef ',' TypeRef ')' (NL INDENT Doc DEDENT)?
+    Route ::= 'route' Identifier (':' VersionNumber)? '(' TypeRef ',' TypeRef ',' TypeRef ')' (NL INDENT Doc DEDENT)?
 
 Type Reference::
 
@@ -1000,6 +1000,7 @@ Basic::
     FloatLiteral ::=  '-'? Digit* ('.' Digit+)? ('E' IntLiteral)?
     IntLiteral ::=  '-'? Digit+
     StringLiteral ::= '"' .* '"' # Not accurate
+    VersionNumber ::= ['1'-'9'] Digit*
     Doc ::= StringLiteral # Not accurate
     NL = Newline
     INDENT = Incremental indentation
