@@ -86,7 +86,7 @@ def quote(s):
         'Only use quote() with names or IDs in Stone.'
     return "'%s'" % s
 
-def parse_data_types_from_doc_ref(api, doc, namespace_context):
+def parse_data_types_from_doc_ref(api, doc, namespace_context, ignore_missing_entries=False):
     """
     Given a documentation string, parse it and return all references to other
     data types. If there are references to routes, include also the data types of
@@ -96,23 +96,34 @@ def parse_data_types_from_doc_ref(api, doc, namespace_context):
     - api: The API containing this doc ref.
     - doc: The documentation string to parse.
     - namespace_context: The namespace name relative to this documentation.
+    - ignore_missing_entries: If set, this will skip references to nonexistent data types instead
+                              of raising an exception.
 
     Returns:
     - a list of referenced data types
     """
     output = []
     data_types, routes_by_ns = parse_data_types_and_routes_from_doc_ref(
-        api, doc, namespace_context)
+        api, doc, namespace_context, ignore_missing_entries=ignore_missing_entries)
     for d in data_types:
         output.append(d)
     for ns_name, routes in routes_by_ns.items():
-        ns = api.namespaces[ns_name]
-        for r in routes:
-            for d in ns.get_route_io_data_types_for_route(r):
-                output.append(d)
+        try:
+            ns = api.namespaces[ns_name]
+            for r in routes:
+                for d in ns.get_route_io_data_types_for_route(r):
+                    output.append(d)
+        except KeyError:
+            if not ignore_missing_entries:
+                raise
     return output
 
-def parse_data_types_and_routes_from_doc_ref(api, doc, namespace_context):
+def parse_data_types_and_routes_from_doc_ref(
+    api,
+    doc,
+    namespace_context,
+    ignore_missing_entries=False
+):
     """
     Given a documentation string, parse it and return all references to other
     data types and routes.
@@ -121,6 +132,8 @@ def parse_data_types_and_routes_from_doc_ref(api, doc, namespace_context):
     - api: The API containing this doc ref.
     - doc: The documentation string to parse.
     - namespace_context: The namespace name relative to this documentation.
+    - ignore_missing_entries: If set, this will skip references to nonexistent data types instead
+                              of raising an exception.
 
     Returns:
     - a tuple of referenced data types and routes
@@ -130,33 +143,37 @@ def parse_data_types_and_routes_from_doc_ref(api, doc, namespace_context):
     routes = defaultdict(set)
 
     for match in doc_ref_re.finditer(doc):
-        tag = match.group('tag')
-        val = match.group('val')
-        supplied_namespace = api.namespaces[namespace_context]
-        if tag == 'field':
-            if '.' in val:
-                type_name, __ = val.split('.', 1)
-                doc_type = supplied_namespace.data_type_by_name[type_name]
-                data_types.add(doc_type)
-            else:
-                pass  # no action required, because we must be referencing the same object
-        elif tag == 'route':
-            if '.' in val:
-                namespace_name, val = val.split('.', 1)
-                namespace = api.namespaces[namespace_name]
-                route = namespace.route_by_name[val]
-                routes[namespace_name].add(route)
-            else:
-                route = supplied_namespace.route_by_name[val]
-                routes[supplied_namespace.name].add(route)
-        elif tag == 'type':
-            if '.' in val:
-                namespace_name, val = val.split('.', 1)
-                doc_type = api.namespaces[namespace_name].data_type_by_name[val]
-                data_types.add(doc_type)
-            else:
-                doc_type = supplied_namespace.data_type_by_name[val]
-                data_types.add(doc_type)
+        try:
+            tag = match.group('tag')
+            val = match.group('val')
+            supplied_namespace = api.namespaces[namespace_context]
+            if tag == 'field':
+                if '.' in val:
+                    type_name, __ = val.split('.', 1)
+                    doc_type = supplied_namespace.data_type_by_name[type_name]
+                    data_types.add(doc_type)
+                else:
+                    pass  # no action required, because we must be referencing the same object
+            elif tag == 'route':
+                if '.' in val:
+                    namespace_name, val = val.split('.', 1)
+                    namespace = api.namespaces[namespace_name]
+                    route = namespace.route_by_name[val]
+                    routes[namespace_name].add(route)
+                else:
+                    route = supplied_namespace.route_by_name[val]
+                    routes[supplied_namespace.name].add(route)
+            elif tag == 'type':
+                if '.' in val:
+                    namespace_name, val = val.split('.', 1)
+                    doc_type = api.namespaces[namespace_name].data_type_by_name[val]
+                    data_types.add(doc_type)
+                else:
+                    doc_type = supplied_namespace.data_type_by_name[val]
+                    data_types.add(doc_type)
+        except KeyError:
+            if not ignore_missing_entries:
+                raise
     return data_types, routes
 
 # Patterns for references in documentation
