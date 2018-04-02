@@ -86,6 +86,79 @@ def quote(s):
         'Only use quote() with names or IDs in Stone.'
     return "'%s'" % s
 
+def parse_data_types_from_doc_ref(api, doc, namespace_context):
+    """
+    Given a documentation string, parse it and return all references to other
+    data types. If there are references to routes, include also the data types of
+    those routes.
+
+    Args:
+    - api: The API containing this doc ref.
+    - doc: The documentation string to parse.
+    - namespace_context: The namespace name relative to this documentation.
+
+    Returns:
+    - a list of referenced data types
+    """
+    output = []
+    data_types, routes_by_ns = parse_data_types_and_routes_from_doc_ref(
+        api, doc, namespace_context)
+    for d in data_types:
+        output.append(d)
+    for ns_name, routes in routes_by_ns.items():
+        ns = api.namespaces[ns_name]
+        for r in routes:
+            for d in ns.get_route_io_data_types_for_route(r):
+                output.append(d)
+    return output
+
+def parse_data_types_and_routes_from_doc_ref(api, doc, namespace_context):
+    """
+    Given a documentation string, parse it and return all references to other
+    data types and routes.
+
+    Args:
+    - api: The API containing this doc ref.
+    - doc: The documentation string to parse.
+    - namespace_context: The namespace name relative to this documentation.
+
+    Returns:
+    - a tuple of referenced data types and routes
+    """
+    assert doc is not None
+    data_types = set()
+    routes = defaultdict(set)
+
+    for match in doc_ref_re.finditer(doc):
+        tag = match.group('tag')
+        val = match.group('val')
+        supplied_namespace = api.namespaces[namespace_context]
+        if tag == 'field':
+            if '.' in val:
+                type_name, __ = val.split('.', 1)
+                doc_type = supplied_namespace.data_type_by_name[type_name]
+                data_types.add(doc_type)
+            else:
+                pass  # no action required, because we must be referencing the same object
+        elif tag == 'route':
+            if '.' in val:
+                namespace_name, val = val.split('.', 1)
+                namespace = api.namespaces[namespace_name]
+                route = namespace.route_by_name[val]
+                routes[namespace_name].add(route)
+            else:
+                route = supplied_namespace.route_by_name[val]
+                routes[supplied_namespace.name].add(route)
+        elif tag == 'type':
+            if '.' in val:
+                namespace_name, val = val.split('.', 1)
+                doc_type = api.namespaces[namespace_name].data_type_by_name[val]
+                data_types.add(doc_type)
+            else:
+                doc_type = supplied_namespace.data_type_by_name[val]
+                data_types.add(doc_type)
+    return data_types, routes
+
 # Patterns for references in documentation
 doc_ref_re = re.compile(r':(?P<tag>[A-z]+):`(?P<val>.*?)`')
 doc_ref_val_re = re.compile(
@@ -1279,7 +1352,7 @@ class IRGenerator(object):
             # Parse namespace doc refs and add them to the starting data types
             if namespace.doc is not None:
                 route_data_types.extend(
-                    self._get_data_types_from_doc_ref(namespace.doc, namespace_name))
+                    parse_data_types_from_doc_ref(self.api, namespace.doc, namespace_name))
 
             # Parse user-specified routes and add them to the starting data types
             # Note that this may add duplicates, but that's okay, as the recursion
@@ -1294,7 +1367,7 @@ class IRGenerator(object):
                 route_data_types.extend(namespace.get_route_io_data_types_for_route(route))
                 if route.doc is not None:
                     route_data_types.extend(
-                        self._get_data_types_from_doc_ref(route.doc, namespace_name))
+                        parse_data_types_from_doc_ref(self.api, route.doc, namespace_name))
 
         # Parse the datatype whitelist and populate any starting data types
         for namespace_name, datatype_names in self._routes['datatype_whitelist'].items():
@@ -1305,7 +1378,7 @@ class IRGenerator(object):
             namespace = self.api.namespaces[namespace_name]
             if namespace.doc is not None:
                 route_data_types.extend(
-                    self._get_data_types_from_doc_ref(namespace.doc, namespace_name))
+                    parse_data_types_from_doc_ref(self.api, namespace.doc, namespace_name))
 
             for datatype_name in datatype_names:
                 if datatype_name not in self.api.namespaces[namespace_name].data_type_by_name:
@@ -1369,8 +1442,8 @@ class IRGenerator(object):
                 self._find_dependencies_recursive(data_type.parent_type, seen, output_types,
                                                   output_routes)
             if data_type.doc is not None:
-                doc_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
-                    data_type.doc, data_type.namespace.name)
+                doc_types, routes_by_ns = parse_data_types_and_routes_from_doc_ref(
+                    self.api, data_type.doc, data_type.namespace.name)
                 for t in doc_types:
                     self._find_dependencies_recursive(t, seen, output_types, output_routes)
                 for namespace_name, routes in routes_by_ns.items():
@@ -1395,8 +1468,8 @@ class IRGenerator(object):
             self._find_dependencies_recursive(data_type.data_type, seen, output_types,
                                               output_routes)
             if data_type.doc is not None:
-                doc_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
-                    data_type.doc, namespace_context)
+                doc_types, routes_by_ns = parse_data_types_and_routes_from_doc_ref(
+                    self.api, data_type.doc, namespace_context)
                 for t in doc_types:
                     self._find_dependencies_recursive(t, seen, output_types, output_routes)
                 for namespace_name, routes in routes_by_ns.items():
@@ -1421,74 +1494,3 @@ class IRGenerator(object):
                                               output_routes)
         else:
             assert False, "Unexpected type in: %s" % data_type
-
-    def _get_data_types_from_doc_ref(self, doc, namespace_context):
-        """
-        Given a documentation string, parse it and return all references to other
-        data types. If there are references to routes, include also the data types of
-        those routes.
-
-        Args:
-        - doc: The documentation string to parse.
-        - namespace_context: The namespace name relative to this documentation.
-
-        Returns:
-        - a list of referenced data types
-        """
-        output = []
-        data_types, routes_by_ns = self._get_data_types_and_routes_from_doc_ref(
-            doc, namespace_context)
-        for d in data_types:
-            output.append(d)
-        for ns_name, routes in routes_by_ns.items():
-            ns = self.api.namespaces[ns_name]
-            for r in routes:
-                for d in ns.get_route_io_data_types_for_route(r):
-                    output.append(d)
-        return output
-
-    def _get_data_types_and_routes_from_doc_ref(self, doc, namespace_context):
-        """
-        Given a documentation string, parse it and return all references to other
-        data types and routes.
-
-        Args:
-        - doc: The documentation string to parse.
-        - namespace_context: The namespace name relative to this documentation.
-
-        Returns:
-        - a tuple of referenced data types and routes
-        """
-        assert doc is not None
-        data_types = set()
-        routes = defaultdict(set)
-
-        for match in doc_ref_re.finditer(doc):
-            tag = match.group('tag')
-            val = match.group('val')
-            supplied_namespace = self.api.namespaces[namespace_context]
-            if tag == 'field':
-                if '.' in val:
-                    type_name, __ = val.split('.', 1)
-                    doc_type = supplied_namespace.data_type_by_name[type_name]
-                    data_types.add(doc_type)
-                else:
-                    pass  # no action required, because we must be referencing the same object
-            elif tag == 'route':
-                if '.' in val:
-                    namespace_name, val = val.split('.', 1)
-                    namespace = self.api.namespaces[namespace_name]
-                    route = namespace.route_by_name[val]
-                    routes[namespace_name].add(route)
-                else:
-                    route = supplied_namespace.route_by_name[val]
-                    routes[supplied_namespace.name].add(route)
-            elif tag == 'type':
-                if '.' in val:
-                    namespace_name, val = val.split('.', 1)
-                    doc_type = self.api.namespaces[namespace_name].data_type_by_name[val]
-                    data_types.add(doc_type)
-                else:
-                    doc_type = supplied_namespace.data_type_by_name[val]
-                    data_types.add(doc_type)
-        return data_types, routes
