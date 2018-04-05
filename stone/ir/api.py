@@ -104,6 +104,7 @@ class ApiNamespace(object):
         self.name = name
         self.doc = None                 # type: typing.Optional[six.text_type]
         self.routes = []                # type: typing.List[ApiRoute]
+        # TODO (peichao): route_by_name is deprecated by routes_by_name and should be removed.
         self.route_by_name = {}         # type: typing.Dict[typing.Text, ApiRoute]
         self.routes_by_name = {}        # type: typing.Dict[typing.Text, ApiRoutesByVersion]
         self.data_types = []            # type: typing.List[UserDefined]
