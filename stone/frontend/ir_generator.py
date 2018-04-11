@@ -238,7 +238,7 @@ class IRGenerator(object):
             elif isinstance(item, AstRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
-                self._check_canonical_name_available(item, namespace.name)
+                self._check_canonical_name_available(item, namespace.name, allow_duplicate=True)
             elif isinstance(item, AstImport):
                 # Handle imports later.
                 pass
@@ -254,7 +254,8 @@ class IRGenerator(object):
                 raise AssertionError('Unknown AST node type %r' %
                                      item.__class__.__name__)
 
-    def _check_canonical_name_available(self, item, namespace_name):
+    # TODO(peichao): the name conflict checking can be merged to _create_* functions using env.
+    def _check_canonical_name_available(self, item, namespace_name, allow_duplicate=False):
         base_name = self._get_base_name(item.name, namespace_name)
 
         if base_name not in self._item_by_canonical_name:
@@ -262,11 +263,10 @@ class IRGenerator(object):
         else:
             stored_item = self._item_by_canonical_name[base_name]
 
-            # Allow name conflicts between routes
-            is_conflict_between_routes = isinstance(item, AstRouteDef) \
-                and isinstance(stored_item, AstRouteDef)
+            is_conflict_between_same_type = item.__class__ == stored_item.__class__
 
-            if not is_conflict_between_routes:
+            # Allow name conflicts between items of the same type when allow_duplicate is True
+            if not is_conflict_between_same_type or not allow_duplicate:
                 msg = ("Name of %s '%s' conflicts with name of "
                        "%s '%s' (%s:%s).") % (
                     self._get_user_friendly_item_type_as_string(item),
