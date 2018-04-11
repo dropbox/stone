@@ -77,11 +77,11 @@ def fmt_var(name, check_reserved=False):
     s = fmt_underscores(name)
     return _rename_if_reserved(s) if check_reserved else s
 
-def fmt_version(version):
+def fmt_version(version, prefix='_v'):
     if version == 1:
         return ''
     else:
-        return '_v{}'.format(version)
+        return '{}{}'.format(prefix, version)
 
 TYPE_IGNORE_COMMENT = "  # type: ignore"
 

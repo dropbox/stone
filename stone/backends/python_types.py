@@ -51,6 +51,7 @@ from stone.backends.python_helpers import (
     fmt_func,
     fmt_obj,
     fmt_var,
+    fmt_version,
     generate_imports_for_referenced_namespaces,
     validators_import,
 )
@@ -858,16 +859,18 @@ class PythonTypesBackend(CodeBackend):
             var_name = fmt_func(route.name)
             data_types = [route.arg_data_type, route.result_data_type,
                           route.error_data_type]
-            with self.block('%s = bb.Route(' % var_name, delim=(None, None), after=')'):
-                self.emit("'%s'," % route.name)
-                self.emit("%r," % (route.deprecated is not None))
+            with self.block('{}{} = bb.Route('.format(var_name, fmt_version(route.version)),
+                            delim=(None, None), after=')'):
+                self.emit('\'{}\','.format(route.name))
+                self.emit('{},'.format(route.version))
+                self.emit('{!r},'.format(route.deprecated is not None))
                 for data_type in data_types:
                     self.emit(
                         generate_validator_constructor(namespace, data_type) + ',')
                 attrs = []
                 for field in route_schema.fields:
                     attr_key = field.name
-                    attrs.append("'%s': %r" % (attr_key, route.attrs.get(attr_key)))
+                    attrs.append('\'{}\': {!r}'.format(attr_key, route.attrs.get(attr_key)))
                 self.generate_multiline_list(
                     attrs, delim=('{', '}'), after=',', compact=True)
 
@@ -877,7 +880,9 @@ class PythonTypesBackend(CodeBackend):
         with self.block('ROUTES =', delim=('{', '}')):
             for route in namespace.routes:
                 var_name = fmt_func(route.name)
-                self.emit("'{}': {},".format(route.name, var_name))
+                self.emit('\'{}{}\': {}{},'.format(
+                    route.name, fmt_version(route.version, prefix=':'),
+                    var_name, fmt_version(route.version)))
         self.emit()
 
     def _generate_redactor(self, validator_name, redactor):
