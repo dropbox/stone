@@ -17,6 +17,7 @@ from stone.backends.python_helpers import (
     fmt_obj,
     fmt_type,
     fmt_var,
+    fmt_version,
 )
 from stone.backends.python_types import (
     class_name_for_data_type,
@@ -244,7 +245,7 @@ class PythonClientBackend(CodeBackend):
 
             # Code to make the request
             args = [
-                '{}.{}'.format(namespace.name, fmt_var(route.name)),
+                '{}.{}{}'.format(namespace.name, fmt_var(route.name), fmt_version(route.version)),
                 "'{}'".format(namespace.name),
                 'arg']
             if request_binary_body:
@@ -274,9 +275,6 @@ class PythonClientBackend(CodeBackend):
         namespace_name = fmt_func(namespace.name)
         if method_name_suffix:
             method_name += method_name_suffix
-        version_suffix = ''
-        if route.version > 1:
-            version_suffix = '_%d' % route.version
         args = ['self']
         if extra_args:
             args += extra_args
@@ -307,7 +305,7 @@ class PythonClientBackend(CodeBackend):
             raise AssertionError('Unhandled request type: %r' %
                                  arg_data_type)
         self.generate_multiline_list(
-            args, 'def {}_{}{}'.format(namespace_name, method_name, version_suffix), ':')
+            args, 'def {}_{}{}'.format(namespace_name, method_name, fmt_version(route.version)), ':')
 
     def _maybe_generate_deprecation_warning(self, route):
         if route.deprecated:

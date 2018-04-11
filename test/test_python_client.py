@@ -50,10 +50,10 @@ class TestGeneratedPythonClient(unittest.TestCase):
                 )
                 return None
             
-            def files_get_metadata_2(self):
+            def files_get_metadata_v2(self):
                 arg = None
                 r = self.request(
-                    files.get_metadata,
+                    files.get_metadata_v2,
                     'files',
                     arg,
                     None,
