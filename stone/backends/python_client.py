@@ -168,6 +168,7 @@ class PythonClientBackend(CodeBackend):
         """Generate a Python method that corresponds to a route.
 
         :param namespace: Namespace that the route belongs to.
+        :param stone.ir.ApiRoute route: IR node for the route.
         :param bool download_to_file: Whether a special version of the route
             that downloads the response body to a file should be generated.
             This can only be used for download-style routes.
@@ -273,6 +274,9 @@ class PythonClientBackend(CodeBackend):
         namespace_name = fmt_func(namespace.name)
         if method_name_suffix:
             method_name += method_name_suffix
+        version_suffix = ''
+        if route.version > 1:
+            version_suffix = '_%d' % route.version
         args = ['self']
         if extra_args:
             args += extra_args
@@ -303,7 +307,7 @@ class PythonClientBackend(CodeBackend):
             raise AssertionError('Unhandled request type: %r' %
                                  arg_data_type)
         self.generate_multiline_list(
-            args, 'def {}_{}'.format(namespace_name, method_name), ':')
+            args, 'def {}_{}{}'.format(namespace_name, method_name, version_suffix), ':')
 
     def _maybe_generate_deprecation_warning(self, route):
         if route.deprecated:
