@@ -1,7 +1,7 @@
 import textwrap
 
 from stone.backends.python_client import PythonClientBackend
-from stone.ir import ApiNamespace, ApiRoute, Void
+from stone.ir import ApiNamespace, ApiRoute, Void, Int32
 from test.backend_test_util import _mock_emit
 
 MYPY = False
@@ -17,7 +17,9 @@ class TestGeneratedPythonClient(unittest.TestCase):
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text
 
-        backend = PythonClientBackend(target_folder_path='output', args=['-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
+        backend = PythonClientBackend(
+            target_folder_path='output',
+            args=['-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
         emitted = _mock_emit(backend)
         for route in ns.routes:
             backend._generate_route(ns, route)
@@ -27,12 +29,13 @@ class TestGeneratedPythonClient(unittest.TestCase):
     def test_route_with_version_number(self):
         # type: () -> None
 
-        route = ApiRoute('get_metadata', 1, None)
-        route.set_attributes(None, None, Void(), Void(), Void(), {})
-        route = ApiRoute('get_metadata', 2, None)
-        route.set_attributes(None, None, Void(), Void(), Void(), {})
+        route_v1 = ApiRoute('get_metadata', 1, None)
+        route_v1.set_attributes(None, None, Void(), Void(), Void(), {})
+        route_v2 = ApiRoute('get_metadata', 2, None)
+        route_v2.set_attributes(None, None, Void(), Int32(), Void(), {})
         ns = ApiNamespace('files')
-        ns.add_route(route)
+        ns.add_route(route_v1)
+        ns.add_route(route_v2)
 
         result = self._evaluate_namespace(ns)
 
@@ -46,7 +49,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
                     None,
                 )
                 return None
-
+            
             def files_get_metadata_2(self):
                 arg = None
                 r = self.request(
@@ -55,7 +58,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
                     arg,
                     None,
                 )
-                return None
+                return r
 
         """)
 
