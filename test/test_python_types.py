@@ -34,13 +34,13 @@ class TestGeneratedPythonTypes(unittest.TestCase):
     def test_route_with_version_number(self):
         # type: () -> None
 
-        route_v1 = ApiRoute('get_metadata', 1, None)
-        route_v1.set_attributes(None, None, Void(), Void(), Void(), {})
-        route_v2 = ApiRoute('get_metadata', 2, None)
-        route_v2.set_attributes(None, None, Void(), Int32(), Void(), {})
+        route1 = ApiRoute('get_metadata', 1, None)
+        route1.set_attributes(None, None, Void(), Void(), Void(), {})
+        route2 = ApiRoute('get_metadata', 2, None)
+        route2.set_attributes(None, None, Void(), Int32(), Void(), {})
         ns = ApiNamespace('files')
-        ns.add_route(route_v1)
-        ns.add_route(route_v2)
+        ns.add_route(route1)
+        ns.add_route(route2)
 
         result = self._evaluate_namespace(ns)
 
@@ -72,5 +72,22 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         """)
 
         self.assertEqual(result, expected)
+
+    def test_route_with_version_number_name_conflict(self):
+        # type: () -> None
+
+        route1 = ApiRoute('get_metadata', 2, None)
+        route1.set_attributes(None, None, Void(), Int32(), Void(), {})
+        route2 = ApiRoute('get_metadata_v2', 1, None)
+        route2.set_attributes(None, None, Void(), Void(), Void(), {})
+        ns = ApiNamespace('files')
+        ns.add_route(route1)
+        ns.add_route(route2)
+
+        with self.assertRaises(RuntimeError) as cm:
+            self._evaluate_namespace(ns)
+        self.assertEqual(
+            'There is a name conflict between {!r} and {!r}'.format(route1, route2),
+            cm.exception.message)
 
     # TODO: add more unit tests for client code generation

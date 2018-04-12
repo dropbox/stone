@@ -156,14 +156,33 @@ class PythonClientBackend(CodeBackend):
                 self.emit('# ------------------------------------------')
                 self.emit('# Routes in {} namespace'.format(namespace.name))
                 self.emit()
-                for route in namespace.routes:
-                    self._generate_route(namespace, route)
+                self._generate_routes(namespace)
 
-    def _generate_route(self, namespace, route):
-        """Generates Python methods that correspond to a route."""
-        self._generate_route_helper(namespace, route)
-        if route.attrs.get('style') == 'download':
-            self._generate_route_helper(namespace, route, True)
+    def _check_route_name_conflict(self, namespace):
+        """
+        Check name conflicts among generated route definitions. Raise a runtime exception when a
+        conflict is encountered.
+        """
+        route_by_name = {}
+        for route in namespace.routes:
+            route_name = '{}{}'.format(route.name, fmt_version(route.version))
+            if route_name in route_by_name:
+                other_route = route_by_name[route_name]
+                raise RuntimeError(
+                    'There is a name conflict between {!r} and {!r}'.format(other_route, route))
+            route_by_name[route_name] = route
+
+    def _generate_routes(self, namespace):
+        """
+        Generates Python methods that correspond to routes in the namespace.
+        """
+
+        self._check_route_name_conflict(namespace)
+
+        for route in namespace.routes:
+            self._generate_route_helper(namespace, route)
+            if route.attrs.get('style') == 'download':
+                self._generate_route_helper(namespace, route, True)
 
     def _generate_route_helper(self, namespace, route, download_to_file=False):
         """Generate a Python method that corresponds to a route.
