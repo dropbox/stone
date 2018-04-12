@@ -12,6 +12,7 @@ from stone.ir import (
 )
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
+    check_route_name_conflict,
     fmt_class,
     fmt_func,
     fmt_obj,
@@ -158,26 +159,12 @@ class PythonClientBackend(CodeBackend):
                 self.emit()
                 self._generate_routes(namespace)
 
-    def _check_route_name_conflict(self, namespace):
-        """
-        Check name conflicts among generated route definitions. Raise a runtime exception when a
-        conflict is encountered.
-        """
-        route_by_name = {}
-        for route in namespace.routes:
-            route_name = '{}{}'.format(route.name, fmt_version(route.version))
-            if route_name in route_by_name:
-                other_route = route_by_name[route_name]
-                raise RuntimeError(
-                    'There is a name conflict between {!r} and {!r}'.format(other_route, route))
-            route_by_name[route_name] = route
-
     def _generate_routes(self, namespace):
         """
         Generates Python methods that correspond to routes in the namespace.
         """
 
-        self._check_route_name_conflict(namespace)
+        check_route_name_conflict(namespace)
 
         for route in namespace.routes:
             self._generate_route_helper(namespace, route)
