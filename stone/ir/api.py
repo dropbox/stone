@@ -329,12 +329,11 @@ class ApiRoute(object):
                  name,
                  version,
                  ast_node):
-        # type: (typing.Text, int, AstRouteDef) -> None
+        # type: (typing.Text, int, typing.Optional[AstRouteDef]) -> None
         """
         :param str name: Designated name of the endpoint.
         :param int version: Designated version of the endpoint.
         :param ast_node: Raw route definition from the parser.
-        :type ast_node: stone.stone.parser.AstRouteDef
         """
         self.name = name
         self.version = version

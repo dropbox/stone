@@ -424,7 +424,7 @@ class TestPythonTypeStubs(unittest.TestCase):
             self._evaluate_namespace(ns)
         self.assertEqual(
             'There is a name conflict between {!r} and {!r}'.format(ns.routes[0], ns.routes[1]),
-            cm.exception.message)
+            str(cm.exception))
 
     def test__generate_base_namespace_module__with_alias(self):
         # type: () -> None

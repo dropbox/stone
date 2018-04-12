@@ -48,7 +48,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
                     None,
                 )
                 return None
-            
+
             def files_get_metadata_v2(self):
                 arg = None
                 r = self.request(
@@ -78,6 +78,6 @@ class TestGeneratedPythonClient(unittest.TestCase):
             self._evaluate_namespace(ns)
         self.assertEqual(
             'There is a name conflict between {!r} and {!r}'.format(route1, route2),
-            cm.exception.message)
+            str(cm.exception))
 
     # TODO: add more unit tests for client code generation

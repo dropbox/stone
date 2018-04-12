@@ -63,7 +63,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 bv.Void(),
                 {},
             )
-            
+
             ROUTES = {
                 'get_metadata': get_metadata,
                 'get_metadata:2': get_metadata_v2,
@@ -88,6 +88,6 @@ class TestGeneratedPythonTypes(unittest.TestCase):
             self._evaluate_namespace(ns)
         self.assertEqual(
             'There is a name conflict between {!r} and {!r}'.format(route1, route2),
-            cm.exception.message)
+            str(cm.exception))
 
     # TODO: add more unit tests for client code generation
