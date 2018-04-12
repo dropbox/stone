@@ -864,7 +864,7 @@ class PythonTypesBackend(CodeBackend):
                           route.error_data_type]
             with self.block('{}{} = bb.Route('.format(var_name, fmt_version(route.version)),
                             delim=(None, None), after=')'):
-                self.emit('\'{}\','.format(route.name))
+                self.emit("'{}',".format(route.name))
                 self.emit('{},'.format(route.version))
                 self.emit('{!r},'.format(route.deprecated is not None))
                 for data_type in data_types:
@@ -873,7 +873,7 @@ class PythonTypesBackend(CodeBackend):
                 attrs = []
                 for field in route_schema.fields:
                     attr_key = field.name
-                    attrs.append('\'{}\': {!r}'.format(attr_key, route.attrs.get(attr_key)))
+                    attrs.append("'{}': {!r}".format(attr_key, route.attrs.get(attr_key)))
                 self.generate_multiline_list(
                     attrs, delim=('{', '}'), after=',', compact=True)
 
@@ -883,7 +883,7 @@ class PythonTypesBackend(CodeBackend):
         with self.block('ROUTES =', delim=('{', '}')):
             for route in namespace.routes:
                 var_name = fmt_func(route.name)
-                self.emit('\'{}{}\': {}{},'.format(
+                self.emit("'{}{}': {}{},".format(
                     route.name, fmt_version(route.version, prefix=':'),
                     var_name, fmt_version(route.version)))
         self.emit()
