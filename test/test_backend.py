@@ -51,7 +51,7 @@ class TestBackend(unittest.TestCase):
         a2.set_attributes(None, [StructField('f2', Boolean(), None, None)])
         l1 = List(a1)
         s = String()
-        route = ApiRoute('test/route', None)
+        route = ApiRoute('test/route', 1, None)
         route.set_attributes(None, None, l1, a2, s, None)
         ns.add_route(route)
 

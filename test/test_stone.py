@@ -602,7 +602,7 @@ class TestStone(unittest.TestCase):
         api = specs_to_ir([('test.stone', text)])
         r_old = api.namespaces['test'].route_by_name['old_route']
         r_new = api.namespaces['test'].route_by_name['new_route']
-        self.assertIsNotNone(r.deprecated)
+        self.assertIsNotNone(r_old.deprecated)
         self.assertEqual(r_old.deprecated.by, r_new)
 
         # Test deprecation with target route (more complex route names)
@@ -615,7 +615,7 @@ class TestStone(unittest.TestCase):
         api = specs_to_ir([('test.stone', text)])
         r_old = api.namespaces['test'].route_by_name['test/old_route']
         r_new = api.namespaces['test'].route_by_name['test/new_route']
-        self.assertIsNotNone(r.deprecated)
+        self.assertIsNotNone(r_old.deprecated)
         self.assertEqual(r_old.deprecated.by, r_new)
 
         # Try deprecation by undefined route
@@ -626,7 +626,7 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Undefined route 'unk_route'.", cm.exception.msg)
+        self.assertEqual("Undefined route 'unk_route' at version 1.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Try deprecation by struct
@@ -642,6 +642,98 @@ class TestStone(unittest.TestCase):
             specs_to_ir([('test.stone', text)])
         self.assertEqual("'S' must be a route.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
+
+        # Test route with version number and deprecation
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata(Void, Void, Void) deprecated by get_metadata:2
+
+            route get_metadata:2(Void, Void, Void)
+            """)
+        api = specs_to_ir([('test.stone', text)])
+        routes = api.namespaces['test'].routes_by_name['get_metadata']
+        route_v1 = routes.at_version[1]
+        route_v2 = routes.at_version[2]
+        self.assertEqual(route_v1.name, 'get_metadata')
+        self.assertEqual(route_v1.version, 1)
+        self.assertEqual(route_v2.name, 'get_metadata')
+        self.assertEqual(route_v2.version, 2)
+        self.assertIsNotNone(route_v1.deprecated)
+        self.assertEqual(route_v1.deprecated.by, route_v2)
+
+        # Test using string as version number
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata:beta(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Unexpected ID with value 'beta'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test using fraction as version number
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata:1.2(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Unexpected FLOAT with value 1.2.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test using zero as version number
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata:0(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Version number should be a positive integer.",
+                         cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test using negative integer as version number
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata:-1(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Version number should be a positive integer.",
+                         cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test deprecating by a route at an undefined version
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata(Void, Void, Void) deprecated by get_metadata:3
+
+            route get_metadata:2(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Undefined route 'get_metadata' at version 3.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test duplicate routes of same version
+        text = textwrap.dedent("""\
+            namespace test
+
+            route get_metadata:2(Void, Void, Void)
+
+            route get_metadata:2(Void, Void, Void)
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Route 'get_metadata' at version 2 already defined (test.stone:3).", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 5)
 
     def test_alphabetizing(self):
         text1 = textwrap.dedent("""\

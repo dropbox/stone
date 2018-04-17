@@ -23,6 +23,7 @@ from ..ir import (
     Api,
     ApiNamespace,
     ApiRoute,
+    ApiRoutesByVersion,
     Boolean,
     Bytes,
     DataType,
@@ -327,7 +328,7 @@ class IRGenerator(object):
             elif isinstance(item, AstRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
-                self._check_canonical_name_available(item, namespace.name)
+                self._check_canonical_name_available(item, namespace.name, allow_duplicate=True)
             elif isinstance(item, AstImport):
                 # Handle imports later.
                 pass
@@ -343,22 +344,28 @@ class IRGenerator(object):
                 raise AssertionError('Unknown AST node type %r' %
                                      item.__class__.__name__)
 
-    def _check_canonical_name_available(self, item, namespace_name):
+    # TODO(peichao): the name conflict checking can be merged to _create_* functions using env.
+    def _check_canonical_name_available(self, item, namespace_name, allow_duplicate=False):
         base_name = self._get_base_name(item.name, namespace_name)
 
         if base_name not in self._item_by_canonical_name:
             self._item_by_canonical_name[base_name] = item
         else:
             stored_item = self._item_by_canonical_name[base_name]
-            msg = ("Name of %s '%s' conflicts with name of "
-                   "%s '%s' (%s:%s).") % (
-                self._get_user_friendly_item_type_as_string(item),
-                item.name,
-                self._get_user_friendly_item_type_as_string(stored_item),
-                stored_item.name,
-                stored_item.path, stored_item.lineno)
 
-            raise InvalidSpec(msg, item.lineno, item.path)
+            is_conflict_between_same_type = item.__class__ == stored_item.__class__
+
+            # Allow name conflicts between items of the same type when allow_duplicate is True
+            if not is_conflict_between_same_type or not allow_duplicate:
+                msg = ("Name of %s '%s' conflicts with name of "
+                       "%s '%s' (%s:%s).") % (
+                    self._get_user_friendly_item_type_as_string(item),
+                    item.name,
+                    self._get_user_friendly_item_type_as_string(stored_item),
+                    stored_item.name,
+                    stored_item.path, stored_item.lineno)
+
+                raise InvalidSpec(msg, item.lineno, item.path)
 
     @classmethod
     def _get_user_friendly_item_type_as_string(cls, item):
@@ -717,19 +724,37 @@ class IRGenerator(object):
         result_dt = self._resolve_type(env, route._ast_node.result_type_ref)
         error_dt = self._resolve_type(env, route._ast_node.error_type_ref)
 
-        if route._ast_node.deprecated:
-            assert route._ast_node.deprecated[0]
-            new_route_name = route._ast_node.deprecated[1]
+        ast_deprecated = route._ast_node.deprecated
+        if ast_deprecated:
+            assert ast_deprecated[0]
+            new_route_name = ast_deprecated[1]
+            new_route_version = ast_deprecated[2]
             if new_route_name:
-                if new_route_name not in env:
+                assert new_route_version
+
+                is_not_defined = False
+                is_not_route = False
+                if new_route_name in env:
+                    if isinstance(env[new_route_name], ApiRoutesByVersion):
+                        if new_route_version not in env[new_route_name].at_version:
+                            is_not_defined = True
+                    else:
+                        is_not_route = True
+                else:
+                    is_not_defined = True
+
+                if is_not_defined:
                     raise InvalidSpec(
-                        'Undefined route %s.' % quote(new_route_name),
+                        'Undefined route %s at version %d.' % (
+                            quote(new_route_name), new_route_version),
                         route._ast_node.lineno, route._ast_node.path)
-                new_route = env[new_route_name]
-                if not isinstance(new_route, ApiRoute):
+
+                if is_not_route:
                     raise InvalidSpec(
                         '%s must be a route.' % quote(new_route_name),
                         route._ast_node.lineno, route._ast_node.path)
+
+                new_route = env[new_route_name].at_version[new_route_version]
                 deprecated = DeprecationInfo(new_route)
             else:
                 deprecated = DeprecationInfo()
@@ -1027,16 +1052,30 @@ class IRGenerator(object):
             stone.api.ApiRoute: A fully-defined route.
         """
         if item.name in env:
-            existing_dt = env[item.name]
-            raise InvalidSpec(
-                'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._ast_node.path,
-                 existing_dt._ast_node.lineno), item.lineno, item.path)
+            if isinstance(env[item.name], ApiRoutesByVersion):
+                if item.version in env[item.name].at_version:
+                    existing_dt = env[item.name].at_version[item.version]
+                    raise InvalidSpec(
+                        'Route %s at version %d already defined (%s:%d).' % (
+                            quote(item.name), item.version, existing_dt._ast_node.path,
+                            existing_dt._ast_node.lineno),
+                        item.lineno, item.path)
+            else:
+                existing_dt = env[item.name]
+                raise InvalidSpec(
+                    'Symbol %s already defined (%s:%d).' % (
+                        quote(item.name), existing_dt._ast_node.path,
+                        existing_dt._ast_node.lineno),
+                    item.lineno, item.path)
+        else:
+            env[item.name] = ApiRoutesByVersion()
+
         route = ApiRoute(
             name=item.name,
+            version=item.version,
             ast_node=item,
         )
-        env[route.name] = route
+        env[route.name].at_version[route.version] = route
         return route
 
     def _get_or_create_env(self, namespace_name):

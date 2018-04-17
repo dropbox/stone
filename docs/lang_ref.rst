@@ -53,7 +53,7 @@ Type                    Arguments (**bold** are required  Notes
                         and positional)
 ======================= ================================= =====================
 Bytes                                                     An array of bytes.
-Boolean                 
+Boolean
 Float{32,64}            * min_value
                         * max_value
 Int{32,64}, UInt{32,64} * min_value
@@ -76,7 +76,7 @@ Timestamp               * **format**: Specified as a      This is used by the
                           string understood by            JSON-serializer since
                           strptime().                     it has no native
                                                           timestamp data type.
-Void                    
+Void
 ======================= ================================= =====================
 
 Positional arguments (bold in the above table) are always required and appear
@@ -593,6 +593,21 @@ followed by the new route's name::
 The new route ``binary_op_v2`` happens to use the same argument and error
 types, but its result type has changed.
 
+Versioning
+----------
+
+It's possible to have multiple versions of the same route. You can do so by adding an optional
+version number to the end of the route name separated by a colon (``:``). The version number needs
+to be a positive integer. When no version number is specified, the default value is 1, as shown
+below::
+
+    route get_metadata:2(Void, Void, Void)
+
+The version number can also be specified in the same way when deprecating a route using
+``deprecated by``::
+
+    route get_metadata(Void, Void, Void) deprecated by get_metadata:2
+
 Import
 ======
 
@@ -959,7 +974,7 @@ Union::
 
 Route::
 
-    Route ::= 'route' Identifier '(' TypeRef ',' TypeRef ',' TypeRef ')' (NL INDENT Doc DEDENT)?
+    Route ::= 'route' Identifier (':' VersionNumber)? '(' TypeRef ',' TypeRef ',' TypeRef ')' (NL INDENT Doc DEDENT)?
 
 Type Reference::
 
@@ -985,6 +1000,7 @@ Basic::
     FloatLiteral ::=  '-'? Digit* ('.' Digit+)? ('E' IntLiteral)?
     IntLiteral ::=  '-'? Digit+
     StringLiteral ::= '"' .* '"' # Not accurate
+    VersionNumber ::= ['1'-'9'] Digit*
     Doc ::= StringLiteral # Not accurate
     NL = Newline
     INDENT = Incremental indentation
