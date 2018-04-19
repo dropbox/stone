@@ -954,7 +954,7 @@ class IRGenerator(object):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
                 obj, resolved_data_type_args, (type_ref.lineno, type_ref.path))
-        elif isinstance(obj, ApiRoute):
+        elif isinstance(obj, ApiRoutesByVersion):
             raise InvalidSpec('A route cannot be referenced here.',
                               *loc)
         elif type_ref.args[0] or type_ref.args[1]:
@@ -1049,7 +1049,7 @@ class IRGenerator(object):
             item (AstRouteDef): Raw route definition from the parser.
 
         Returns:
-            stone.api.ApiRoute: A fully-defined route.
+            stone.api.ApiRoutesByVersion: A group of fully-defined routes indexed by versions.
         """
         if item.name in env:
             if isinstance(env[item.name], ApiRoutesByVersion):
@@ -1210,7 +1210,7 @@ class IRGenerator(object):
                             'Bad doc reference to field %s of '
                             'unknown type %s.' % (field_name, quote(type_name)),
                             *loc)
-                    elif isinstance(env[type_name], ApiRoute):
+                    elif isinstance(env[type_name], ApiRoutesByVersion):
                         raise InvalidSpec(
                             'Bad doc reference to field %s of route %s.' %
                             (quote(field_name), quote(type_name)),
@@ -1252,7 +1252,7 @@ class IRGenerator(object):
                     raise InvalidSpec(
                         'Unknown doc reference to route %s.' % quote(val),
                         *loc)
-                elif not isinstance(env_to_check[val], ApiRoute):
+                elif not isinstance(env_to_check[val], ApiRoutesByVersion):
                     raise InvalidSpec(
                         'Doc reference to type %s is not a route.' %
                         quote(val), *loc)

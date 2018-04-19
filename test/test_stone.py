@@ -692,8 +692,7 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer.",
-                         cm.exception.msg)
+        self.assertEqual("Version number should be a positive integer.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test using negative integer as version number
@@ -704,8 +703,7 @@ class TestStone(unittest.TestCase):
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer.",
-                         cm.exception.msg)
+        self.assertEqual("Version number should be a positive integer.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test deprecating by a route at an undefined version
@@ -1060,6 +1058,20 @@ class TestStone(unittest.TestCase):
             specs_to_ir([('test.stone', text)])
         self.assertIn('Attributes cannot be specified for instantiated type',
                       cm.exception.msg)
+
+        # Test aliasing to route
+        text = textwrap.dedent("""\
+            namespace test
+
+            route test_route(Void, Void, Void)
+
+            alias S = test_route
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("A route cannot be referenced here.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 5)
+        self.assertEqual(cm.exception.path, 'test.stone')
 
         # Test aliasing from another namespace
         text1 = textwrap.dedent("""\
@@ -2130,7 +2142,7 @@ class TestStone(unittest.TestCase):
             cm.exception.msg)
 
     def test_doc_refs(self):
-        # Test union doc referencing field
+        # Test union doc referencing a field
         text = textwrap.dedent("""\
             namespace test
 
@@ -2141,7 +2153,7 @@ class TestStone(unittest.TestCase):
             """)
         specs_to_ir([('test.stone', text)])
 
-        # Test union field doc referencing other field
+        # Test union field doc referencing another field
         text = textwrap.dedent("""\
             namespace test
 
@@ -2151,6 +2163,54 @@ class TestStone(unittest.TestCase):
                 b
             """)
         specs_to_ir([('test.stone', text)])
+
+        # Test docs referencing a route
+        text = textwrap.dedent("""\
+            namespace test
+
+            route test_route(Void, Void, Void)
+
+            struct T
+                "type doc ref :route:`test_route`"
+                f String
+                    "field doc ref :route:`test_route`"
+
+            union U
+                "type doc ref :route:`test_route`"
+                f String
+                    "field doc ref :route:`test_route`"
+            """)
+        specs_to_ir([('test.stone', text)])
+
+        # Test referencing an undefined route
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct T
+                "type doc ref :route:`test_route`"
+                f String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Unknown doc reference to route 'test_route'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 4)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Test referencing a field of a route
+        text = textwrap.dedent("""\
+            namespace test
+
+            route test_route(Void, Void, Void)
+
+            struct T
+                "type doc ref :field:`test_route.g`"
+                f String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Bad doc reference to field 'g' of route 'test_route'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+        self.assertEqual(cm.exception.path, 'test.stone')
 
     def test_namespace(self):
         # Test that namespace docstrings are combined
