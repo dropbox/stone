@@ -954,7 +954,7 @@ class IRGenerator(object):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
                 obj, resolved_data_type_args, (type_ref.lineno, type_ref.path))
-        elif isinstance(obj, ApiRoute):
+        elif isinstance(obj, ApiRoutesByVersion):
             raise InvalidSpec('A route cannot be referenced here.',
                               *loc)
         elif type_ref.args[0] or type_ref.args[1]:

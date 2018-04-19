@@ -1059,6 +1059,19 @@ class TestStone(unittest.TestCase):
         self.assertIn('Attributes cannot be specified for instantiated type',
                       cm.exception.msg)
 
+        # Test aliasing to route
+        text = textwrap.dedent("""\
+            namespace test
+
+            route test_route(Void, Void, Void)
+
+            alias S = test_route
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("A route cannot be referenced here.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 5)
+
         # Test aliasing from another namespace
         text1 = textwrap.dedent("""\
             namespace test1
