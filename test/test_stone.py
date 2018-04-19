@@ -2167,14 +2167,14 @@ class TestStone(unittest.TestCase):
         # Test docs referencing a route
         text = textwrap.dedent("""\
             namespace test
-            
+
             route test_route(Void, Void, Void)
-            
+
             struct T
                 "type doc ref :route:`test_route`"
                 f String
                     "field doc ref :route:`test_route`"
-            
+
             union U
                 "type doc ref :route:`test_route`"
                 f String
@@ -2185,7 +2185,7 @@ class TestStone(unittest.TestCase):
         # Test referencing an undefined route
         text = textwrap.dedent("""\
             namespace test
-    
+
             struct T
                 "type doc ref :route:`test_route`"
                 f String
@@ -2199,9 +2199,9 @@ class TestStone(unittest.TestCase):
         # Test referencing a field of a route
         text = textwrap.dedent("""\
             namespace test
-            
+
             route test_route(Void, Void, Void)
-            
+
             struct T
                 "type doc ref :field:`test_route.g`"
                 f String
