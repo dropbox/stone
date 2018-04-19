@@ -1071,6 +1071,7 @@ class TestStone(unittest.TestCase):
             specs_to_ir([('test.stone', text)])
         self.assertEqual("A route cannot be referenced here.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 5)
+        self.assertEqual(cm.exception.path, 'test.stone')
 
         # Test aliasing from another namespace
         text1 = textwrap.dedent("""\
@@ -2180,6 +2181,20 @@ class TestStone(unittest.TestCase):
                     "field doc ref :route:`test_route`"
             """)
         specs_to_ir([('test.stone', text)])
+
+        # Test referencing an undefined route
+        text = textwrap.dedent("""\
+            namespace test
+    
+            struct T
+                "type doc ref :route:`test_route`"
+                f String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Unknown doc reference to route 'test_route'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 4)
+        self.assertEqual(cm.exception.path, 'test.stone')
 
     def test_namespace(self):
         # Test that namespace docstrings are combined

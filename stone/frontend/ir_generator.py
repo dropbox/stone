@@ -1049,7 +1049,7 @@ class IRGenerator(object):
             item (AstRouteDef): Raw route definition from the parser.
 
         Returns:
-            stone.api.ApiRoute: A fully-defined route.
+            stone.api.ApiRoutesByVersion: A group of fully-defined routes indexed by versions.
         """
         if item.name in env:
             if isinstance(env[item.name], ApiRoutesByVersion):
@@ -1252,7 +1252,7 @@ class IRGenerator(object):
                     raise InvalidSpec(
                         'Unknown doc reference to route %s.' % quote(val),
                         *loc)
-                elif not isinstance(env_to_check[val], ApiRoute):
+                elif not isinstance(env_to_check[val], ApiRoutesByVersion):
                     raise InvalidSpec(
                         'Doc reference to type %s is not a route.' %
                         quote(val), *loc)
