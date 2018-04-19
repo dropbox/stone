@@ -2196,6 +2196,22 @@ class TestStone(unittest.TestCase):
         self.assertEqual(cm.exception.lineno, 4)
         self.assertEqual(cm.exception.path, 'test.stone')
 
+        # Test referencing a field of a route
+        text = textwrap.dedent("""\
+            namespace test
+            
+            route test_route(Void, Void, Void)
+            
+            struct T
+                "type doc ref :field:`test_route.g`"
+                f String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Bad doc reference to field 'g' of route 'test_route'.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
     def test_namespace(self):
         # Test that namespace docstrings are combined
         ns1_text = textwrap.dedent("""\

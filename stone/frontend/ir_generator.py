@@ -1210,7 +1210,7 @@ class IRGenerator(object):
                             'Bad doc reference to field %s of '
                             'unknown type %s.' % (field_name, quote(type_name)),
                             *loc)
-                    elif isinstance(env[type_name], ApiRoute):
+                    elif isinstance(env[type_name], ApiRoutesByVersion):
                         raise InvalidSpec(
                             'Bad doc reference to field %s of route %s.' %
                             (quote(field_name), quote(type_name)),
