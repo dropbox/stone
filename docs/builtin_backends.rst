@@ -266,11 +266,12 @@ Routes are represented as instances of a ``Route`` object. The generated Python
 module for the namespace will have a module-level variable for each route::
 
     >>> eval
-    Route('eval', False, ...)
+    Route('eval', 1, False, ...)
 
 Route attributes specified in the spec are available as a dict in the ``attrs``
 member variable. Route deprecation is stored in the ``deprecated`` member
-variable.
+variable. The name and version of a route are stored in the ``name`` and ``version`` member
+variables, respectively.
 
 Serialization
 -------------
@@ -360,3 +361,28 @@ example, an API that goes over HTTP might have the following client::
 
 Note that care is taken to ensure that that the return type and exception type
 match those that were specified in the automatically generated documentation.
+
+Routes with Version Numbers
+---------------------------
+
+There can be multiple versions of routes sharing the same name. For each route with a version
+numbers other than 1, the generated module-level route variable and route function have a version
+suffix appended in the form of ``{name}_v{version}``.
+
+For example, suppose we add a new version of route ``eval`` in ``calc.stone`` as follows::
+
+    ...
+
+    route eval:2(Expression, ResultV2, EvalError)
+
+    struct ResultV2
+        answer String
+
+    ...
+
+The module-level variable for the route will be::
+
+    >>> eval_v2
+    Route('eval', 2, False, ...)
+
+And the corresponding route function in ``client.py`` will be ``calc_eval_v2``.
