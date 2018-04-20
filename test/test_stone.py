@@ -735,6 +735,21 @@ class TestStone(unittest.TestCase):
             "Route 'get_metadata' at version 2 already defined (test.stone:3).", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 5)
 
+        # Test user-friendly representation
+        text = textwrap.dedent("""\
+            namespace test
+
+            route alpha/get_metadata(Void, Void, Void)
+
+            route alpha/get_metadata:2(Void, Void, Void)
+            """)
+        api = specs_to_ir([('test.stone', text)])
+        routes = api.namespaces['test'].routes_by_name['alpha/get_metadata']
+        route_v1 = routes.at_version[1]
+        route_v2 = routes.at_version[2]
+        self.assertEqual(route_v1.name_with_version(), 'alpha/get_metadata')
+        self.assertEqual(route_v2.name_with_version(), 'alpha/get_metadata:2')
+
     def test_alphabetizing(self):
         text1 = textwrap.dedent("""\
             namespace ns_b
