@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 from stone.ir.data_types import String
 from stone.typing_hacks import cast
+
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -27,11 +28,11 @@ from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
 )
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
+    append_version_suffix,
     class_name_for_data_type,
     check_route_name_conflict,
     fmt_func,
     fmt_var,
-    fmt_version,
     generate_imports_for_referenced_namespaces,
     validators_import_with_type_ignore,
 )
@@ -392,9 +393,9 @@ class PythonTypeStubsBackend(CodeBackend):
 
         for route in namespace.routes:
             self.emit(
-                "{var_name}{version_suffix}: bb.Route = ...".format(
-                    var_name=fmt_func(route.name),
-                    version_suffix=fmt_version(route.version),
+                "{var_name_with_version_suffix}: bb.Route = ...".format(
+                    var_name_with_version_suffix=append_version_suffix(
+                        fmt_func(route.name), route.version),
                 )
             )
 

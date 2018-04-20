@@ -2,6 +2,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import re
 
+from stone.backend import CodeBackend
+from stone.backends.python_helpers import (
+    append_version_suffix,
+    check_route_name_conflict,
+    fmt_class,
+    fmt_func,
+    fmt_obj,
+    fmt_type,
+    fmt_var,
+)
+from stone.backends.python_types import (
+    class_name_for_data_type,
+)
 from stone.ir import (
     is_nullable_type,
     is_struct_type,
@@ -9,19 +22,6 @@ from stone.ir import (
     is_union_type,
     is_user_defined_type,
     is_void_type,
-)
-from stone.backend import CodeBackend
-from stone.backends.python_helpers import (
-    check_route_name_conflict,
-    fmt_class,
-    fmt_func,
-    fmt_obj,
-    fmt_type,
-    fmt_var,
-    fmt_version,
-)
-from stone.backends.python_types import (
-    class_name_for_data_type,
 )
 
 _MYPY = False
@@ -251,7 +251,8 @@ class PythonClientBackend(CodeBackend):
 
             # Code to make the request
             args = [
-                '{}.{}{}'.format(namespace.name, fmt_var(route.name), fmt_version(route.version)),
+                '{}.{}'.format(namespace.name,
+                               append_version_suffix(fmt_var(route.name), route.version)),
                 "'{}'".format(namespace.name),
                 'arg']
             if request_binary_body:
@@ -311,7 +312,8 @@ class PythonClientBackend(CodeBackend):
             raise AssertionError('Unhandled request type: %r' %
                                  arg_data_type)
         self.generate_multiline_list(
-            args, 'def {}_{}{}'.format(namespace_name, method_name, fmt_version(route.version)), ':')
+            args, 'def {}_{}'.format(namespace_name,
+                                     append_version_suffix(method_name, route.version)), ':')
 
     def _maybe_generate_deprecation_warning(self, route):
         if route.deprecated:
