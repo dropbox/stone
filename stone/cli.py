@@ -270,6 +270,7 @@ def main():
                 if namespace.name not in args.whitelist_namespace_routes:
                     namespace.routes = []
                     namespace.route_by_name = {}
+                    namespace.routes_by_name = {}
 
         if args.blacklist_namespace_routes:
             for namespace_name in args.blacklist_namespace_routes:
@@ -278,8 +279,10 @@ def main():
                           namespace_name, file=sys.stderr)
                     sys.exit(1)
                 else:
-                    api.namespaces[namespace_name].routes = []
-                    api.namespaces[namespace_name].route_by_name = {}
+                    namespace = api.namespaces[namespace_name]
+                    namespace.routes = []
+                    namespace.route_by_name = {}
+                    namespace.routes_by_name = {}
 
         if route_filter:
             for namespace in api.namespaces.values():
@@ -287,9 +290,12 @@ def main():
                 for route in namespace.routes:
                     if route_filter.eval(route):
                         filtered_routes.append(route)
-                    else:
-                        del namespace.route_by_name[route.name]
                 namespace.routes = filtered_routes
+
+                namespace.route_by_name = {}
+                namespace.routes_by_name = {}
+                for route in filtered_routes:
+                    namespace.add_route(route)
 
         if args.attribute:
             attrs = set(args.attribute)
