@@ -4,7 +4,6 @@ import re
 
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
-    append_version_suffix,
     check_route_name_conflict,
     fmt_class,
     fmt_func,
@@ -251,8 +250,7 @@ class PythonClientBackend(CodeBackend):
 
             # Code to make the request
             args = [
-                '{}.{}'.format(namespace.name,
-                               append_version_suffix(fmt_var(route.name), route.version)),
+                '{}.{}'.format(namespace.name, fmt_func(route.name, version=route.version)),
                 "'{}'".format(namespace.name),
                 'arg']
             if request_binary_body:
@@ -276,12 +274,10 @@ class PythonClientBackend(CodeBackend):
 
     def _generate_route_method_decl(
             self, namespace, route, arg_data_type, request_binary_body,
-            method_name_suffix=None, extra_args=None):
+            method_name_suffix='', extra_args=None):
         """Generates the method prototype for a route."""
-        method_name = fmt_func(route.name)
+        method_name = fmt_func(route.name + method_name_suffix, version=route.version)
         namespace_name = fmt_func(namespace.name)
-        if method_name_suffix:
-            method_name += method_name_suffix
         args = ['self']
         if extra_args:
             args += extra_args
@@ -311,9 +307,7 @@ class PythonClientBackend(CodeBackend):
         elif not is_void_type(arg_data_type):
             raise AssertionError('Unhandled request type: %r' %
                                  arg_data_type)
-        self.generate_multiline_list(
-            args, 'def {}_{}'.format(namespace_name,
-                                     append_version_suffix(method_name, route.version)), ':')
+        self.generate_multiline_list(args, 'def {}_{}'.format(namespace_name, method_name), ':')
 
     def _maybe_generate_deprecation_warning(self, route):
         if route.deprecated:

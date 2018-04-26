@@ -28,7 +28,6 @@ from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
 )
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
-    append_version_suffix,
     class_name_for_data_type,
     check_route_name_conflict,
     fmt_func,
@@ -393,11 +392,8 @@ class PythonTypeStubsBackend(CodeBackend):
 
         for route in namespace.routes:
             self.emit(
-                "{var_name_with_version_suffix}: bb.Route = ...".format(
-                    var_name_with_version_suffix=append_version_suffix(
-                        fmt_func(route.name), route.version),
-                )
-            )
+                "{method_name}: bb.Route = ...".format(
+                    method_name=fmt_func(route.name, version=route.version)))
 
         if namespace.routes:
             self.emit()

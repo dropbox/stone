@@ -60,9 +60,13 @@ def fmt_class(name, check_reserved=False):
     return _rename_if_reserved(s) if check_reserved else s
 
 
-def fmt_func(name, check_reserved=False):
+def fmt_func(name, check_reserved=False, version=1):
     s = fmt_underscores(name)
-    return _rename_if_reserved(s) if check_reserved else s
+    if check_reserved:
+        s = _rename_if_reserved(s)
+    if version > 1:
+        s = '{}_v{}'.format(name, version)
+    return s
 
 
 def fmt_obj(o):
@@ -78,13 +82,6 @@ def fmt_var(name, check_reserved=False):
     return _rename_if_reserved(s) if check_reserved else s
 
 
-def append_version_suffix(name, version):
-    if version == 1:
-        return name
-    else:
-        return '{}_v{}'.format(name, version)
-
-
 def check_route_name_conflict(namespace):
     """
     Check name conflicts among generated route definitions. Raise a runtime exception when a
@@ -93,7 +90,7 @@ def check_route_name_conflict(namespace):
 
     route_by_name = {}
     for route in namespace.routes:
-        route_name = append_version_suffix(route.name, route.version)
+        route_name = fmt_func(route.name, version=route.version)
         if route_name in route_by_name:
             other_route = route_by_name[route_name]
             raise RuntimeError(

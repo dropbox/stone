@@ -46,7 +46,6 @@ from stone.ir import (
 from stone.ir import DataType  # noqa: F401 # pylint: disable=unused-import
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
-    append_version_suffix,
     class_name_for_data_type,
     check_route_name_conflict,
     fmt_class,
@@ -859,11 +858,12 @@ class PythonTypesBackend(CodeBackend):
         check_route_name_conflict(namespace)
 
         for route in namespace.routes:
-            var_name = fmt_func(route.name)
             data_types = [route.arg_data_type, route.result_data_type,
                           route.error_data_type]
-            with self.block('{} = bb.Route('.format(append_version_suffix(var_name, route.version)),
-                            delim=(None, None), after=')'):
+            with self.block(
+                    '{} = bb.Route('.format(fmt_func(route.name, version=route.version)),
+                    delim=(None, None),
+                    after=')'):
                 self.emit("'{}',".format(route.name))
                 self.emit('{},'.format(route.version))
                 self.emit('{!r},'.format(route.deprecated is not None))
@@ -882,9 +882,8 @@ class PythonTypesBackend(CodeBackend):
 
         with self.block('ROUTES =', delim=('{', '}')):
             for route in namespace.routes:
-                var_name = fmt_func(route.name)
-                self.emit("'{}': {},".format(route.name_with_version(),
-                                             append_version_suffix(var_name, route.version)))
+                self.emit("'{}': {},".format(
+                    route.name_with_version(), fmt_func(route.name, version=route.version)))
         self.emit()
 
     def _generate_redactor(self, validator_name, redactor):
