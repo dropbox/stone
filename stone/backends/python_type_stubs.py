@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 from stone.ir.data_types import String
 from stone.typing_hacks import cast
+
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -28,6 +29,7 @@ from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
     class_name_for_data_type,
+    check_route_name_conflict,
     fmt_func,
     fmt_var,
     generate_imports_for_referenced_namespaces,
@@ -385,13 +387,13 @@ class PythonTypeStubsBackend(CodeBackend):
             namespace,  # type: ApiNamespace
     ):
         # type: (...) -> None
+
+        check_route_name_conflict(namespace)
+
         for route in namespace.routes:
-            var_name = fmt_func(route.name)
             self.emit(
-                "{var_name}: bb.Route = ...".format(
-                    var_name=var_name
-                )
-            )
+                "{method_name}: bb.Route = ...".format(
+                    method_name=fmt_func(route.name, version=route.version)))
 
         if namespace.routes:
             self.emit()

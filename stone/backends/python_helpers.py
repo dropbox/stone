@@ -2,6 +2,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import pprint
 
+from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
+from stone.backends.helpers import (
+    fmt_pascal,
+    fmt_underscores,
+)
 from stone.ir import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
     Boolean,
@@ -17,11 +22,6 @@ from stone.ir import (
     UInt64,
     is_user_defined_type,
     is_alias,
-)
-from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
-from stone.backends.helpers import (
-    fmt_pascal,
-    fmt_underscores,
 )
 
 _type_table = {
@@ -60,9 +60,13 @@ def fmt_class(name, check_reserved=False):
     return _rename_if_reserved(s) if check_reserved else s
 
 
-def fmt_func(name, check_reserved=False):
+def fmt_func(name, check_reserved=False, version=1):
     s = fmt_underscores(name)
-    return _rename_if_reserved(s) if check_reserved else s
+    if check_reserved:
+        s = _rename_if_reserved(s)
+    if version > 1:
+        s = '{}_v{}'.format(name, version)
+    return s
 
 
 def fmt_obj(o):
@@ -76,6 +80,22 @@ def fmt_type(data_type):
 def fmt_var(name, check_reserved=False):
     s = fmt_underscores(name)
     return _rename_if_reserved(s) if check_reserved else s
+
+
+def check_route_name_conflict(namespace):
+    """
+    Check name conflicts among generated route definitions. Raise a runtime exception when a
+    conflict is encountered.
+    """
+
+    route_by_name = {}
+    for route in namespace.routes:
+        route_name = fmt_func(route.name, version=route.version)
+        if route_name in route_by_name:
+            other_route = route_by_name[route_name]
+            raise RuntimeError(
+                'There is a name conflict between {!r} and {!r}'.format(other_route, route))
+        route_by_name[route_name] = route
 
 TYPE_IGNORE_COMMENT = "  # type: ignore"
 

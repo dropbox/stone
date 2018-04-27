@@ -184,8 +184,26 @@ def _make_namespace_with_route():
         ast_node=mock_ast_node,
     )
     route_two = ApiRoute(
-        name="route_two",
+        name="route_one",
+        version=2,
+        ast_node=mock_ast_node,
+    )
+    ns.add_route(route_one)
+    ns.add_route(route_two)
+    return ns
+
+def _make_namespace_with_route_name_conflict():
+    # type: (...) -> ApiNamespace
+    ns = ApiNamespace("_make_namespace_with_route()")
+    mock_ast_node = Mock()
+    route_one = ApiRoute(
+        name="route_one_v2",
         version=1,
+        ast_node=mock_ast_node,
+    )
+    route_two = ApiRoute(
+        name="route_one",
+        version=2,
         ast_node=mock_ast_node,
     )
     ns.add_route(route_one)
@@ -393,10 +411,20 @@ class TestPythonTypeStubs(unittest.TestCase):
             {headers}
 
             route_one: bb.Route = ...
-            route_two: bb.Route = ...
+            route_one_v2: bb.Route = ...
 
             """).format(headers=_headers)
         self.assertEqual(result, expected)
+
+    def test__generate_routes_name_conflict(self):
+        # type: () -> None
+        ns = _make_namespace_with_route_name_conflict()
+
+        with self.assertRaises(RuntimeError) as cm:
+            self._evaluate_namespace(ns)
+        self.assertEqual(
+            'There is a name conflict between {!r} and {!r}'.format(ns.routes[0], ns.routes[1]),
+            str(cm.exception))
 
     def test__generate_base_namespace_module__with_alias(self):
         # type: () -> None

@@ -2,16 +2,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import re
 
-from stone.ir import (
-    is_nullable_type,
-    is_struct_type,
-    is_tag_ref,
-    is_union_type,
-    is_user_defined_type,
-    is_void_type,
-)
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
+    check_route_name_conflict,
     fmt_class,
     fmt_func,
     fmt_obj,
@@ -20,6 +13,14 @@ from stone.backends.python_helpers import (
 )
 from stone.backends.python_types import (
     class_name_for_data_type,
+)
+from stone.ir import (
+    is_nullable_type,
+    is_struct_type,
+    is_tag_ref,
+    is_union_type,
+    is_user_defined_type,
+    is_void_type,
 )
 
 _MYPY = False
@@ -155,19 +156,25 @@ class PythonClientBackend(CodeBackend):
                 self.emit('# ------------------------------------------')
                 self.emit('# Routes in {} namespace'.format(namespace.name))
                 self.emit()
-                for route in namespace.routes:
-                    self._generate_route(namespace, route)
+                self._generate_routes(namespace)
 
-    def _generate_route(self, namespace, route):
-        """Generates Python methods that correspond to a route."""
-        self._generate_route_helper(namespace, route)
-        if route.attrs.get('style') == 'download':
-            self._generate_route_helper(namespace, route, True)
+    def _generate_routes(self, namespace):
+        """
+        Generates Python methods that correspond to routes in the namespace.
+        """
+
+        check_route_name_conflict(namespace)
+
+        for route in namespace.routes:
+            self._generate_route_helper(namespace, route)
+            if route.attrs.get('style') == 'download':
+                self._generate_route_helper(namespace, route, True)
 
     def _generate_route_helper(self, namespace, route, download_to_file=False):
         """Generate a Python method that corresponds to a route.
 
         :param namespace: Namespace that the route belongs to.
+        :param stone.ir.ApiRoute route: IR node for the route.
         :param bool download_to_file: Whether a special version of the route
             that downloads the response body to a file should be generated.
             This can only be used for download-style routes.
@@ -243,7 +250,7 @@ class PythonClientBackend(CodeBackend):
 
             # Code to make the request
             args = [
-                '{}.{}'.format(namespace.name, fmt_var(route.name)),
+                '{}.{}'.format(namespace.name, fmt_func(route.name, version=route.version)),
                 "'{}'".format(namespace.name),
                 'arg']
             if request_binary_body:
@@ -267,12 +274,10 @@ class PythonClientBackend(CodeBackend):
 
     def _generate_route_method_decl(
             self, namespace, route, arg_data_type, request_binary_body,
-            method_name_suffix=None, extra_args=None):
+            method_name_suffix='', extra_args=None):
         """Generates the method prototype for a route."""
-        method_name = fmt_func(route.name)
+        method_name = fmt_func(route.name + method_name_suffix, version=route.version)
         namespace_name = fmt_func(namespace.name)
-        if method_name_suffix:
-            method_name += method_name_suffix
         args = ['self']
         if extra_args:
             args += extra_args
@@ -302,8 +307,7 @@ class PythonClientBackend(CodeBackend):
         elif not is_void_type(arg_data_type):
             raise AssertionError('Unhandled request type: %r' %
                                  arg_data_type)
-        self.generate_multiline_list(
-            args, 'def {}_{}'.format(namespace_name, method_name), ':')
+        self.generate_multiline_list(args, 'def {}_{}'.format(namespace_name, method_name), ':')
 
     def _maybe_generate_deprecation_warning(self, route):
         if route.deprecated:
