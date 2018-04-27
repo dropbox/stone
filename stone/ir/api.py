@@ -372,8 +372,19 @@ class ApiRoute(object):
         self.error_data_type = error_data_type
         self.attrs = attrs
 
+    def name_with_version(self):
+        """
+        Get user-friendly representation of the route.
+
+        :return: Route name with version suffix. The version suffix is omitted for version 1.
+        """
+        if self.version == 1:
+            return self.name
+        else:
+            return '{}:{}'.format(self.name, self.version)
+
     def __repr__(self):
-        return 'ApiRoute({!r}:{!r})'.format(self.name, self.version)
+        return 'ApiRoute({})'.format(self.name_with_version())
 
 
 class DeprecationInfo(object):
