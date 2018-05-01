@@ -1272,14 +1272,19 @@ class IRGenerator(object):
                     env_to_check = env[namespace_name]
                 else:
                     env_to_check = env
-                if val not in env_to_check:
+
+                route_name, version = parse_route_name_and_version(val)
+                if route_name not in env_to_check:
                     raise InvalidSpec(
-                        'Unknown doc reference to route %s.' % quote(val),
+                        'Unknown doc reference to route {}.'.format(quote(route_name)), *loc)
+                if not isinstance(env_to_check[route_name], ApiRoutesByVersion):
+                    raise InvalidSpec(
+                        'Doc reference to type {} is not a route.'.format(quote(route_name)), *loc)
+                if version not in env_to_check[route_name].at_version:
+                    raise InvalidSpec(
+                        'Doc reference to route {} has undefined version {}.'.format(
+                            quote(route_name), version),
                         *loc)
-                elif not isinstance(env_to_check[val], ApiRoutesByVersion):
-                    raise InvalidSpec(
-                        'Doc reference to type %s is not a route.' %
-                        quote(val), *loc)
             elif tag == 'type':
                 if '.' in val:
                     # Handle reference to type in imported namespace.
