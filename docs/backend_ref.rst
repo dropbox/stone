@@ -183,7 +183,7 @@ RoutesByVersion
 ---------------
 
 at_version
-    A map from version number to Route object.
+    A map from version number to Route object. The version number is an integer starting at 1.
 
 DataType
 --------
