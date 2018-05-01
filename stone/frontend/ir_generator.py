@@ -119,6 +119,25 @@ def parse_data_types_from_doc_ref(api, doc, namespace_context, ignore_missing_en
                 raise
     return output
 
+def parse_route_name_and_version(route_repr):
+    """
+    Parse a route representation string and return the route name and version number.
+
+    :param route_repr: Route representation string.
+
+    :return: A tuple containing route name and version number.
+    """
+    if ':' in route_repr:
+        route_name, version = route_repr.split(':', 1)
+        try:
+            version = int(version)
+        except ValueError:
+            raise ValueError('Invalid route representation: {}'.format(route_repr))
+    else:
+        route_name = route_repr
+        version = 1
+    return route_name, version
+
 def parse_data_types_and_routes_from_doc_ref(
     api,
     doc,
@@ -159,11 +178,16 @@ def parse_data_types_and_routes_from_doc_ref(
                 if '.' in val:
                     namespace_name, val = val.split('.', 1)
                     namespace = api.namespaces[namespace_name]
-                    route = namespace.route_by_name[val]
-                    routes[namespace_name].add(route)
                 else:
-                    route = supplied_namespace.route_by_name[val]
-                    routes[supplied_namespace.name].add(route)
+                    namespace = supplied_namespace
+
+                try:
+                    route_name, version = parse_route_name_and_version(val)
+                except ValueError as ex:
+                    raise KeyError(str(ex))
+
+                route = namespace.routes_by_name[route_name].at_version[version]
+                routes[namespace.name].add(route)
             elif tag == 'type':
                 if '.' in val:
                     namespace_name, val = val.split('.', 1)
@@ -1397,9 +1421,25 @@ class IRGenerator(object):
         assert 'route_whitelist' in self._routes
         assert 'datatype_whitelist' in self._routes
 
+        # Get route whitelist in canonical form
+        route_whitelist = {}
+        for namespace_name, route_reprs in self._routes['route_whitelist'].items():
+            new_route_reprs = []
+            if route_reprs == ['*']:
+                namespace = self.api.namespaces[namespace_name]
+                new_route_reprs = [route.name_with_version() for route in namespace.routes]
+            else:
+                for route_repr in route_reprs:
+                    route_name, version = parse_route_name_and_version(route_repr)
+                    if version > 1:
+                        new_route_reprs.append('{}:{}'.format(route_name, version))
+                    else:
+                        new_route_reprs.append(route_name)
+            route_whitelist[namespace_name] = new_route_reprs
+
         # Parse the route whitelist and populate any starting data types
         route_data_types = []
-        for namespace_name, routes_names in self._routes['route_whitelist'].items():
+        for namespace_name, routes_reprs in route_whitelist.items():
             # Error out if user supplied nonexistent namespace
             if namespace_name not in self.api.namespaces:
                 raise AssertionError('Namespace %s is not defined!' % namespace_name)
@@ -1413,13 +1453,14 @@ class IRGenerator(object):
             # Parse user-specified routes and add them to the starting data types
             # Note that this may add duplicates, but that's okay, as the recursion
             # keeps track of visited data types.
-            if routes_names == ['*']:
-                routes_names = namespace.route_by_name.keys()
-            assert '*' not in routes_names
-            for route_name in routes_names:
-                if route_name not in namespace.route_by_name:
-                    raise AssertionError('Route %s is not defined!' % route_name)
-                route = namespace.route_by_name[route_name]
+            assert '*' not in routes_reprs
+            for routes_repr in routes_reprs:
+                route_name, version = parse_route_name_and_version(routes_repr)
+                if route_name not in namespace.routes_by_name or \
+                        version not in namespace.routes_by_name[route_name].at_version:
+                    raise AssertionError('Route %s at version %d is not defined!' % (route_name, version))
+
+                route = namespace.routes_by_name[route_name].at_version[version]
                 route_data_types.extend(namespace.get_route_io_data_types_for_route(route))
                 if route.doc is not None:
                     route_data_types.extend(
@@ -1449,24 +1490,28 @@ class IRGenerator(object):
         # routes for each namespace.
         for namespace in self.api.namespaces.values():
             data_types = list(set(output_types_by_ns[namespace.name]))  # defaults to empty list
-            output_route_names = [r.name for r in output_routes_by_ns[namespace.name]]
             namespace.data_types = data_types
             namespace.data_type_by_name = {d.name: d for d in data_types}
-            if namespace.name in self._routes['route_whitelist']:
-                whitelisted_route_names = self._routes['route_whitelist'][namespace.name]
-                if whitelisted_route_names != ["*"]:
-                    route_names = list(set(whitelisted_route_names + output_route_names))
-                    route_by_names = {rname: namespace.route_by_name[rname]
-                        for rname in route_names}
-                    routes = list(route_by_names.values())
-                    namespace.routes = routes
-                    namespace.route_by_name = route_by_names
+
+            output_route_names = [route.name_with_version()
+                                  for route in output_routes_by_ns[namespace.name]]
+            if namespace.name in route_whitelist:
+                whitelisted_route_reprs = route_whitelist[namespace.name]
+                route_reprs = list(set(whitelisted_route_reprs + output_route_names))
             else:
-                route_by_names = {rname: namespace.route_by_name[rname]
-                                  for rname in output_route_names}
-                routes = list(route_by_names.values())
-                namespace.routes = routes
-                namespace.route_by_name = route_by_names
+                route_reprs = output_route_names
+
+            routes = []
+            for route_repr in route_reprs:
+                route_name, version = parse_route_name_and_version(route_repr)
+                route = namespace.routes_by_name[route_name].at_version[version]
+                routes.append(route)
+
+            namespace.routes = []
+            namespace.route_by_name = {}
+            namespace.routes_by_name = {}
+            for route in routes:
+                namespace.add_route(route)
 
     def _find_dependencies(self, data_types):
         output_types = defaultdict(list)
