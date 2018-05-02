@@ -290,8 +290,8 @@ def main():
                 for route in namespace.routes:
                     if route_filter.eval(route):
                         filtered_routes.append(route)
-                namespace.routes = filtered_routes
 
+                namespace.routes = []
                 namespace.route_by_name = {}
                 namespace.routes_by_name = {}
                 for route in filtered_routes:
