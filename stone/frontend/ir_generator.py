@@ -1463,7 +1463,8 @@ class IRGenerator(object):
                 route_name, version = parse_route_name_and_version(routes_repr)
                 if route_name not in namespace.routes_by_name or \
                         version not in namespace.routes_by_name[route_name].at_version:
-                    raise AssertionError('Route %s at version %d is not defined!' % (route_name, version))
+                    raise AssertionError('Route %s at version %d is not defined!' %
+                                         (route_name, version))
 
                 route = namespace.routes_by_name[route_name].at_version[version]
                 route_data_types.extend(namespace.get_route_io_data_types_for_route(route))
@@ -1498,8 +1499,8 @@ class IRGenerator(object):
             namespace.data_types = data_types
             namespace.data_type_by_name = {d.name: d for d in data_types}
 
-            output_route_reprs = [route.name_with_version()
-                                  for route in output_routes_by_ns[namespace.name]]
+            output_route_reprs = [output_route.name_with_version()
+                                  for output_route in output_routes_by_ns[namespace.name]]
             if namespace.name in route_whitelist:
                 whitelisted_route_reprs = route_whitelist[namespace.name]
                 route_reprs = list(set(whitelisted_route_reprs + output_route_reprs))

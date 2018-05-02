@@ -2235,7 +2235,7 @@ class TestStone(unittest.TestCase):
 
             union U
                 a
-            
+
             struct T
                 "type doc ref :route:`U`"
                 f String

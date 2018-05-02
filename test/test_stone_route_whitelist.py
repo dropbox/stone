@@ -102,7 +102,8 @@ class TestStone(unittest.TestCase):
         api = specs_to_ir([('test.stone', text)],
                           route_whitelist_filter=route_whitelist_filter)
         self._compare_namespace_names(api, ['test'])
-        self._compare_datatype_names(api.namespaces['test'], ['TestArg', 'TestArg2', 'TestResult', 'TestResult2'])
+        self._compare_datatype_names(api.namespaces['test'],
+                                     ['TestArg', 'TestArg2', 'TestResult', 'TestResult2'])
 
     def test_alias(self):
         """
