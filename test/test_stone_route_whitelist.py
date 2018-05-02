@@ -39,14 +39,27 @@ class TestStone(unittest.TestCase):
             route TestRoute (TestArg, TestResult, Void)
                 "test doc"
 
+            struct TestArg2
+                f String
+                    "test doc"
+                example default
+                    f = "asdf"
+            struct TestResult2
+                f String
+                    "test doc"
+                example default
+                    f = "asdf"
+            route TestRoute:2 (TestArg2, TestResult2, Void)
+                "test doc"
+
             """)
         route_whitelist_filter = {
-            "route_whitelist": {"test": ["TestRoute"]},
+            "route_whitelist": {"test": ["TestRoute:2"]},
             "datatype_whitelist": {}
         }
         api = specs_to_ir([('test.stone', text)], route_whitelist_filter=route_whitelist_filter)
         self._compare_namespace_names(api, ['test'])
-        self._compare_datatype_names(api.namespaces['test'], ['TestArg', 'TestResult'])
+        self._compare_datatype_names(api.namespaces['test'], ['TestArg2', 'TestResult2'])
 
     def test_star(self):
         """
@@ -54,23 +67,6 @@ class TestStone(unittest.TestCase):
         """
         text = textwrap.dedent("""\
             namespace test
-
-            struct TestArg
-                f String
-                    "test doc"
-                example default
-                    f = "asdf"
-            struct TestResult
-                f String
-                    "test doc"
-                example default
-                    f = "asdf"
-            route TestRoute (TestArg, TestResult, Void)
-                "test doc"
-
-            """)
-        text2 = textwrap.dedent("""\
-            namespace test2
 
             struct TestArg
                 f String
@@ -95,19 +91,18 @@ class TestStone(unittest.TestCase):
                     "test doc"
                 example default
                     f = "asdf"
-            route TestRoute2 (TestArg2, TestResult2, Void)
+            route TestRoute:2 (TestArg2, TestResult2, Void)
                 "test doc"
 
             """)
         route_whitelist_filter = {
-            "route_whitelist": {"test": ["*"], "test2": ["TestRoute2"]},
+            "route_whitelist": {"test": ["*"]},
             "datatype_whitelist": {}
         }
-        api = specs_to_ir([('test.stone', text), ('test2.stone', text2)],
+        api = specs_to_ir([('test.stone', text)],
                           route_whitelist_filter=route_whitelist_filter)
-        self._compare_namespace_names(api, ['test', 'test2'])
-        self._compare_datatype_names(api.namespaces['test'], ['TestArg', 'TestResult'])
-        self._compare_datatype_names(api.namespaces['test2'], ['TestArg2', 'TestResult2'])
+        self._compare_namespace_names(api, ['test'])
+        self._compare_datatype_names(api.namespaces['test'], ['TestArg', 'TestArg2', 'TestResult', 'TestResult2'])
 
     def test_alias(self):
         """
