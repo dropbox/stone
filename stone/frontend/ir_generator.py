@@ -1444,7 +1444,7 @@ class IRGenerator(object):
 
         # Parse the route whitelist and populate any starting data types
         route_data_types = []
-        for namespace_name, routes_reprs in route_whitelist.items():
+        for namespace_name, route_reprs in route_whitelist.items():
             # Error out if user supplied nonexistent namespace
             if namespace_name not in self.api.namespaces:
                 raise AssertionError('Namespace %s is not defined!' % namespace_name)
@@ -1458,8 +1458,8 @@ class IRGenerator(object):
             # Parse user-specified routes and add them to the starting data types
             # Note that this may add duplicates, but that's okay, as the recursion
             # keeps track of visited data types.
-            assert '*' not in routes_reprs
-            for routes_repr in routes_reprs:
+            assert '*' not in route_reprs
+            for routes_repr in route_reprs:
                 route_name, version = parse_route_name_and_version(routes_repr)
                 if route_name not in namespace.routes_by_name or \
                         version not in namespace.routes_by_name[route_name].at_version:
@@ -1498,13 +1498,13 @@ class IRGenerator(object):
             namespace.data_types = data_types
             namespace.data_type_by_name = {d.name: d for d in data_types}
 
-            output_route_names = [route.name_with_version()
+            output_route_reprs = [route.name_with_version()
                                   for route in output_routes_by_ns[namespace.name]]
             if namespace.name in route_whitelist:
                 whitelisted_route_reprs = route_whitelist[namespace.name]
-                route_reprs = list(set(whitelisted_route_reprs + output_route_names))
+                route_reprs = list(set(whitelisted_route_reprs + output_route_reprs))
             else:
-                route_reprs = output_route_names
+                route_reprs = output_route_reprs
 
             routes = []
             for route_repr in route_reprs:
