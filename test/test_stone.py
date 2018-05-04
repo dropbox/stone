@@ -2197,6 +2197,24 @@ class TestStone(unittest.TestCase):
             """)
         specs_to_ir([('test.stone', text)])
 
+        # Test docs referencing a route with version number
+        text = textwrap.dedent("""\
+            namespace test
+
+            route test_route:2(Void, Void, Void)
+
+            struct T
+                "type doc ref :route:`test_route:2`"
+                f String
+                    "field doc ref :route:`test_route:2`"
+
+            union U
+                "type doc ref :route:`test_route:2`"
+                f String
+                    "field doc ref :route:`test_route:2`"
+            """)
+        specs_to_ir([('test.stone', text)])
+
         # Test referencing an undefined route
         text = textwrap.dedent("""\
             namespace test
@@ -2209,6 +2227,40 @@ class TestStone(unittest.TestCase):
             specs_to_ir([('test.stone', text)])
         self.assertEqual("Unknown doc reference to route 'test_route'.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 4)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Test referencing a field as a route
+        text = textwrap.dedent("""\
+            namespace test
+
+            union U
+                a
+
+            struct T
+                "type doc ref :route:`U`"
+                f String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Doc reference to type 'U' is not a route.", cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
+        self.assertEqual(cm.exception.path, 'test.stone')
+
+        # Test referencing a route at an undefined version
+        text = textwrap.dedent("""\
+            namespace test
+
+            route test_route:2(Void, Void, Void)
+
+            struct T
+                "type doc ref :route:`test_route:3`"
+                f String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual("Doc reference to route 'test_route' has undefined version 3.",
+                         cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
         self.assertEqual(cm.exception.path, 'test.stone')
 
         # Test referencing a field of a route

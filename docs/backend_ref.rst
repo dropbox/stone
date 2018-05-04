@@ -96,7 +96,13 @@ routes
     A list of Route objects in alphabetical order.
 
 route_by_name
-    A map from route name to Route object.
+    A map from route name to Route object. For routes of multiple versions,
+    only the route at version 1 is included. This field is deprecated by
+    ``routes_by_name`` and will be removed in the future.
+
+routes_by_name
+    A map from route name to RoutesByVersion object containing a group of Route
+    objects at different versions.
 
 data_types
     A list of user-defined DataType objects in alphabetical order.
@@ -172,6 +178,12 @@ attrs
     (None, bool, float, int, str) and `TagRef objects <#union-tag-reference>`_.
 
 See the Python object definition for more information.
+
+RoutesByVersion
+---------------
+
+at_version
+    A map from version number to Route object. The version number is an integer starting at 1.
 
 DataType
 --------
