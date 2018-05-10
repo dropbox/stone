@@ -810,6 +810,7 @@ with a redactor tag. In this case, any field of that alias type will be redacted
 done at the type level.
 
 ::
+
     namespace people
 
     annotation NameRedactor = RedactedBlot("test_regex")
