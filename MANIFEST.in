@@ -1,5 +1,6 @@
 include ez_setup.py
 include LICENSE
 include *.rst
-include stone/target/swift_rsrc/*
+include stone/backends/obj_c_rsrc/*
+include stone/backends/swift_rsrc/*
 include test/requirements.txt
