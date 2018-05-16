@@ -2179,6 +2179,22 @@ class TestStone(unittest.TestCase):
             """)
         specs_to_ir([('test.stone', text)])
 
+        # Test union field doc referencing a field from an imported namespace
+        text1 = textwrap.dedent("""\
+            namespace test1
+
+            union U
+                a
+        """)
+        text2 = textwrap.dedent("""\
+            namespace test2
+            import test1
+            union U
+                ":field:`test1.U.a`"
+                b
+        """)
+        specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
+
         # Test docs referencing a route
         text = textwrap.dedent("""\
             namespace test

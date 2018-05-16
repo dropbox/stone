@@ -1239,8 +1239,14 @@ class IRGenerator(object):
                             'Bad doc reference to field %s of route %s.' %
                             (quote(field_name), quote(type_name)),
                             *loc)
-                    elif not any(field.name == field_name
-                                 for field in env[type_name].all_fields):
+                    if isinstance(env[type_name], Environment):
+                        # Handle reference to field in imported namespace.
+                        namespace_name, type_name, field_name = val.split('.', 2)
+                        env_to_check = env[namespace_name]
+                    else:
+                        env_to_check = env
+                    if not any(field.name == field_name
+                               for field in env_to_check[type_name].all_fields):
                         raise InvalidSpec(
                             'Bad doc reference to unknown field %s.' % quote(val),
                             *loc)
