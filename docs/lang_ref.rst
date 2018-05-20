@@ -313,6 +313,33 @@ Maps are expressed with curly braces::
         example default
             similar_colors = {"blue": ["aqua", "azure"], "red": ["crimson"], "green": []}
 
+Map examples can also be multiline (Be mindful of indentation rules)::
+
+    struct SimpleDigits
+        digit_mapping Map(String, Int32)
+
+        example default
+            digit_mapping = # Mapping starts on line below
+                {
+                    "one": 1,
+                    "two": 2
+                }
+
+    struct Digits
+        digit_mapping Map(String, Map(String, Int32))
+
+        example default
+            digit_mapping = { # Mapping starts on same line as example
+                "one": {
+                    "one": 11,
+                    "two": 12
+                },
+                "two": {
+                    "one": 21,
+                    "two": 22
+                }
+            }
+
 Union
 =====
 

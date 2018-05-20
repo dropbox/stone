@@ -732,6 +732,11 @@ class ParserFactory(object):
             p[0] = AstExampleField(
                 self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
 
+    def p_example_multiline(self, p):
+        """example_field : ID EQ NL INDENT ex_map NL DEDENT"""
+        p[0] = AstExampleField(
+            self.path, p.lineno(1), p.lexpos(1), p[1], p[5])
+
     def p_example_field_ref(self, p):
         'example_field : ID EQ ID NL'
         p[0] = AstExampleField(self.path, p.lineno(1), p.lexpos(1),
@@ -781,6 +786,10 @@ class ParserFactory(object):
                   | LBRACE empty RBRACE"""
         p[0] = p[2] or {}
 
+    def p_ex_map_multiline(self, p):
+        """ex_map : LBRACE NL INDENT ex_map_pairs NL DEDENT RBRACE"""
+        p[0] = p[4] or {}
+
     def p_ex_map_elem_primitive(self, p):
         """ex_map_elem : primitive"""
         p[0] = None if p[1] == NullToken else p[1]
@@ -811,6 +820,11 @@ class ParserFactory(object):
         """ex_map_pairs : ex_map_pairs COMMA ex_map_pair"""
         p[0] = p[1]
         p[0].update(p[3])
+
+    def p_ex_map_pairs_multiline(self, p):
+        """ex_map_pairs : ex_map_pairs COMMA NL ex_map_pair"""
+        p[0] = p[1]
+        p[0].update(p[4])
 
     # --------------------------------------------------------------
 
