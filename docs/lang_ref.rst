@@ -315,21 +315,11 @@ Maps are expressed with curly braces::
 
 Map examples can also be multiline (Be mindful of indentation rules)::
 
-    struct SimpleDigits
-        digit_mapping Map(String, Int32)
-
-        example default
-            digit_mapping = # Mapping starts on line below
-                {
-                    "one": 1,
-                    "two": 2
-                }
-
     struct Digits
         digit_mapping Map(String, Map(String, Int32))
 
         example default
-            digit_mapping = { # Mapping starts on same line as example
+            digit_mapping = {
                 "one": {
                     "one": 11,
                     "two": 12
@@ -339,7 +329,6 @@ Map examples can also be multiline (Be mindful of indentation rules)::
                     "two": 22
                 }
             }
-
 Union
 =====
 

@@ -3614,13 +3614,13 @@ class TestStone(unittest.TestCase):
 
         # error when example doesn't match definition
         text = textwrap.dedent("""\
-        namespace test
+            namespace test
 
-        struct S
-            m Map(String, String)
+            struct S
+                m Map(String, String)
 
-            example default
-                m = {"one": 1}
+                example default
+                    m = {"one": 1}
         """)
 
         with self.assertRaises(InvalidSpec):
@@ -3628,30 +3628,13 @@ class TestStone(unittest.TestCase):
 
         # test multiline docstrings
         text = textwrap.dedent("""\
-        namespace test
+            namespace test
 
-        struct S
-            m Map(String, Int32)
+            struct S
+                m Map(String, Int32)
 
-            example default
-                m = {
-                    "one": 1, "two": 2
-                }
-        """)
-
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
-
-        text = textwrap.dedent("""\
-        namespace test
-
-        struct S
-            m Map(String, Int32)
-
-            example default
-                m =
-                    {
+                example default
+                    m = {
                         "one": 1, "two": 2
                     }
         """)
@@ -3661,40 +3644,57 @@ class TestStone(unittest.TestCase):
         self.assertIsInstance(s.get_examples()['default'].value, dict)
 
         text = textwrap.dedent("""\
-                namespace test
+            namespace test
 
-                struct S
-                    m Map(String, Int32)
+            struct S
+                m Map(String, Int32)
 
-                    example default
-                        m =
-                            {
-                                "one": 1,
-                                "two": 2
-                            }
-                """)
+                example default
+                    m =
+                        {
+                            "one": 1, "two": 2
+                        }
+        """)
 
         api = specs_to_ir([('test.stone', text)])
         s = api.namespaces['test'].data_type_by_name['S']
         self.assertIsInstance(s.get_examples()['default'].value, dict)
 
         text = textwrap.dedent("""\
-        namespace test
+            namespace test
 
-        struct S
-            m Map(String, Map(String, Int32))
+            struct S
+                m Map(String, Int32)
 
-            example default
-                m = {
-                    "one": {
-                        "one": 11,
-                        "two": 12
-                    },
-                    "two": {
-                        "one": 21,
-                        "two": 22
+                example default
+                    m =
+                        {
+                            "one": 1,
+                            "two": 2
+                        }
+        """)
+
+        api = specs_to_ir([('test.stone', text)])
+        s = api.namespaces['test'].data_type_by_name['S']
+        self.assertIsInstance(s.get_examples()['default'].value, dict)
+
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                m Map(String, Map(String, Int32))
+
+                example default
+                    m = {
+                        "one": {
+                            "one": 11,
+                            "two": 12
+                        },
+                        "two": {
+                            "one": 21,
+                            "two": 22
+                        }
                     }
-                }
         """)
 
         api = specs_to_ir([('test.stone', text)])
