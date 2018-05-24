@@ -34,9 +34,9 @@ class TestGeneratedPythonTypes(unittest.TestCase):
     def test_route_with_version_number(self):
         # type: () -> None
 
-        route1 = ApiRoute('get_metadata', 1, None)
+        route1 = ApiRoute('alpha/get_metadata', 1, None)
         route1.set_attributes(None, None, Void(), Void(), Void(), {})
-        route2 = ApiRoute('get_metadata', 2, None)
+        route2 = ApiRoute('alpha/get_metadata', 2, None)
         route2.set_attributes(None, None, Void(), Int32(), Void(), {})
         ns = ApiNamespace('files')
         ns.add_route(route1)
@@ -45,8 +45,8 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         result = self._evaluate_namespace(ns)
 
         expected = textwrap.dedent("""\
-            get_metadata = bb.Route(
-                'get_metadata',
+            alpha_get_metadata = bb.Route(
+                'alpha/get_metadata',
                 1,
                 False,
                 bv.Void(),
@@ -54,8 +54,8 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 bv.Void(),
                 {},
             )
-            get_metadata_v2 = bb.Route(
-                'get_metadata',
+            alpha_get_metadata_v2 = bb.Route(
+                'alpha/get_metadata',
                 2,
                 False,
                 bv.Void(),
@@ -65,8 +65,8 @@ class TestGeneratedPythonTypes(unittest.TestCase):
             )
 
             ROUTES = {
-                'get_metadata': get_metadata,
-                'get_metadata:2': get_metadata_v2,
+                'alpha/get_metadata': alpha_get_metadata,
+                'alpha/get_metadata:2': alpha_get_metadata_v2,
             }
 
         """)
@@ -76,9 +76,9 @@ class TestGeneratedPythonTypes(unittest.TestCase):
     def test_route_with_version_number_name_conflict(self):
         # type: () -> None
 
-        route1 = ApiRoute('get_metadata', 2, None)
+        route1 = ApiRoute('alpha/get_metadata', 2, None)
         route1.set_attributes(None, None, Void(), Int32(), Void(), {})
-        route2 = ApiRoute('get_metadata_v2', 1, None)
+        route2 = ApiRoute('alpha/get_metadata_v2', 1, None)
         route2.set_attributes(None, None, Void(), Void(), Void(), {})
         ns = ApiNamespace('files')
         ns.add_route(route1)

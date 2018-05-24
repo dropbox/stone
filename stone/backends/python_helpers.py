@@ -65,7 +65,7 @@ def fmt_func(name, check_reserved=False, version=1):
     if check_reserved:
         s = _rename_if_reserved(s)
     if version > 1:
-        s = '{}_v{}'.format(name, version)
+        s = '{}_v{}'.format(s, version)
     return s
 
 
