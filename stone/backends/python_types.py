@@ -443,7 +443,7 @@ class PythonTypesBackend(CodeBackend):
             # Call the parent constructor if a super type exists
             if data_type.parent_type:
                 class_name = class_name_for_data_type(data_type)
-                all_parent_fields = [fmt_func(f.name, True)
+                all_parent_fields = [fmt_func(f.name, check_reserved=True)
                               for f in data_type.parent_type.all_fields]
                 self.generate_multiline_list(
                     all_parent_fields,
@@ -484,7 +484,7 @@ class PythonTypesBackend(CodeBackend):
         """
         for field in data_type.fields:
             field_name = fmt_func(field.name)
-            field_name_reserved_check = fmt_func(field.name, True)
+            field_name_reserved_check = fmt_func(field.name, check_reserved=True)
             if is_nullable_type(field.data_type):
                 field_dt = field.data_type.data_type
                 dt_nullable = True
@@ -755,7 +755,7 @@ class PythonTypesBackend(CodeBackend):
         for field in data_type.fields:
             if not is_void_type(field.data_type):
                 field_name = fmt_func(field.name)
-                field_name_reserved_check = fmt_func(field.name, True)
+                field_name_reserved_check = fmt_func(field.name, check_reserved=True)
                 if is_nullable_type(field.data_type):
                     field_dt = field.data_type.data_type
                 else:
