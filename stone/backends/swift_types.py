@@ -466,7 +466,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
             with self.block('static let {} = Route('.format(var_name),
                             delim=(None, None), after=')'):
                 self.emit('name: \"{}\",'.format(route.name))
-                self.emit('version: {},').format(route.version)
+                self.emit('version: {},'.format(route.version))
                 self.emit('namespace: \"{}\",'.format(namespace.name))
                 self.emit('deprecated: {},'.format('true' if route.deprecated
                                                    is not None else 'false'))
