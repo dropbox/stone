@@ -140,7 +140,11 @@ class SwiftBaseBackend(CodeBackend):
 
     def _docf(self, tag, val):
         if tag == 'route':
-            return fmt_func(val)
+            if ':' in val:
+                val, version = val.split(':', 1)
+            else:
+                version = 1
+            return fmt_func(val, version)
         elif tag == 'field':
             if '.' in val:
                 cls, field = val.split('.')

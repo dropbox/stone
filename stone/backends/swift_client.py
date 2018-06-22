@@ -15,6 +15,7 @@ from stone.backends.swift import (
     undocumented,
 )
 from stone.backends.swift_helpers import (
+    check_route_name_conflict,
     fmt_class,
     fmt_func,
     fmt_var,
@@ -153,6 +154,8 @@ class SwiftBackend(SwiftBaseBackend):
                     self.emit('self.{} = {}Routes(client: client)'.format(var, typ))
 
     def _generate_routes(self, namespace):
+        check_route_name_conflict(namespace)
+
         ns_class = fmt_class(namespace.name)
         self.emit_raw(stone_warning)
         self.emit('/// Routes for the {} namespace'.format(namespace.name))
@@ -194,7 +197,7 @@ class SwiftBackend(SwiftBaseBackend):
         extra_docs = extra_docs or []
 
         arg_type = fmt_type(route.arg_data_type)
-        func_name = fmt_func(route.name)
+        func_name = fmt_func(route.name, route.version)
 
         if route.doc:
             route_doc = self.process_doc(route.doc, self._docf)
@@ -254,9 +257,10 @@ class SwiftBackend(SwiftBaseBackend):
 
     def _maybe_generate_deprecation_warning(self, route):
         if route.deprecated:
-            msg = '{} is deprecated.'.format(route.name)
+            msg = '{} is deprecated.'.format(fmt_func(route.name, route.version))
             if route.deprecated.by:
-                msg += ' Use {}.'.format(route.deprecated.by.name)
+                msg += ' Use {}.'.format(
+                    fmt_func(route.deprecated.by.name, route.deprecated.by.version))
             self.emit('@available(*, unavailable, message:"{}")'.format(msg))
 
     def _generate_route(self, namespace, route):

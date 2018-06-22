@@ -16,6 +16,7 @@ from stone.ir import (
     unwrap_nullable,
 )
 from stone.backends.swift_helpers import (
+    check_route_name_conflict,
     fmt_class,
     fmt_default_value,
     fmt_func,
@@ -455,14 +456,17 @@ class SwiftTypesBackend(SwiftBaseBackend):
             yield
 
     def _generate_route_objects(self, route_schema, namespace):
+        check_route_name_conflict(namespace)
+
         self.emit()
         self.emit('/// Stone Route Objects')
         self.emit()
         for route in namespace.routes:
-            var_name = fmt_func(route.name)
+            var_name = fmt_func(route.name, route.version)
             with self.block('static let {} = Route('.format(var_name),
                             delim=(None, None), after=')'):
                 self.emit('name: \"{}\",'.format(route.name))
+                self.emit('version: {},').format(route.version)
                 self.emit('namespace: \"{}\",'.format(namespace.name))
                 self.emit('deprecated: {},'.format('true' if route.deprecated
                                                    is not None else 'false'))
