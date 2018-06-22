@@ -142,6 +142,7 @@ class SwiftBaseBackend(CodeBackend):
         if tag == 'route':
             if ':' in val:
                 val, version = val.split(':', 1)
+                version = int(version)
             else:
                 version = 1
             return fmt_func(val, version)
