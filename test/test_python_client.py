@@ -29,7 +29,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
         # type: () -> None
 
         route1 = ApiRoute('get_metadata', 1, None)
-        route1.set_attributes(None, None, Void(), Void(), Void(), {})
+        route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(), {})
         route2 = ApiRoute('get_metadata', 2, None)
         route2.set_attributes(None, None, Void(), Int32(), Void(), {})
         ns = ApiNamespace('files')
@@ -38,8 +38,13 @@ class TestGeneratedPythonClient(unittest.TestCase):
 
         result = self._evaluate_namespace(ns)
 
-        expected = textwrap.dedent("""\
+        expected = textwrap.dedent('''\
             def files_get_metadata(self):
+                """
+                :meth:`files_get_metadata_v2`
+
+                :rtype: None
+                """
                 arg = None
                 r = self.request(
                     files.get_metadata,
@@ -59,7 +64,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
                 )
                 return r
 
-        """)
+        ''')
 
         self.assertEqual(result, expected)
 

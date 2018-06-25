@@ -47,40 +47,33 @@ _reserved_keywords = {
     'while',
 }
 
-
 def _rename_if_reserved(s):
     if s in _reserved_keywords:
         return s + '_'
     else:
         return s
 
-
 def fmt_class(name, check_reserved=False):
     s = fmt_pascal(name)
     return _rename_if_reserved(s) if check_reserved else s
 
-
 def fmt_func(name, check_reserved=False, version=1):
-    s = fmt_underscores(name)
+    name = fmt_underscores(name)
     if check_reserved:
-        s = _rename_if_reserved(s)
+        name = _rename_if_reserved(name)
     if version > 1:
-        s = '{}_v{}'.format(s, version)
-    return s
-
+        name = '{}_v{}'.format(name, version)
+    return name
 
 def fmt_obj(o):
     return pprint.pformat(o, width=1)
 
-
 def fmt_type(data_type):
     return _type_table.get(data_type.__class__, fmt_class(data_type.name))
-
 
 def fmt_var(name, check_reserved=False):
     s = fmt_underscores(name)
     return _rename_if_reserved(s) if check_reserved else s
-
 
 def check_route_name_conflict(namespace):
     """
@@ -132,7 +125,6 @@ def generate_imports_for_referenced_namespaces(
                 type_ignore_comment=type_ignore_comment
             ))
     backend.emit()
-
 
 # This will be at the top of every generated file.
 _validators_import_template = """\

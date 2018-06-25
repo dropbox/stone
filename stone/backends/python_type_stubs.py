@@ -216,7 +216,7 @@ class PythonTypeStubsBackend(CodeBackend):
 
         for field in data_type.fields:
             if not is_void_type(field.data_type):
-                field_name_reserved_check = fmt_func(field.name, True)
+                field_name_reserved_check = fmt_func(field.name, check_reserved=True)
                 val_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
 
                 self.emit('@classmethod')

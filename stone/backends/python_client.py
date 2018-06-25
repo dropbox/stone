@@ -150,8 +150,6 @@ class PythonClientBackend(CodeBackend):
         and routes are represented as Python classes."""
         self.cur_namespace = None
         for namespace in namespaces:
-            # Hack: needed for _docf()
-            self.cur_namespace = namespace
             if namespace.routes:
                 self.emit('# ------------------------------------------')
                 self.emit('# Routes in {} namespace'.format(namespace.name))
@@ -162,6 +160,9 @@ class PythonClientBackend(CodeBackend):
         """
         Generates Python methods that correspond to routes in the namespace.
         """
+
+        # Hack: needed for _docf()
+        self.cur_namespace = namespace
 
         check_route_name_conflict(namespace)
 
@@ -468,10 +469,16 @@ class PythonClientBackend(CodeBackend):
                 fq_val = self.cur_namespace.name + '.' + fq_val
             return ':class:`{}.{}`'.format(self.args.types_package, fq_val)
         elif tag == 'route':
-            if '.' in val:
-                return ':meth:`{}`'.format(fmt_func(val))
+            if ':' in val:
+                val, version = val.split(':', 1)
+                version = int(version)
             else:
-                return ':meth:`{}_{}`'.format(self.cur_namespace.name, fmt_func(val))
+                version = 1
+            if '.' in val:
+                return ':meth:`{}`'.format(fmt_func(val, version=version))
+            else:
+                return ':meth:`{}_{}`'.format(
+                    self.cur_namespace.name, fmt_func(val, version=version))
         elif tag == 'link':
             anchor, link = val.rsplit(' ', 1)
             return '`{} <{}>`_'.format(anchor, link)
