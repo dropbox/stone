@@ -107,8 +107,11 @@ def fmt_class(name):
     return _format_camelcase(name, lower_first=False)
 
 
-def fmt_func(name):
-    return _format_camelcase(name)
+def fmt_func(name, version):
+    if version > 1:
+        name = '{}_v{}'.format(name, version)
+    name = _format_camelcase(name)
+    return name
 
 
 def fmt_type(data_type):
@@ -151,3 +154,18 @@ def fmt_default_value(namespace, field):
     else:
         raise TypeError('Can\'t handle default value type %r' %
                         type(field.data_type))
+
+def check_route_name_conflict(namespace):
+    """
+    Check name conflicts among generated route definitions. Raise a runtime exception when a
+    conflict is encountered.
+    """
+
+    route_by_name = {}
+    for route in namespace.routes:
+        route_name = fmt_func(route.name, route.version)
+        if route_name in route_by_name:
+            other_route = route_by_name[route_name]
+            raise RuntimeError(
+                'There is a name conflict between {!r} and {!r}'.format(other_route, route))
+        route_by_name[route_name] = route
