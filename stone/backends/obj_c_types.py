@@ -1114,30 +1114,29 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     serialize_call = self._fmt_serialization_call(
                         field.data_type, input_value, True)
 
-                    if not is_void_type(data_type):
-                        if not nullable:
-                            if is_user_defined_type(data_type):
+                    def emit_serializer():
+                        if is_user_defined_type(data_type):
+                            if is_struct_type(data_type) and not data_type.has_enumerated_subtypes():
+                                self.emit('jsonDict = [{} mutableCopy];'.
+                                          format(serialize_call))
+                            else:
                                 self.emit(
                                     'jsonDict[@"{}"] = [{} mutableCopy];'.
                                     format(field.name, serialize_call))
-                            elif is_primitive_type(data_type):
-                                self.emit('jsonDict[@"{}"] = {};'.format(
-                                    field.name, input_value))
-                            else:
-                                self.emit('jsonDict[@"{}"] = {};'.format(
-                                    field.name, serialize_call))
+                        elif is_primitive_type(data_type):
+                            self.emit('jsonDict[@"{}"] = {};'.format(
+                                field.name, input_value))
+                        else:
+                            self.emit('jsonDict[@"{}"] = {};'.format(
+                                field.name, serialize_call))
+
+                    if not is_void_type(data_type):
+                        if not nullable:
+                            emit_serializer()
                         else:
                             with self.block('if (valueObj.{})'.format(
                                     fmt_var(field.name))):
-                                if is_user_defined_type(data_type):
-                                    self.emit('jsonDict = [{} mutableCopy];'.
-                                              format(serialize_call))
-                                elif is_primitive_type(data_type):
-                                    self.emit('jsonDict[@"{}"] = {};'.format(
-                                        field.name, input_value))
-                                else:
-                                    self.emit('jsonDict[@"{}"] = {};'.format(
-                                        field.name, serialize_call))
+                                emit_serializer()
 
                     self.emit('jsonDict[@".tag"] = @"{}";'.format(field.name))
 
