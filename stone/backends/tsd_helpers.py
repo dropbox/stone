@@ -101,8 +101,11 @@ def fmt_union(type_strings):
     """
     return '|'.join(type_strings) if len(type_strings) > 1 else type_strings[0]
 
-def fmt_func(name):
-    return fmt_camel(name)
+def fmt_func(name, version):
+    if version == 1:
+        return fmt_camel(name)
+    return fmt_camel(name) + 'V{}'.format(version)
+
 
 def fmt_var(name):
     return fmt_camel(name)
@@ -117,7 +120,12 @@ def fmt_tag(cur_namespace, tag, val):
             fq_val = cur_namespace.name + '.' + fq_val
         return fq_val
     elif tag == 'route':
-        return fmt_func(val) + "()"
+        if ':' in val:
+            val, version = val.split(':', 1)
+            version = int(version)
+        else:
+            version = 1
+        return fmt_func(val, version) + "()"
     elif tag == 'link':
         anchor, link = val.rsplit(' ', 1)
         # There's no way to have links in TSDoc, so simply use JSDoc's formatting.
@@ -130,6 +138,23 @@ def fmt_tag(cur_namespace, tag, val):
         return val
     else:
         raise RuntimeError('Unknown doc ref tag %r' % tag)
+
+
+def check_route_name_conflict(namespace):
+    """
+    Check name conflicts among generated route definitions. Raise a runtime exception when a
+    conflict is encountered.
+    """
+
+    route_by_name = {}
+    for route in namespace.routes:
+        route_name = fmt_func(route.name, route.version)
+        if route_name in route_by_name:
+            other_route = route_by_name[route_name]
+            raise RuntimeError(
+                'There is a name conflict between {!r} and {!r}'.format(other_route, route))
+        route_by_name[route_name] = route
+
 
 def generate_imports_for_referenced_namespaces(backend, namespace, module_name_prefix):
     # type: (Backend, ApiNamespace, str) -> None

@@ -17,6 +17,7 @@ argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.backend import CodeBackend
 from stone.backends.tsd_helpers import (
+    check_route_name_conflict,
     fmt_error_type,
     fmt_func,
     fmt_tag,
@@ -102,17 +103,19 @@ class TSDClientBackend(CodeBackend):
     def _generate_routes(self, api, spaces_per_indent, indent_level):
         with self.indent(dent=spaces_per_indent * (indent_level + 1)):
             for namespace in api.namespaces.values():
+                # first check for route name conflict
+                check_route_name_conflict(namespace)
                 for route in namespace.routes:
                     self._generate_route(
                         namespace, route)
 
     def _generate_route(self, namespace, route):
-        function_name = fmt_func(namespace.name + '_' + route.name)
+        function_name = fmt_func(namespace.name + '_' + route.name, route.version)
         self.emit()
         self.emit('/**')
         if route.doc:
             self.emit_wrapped_text(self.process_doc(route.doc, self._docf), prefix=' * ')
-            self.emit(' * ')
+            self.emit(' *')
         self.emit_wrapped_text('When an error occurs, the route rejects the promise with type %s.'
                                % fmt_error_type(route.error_data_type), prefix=' * ')
         if route.deprecated:
