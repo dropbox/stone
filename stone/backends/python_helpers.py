@@ -118,14 +118,14 @@ def generate_imports_for_referenced_namespaces(
         backend.emit('from . import (')
         with backend.indent():
             for ns in imported_namespaces:
-                backend.emit(ns.name + ',')
+                backend.emit(fmt_namespace(ns.name) + ',')
         backend.emit(')')
     backend.emit('except (ImportError, SystemError, ValueError):')
     # Fallback if imported from outside a package.
     with backend.indent():
         for ns in imported_namespaces:
             backend.emit('import {namespace_name}{type_ignore_comment}'.format(
-                namespace_name=ns.name,
+                namespace_name=fmt_namespace(ns.name),
                 type_ignore_comment=type_ignore_comment
             ))
     backend.emit()

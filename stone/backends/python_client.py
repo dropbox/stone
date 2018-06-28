@@ -140,11 +140,11 @@ class PythonClientBackend(CodeBackend):
 
     def _generate_imports(self, namespaces):
         # Only import namespaces that have user-defined types defined.
-        ns_names_to_import = [ns.name for ns in namespaces if ns.data_types]
         self.emit('from . import (')
         with self.indent():
-            for ns in ns_names_to_import:
-                self.emit(ns + ',')
+            for namespace in namespaces:
+                if namespace.data_types:
+                    self.emit(fmt_namespace(namespace.name) + ',')
         self.emit(')')
 
     def _generate_route_methods(self, namespaces):
