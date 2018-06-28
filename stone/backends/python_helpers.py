@@ -170,5 +170,5 @@ def class_name_for_data_type(data_type, ns=None):
     name = fmt_class(data_type.name)
     if ns and data_type.namespace != ns:
         # If from an imported namespace, add a namespace prefix.
-        name = '{}.{}'.format(data_type.namespace.name, name)
+        name = '{}.{}'.format(fmt_namespace(data_type.namespace.name), name)
     return name

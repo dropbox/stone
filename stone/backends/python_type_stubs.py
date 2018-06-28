@@ -31,6 +31,7 @@ from stone.backends.python_helpers import (
     class_name_for_data_type,
     check_route_name_conflict,
     fmt_func,
+    fmt_namespace,
     fmt_var,
     generate_imports_for_referenced_namespaces,
     generate_module_header,
@@ -106,7 +107,7 @@ class PythonTypeStubsBackend(CodeBackend):
         routes in the Stone spec.
         """
         for namespace in api.namespaces.values():
-            with self.output_to_relative_path('{}.pyi'.format(namespace.name)):
+            with self.output_to_relative_path('{}.pyi'.format(fmt_namespace(namespace.name))):
                 self._generate_base_namespace_module(namespace)
 
     def _generate_base_namespace_module(self, namespace):

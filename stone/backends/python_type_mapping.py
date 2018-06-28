@@ -20,7 +20,7 @@ from stone.ir import (
     is_user_defined_type,
     is_void_type,
 )
-from stone.backends.python_helpers import class_name_for_data_type
+from stone.backends.python_helpers import class_name_for_data_type, fmt_namespace
 from stone.ir.data_types import String
 from stone.typing_hacks import cast
 
@@ -75,8 +75,8 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
         user_defined_type = cast(UserDefined, data_type)
         class_name = class_name_for_data_type(user_defined_type)
         if user_defined_type.namespace.name != ns.name:
-            return '%s.%s_validator' % (
-                user_defined_type.namespace.name, class_name)
+            return '{}.{}_validator'.format(
+                fmt_namespace(user_defined_type.namespace.name), class_name)
         else:
             return class_name
     elif is_list_type(data_type):

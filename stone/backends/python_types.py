@@ -474,11 +474,10 @@ class PythonTypesBackend(CodeBackend):
 
     def _generate_python_value(self, ns, value):
         if is_tag_ref(value):
-            ref = '{}.{}'.format(
-                class_name_for_data_type(value.union_data_type),
-                fmt_var(value.tag_name))
+            ref = '{}.{}'.format(class_name_for_data_type(value.union_data_type),
+                                 fmt_var(value.tag_name))
             if ns != value.union_data_type.namespace:
-                ref = '%s.%s' % (value.union_data_type.namespace.name, ref)
+                ref = '{}.{}'.format(fmt_namespace(value.union_data_type.namespace.name), ref)
             return ref
         else:
             return fmt_obj(value)
@@ -948,12 +947,12 @@ def generate_validator_constructor(ns, data_type):
     elif is_user_defined_type(dt):
         v = fmt_class(dt.name) + '_validator'
         if ns.name != dt.namespace.name:
-            v = '{}.{}'.format(dt.namespace.name, v)
+            v = '{}.{}'.format(fmt_namespace(dt.namespace.name), v)
     elif is_alias(dt):
         # Assume that the alias has already been declared elsewhere.
         name = fmt_class(dt.name) + '_validator'
         if ns.name != dt.namespace.name:
-            name = '{}.{}'.format(dt.namespace.name, name)
+            name = '{}.{}'.format(fmt_namespace(dt.namespace.name), name)
         v = name
     elif is_boolean_type(dt) or is_bytes_type(dt) or is_void_type(dt):
         v = generate_func_call('bv.{}'.format(dt.name))

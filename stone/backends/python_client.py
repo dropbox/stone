@@ -3,10 +3,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import re
 
 from stone.backend import CodeBackend
+from stone.backends.helpers import fmt_underscores
 from stone.backends.python_helpers import (
     check_route_name_conflict,
     fmt_class,
     fmt_func,
+    fmt_namespace,
     fmt_obj,
     fmt_type,
     fmt_var,
@@ -242,7 +244,7 @@ class PythonClientBackend(CodeBackend):
                 self.generate_multiline_list(
                     [f.name for f in arg_data_type.all_fields],
                     before='arg = {}.{}'.format(
-                        arg_data_type.namespace.name,
+                        fmt_namespace(arg_data_type.namespace.name),
                         fmt_class(arg_data_type.name)),
                 )
             elif not is_union_type(arg_data_type):
@@ -251,7 +253,8 @@ class PythonClientBackend(CodeBackend):
 
             # Code to make the request
             args = [
-                '{}.{}'.format(namespace.name, fmt_func(route.name, version=route.version)),
+                '{}.{}'.format(fmt_namespace(namespace.name),
+                               fmt_func(route.name, version=route.version)),
                 "'{}'".format(namespace.name),
                 'arg']
             if request_binary_body:
@@ -277,8 +280,6 @@ class PythonClientBackend(CodeBackend):
             self, namespace, route, arg_data_type, request_binary_body,
             method_name_suffix='', extra_args=None):
         """Generates the method prototype for a route."""
-        method_name = fmt_func(route.name + method_name_suffix, version=route.version)
-        namespace_name = fmt_func(namespace.name)
         args = ['self']
         if extra_args:
             args += extra_args
@@ -308,6 +309,9 @@ class PythonClientBackend(CodeBackend):
         elif not is_void_type(arg_data_type):
             raise AssertionError('Unhandled request type: %r' %
                                  arg_data_type)
+
+        method_name = fmt_func(route.name + method_name_suffix, version=route.version)
+        namespace_name = fmt_underscores(namespace.name)
         self.generate_multiline_list(args, 'def {}_{}'.format(namespace_name, method_name), ':')
 
     def _maybe_generate_deprecation_warning(self, route):
@@ -510,7 +514,7 @@ class PythonClientBackend(CodeBackend):
     def _generate_python_value(self, namespace, value):
         if is_tag_ref(value):
             return '{}.{}.{}'.format(
-                namespace.name,
+                fmt_namespace(namespace.name),
                 class_name_for_data_type(value.union_data_type),
                 fmt_var(value.tag_name))
         else:
