@@ -155,7 +155,10 @@ class PythonTypesBackend(CodeBackend):
 
     def _generate_dummy_namespace_module(self, reserved_namespace_name):
         generate_module_header(self)
-        self.emit('import * from {}'.format(reserved_namespace_name))
+        self.emit('# If you have issues importing this module because Python '
+                  'recognizes it as a keyword, use {} instead.'.format(
+            reserved_namespace_name))
+        self.emit('from {} import *'.format(reserved_namespace_name))
 
     def _generate_alias_definition(self, namespace, alias):
         v = generate_validator_constructor(namespace, alias.data_type)
