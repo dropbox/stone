@@ -48,9 +48,9 @@ from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
     class_name_for_data_type,
     check_route_name_conflict,
-    escape_keyword_namespace,
     fmt_class,
     fmt_func,
+    fmt_namespace,
     fmt_obj,
     fmt_var,
     generate_imports_for_referenced_namespaces,
@@ -101,7 +101,7 @@ class PythonTypesBackend(CodeBackend):
         shutil.copy(os.path.join(rsrc_folder, 'stone_base.py'),
                     self.target_folder_path)
         for namespace in api.namespaces.values():
-            reserved_namespace_name = escape_keyword_namespace(namespace.name)
+            reserved_namespace_name = fmt_namespace(namespace.name)
             with self.output_to_relative_path('{}.py'.format(reserved_namespace_name)):
                 self._generate_base_namespace_module(api, namespace)
             if reserved_namespace_name != namespace.name:
@@ -155,9 +155,8 @@ class PythonTypesBackend(CodeBackend):
 
     def _generate_dummy_namespace_module(self, reserved_namespace_name):
         generate_module_header(self)
-        self.emit('# If you have issues importing this module because Python '
-                  'recognizes it as a keyword, use {} instead.'.format(
-            reserved_namespace_name))
+        self.emit('# If you have issues importing this module because Python recognizes it as a '
+                  'keyword, use {} instead.'.format(reserved_namespace_name))
         self.emit('from {} import *'.format(reserved_namespace_name))
 
     def _generate_alias_definition(self, namespace, alias):
