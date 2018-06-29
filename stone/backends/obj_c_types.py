@@ -662,7 +662,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
         with self.block_func(
                 func='serialize',
                 args=fmt_func_args_declaration([('instance', 'id')]),
-                return_type='nullable NSDictionary *',
+                return_type='nullable NSDictionary<NSString *, id>  *',
                 class_func=True):
             func_call = fmt_func_call(
                 caller=fmt_serial_class(data_type_name),
@@ -673,7 +673,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
 
         with self.block_func(
                 func='deserialize',
-                args=fmt_func_args_declaration([('dict', 'NSDictionary *')]),
+                args=fmt_func_args_declaration([('dict', 'NSDictionary<NSString *, id>  *')]),
                 return_type='id',
                 class_func=True):
             self.emit('return {};'.format(
@@ -689,12 +689,12 @@ class ObjCTypesBackend(ObjCBaseBackend):
             func='serialize',
             args=fmt_func_args_declaration([(
                 'instance', '{} *'.format(obj_name))]),
-            return_type='nullable NSDictionary *',
+            return_type='nullable NSDictionary<NSString *, id>  *',
             class_func=True)
         deserial_signature = fmt_signature(
             func='deserialize',
             args=fmt_func_args_declaration([('dict',
-                                             'NSDictionary *')]),
+                                             'NSDictionary<NSString *, id>  *')]),
             return_type='{} *'.format(obj_name),
             class_func=True)
         self.emit(comment_prefix)
@@ -952,7 +952,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                 func='serialize',
                 args=fmt_func_args_declaration([('valueObj',
                                                  '{} *'.format(struct_name))]),
-                return_type='NSDictionary *',
+                return_type='NSDictionary<NSString *, id> *',
                 class_func=True):
             if not struct.all_fields and not struct.has_enumerated_subtypes():
                 self.emit('#pragma unused(valueObj)')
@@ -1018,7 +1018,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
         with self.block_func(
                 func='deserialize',
                 args=fmt_func_args_declaration([('valueDict',
-                                                 'NSDictionary *')]),
+                                                 'NSDictionary<NSString *, id> *')]),
                 return_type='{} *'.format(struct_name),
                 class_func=True):
             if not struct.all_fields and not struct.has_enumerated_subtypes():
@@ -1093,7 +1093,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                 func='serialize',
                 args=fmt_func_args_declaration([('valueObj',
                                                  '{} *'.format(union_name))]),
-                return_type='NSDictionary *',
+                return_type='NSDictionary<NSString *, id> *',
                 class_func=True):
 
             if not union.all_fields:
@@ -1164,7 +1164,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
         with self.block_func(
                 func='deserialize',
                 args=fmt_func_args_declaration([('valueDict',
-                                                 'NSDictionary *')]),
+                                                 'NSDictionary<NSString *, id> *')]),
                 return_type='{} *'.format(union_name),
                 class_func=True):
             if not union.all_fields:
