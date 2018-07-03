@@ -13,3 +13,4 @@ parser.out
 *.pyo
 *.swp
 *~
+.pytest_cache/

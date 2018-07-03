@@ -94,9 +94,34 @@ def fmt_jsdoc_union(type_strings):
     return '(' + '|'.join(type_strings) + ')' if len(type_strings) > 1 else type_strings[0]
 
 
-def fmt_func(name):
-    return fmt_camel(name)
+def fmt_func(name, version):
+    if version == 1:
+        return fmt_camel(name)
+    return fmt_camel(name) + 'V{}'.format(version)
+
+
+def fmt_url(namespace_name, route_name, route_version):
+    if route_version != 1:
+        return '{}/{}_v{}'.format(namespace_name, route_name, route_version)
+    else:
+        return '{}/{}'.format(namespace_name, route_name)
 
 
 def fmt_var(name):
     return fmt_camel(name)
+
+
+def check_route_name_conflict(namespace):
+    """
+    Check name conflicts among generated route definitions. Raise a runtime exception when a
+    conflict is encountered.
+    """
+
+    route_by_name = {}
+    for route in namespace.routes:
+        route_name = fmt_func(route.name, version=route.version)
+        if route_name in route_by_name:
+            other_route = route_by_name[route_name]
+            raise RuntimeError(
+                'There is a name conflict between {!r} and {!r}'.format(other_route, route))
+        route_by_name[route_name] = route

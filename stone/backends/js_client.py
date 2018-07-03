@@ -15,10 +15,12 @@ argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.backend import CodeBackend
 from stone.backends.js_helpers import (
+    check_route_name_conflict,
     fmt_error_type,
     fmt_func,
     fmt_obj,
     fmt_type,
+    fmt_url,
 )
 
 _cmdline_parser = argparse.ArgumentParser(prog='js-client-backend')
@@ -53,21 +55,21 @@ class JavascriptClientBackend(CodeBackend):
     preserve_aliases = True
 
     def generate(self, api):
+        # first check for route name conflict
         with self.output_to_relative_path(self.args.filename):
-
             self.emit_raw(_header)
-
             for namespace in api.namespaces.values():
+                # Hack: needed for _docf()
+                self.cur_namespace = namespace
+
+                check_route_name_conflict(namespace)
                 for route in namespace.routes:
-                    self._generate_route(
-                        api.route_schema, namespace, route)
-
+                    self._generate_route(api.route_schema, namespace, route)
             self.emit()
-
             self.emit('export { routes };')
 
     def _generate_route(self, route_schema, namespace, route):
-        function_name = fmt_func(namespace.name + '_' + route.name)
+        function_name = fmt_func(namespace.name + '_' + route.name, route.version)
         self.emit()
         self.emit('/**')
         if route.doc:
@@ -84,9 +86,10 @@ class JavascriptClientBackend(CodeBackend):
                 (fmt_type(route.result_data_type),
                  fmt_error_type(route.error_data_type)))
         self.emit(' */')
-        self.emit('routes.%s = function (arg) {' % function_name)
+
+        self.emit('routes.%s = function (arg) {' % (function_name))
         with self.indent(dent=2):
-            url = '{}/{}'.format(namespace.name, route.name)
+            url = fmt_url(namespace.name, route.name, route.version)
             if route_schema.fields:
                 additional_args = []
                 for field in route_schema.fields:
@@ -104,5 +107,17 @@ class JavascriptClientBackend(CodeBackend):
         Callback used as the handler argument to process_docs(). This converts
         Stone doc references to JSDoc-friendly annotations.
         """
-        # TODO(kelkabany): We're currently just dropping all doc ref tags.
+        # TODO(kelkabany): We're currently just dropping all doc ref tags ...
+        # NOTE(praneshp): ... except for versioned routes
+        if tag == 'route':
+            if ':' in val:
+                val, version = val.split(':', 1)
+                version = int(version)
+            else:
+                version = 1
+            url = fmt_url(self.cur_namespace.name, val, version)
+            # NOTE: In js, for comments, we drop the namespace name and the '/' when
+            # documenting URLs
+            return url[(len(self.cur_namespace.name) + 1):]
+
         return val
