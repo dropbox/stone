@@ -224,8 +224,10 @@ class PythonTypesBackend(CodeBackend):
         if data_type.parent_type:
             extends = class_name_for_data_type(data_type.parent_type, ns)
         else:
-            if is_union_type(data_type):
+            if is_struct_type(data_type):
                 # Use a handwritten base class
+                extends = 'bb.Struct'
+            elif is_union_type(data_type):
                 extends = 'bb.Union'
             else:
                 extends = 'object'

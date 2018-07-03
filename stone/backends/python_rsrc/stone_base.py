@@ -20,6 +20,12 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
+class Struct(object):
+    # This is a parent class for all classes representing Stone structs. It does
+    # not provide any functionality, but it can be used to determine whether an
+    # object represents a Stone struct.
+    pass
+
 class Union(object):
     # TODO(kelkabany): Possible optimization is to remove _value if a
     # union is composed of only symbols.
