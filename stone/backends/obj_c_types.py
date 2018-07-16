@@ -976,7 +976,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         self.emit('jsonDict[@"{}"] = {};'.format(
                             field.name, serialize_call))
                 else:
-                    with self.block('if ({})'.format(input_value)):
+                    with self.block('if ({} != nil)'.format(input_value)):
                         self.emit('jsonDict[@"{}"] = {};'.format(
                             field.name, serialize_call))
             self.emit()
