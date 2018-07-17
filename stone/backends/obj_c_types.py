@@ -1085,6 +1085,18 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     self._generate_throw_error('InvalidTag', description_str)
         self.emit()
 
+    def _generate_union_serializer_needs_initialization(self, union):
+        """Will _generate_union_serializer code ever read jsonDict's initialization?"""
+        answer = False
+        for field in union.all_fields:
+            data_type, nullable = unwrap_nullable(field.data_type)
+            if not is_user_defined_type(data_type):
+                answer = True
+                break
+        if not union.closed:
+            answer = True
+        return answer
+
     def _generate_union_serializer(self, union):
         """Emits the serialize method for the serialization object for the given union."""
         union_name = fmt_class_prefix(union)
@@ -1099,9 +1111,12 @@ class ObjCTypesBackend(ObjCBaseBackend):
             if not union.all_fields:
                 self.emit('#pragma unused(valueObj)')
 
-            self.emit(
-                'NSMutableDictionary *jsonDict = [[NSMutableDictionary alloc] init];'
-            )
+            # NOTE: Initializing jsonDict only if we need to avoids Xcode Analyze warning:
+            # Value stored to 'jsonDict' during its initialization is never read
+            if self._generate_union_serializer_needs_initialization(union):
+                self.emit('NSMutableDictionary *jsonDict = [[NSMutableDictionary alloc] init];')
+            else:
+                self.emit('NSMutableDictionary *jsonDict;')
             self.emit()
 
             first_block = True
