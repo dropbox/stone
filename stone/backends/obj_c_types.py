@@ -826,7 +826,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
             enum_field_name = fmt_enum_name(field.name, data_type)
             self.emit('case {}:'.format(enum_field_name))
         if nullable:
-            with self.block('if (self.{})'.format(fmt_var(field.name))):
+            with self.block('if (self.{} != nil)'.format(fmt_var(field.name))):
                 self._generate_equality_check(data_type, field, other_obj_name)
         else:
             self._generate_equality_check(data_type, field, other_obj_name)
