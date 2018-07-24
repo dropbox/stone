@@ -12,10 +12,14 @@
     if (value == nil) {
         [DBStoneValidators raiseIllegalStateErrorWithMessage:@"Value must not be `nil`"];
     }
-    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-    [formatter setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
-    [formatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
-    [formatter setDateFormat:[self convertFormat:dateFormat]];
+    static NSDateFormatter *formatter;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [[NSDateFormatter alloc] init];
+        [formatter setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
+        [formatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+        [formatter setDateFormat:[self convertFormat:dateFormat]];
+    });
 
     return [formatter stringFromDate:value];
 }
@@ -25,10 +29,14 @@
     if (value == nil) {
         [DBStoneValidators raiseIllegalStateErrorWithMessage:@"Value must not be `nil`"];
     }
-    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
-    [formatter setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
-    [formatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
-    [formatter setDateFormat:[self convertFormat:dateFormat]];
+    static NSDateFormatter *formatter;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        formatter = [[NSDateFormatter alloc] init];
+        [formatter setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
+        [formatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+        [formatter setDateFormat:[self convertFormat:dateFormat]];
+    });
 
     return [formatter dateFromString:value];
 }
