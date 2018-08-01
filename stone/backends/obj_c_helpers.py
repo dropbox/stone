@@ -325,10 +325,20 @@ def fmt_routes_class(namespace_name, auth_type):
         fmt_class_caps(namespace_name), fmt_camel_upper(auth_type_to_use))
 
 
-def fmt_route_var(namespace_name, route_name):
-    return 'DB{}{}'.format(
-        fmt_class_caps(namespace_name), fmt_camel_upper(route_name))
+def fmt_route_var(namespace_name, route):
+    ret = 'DB{}{}'.format(
+        fmt_class_caps(namespace_name), fmt_camel_upper(route.name))
+    if route.version != 1:
+        ret = '{}V{}'.format(ret, route.version)
 
+    return ret
+
+def fmt_route_func(route):
+    ret = fmt_var(route.name)
+    if route.version != 1:
+        ret = '{}V{}'.format(ret, route.version)
+
+    return ret
 
 def fmt_func_args(arg_str_pairs):
     result = []
