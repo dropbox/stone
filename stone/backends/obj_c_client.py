@@ -20,6 +20,7 @@ from stone.backends.obj_c_helpers import (
     fmt_import,
     fmt_property_str,
     fmt_route_obj_class,
+    fmt_route_func,
     fmt_route_var,
     fmt_routes_class,
     fmt_signature,
@@ -346,12 +347,12 @@ class ObjCBackend(ObjCBaseBackend):
             transport_args.append((name, value))
 
         with self.block_func(
-                func='{}{}'.format(fmt_var(route.name), func_suffix),
+                func='{}{}'.format(fmt_route_func(route), func_suffix),
                 args=fmt_func_args_declaration(user_args),
                 return_type='{} *'.format(task_type_name)):
             self.emit('DBRoute *route = {}.{};'.format(
                 fmt_route_obj_class(namespace.name),
-                fmt_route_var(namespace.name, route.name)))
+                fmt_route_var(namespace.name, route)))
             if is_union_type(route.arg_data_type):
                 self.emit('{} *arg = {};'.format(
                     fmt_class_prefix(route.arg_data_type),
@@ -487,7 +488,7 @@ class ObjCBackend(ObjCBaseBackend):
 
         deprecated = 'DEPRECATED: ' if route.deprecated else ''
 
-        func_name = '{}{}'.format(fmt_var(route.name), func_suffix)
+        func_name = '{}{}'.format(fmt_route_func(route), func_suffix)
 
         self.emit(comment_prefix)
         if route.doc:
@@ -533,7 +534,7 @@ class ObjCBackend(ObjCBaseBackend):
         """Returns a deprecation tag / message, if route is deprecated."""
         result = ''
         if route.deprecated:
-            msg = '{} is deprecated.'.format(fmt_var(route.name))
+            msg = '{} is deprecated.'.format(fmt_route_func(route))
             if route.deprecated.by:
                 msg += ' Use {}.'.format(fmt_var(route.deprecated.by.name))
             result = ' __deprecated_msg("{}")'.format(msg)

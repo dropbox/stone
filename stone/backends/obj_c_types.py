@@ -36,6 +36,7 @@ from stone.backends.obj_c_helpers import (
     fmt_property_str,
     fmt_public_name,
     fmt_routes_class,
+    fmt_route_func,
     fmt_route_obj_class,
     fmt_route_var,
     fmt_serial_class,
@@ -1287,12 +1288,16 @@ class ObjCTypesBackend(ObjCBaseBackend):
 
             with self.block_m(fmt_route_obj_class(namespace.name)):
                 for route in namespace.routes:
-                    route_name = fmt_route_var(namespace.name, route.name)
+                    route_name = fmt_route_var(namespace.name, route)
                     self.emit('static DBRoute *{};'.format(route_name))
                 self.emit()
 
                 for route in namespace.routes:
-                    route_name = fmt_route_var(namespace.name, route.name)
+                    route_name = fmt_route_var(namespace.name, route)
+                    if route.version == 1:
+                        route_path = route.name
+                    else:
+                        '{}_v{}'.format(route.name, route.version)
 
                     if route.deprecated:
                         deprecated = '@{}'.format('YES')
@@ -1340,7 +1345,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                                         route_name),
                                     delim=(None, None),
                                     after='];'):
-                                self.emit('@\"{}\"'.format(route.name))
+                                self.emit('@\"{}\"'.format(route_path))
                                 self.emit('namespace_:@\"{}\"'.format(
                                     namespace.name))
                                 self.emit('deprecated:{}'.format(deprecated))
@@ -1401,7 +1406,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
             self.emit(comment_prefix)
             with self.block_h(fmt_route_obj_class(namespace.name)):
                 for route in namespace.routes:
-                    route_name = fmt_route_var(namespace.name, route.name)
+                    route_name = fmt_route_var(namespace.name, route)
 
                     route_obj_access_signature = fmt_signature(
                         func=route_name,
@@ -1410,7 +1415,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         class_func=True)
                     base_str = 'Accessor method for the {} route object.'
                     self.emit_wrapped_text(
-                        base_str.format(fmt_var(route.name)),
+                        base_str.format(fmt_route_func(route)),
                         prefix=comment_prefix)
                     self.emit('{};'.format(route_obj_access_signature))
                     self.emit()
