@@ -721,6 +721,10 @@ class IRGenerator(object):
                     if not (field._ast_node.type_ref.nullable and default_value is None):
                         # Verify that the type of the default value is correct for this field
                         try:
+                            if field.data_type.name in ('Float32', 'Float64'):
+                                # You can assign int to the default value of float type
+                                # However float type should always have default value in float
+                                default_value = float(default_value)
                             field.data_type.check(default_value)
                         except ValueError as e:
                             raise InvalidSpec(

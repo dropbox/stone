@@ -287,6 +287,7 @@ class TestStone(unittest.TestCase):
                 f2 Float64 = -4.2
                 f3 Float64 = -5e-3
                 f4 Float64 = -5.1e-3
+                f5 Float64 = 1
             """)
         out = self.parser_factory.get_parser().parse(text)
         self.assertEqual(out[1].name, 'S')
@@ -298,6 +299,10 @@ class TestStone(unittest.TestCase):
         self.assertEqual(out[1].fields[3].default, -4.2)
         self.assertEqual(out[1].fields[4].default, -5e-3)
         self.assertEqual(out[1].fields[5].default, -5.1e-3)
+
+        # float type should always have default value in float
+        api = specs_to_ir([('test.stone', text)])
+        self.assertIsInstance(api.namespaces['ns'].data_type_by_name['S'].fields[6].default, float)
 
         # Try extending nullable type
         text = textwrap.dedent("""\
