@@ -575,6 +575,7 @@ class Field(object):
         self.omitted_caller = None
         self.deprecated = None
         self.preview = None
+        self.custom_annotations = []
 
     def set_annotations(self, annotations):
         if not annotations:
@@ -615,6 +616,8 @@ class Field(object):
                     raise InvalidSpec("Redactor already set as %r." %
                                       str(self.redactor), self._ast_node.lineno)
                 self.redactor = annotation
+            elif isinstance(annotation, CustomAnnotation):
+                self.custom_annotations.append(annotation)
             else:
                 raise InvalidSpec(
                     'Annotation %r not recognized for field.' % annotation, self._ast_node.lineno)
@@ -770,6 +773,14 @@ class UserDefined(Composite):
                         % (field.name, cur_type.name, lineno),
                         field._ast_node.lineno)
             cur_type = cur_type.parent_type
+
+        # Import namespaces containing any custom annotations
+        for field in self.fields:
+            for annotation in field.custom_annotations:
+                if annotation.namespace.name != self.namespace.name:
+                    self.namespace.add_imported_namespace(
+                        annotation.namespace,
+                        imported_data_type=True)
 
         # Indicate that the attributes of the type have been populated.
         self._is_forward_ref = False
@@ -1582,9 +1593,64 @@ class TagRef(object):
         return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
 
 
+class AnnotationTypeParam(object):
+    """
+    A parameter that can be supplied to a custom annotation type.
+    """
+    def __init__(self, name, data_type, doc, has_default, default, ast_node):
+        self.name = name
+        self.data_type = data_type
+        self.raw_doc = doc
+        self.doc = doc_unwrap(doc)
+        self.has_default = has_default
+        self.default = default
+        self._ast_node = ast_node
+
+        if self.has_default:
+            try:
+                self.data_type.check(self.default)
+            except ValueError as e:
+                raise InvalidSpec('Default value for parameter %s is invalid: %s' % (
+                    self.name, e), self._ast_node.lineno, self._ast_node.path)
+
+
+class AnnotationType(object):
+    """
+    Used when a spec defines a custom annotation type.
+    """
+    def __init__(self, name, namespace, doc, params):
+        self.name = name
+        self.namespace = namespace
+        self.raw_doc = doc
+        self.doc = doc_unwrap(doc)
+        self.params = params
+
+        self._params_by_name = {}  # type: Dict[str, AnnotationTypeParam]
+        for param in self.params:
+            if param.name in self._params_by_name:
+                orig_lineno = self._params_by_name[param.name]._ast_node.lineno
+                raise InvalidSpec("Parameter '%s' already defined on line %s." %
+                                  (param.name, orig_lineno),
+                                  param._ast_node.lineno, param._ast_node.path)
+            self._params_by_name[param.name] = param
+
+    def has_documented_type_or_params(self):
+        """Returns whether this type, or any of its parameters, are documented.
+
+        Use this when deciding whether to create a block of documentation for
+        this type.
+        """
+        return self.doc or self.has_documented_params()
+
+    def has_documented_params(self):
+        """Returns whether at least one param is documented."""
+        return any(param.doc for param in self.params)
+
+
 class Annotation(object):
     """
-    Used when a field is annotated with a pre-defined Stone action.
+    Used when a field is annotated with a pre-defined Stone action or a custom
+    annotation.
     """
     def __init__(self, name, namespace, ast_node):
         self.name = name
@@ -1645,6 +1711,45 @@ class RedactedHash(Redacted):
         return 'RedactedHash(%r, %r, %r)' % (self.name, self.namespace, self.regex)
 
 
+class CustomAnnotation(Annotation):
+    """
+    Used when a field is annotated with a custom annotation type.
+    """
+    def __init__(self, name, namespace, ast_node, annotation_type,
+                 annotation_type_ns, args, kwargs):
+        super(CustomAnnotation, self).__init__(name, namespace, ast_node)
+        self.annotation_type_name = annotation_type
+        self.annotation_type_ns = annotation_type_ns
+        self.args = args
+        self.kwargs = kwargs
+
+        self.annotation_type = None
+
+    def set_attributes(self, annotation_type):
+        self.annotation_type = annotation_type
+
+        if self.args:
+            raise InvalidSpec('Annotations cannot accept positional arguments',
+                self._ast_node.lineno, self._ast_node.path)
+
+        for param in self.annotation_type.params:
+            if param.name in self.kwargs:
+                try:
+                    param.data_type.check(self.kwargs[param.name])
+                except ValueError as e:
+                    raise InvalidSpec('Invalid value for parameter %s of annotation type %s: %s' %
+                        (param.name, self.annotation_type.name, e), self._ast_node.lineno,
+                        self._ast_node.path)
+            elif isinstance(param.data_type, Nullable):
+                self.kwargs[param.name] = None
+            elif param.has_default:
+                self.kwargs[param.name] = param.default
+            else:
+                raise InvalidSpec('No value specified for parameter %s of annotation type %s' %
+                    (param.name, self.annotation_type.name), self._ast_node.lineno,
+                    self._ast_node.path)
+
+
 class Alias(Composite):
     """
     NOTE: The categorization of aliases as a composite type is arbitrary.
@@ -1673,6 +1778,7 @@ class Alias(Composite):
         self.doc = None
         self.data_type = None
         self.redactor = None
+        self.custom_annotations = []
 
     def set_annotations(self, annotations):
         for annotation in annotations:
@@ -1682,8 +1788,15 @@ class Alias(Composite):
                     raise InvalidSpec("Redactor already set as %r" %
                                       str(self.redactor), self._ast_node.lineno)
                 self.redactor = annotation
+            elif isinstance(annotation, CustomAnnotation):
+                if annotation.namespace.name != self.namespace.name:
+                    self.namespace.add_imported_namespace(
+                        annotation.namespace,
+                        imported_data_type=True)
+
+                self.custom_annotations.append(annotation)
             else:
-                raise InvalidSpec("Aliases only support 'Redacted', not %r" %
+                raise InvalidSpec("Aliases only support 'Redacted' and custom annotations, not %r" %
                                   str(annotation), self._ast_node.lineno)
 
     def set_attributes(self, doc, data_type):

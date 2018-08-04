@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import textwrap
-from contextlib import contextmanager
 
 from stone.ir.data_types import String
 from stone.typing_hacks import cast
@@ -14,6 +13,7 @@ from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
     Api,
     ApiNamespace,
     Alias,
+    AnnotationType,
     DataType,
     List,
     Map,
@@ -28,8 +28,10 @@ from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
 )
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
+    class_name_for_annotation_type,
     class_name_for_data_type,
     check_route_name_conflict,
+    emit_pass_if_nothing_emitted,
     fmt_func,
     fmt_namespace,
     fmt_var,
@@ -41,16 +43,6 @@ from stone.backends.python_type_mapping import (  # noqa: F401 # pylint: disable
     OverrideDefaultTypesDict,
     map_stone_type_to_python_type,
 )
-
-@contextmanager
-def emit_pass_if_nothing_emitted(codegen):
-    # type: (CodeBackend) -> typing.Iterator[None]
-    starting_lineno = codegen.lineno
-    yield
-    ending_lineno = codegen.lineno
-    if starting_lineno == ending_lineno:
-        codegen.emit("pass")
-        codegen.emit()
 
 class ImportTracker(object):
     def __init__(self):
@@ -124,6 +116,11 @@ class PythonTypeStubsBackend(CodeBackend):
         # Generate import statements for all referenced namespaces.
         self._generate_imports_for_referenced_namespaces(namespace)
 
+        self._generate_typevars()
+
+        for annotation_type in namespace.annotation_types:
+            self._generate_annotation_type_class(namespace, annotation_type)
+
         for data_type in namespace.linearize_data_types():
             if isinstance(data_type, Struct):
                 self._generate_struct_class(namespace, data_type)
@@ -146,6 +143,39 @@ class PythonTypeStubsBackend(CodeBackend):
             insert_type_ignore=True
         )
 
+    def _generate_typevars(self):
+        # type: () -> None
+        """
+        Creates type variables that are used by the type signatures for
+        _process_custom_annotations.
+        """
+        self.emit("T = TypeVar('T', bound=bb.AnnotationType)")
+        self.emit("U = TypeVar('U')")
+        self.import_tracker._register_typing_import('TypeVar')
+        self.emit()
+
+    def _generate_annotation_type_class(self, ns, annotation_type):
+        # type: (ApiNamespace, AnnotationType) -> None
+        """Defines a Python class that represents an annotation type in Stone."""
+        self.emit('class {}(object):'.format(class_name_for_annotation_type(annotation_type, ns)))
+        with self.indent():
+            args = []
+            for param in annotation_type.params:
+                param_name = fmt_var(param.name, True)
+                param_type = self.map_stone_type_to_pep484_type(ns, param.data_type)
+                args.append(
+                    "{param_name}: {param_type} = ...".format(
+                        param_name=param_name,
+                        param_type=param_type,
+                    )
+                )
+
+            self.generate_multiline_list(
+                before='def __init__',
+                items=["self"] + args,
+                after=' -> None: ...')
+        self.emit()
+
     def _generate_struct_class(self, ns, data_type):
         # type: (ApiNamespace, Struct) -> None
         """Defines a Python class that represents a struct in Stone."""
@@ -153,6 +183,7 @@ class PythonTypeStubsBackend(CodeBackend):
         with self.indent():
             self._generate_struct_class_init(ns, data_type)
             self._generate_struct_class_properties(ns, data_type)
+            self._generate_struct_or_union_class_custom_annotations()
 
         self._generate_validator_for(data_type)
         self.emit()
@@ -172,6 +203,7 @@ class PythonTypeStubsBackend(CodeBackend):
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_variant_creators(ns, data_type)
             self._generate_union_class_get_helpers(ns, data_type)
+            self._generate_struct_or_union_class_custom_annotations()
 
         self._generate_validator_for(data_type)
         self.emit()
@@ -315,6 +347,21 @@ class PythonTypeStubsBackend(CodeBackend):
 
         for s in to_emit:
             self.emit(s)
+
+    def _generate_struct_or_union_class_custom_annotations(self):
+        """
+        The _process_custom_annotations function allows client code to access
+        custom annotations defined in the spec.
+        """
+        self.emit('def _process_custom_annotations(')
+        with self.indent():
+            self.emit('self,')
+            self.emit('annotation_type: Type[T],')
+            self.emit('f: Callable[[T, U], U],')
+            self.import_tracker._register_typing_import('Type')
+            self.import_tracker._register_typing_import('Callable')
+        self.emit(') -> None: ...')
+        self.emit()
 
     def _get_pep_484_type_mapping_callbacks(self):
         # type: () -> OverrideDefaultTypesDict

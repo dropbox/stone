@@ -19,12 +19,19 @@ _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
+class AnnotationType(object):
+    # This is a base class for all annotation types.
+    pass
+
+if _MYPY:
+    T = typing.TypeVar('T', bound=AnnotationType)
+    U = typing.TypeVar('U')
 
 class Struct(object):
-    # This is a parent class for all classes representing Stone structs. It does
-    # not provide any functionality, but it can be used to determine whether an
-    # object represents a Stone struct.
-    pass
+    # This is a base class for all classes representing Stone structs.
+    def _process_custom_annotations(self, annotation_type, f):
+        # type: (typing.Type[T], typing.Callable[[T, U], U]) -> None
+        pass
 
 class Union(object):
     # TODO(kelkabany): Possible optimization is to remove _value if a
@@ -63,6 +70,10 @@ class Union(object):
 
     def __hash__(self):
         return hash((self._tag, self._value))
+
+    def _process_custom_annotations(self, annotation_type, f):
+        # type: (typing.Type[T], typing.Callable[[T, U], U]) -> None
+        pass
 
     @classmethod
     def _is_tag_present(cls, tag, caller_permissions):
@@ -110,3 +121,32 @@ class Route(object):
             self.result_type,
             self.error_type,
             self.attrs)
+
+def partially_apply(f, arg):
+    def g(*args, **kwargs):
+        return f(arg, *args, **kwargs)
+    return g
+
+# helper functions used when constructing custom annotation processors
+
+def make_struct_annotation_processor(annotation_type, f):
+    def g(struct):
+        if struct is None:
+            return struct
+        struct._process_custom_annotations(annotation_type, f)
+        return struct
+    return g
+
+def make_list_annotation_processor(f):
+    def g(list_):
+        if list_ is None:
+            return list_
+        return [f(x) for x in list_]
+    return g
+
+def make_map_value_annotation_processor(f):
+    def g(map_):
+        if map_ is None:
+            return map_
+        return {k: f(v) for k, v in map_.items()}
+    return g

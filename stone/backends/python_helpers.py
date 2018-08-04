@@ -1,14 +1,17 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from contextlib import contextmanager
+
 import pprint
 
-from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
+from stone.backend import Backend, CodeBackend  # noqa: F401 # pylint: disable=unused-import
 from stone.backends.helpers import (
     fmt_pascal,
     fmt_underscores,
 )
 from stone.ir import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
+    AnnotationType,
     Boolean,
     Bytes,
     Float32,
@@ -23,6 +26,10 @@ from stone.ir import (
     is_user_defined_type,
     is_alias,
 )
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 _type_table = {
     Boolean: 'bool',
@@ -47,6 +54,16 @@ _reserved_keywords = {
     'while',
     'async',
 }
+
+@contextmanager
+def emit_pass_if_nothing_emitted(codegen):
+    # type: (CodeBackend) -> typing.Iterator[None]
+    starting_lineno = codegen.lineno
+    yield
+    ending_lineno = codegen.lineno
+    if starting_lineno == ending_lineno:
+        codegen.emit("pass")
+        codegen.emit()
 
 def _rename_if_reserved(s):
     if s in _reserved_keywords:
@@ -171,4 +188,15 @@ def class_name_for_data_type(data_type, ns=None):
     if ns and data_type.namespace != ns:
         # If from an imported namespace, add a namespace prefix.
         name = '{}.{}'.format(fmt_namespace(data_type.namespace.name), name)
+    return name
+
+def class_name_for_annotation_type(annotation_type, ns=None):
+    """
+    Same as class_name_for_data_type, but works with annotation types.
+    """
+    assert isinstance(annotation_type, AnnotationType)
+    name = fmt_class(annotation_type.name)
+    if ns and annotation_type.namespace != ns:
+        # If from an imported namespace, add a namespace prefix.
+        name = '{}.{}'.format(fmt_namespace(annotation_type.namespace.name), name)
     return name

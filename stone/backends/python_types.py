@@ -20,7 +20,7 @@ if _MYPY:
 import importlib
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
-from stone.ir import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
+from stone.ir import AnnotationType, ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
     Struct,
     Union,
@@ -40,14 +40,17 @@ from stone.ir import (
     is_void_type,
     RedactedBlot,
     RedactedHash,
+    unwrap,
     unwrap_aliases,
     unwrap_nullable,
 )
 from stone.ir import DataType  # noqa: F401 # pylint: disable=unused-import
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
+    class_name_for_annotation_type,
     class_name_for_data_type,
     check_route_name_conflict,
+    emit_pass_if_nothing_emitted,
     fmt_class,
     fmt_func,
     fmt_namespace,
@@ -125,6 +128,9 @@ class PythonTypesBackend(CodeBackend):
 
         # Generate import statements for all referenced namespaces.
         self._generate_imports_for_referenced_namespaces(namespace)
+
+        for annotation_type in namespace.annotation_types:
+            self._generate_annotation_type_class(namespace, annotation_type)
 
         for data_type in namespace.linearize_data_types():
             if isinstance(data_type, Struct):
@@ -235,6 +241,46 @@ class PythonTypesBackend(CodeBackend):
             class_name_for_data_type(data_type), extends)
 
     #
+    # Annotation types
+    #
+
+    def _generate_annotation_type_class(self, ns, annotation_type):
+        # type: (ApiNamespace, AnnotationType) -> None
+        """Defines a Python class that represents an annotation type in Stone."""
+        self.emit('class {}(bb.AnnotationType):'.format(
+            class_name_for_annotation_type(annotation_type, ns)))
+        with self.indent():
+            if annotation_type.has_documented_type_or_params():
+                self.emit('"""')
+                if annotation_type.doc:
+                    self.emit_wrapped_text(
+                        self.process_doc(annotation_type.doc, self._docf))
+                    if annotation_type.has_documented_params():
+                        self.emit()
+                for param in annotation_type.params:
+                    if not param.doc:
+                        continue
+                    self.emit_wrapped_text(':ivar {}: {}'.format(
+                        fmt_var(param.name),
+                        self.process_doc(param.doc, self._docf)),
+                        subsequent_prefix='    ')
+                self.emit('"""')
+            self.emit()
+
+            args = ['self']
+            for param in annotation_type.params:
+                param_name = fmt_var(param.name, True)
+                default_value = (self._generate_python_value(ns, param.default)
+                                 if param.has_default else 'None')
+                args.append('{}={}'.format(param_name, default_value))
+            self.generate_multiline_list(args, before='def __init__', after=':')
+
+            with self.indent():
+                for param in annotation_type.params:
+                    self.emit('self.{0} = {0}'.format(fmt_var(param.name, True)))
+            self.emit()
+
+    #
     # Struct Types
     #
 
@@ -264,6 +310,7 @@ class PythonTypesBackend(CodeBackend):
             self._generate_struct_class_has_required_fields(data_type)
             self._generate_struct_class_init(data_type)
             self._generate_struct_class_properties(ns, data_type)
+            self._generate_struct_class_custom_annotations(ns, data_type)
             self._generate_struct_class_repr(data_type)
         if data_type.has_enumerated_subtypes():
             validator = 'StructTree'
@@ -557,6 +604,110 @@ class PythonTypesBackend(CodeBackend):
                 self.emit('self._{}_present = False'.format(field_name))
             self.emit()
 
+    def _generate_custom_annotation_instance(self, ns, annotation):
+        """
+        Generates code to construct an instance of an annotation type object
+        with parameters from the specified annotation.
+        """
+        annotation_class = class_name_for_annotation_type(annotation.annotation_type, ns)
+        return generate_func_call(
+            annotation_class,
+            kwargs=((fmt_var(k, True), self._generate_python_value(ns, v))
+                    for k, v in annotation.kwargs.items())
+        )
+
+    def _generate_custom_annotation_processors(self, ns, data_type):
+        """
+        Generates code that will run a custom processor function f on every
+        field with a custom annotation, no matter how deep (recursively) it
+        might be located in data_type (incl. in elements of lists or maps).
+        Yields pairs of (annotation_type, code) where code is code that
+        evaluates to a function that should be executed with an instance of
+        data_type as the only parameter, and whose return value should replace
+        that instance.
+        """
+        # annotations applied to members of this type
+        dt, _, _ = unwrap(data_type)
+        if is_struct_type(dt) or is_union_type(dt):
+            annotation_types_seen = set()
+            for annotation in get_custom_annotations_recursive(dt):
+                if annotation.annotation_type not in annotation_types_seen:
+                    yield (annotation.annotation_type,
+                           generate_func_call(
+                               'bb.make_struct_annotation_processor',
+                               args=[class_name_for_annotation_type(annotation.annotation_type, ns),
+                                     'f']
+                           ))
+                    annotation_types_seen.add(annotation.annotation_type)
+        elif is_list_type(dt):
+            for annotation_type, processor in self._generate_custom_annotation_processors(
+                    ns, dt.data_type):
+                # every member needs to be replaced---use handwritten processor
+                yield (annotation_type,
+                       generate_func_call(
+                           'bb.make_list_annotation_processor',
+                           args=[processor]
+                       ))
+        elif is_map_type(dt):
+            for annotation_type, processor in self._generate_custom_annotation_processors(
+                    ns, dt.value_data_type):
+                # every value needs to be replaced---use handwritten processor
+                yield (annotation_type,
+                       generate_func_call(
+                           'bb.make_map_value_annotation_processor',
+                           args=[processor]
+                       ))
+
+        # annotations applied to this specific type (through aliases)
+        for annotation in get_custom_annotations_for_type(data_type):
+            yield (annotation.annotation_type,
+                   generate_func_call(
+                       'bb.partially_apply',
+                       args=['f', self._generate_custom_annotation_instance(ns, annotation)]
+                   ))
+
+    def _generate_struct_class_custom_annotations(self, ns, data_type):
+        """
+        The _process_custom_annotations function allows client code to access
+        custom annotations defined in the spec.
+        """
+        self.emit('def _process_custom_annotations(self, annotation_type, f):')
+
+        with self.indent(), emit_pass_if_nothing_emitted(self):
+            if data_type.parent_type:
+                self.emit(
+                    'super({}, self)._process_custom_annotations(annotation_type, f)'.format(
+                        class_name_for_data_type(data_type)
+                    )
+                )
+                self.emit()
+
+            for field in data_type.fields:
+                field_name = fmt_func(field.name, check_reserved=True)
+                # first, recurse into any submembers of the field that have annotations
+                for annotation_type, processor in self._generate_custom_annotation_processors(
+                        ns, field.data_type):
+                    annotation_class = class_name_for_annotation_type(annotation_type, ns)
+                    self.emit('if annotation_type is {}:'.format(annotation_class))
+                    with self.indent():
+                        self.emit('self.{} = {}'.format(
+                            field_name,
+                            generate_func_call(processor, args=['self.{}'.format(field_name)])
+                        ))
+                    self.emit()
+
+                # now process any annotations applied directly onto this field
+                for annotation in field.custom_annotations:
+                    annotation_class = class_name_for_annotation_type(
+                        annotation.annotation_type, ns)
+                    self.emit('if annotation_type is {}:'.format(annotation_class))
+                    with self.indent():
+                        self.emit('self.{field} = f({annotation}, self.{field})'.format(
+                            field=field_name,
+                            annotation=self._generate_custom_annotation_instance(ns, annotation),
+                        ))
+                    self.emit()
+
     def _generate_struct_class_repr(self, data_type):
         """
         Generates something like:
@@ -679,6 +830,7 @@ class PythonTypesBackend(CodeBackend):
             self._generate_union_class_variant_creators(ns, data_type)
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_get_helpers(ns, data_type)
+            self._generate_union_class_custom_annotations(ns, data_type)
             self._generate_union_class_repr(data_type)
         self.emit('{0}_validator = bv.Union({0})'.format(
             class_name_for_data_type(data_type)
@@ -834,6 +986,53 @@ class PythonTypesBackend(CodeBackend):
                     self.emit('return self._value')
                 self.emit()
 
+    def _generate_union_class_custom_annotations(self, ns, data_type):
+        """
+        The _process_custom_annotations function allows client code to access
+        custom annotations defined in the spec.
+        """
+        self.emit('def _process_custom_annotations(self, annotation_type, f):')
+        with self.indent(), emit_pass_if_nothing_emitted(self):
+            if data_type.parent_type:
+                self.emit(
+                    'super({}, self)._process_custom_annotations(annotation_type, f)'.format(
+                        class_name_for_data_type(data_type)
+                    )
+                )
+                self.emit()
+
+            for field in data_type.fields:
+                recursive_processors = list(self._generate_custom_annotation_processors(
+                    ns, field.data_type))
+                # check if we have any annotations that apply to this field at all
+                if len(recursive_processors) == len(field.custom_annotations) == 0:
+                    continue
+
+                field_name = fmt_func(field.name)
+                self.emit('if self.is_{}():'.format(field_name))
+
+                with self.indent():
+                    # first, recurse into any submembers of the field that have annotations
+                    for annotation_type, processor in recursive_processors:
+                        annotation_class = class_name_for_annotation_type(annotation_type, ns)
+                        self.emit('if annotation_type is {}:'.format(annotation_class))
+                        with self.indent():
+                            self.emit('self._value = {}'.format(
+                                generate_func_call(processor, args=['self._value'])
+                            ))
+                        self.emit()
+
+                    # now process any annotations applied directly onto this field
+                    for annotation in field.custom_annotations:
+                        annotation_class = class_name_for_annotation_type(
+                            annotation.annotation_type, ns)
+                        self.emit('if annotation_type is {}:'.format(annotation_class))
+                        with self.indent():
+                            self.emit('self._value = f({}, self._value)'.format(
+                                self._generate_custom_annotation_instance(ns, annotation),
+                            ))
+                        self.emit()
+
     def _generate_union_class_repr(self, data_type):
         """
         The __repr__() function will return a string of the class name, and
@@ -899,6 +1098,53 @@ class PythonTypesBackend(CodeBackend):
             self.emit("{}._redact = bv.HashRedactor({})".format(validator_name, regex))
         elif isinstance(redactor, RedactedBlot):
             self.emit("{}._redact = bv.BlotRedactor({})".format(validator_name, regex))
+
+def get_custom_annotations_for_type(data_type):
+    """
+    Given a Stone data type, returns all custom annotations applied to it.
+    """
+    # annotations can only be applied to Aliases, but they can be wrapped in
+    # Nullable. also, Aliases pointing to other Aliases don't automatically
+    # inherit their custom annotations, so we might have to traverse.
+    result = []
+    data_type, _ = unwrap_nullable(data_type)
+    while is_alias(data_type):
+        result.extend(data_type.custom_annotations)
+        data_type, _ = unwrap_nullable(data_type.data_type)
+    return result
+
+def get_custom_annotations_recursive(data_type):
+    """
+    Given a Stone data type, returns all custom annotations applied to any of
+    its memebers, as well as submembers, ..., to an arbitrary depth.
+    """
+    # because Stone structs can contain references to themselves (or otherwise
+    # be cyclical), we need ot keep track of the data types we've already seen
+    data_types_seen = set()
+
+    def recurse(data_type):
+        if data_type in data_types_seen:
+            return
+        data_types_seen.add(data_type)
+
+        dt, _, _ = unwrap(data_type)
+        if is_struct_type(dt) or is_union_type(dt):
+            for field in dt.fields:
+                for annotation in recurse(field.data_type):
+                    yield annotation
+                for annotation in field.custom_annotations:
+                    yield annotation
+        elif is_list_type(dt):
+            for annotation in recurse(dt.data_type):
+                yield annotation
+        elif is_map_type(dt):
+            for annotation in recurse(dt.value_data_type):
+                yield annotation
+
+        for annotation in get_custom_annotations_for_type(data_type):
+            yield annotation
+
+    return recurse(data_type)
 
 def generate_validator_constructor(ns, data_type):
     """

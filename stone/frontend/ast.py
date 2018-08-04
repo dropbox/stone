@@ -250,23 +250,53 @@ class AstAnnotationRef(ASTNode):
 
 class AstAnnotationDef(ASTNode):
 
-    def __init__(self, path, lineno, lexpos, name, annotation_type, args, kwargs):
+    def __init__(self, path, lineno, lexpos, name, annotation_type,
+                 annotation_type_ns, args, kwargs):
         """
         Args:
             name (str): Name of the defined annotation.
             annotation_type (str): Type of annotation to define.
+            annotation_type_ns (Optional[str]): Namespace where the annotation
+              type was defined. If None, current namespace or builtin.
             args (str): Arguments to define annotation.
             kwargs (str): Keyword Arguments to define annotation.
         """
         super(AstAnnotationDef, self).__init__(path, lineno, lexpos)
         self.name = name
         self.annotation_type = annotation_type
+        self.annotation_type_ns = annotation_type_ns
         self.args = args
         self.kwargs = kwargs
 
     def __repr__(self):
-        return 'AstAnnotationDef({!r}, {!r}, {!r}, {!r})'.format(
-            self.name, self.annotation_type, self.args, self.kwargs
+        return 'AstAnnotationDef({!r}, {!r}, {!r}, {!r}, {!r})'.format(
+            self.name,
+            self.annotation_type,
+            self.annotation_type_ns,
+            self.args,
+            self.kwargs,
+        )
+
+class AstAnnotationTypeDef(ASTNode):
+
+    def __init__(self, path, lineno, lexpos, name, doc, params):
+        """
+        Args:
+            name (str): Name of the defined annotation type.
+            doc (str): Docstring for the defined annotation type.
+            params (List[AstField]): Parameters that can be passed to the
+                annotation type.
+        """
+        super(AstAnnotationTypeDef, self).__init__(path, lineno, lexpos)
+        self.name = name
+        self.doc = doc
+        self.params = params
+
+    def __repr__(self):
+        return 'AstAnnotationTypeDef({!r}, {!r}, {!r})'.format(
+            self.name,
+            self.doc,
+            self.params,
         )
 
 class AstField(ASTNode):

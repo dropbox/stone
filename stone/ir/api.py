@@ -20,6 +20,7 @@ if _MYPY:
     from .data_types import (  # noqa: F401 # pylint: disable=unused-import
         Alias,
         Annotation,
+        AnnotationType,
         DataType,
         List as DataTypeList,
         Nullable,
@@ -102,18 +103,20 @@ class ApiNamespace(object):
     def __init__(self, name):
         # type: (typing.Text) -> None
         self.name = name
-        self.doc = None                 # type: typing.Optional[six.text_type]
-        self.routes = []                # type: typing.List[ApiRoute]
+        self.doc = None                    # type: typing.Optional[six.text_type]
+        self.routes = []                   # type: typing.List[ApiRoute]
         # TODO (peichao): route_by_name is deprecated by routes_by_name and should be removed.
-        self.route_by_name = {}         # type: typing.Dict[typing.Text, ApiRoute]
-        self.routes_by_name = {}        # type: typing.Dict[typing.Text, ApiRoutesByVersion]
-        self.data_types = []            # type: typing.List[UserDefined]
-        self.data_type_by_name = {}     # type: typing.Dict[str, UserDefined]
-        self.aliases = []               # type: typing.List[Alias]
-        self.alias_by_name = {}         # type: typing.Dict[str, Alias]
-        self.annotations = []           # type: typing.List[Annotation]
-        self.annotation_by_name = {}    # type: typing.Dict[str, Annotation]
-        self._imported_namespaces = {}  # type: typing.Dict[ApiNamespace, _ImportReason]
+        self.route_by_name = {}            # type: typing.Dict[typing.Text, ApiRoute]
+        self.routes_by_name = {}           # type: typing.Dict[typing.Text, ApiRoutesByVersion]
+        self.data_types = []               # type: typing.List[UserDefined]
+        self.data_type_by_name = {}        # type: typing.Dict[str, UserDefined]
+        self.aliases = []                  # type: typing.List[Alias]
+        self.alias_by_name = {}            # type: typing.Dict[str, Alias]
+        self.annotations = []              # type: typing.List[Annotation]
+        self.annotation_by_name = {}       # type: typing.Dict[str, Annotation]
+        self.annotation_types = []         # type: typing.List[AnnotationType]
+        self.annotation_type_by_name = {}  # type: typing.Dict[str, AnnotationType]
+        self._imported_namespaces = {}     # type: typing.Dict[ApiNamespace, _ImportReason]
 
     def add_doc(self, docstring):
         # type: (six.text_type) -> None
@@ -155,6 +158,11 @@ class ApiNamespace(object):
         # type: (Annotation) -> None
         self.annotations.append(annotation)
         self.annotation_by_name[annotation.name] = annotation
+
+    def add_annotation_type(self, annotation_type):
+        # type: (AnnotationType) -> None
+        self.annotation_types.append(annotation_type)
+        self.annotation_type_by_name[annotation_type.name] = annotation_type
 
     def add_imported_namespace(self,
                                namespace,

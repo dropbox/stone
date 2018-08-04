@@ -4287,25 +4287,51 @@ class TestStone(unittest.TestCase):
         self.assertEqual(cm.exception.path, 'ns1.stone')
 
     def test_annotations(self):
-        # Test non-existant annotation
+        # Test non-existant annotation type
         text = textwrap.dedent("""\
             namespace test
 
-            annotation NonExistant = NonExistant()
+            annotation Broken = NonExistantType()
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Symbol 'NonExistantType' is undefined",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test annotation that refers to something of the wrong type
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct ItsAStruct
+                f String
+
+            annotation NonExistant = ItsAStruct()
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "'ItsAStruct' is not an annotation type",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test non-existant annotation
+        text = textwrap.dedent("""\
+            namespace test
 
             struct S
 
                 f String
                     @NonExistant
-                    "Test field with two non-existant tag."
-
+                    "Test field with a non-existant tag."
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual(
-            "Unknown Annotation type 'NonExistant'.",
+            "Symbol 'NonExistant' is undefined.",
             cm.exception.msg)
-        self.assertEqual(cm.exception.lineno, 3)
+        self.assertEqual(cm.exception.lineno, 6)
 
         # Test omission tag
         text = textwrap.dedent("""\
@@ -4601,7 +4627,7 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertIn(
-            "Aliases only support 'Redacted', not",
+            "Aliases only support 'Redacted' and custom annotations, not",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 5)
 
@@ -4727,6 +4753,78 @@ class TestStone(unittest.TestCase):
             "Redactors can't be applied to user-defined or void types.",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
+
+    def test_custom_annotations(self):
+        # Test annotation type with non-primitive parameter
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                f String
+
+            custom_annotation_type AT
+                s S
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Parameters of annotation types must be primitive or Nullable",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
+
+        # Test annotation type with an annotation applied to a parameter
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Deprecated = Deprecated()
+
+            custom_annotation_type AT
+                s String
+                    @Deprecated
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Annotations cannot be applied to parameters of annotation types",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test custom annotation type, instance, and application
+        text = textwrap.dedent("""\
+            namespace test
+
+            custom_annotation_type Important
+                importance String = "very"
+
+            annotation VeryImportant = Important()
+            annotation SortaImportant = Important(importance="sorta")
+
+            alias TestAlias = String
+                @VeryImportant
+
+            struct TestStruct
+                f String
+                    @SortaImportant
+                g List(TestAlias)
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        annotation_type = api.namespaces['test'].annotation_type_by_name['Important']
+        self.assertEqual(len(annotation_type.params), 1)
+        self.assertEqual(annotation_type.params[0].name, 'importance')
+        self.assertTrue(annotation_type.params[0].has_default)
+        self.assertEqual(annotation_type.params[0].default, 'very')
+
+        annotation = api.namespaces['test'].annotation_by_name['SortaImportant']
+        self.assertTrue(annotation.annotation_type is annotation_type)
+
+        alias = api.namespaces['test'].alias_by_name['TestAlias']
+        self.assertTrue(alias.custom_annotations[0].annotation_type is annotation_type)
+
+        struct = api.namespaces['test'].data_type_by_name['TestStruct']
+        field_annotation = struct.fields[0].custom_annotations[0]
+        self.assertTrue(field_annotation.annotation_type is annotation_type)
+        self.assertEqual(field_annotation.kwargs['importance'], 'sorta')
 
 
 if __name__ == '__main__':

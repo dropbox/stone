@@ -165,6 +165,7 @@ class Lexer(object):
     KEYWORDS = [
         'alias',
         'annotation',
+        'custom_annotation_type',
         'attrs',
         'by',
         'deprecated',
@@ -183,6 +184,7 @@ class Lexer(object):
 
     RESERVED = {
         'annotation': 'ANNOTATION',
+        'custom_annotation_type': 'ANNOTATION_TYPE',
         'attrs': 'ATTRS',
         'deprecated': 'DEPRECATED',
         'by': 'BY',

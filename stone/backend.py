@@ -182,6 +182,13 @@ class Backend(object):
     def clear_output_buffer(self):
         self.output = []
 
+    def indent_step(self):
+        # type: () -> int
+        """
+        Returns the size of a single indentation step.
+        """
+        return 1 if self.tabs_for_indents else 4
+
     @contextmanager
     def indent(self, dent=None):
         # type: (typing.Optional[int]) -> typing.Iterator[None]
@@ -193,10 +200,7 @@ class Backend(object):
         """
         assert dent is None or dent >= 0, 'dent must be >= 0.'
         if dent is None:
-            if self.tabs_for_indents:
-                dent = 1
-            else:
-                dent = 4
+            dent = self.indent_step()
         self.cur_indent += dent
         yield
         self.cur_indent -= dent
