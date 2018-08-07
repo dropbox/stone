@@ -1297,7 +1297,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     if route.version == 1:
                         route_path = route.name
                     else:
-                        '{}_v{}'.format(route.name, route.version)
+                        route_path = '{}_v{}'.format(route.name, route.version)
 
                     if route.deprecated:
                         deprecated = '@{}'.format('YES')
