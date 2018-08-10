@@ -158,7 +158,7 @@ change, we suggest the following verbose approach:
   * The Stone language syntax supports specifying a version number for a
     route. You can attach the version number to the end of the route name
     separated by a `:`. For example, to introduce version 2 for
-    ``/get_account``, change it to ``/get_account:2``.
+    ``/get_account``, use the annotation ``/get_account:2``.
 
 * Copy the definition of any data types that are changing in a backwards
   incompatible way. For example, if the response data type is undergoing an
