@@ -740,8 +740,10 @@ Annotations
 ======
 
 Annotations are special decorator tags that can be applied to fields in a
-Stone spec. Each annotation corresponds to an action that Stone will perform
-on the field. Annotations can be stacked on top of one another in most cases.
+Stone spec. Built-in annotations correspond to actions that Stone will perform
+on the field, and custom annotations can be created to mark fields that require
+special processing in client code. Annotations can be stacked on top of one
+another in most cases.
 
 Currently, Stone supports the following annotations:
 
@@ -896,6 +898,49 @@ compile-time warnings if the field is referenced.
         example default
             name = "Stephen Cobbe"
 
+
+Custom annotations
+----------
+
+**NB:** only the `python_types` backend supports custom annotations at this
+time.
+
+A custom annotation type, possibly taking some arguments, can be defined
+similarly to structs, and then applied the same way built-in annotations are.
+Note that the parameters can only be primitives (possibly nullable).
+
+::
+
+    namespace custom_annotation_demo
+
+    custom_annotation_type Noteworthy
+        "Describes a field with noteworthy information"
+        importance String = "low"
+
+    annotation KindaNoteworthy = Noteworthy()
+    annotation ReallyNoteworthy = Noteworthy(importance="high")
+
+    alias ImportantString = String
+        @ReallyNoteworthy
+
+    struct Secrets
+        small_secret String
+            @KindaNoteworthy
+        lots_of_big_ones List(ImportantString)
+
+
+In client code, you can access every field of a struct marked with a certain
+custom annotation by calling ``._process_custom_annotations(custom_annotation,
+f)`` on the struct. ``f`` will then be called with two parameters---an instance
+of the annotation type with all the parameters populated and the value of the
+field. The value of the field will then be replaced with the return value of
+``f``.
+
+Note that this will also affect annotated fields that are located arbitrarily
+deep in the struct. In the example above, calling
+``secret._process_custom_annotations(Noteworthy, f)`` will result in ``f`` being
+called once with ``Noteworthy("low")`` and ``small_secret``, as well as once for
+every element of ``lots_of_big_ones`` with ``Noteworthy("high")``.
 
 .. _doc:
 
