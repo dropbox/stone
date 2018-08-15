@@ -299,6 +299,7 @@ class TestStone(unittest.TestCase):
         self.assertEqual(out[1].fields[3].default, -4.2)
         self.assertEqual(out[1].fields[4].default, -5e-3)
         self.assertEqual(out[1].fields[5].default, -5.1e-3)
+        self.assertEqual(out[1].fields[6].default, 1)
 
         # float type should always have default value in float
         api = specs_to_ir([('test.stone', text)])
