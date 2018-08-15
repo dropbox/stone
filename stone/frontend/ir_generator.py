@@ -410,6 +410,8 @@ class IRGenerator(object):
             return 'alias'
         elif isinstance(item, AstNamespace):
             return 'namespace'
+        elif isinstance(item, AstAnnotationTypeDef):
+            return 'annotation type'
         else:
             raise AssertionError('unhandled type %r' % item)
 
