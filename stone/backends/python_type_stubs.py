@@ -159,22 +159,41 @@ class PythonTypeStubsBackend(CodeBackend):
         """Defines a Python class that represents an annotation type in Stone."""
         self.emit('class {}(object):'.format(class_name_for_annotation_type(annotation_type, ns)))
         with self.indent():
-            args = []
-            for param in annotation_type.params:
-                param_name = fmt_var(param.name, True)
-                param_type = self.map_stone_type_to_pep484_type(ns, param.data_type)
-                args.append(
-                    "{param_name}: {param_type} = ...".format(
-                        param_name=param_name,
-                        param_type=param_type,
-                    )
-                )
-
-            self.generate_multiline_list(
-                before='def __init__',
-                items=["self"] + args,
-                after=' -> None: ...')
+            self._generate_annotation_type_class_init(ns, annotation_type)
+            self._generate_annotation_type_class_properties(ns, annotation_type)
         self.emit()
+
+    def _generate_annotation_type_class_init(self, ns, annotation_type):
+        # type: (ApiNamespace, AnnotationType) -> None
+        args = []
+        for param in annotation_type.params:
+            param_name = fmt_var(param.name, True)
+            param_type = self.map_stone_type_to_pep484_type(ns, param.data_type)
+            args.append(
+                "{param_name}: {param_type} = ...".format(
+                    param_name=param_name,
+                    param_type=param_type,
+                )
+            )
+
+        self.generate_multiline_list(
+            before='def __init__',
+            items=["self"] + args,
+            after=' -> None: ...')
+        self.emit()
+
+    def _generate_annotation_type_class_properties(self, ns, annotation_type):
+        # type: (ApiNamespace, Struct) -> None
+        for param in annotation_type.params:
+            prop_name = fmt_var(param.name, True)
+            param_type = self.map_stone_type_to_pep484_type(ns, param.data_type)
+
+            self.emit('@property')
+            self.emit('def {prop_name}(self) -> {param_type}: ...'.format(
+                prop_name=prop_name,
+                param_type=param_type,
+            ))
+            self.emit()
 
     def _generate_struct_class(self, ns, data_type):
         # type: (ApiNamespace, Struct) -> None

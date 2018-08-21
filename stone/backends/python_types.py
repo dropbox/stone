@@ -267,17 +267,53 @@ class PythonTypesBackend(CodeBackend):
                 self.emit('"""')
             self.emit()
 
-            args = ['self']
-            for param in annotation_type.params:
-                param_name = fmt_var(param.name, True)
-                default_value = (self._generate_python_value(ns, param.default)
-                                 if param.has_default else 'None')
-                args.append('{}={}'.format(param_name, default_value))
-            self.generate_multiline_list(args, before='def __init__', after=':')
+            self._generate_annotation_type_class_slots(annotation_type)
+            self._generate_annotation_type_class_init(ns, annotation_type)
+            self._generate_annotation_type_class_properties(ns, annotation_type)
+            self.emit()
 
+    def _generate_annotation_type_class_slots(self, annotation_type):
+        # type: (ApiNamespace, AnnotationType) -> None
+        with self.block('__slots__ =', delim=('[', ']')):
+            for param in annotation_type.params:
+                param_name = fmt_var(param.name)
+                self.emit("'_{}',".format(param_name))
+        self.emit()
+
+    def _generate_annotation_type_class_init(self, ns, annotation_type):
+        # type: (ApiNamespace, AnnotationType) -> None
+        args = ['self']
+        for param in annotation_type.params:
+            param_name = fmt_var(param.name, True)
+            default_value = (self._generate_python_value(ns, param.default)
+                             if param.has_default else 'None')
+            args.append('{}={}'.format(param_name, default_value))
+        self.generate_multiline_list(args, before='def __init__', after=':')
+
+        with self.indent():
+            for param in annotation_type.params:
+                self.emit('self._{0} = {0}'.format(fmt_var(param.name, True)))
+        self.emit()
+
+    def _generate_annotation_type_class_properties(self, ns, annotation_type):
+        # type: (ApiNamespace, AnnotationType) -> None
+        for param in annotation_type.params:
+            param_name = fmt_var(param.name, True)
+            prop_name = fmt_func(param.name, True)
+            self.emit('@property')
+            self.emit('def {}(self):'.format(prop_name))
+            self.emit('"""')
+            if param.doc:
+                self.emit_wrapped_text(
+                    self.process_doc(param.doc, self._docf))
+                # Sphinx wants an extra line between the text and the
+                # rtype declaration.
+                self.emit()
+            self.emit(':rtype: {}'.format(
+                self._python_type_mapping(ns, param.data_type)))
+            self.emit('"""')
             with self.indent():
-                for param in annotation_type.params:
-                    self.emit('self.{0} = {0}'.format(fmt_var(param.name, True)))
+                self.emit('return self._{}'.format(param_name))
             self.emit()
 
     #
