@@ -647,27 +647,8 @@ class IRGenerator(object):
         for namespace in self.api.namespaces.values():
             env = self._get_or_create_env(namespace.name)
 
-            for alias in namespace.aliases:
-                data_type = self._resolve_type(env, alias._ast_node.type_ref)
-                alias.set_attributes(alias._ast_node.doc, data_type)
-                annotations = [self._resolve_annotation_type(env, annotation)
-                               for annotation in alias._ast_node.annotations]
-                alias.set_annotations(annotations)
-
-            for data_type in namespace.data_types:
-                if not data_type._is_forward_ref:
-                    continue
-
-                self._resolution_in_progress.add(data_type)
-                if isinstance(data_type, Struct):
-                    self._populate_struct_type_attributes(env, data_type)
-                elif isinstance(data_type, Union):
-                    self._populate_union_type_attributes(env, data_type)
-                else:
-                    raise AssertionError('Unhandled type: %r' %
-                                         type(data_type))
-                self._resolution_in_progress.remove(data_type)
-
+            # do annotations before everything else, since populating aliases
+            # and datatypes involves setting annotations
             for annotation in namespace.annotations:
                 if isinstance(annotation, CustomAnnotation):
                     loc = annotation._ast_node.lineno, annotation._ast_node.path
@@ -697,6 +678,27 @@ class IRGenerator(object):
                         )
 
                     annotation.set_attributes(annotation_type)
+
+            for alias in namespace.aliases:
+                data_type = self._resolve_type(env, alias._ast_node.type_ref)
+                alias.set_attributes(alias._ast_node.doc, data_type)
+                annotations = [self._resolve_annotation_type(env, annotation)
+                               for annotation in alias._ast_node.annotations]
+                alias.set_annotations(annotations)
+
+            for data_type in namespace.data_types:
+                if not data_type._is_forward_ref:
+                    continue
+
+                self._resolution_in_progress.add(data_type)
+                if isinstance(data_type, Struct):
+                    self._populate_struct_type_attributes(env, data_type)
+                elif isinstance(data_type, Union):
+                    self._populate_union_type_attributes(env, data_type)
+                else:
+                    raise AssertionError('Unhandled type: %r' %
+                                         type(data_type))
+                self._resolution_in_progress.remove(data_type)
 
         assert len(self._resolution_in_progress) == 0
 
