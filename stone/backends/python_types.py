@@ -302,17 +302,17 @@ class PythonTypesBackend(CodeBackend):
             prop_name = fmt_func(param.name, True)
             self.emit('@property')
             self.emit('def {}(self):'.format(prop_name))
-            self.emit('"""')
-            if param.doc:
-                self.emit_wrapped_text(
-                    self.process_doc(param.doc, self._docf))
-                # Sphinx wants an extra line between the text and the
-                # rtype declaration.
-                self.emit()
-            self.emit(':rtype: {}'.format(
-                self._python_type_mapping(ns, param.data_type)))
-            self.emit('"""')
             with self.indent():
+                self.emit('"""')
+                if param.doc:
+                    self.emit_wrapped_text(
+                        self.process_doc(param.doc, self._docf))
+                    # Sphinx wants an extra line between the text and the
+                    # rtype declaration.
+                    self.emit()
+                self.emit(':rtype: {}'.format(
+                    self._python_type_mapping(ns, param.data_type)))
+                self.emit('"""')
                 self.emit('return self._{}'.format(param_name))
             self.emit()
 
