@@ -1722,10 +1722,10 @@ class CustomAnnotation(Annotation):
     """
     Used when a field is annotated with a custom annotation type.
     """
-    def __init__(self, name, namespace, ast_node, annotation_type,
+    def __init__(self, name, namespace, ast_node, annotation_type_name,
                  annotation_type_ns, args, kwargs):
         super(CustomAnnotation, self).__init__(name, namespace, ast_node)
-        self.annotation_type_name = annotation_type
+        self.annotation_type_name = annotation_type_name
         self.annotation_type_ns = annotation_type_ns
         self.args = args
         self.kwargs = kwargs
