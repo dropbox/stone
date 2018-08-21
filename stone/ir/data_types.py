@@ -1625,7 +1625,7 @@ class AnnotationType(object):
         self.doc = doc_unwrap(doc)
         self.params = params
 
-        self._params_by_name = {}  # type: Dict[str, AnnotationTypeParam]
+        self._params_by_name = {}  # type: typing.Dict[str, AnnotationTypeParam]
         for param in self.params:
             if param.name in self._params_by_name:
                 orig_lineno = self._params_by_name[param.name]._ast_node.lineno
