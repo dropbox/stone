@@ -916,6 +916,8 @@ Note that the parameters can only be primitives (possibly nullable).
     custom_annotation_type Noteworthy
         "Describes a field with noteworthy information"
         importance String = "low"
+            "The level of importance for this field (one of 'low', 'med',
+            'high')."
 
     annotation KindaNoteworthy = Noteworthy()
     annotation ReallyNoteworthy = Noteworthy(importance="high")
@@ -931,16 +933,18 @@ Note that the parameters can only be primitives (possibly nullable).
 
 In client code, you can access every field of a struct marked with a certain
 custom annotation by calling ``._process_custom_annotations(custom_annotation,
-f)`` on the struct. ``f`` will then be called with two parameters---an instance
-of the annotation type with all the parameters populated and the value of the
-field. The value of the field will then be replaced with the return value of
-``f``.
+processor)`` on the struct. ``processor`` will then be called with two
+parameters---an instance of the annotation type with all the parameters
+populated and the value of the field. The value of the field will then be
+replaced with the return value of ``f``.
 
 Note that this will also affect annotated fields that are located arbitrarily
-deep in the struct. In the example above, calling
-``secret._process_custom_annotations(Noteworthy, f)`` will result in ``f`` being
-called once with ``Noteworthy("low")`` and ``small_secret``, as well as once for
-every element of ``lots_of_big_ones`` with ``Noteworthy("high")``.
+deep in the struct. In the example above, if ``secret`` is a struct of type
+``Secrets``, then calling ``secret._process_custom_annotations(Noteworthy, f)``
+will result in ``f`` being called once as
+``f(Noteworthy("low"), secret.small_secret)`` and once as
+``f(Noteworthy("high"), x)`` for each element ``x`` of
+``secret.lots_of_big_ones``.
 
 .. _doc:
 
