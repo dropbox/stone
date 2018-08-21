@@ -93,6 +93,7 @@ class _ImportReason(object):
         self.alias = False
         self.data_type = False
         self.annotation = False
+        self.annotation_type = False
 
 
 class ApiNamespace(object):
@@ -168,7 +169,8 @@ class ApiNamespace(object):
                                namespace,
                                imported_alias=False,
                                imported_data_type=False,
-                               imported_annotation=False):
+                               imported_annotation=False,
+                               imported_annotation_type=False):
         # type: (ApiNamespace, bool, bool, bool) -> None
         """
         Keeps track of namespaces that this namespace imports.
@@ -181,6 +183,9 @@ class ApiNamespace(object):
                 data type in the imported namespace.
             imported_annotation (bool): Set if this namespace references a
                 annotation in the imported namespace.
+            imported_annotation_type (bool): Set if this namespace references an
+                annotation in the imported namespace, possibly indirectly (by
+                referencing an annotation elsewhere that has this type).
         """
         assert self.name != namespace.name, \
             'Namespace cannot import itself.'
@@ -191,6 +196,8 @@ class ApiNamespace(object):
             reason.data_type = True
         if imported_annotation:
             reason.annotation = True
+        if imported_annotation_type:
+            reason.annotation_type = True
 
     def linearize_data_types(self):
         # type: () -> typing.List[UserDefined]
@@ -275,7 +282,8 @@ class ApiNamespace(object):
                 data_types.add(data_user_type)
         return data_types
 
-    def get_imported_namespaces(self, must_have_imported_data_type=False):
+    def get_imported_namespaces(self, must_have_imported_data_type=False,
+                                consider_annotations=False):
         # type: (bool) -> typing.List[ApiNamespace]
         """
         Returns a list of Namespace objects. A namespace is a member of this
@@ -283,8 +291,11 @@ class ApiNamespace(object):
         referenced from it. Namespaces are in ASCII order by name.
 
         Args:
-            must_have_imported_data_type (bool): If true, return does not
-                include namespaces that were imported only for aliases.
+            must_have_imported_data_type (bool): If true, result does not
+                include namespaces that were not imported for data types.
+            consider_annotations (bool): If false, result does not include
+                namespaces that were only imported for annotations or
+                annotation types.
 
         Returns:
             List[Namespace]: A list of imported namespaces.
@@ -293,6 +304,9 @@ class ApiNamespace(object):
         for imported_namespace, reason in self._imported_namespaces.items():
             if must_have_imported_data_type and not reason.data_type:
                 continue
+            if (not consider_annotations) and not (reason.data_type or reason.alias):
+                continue
+
             imported_namespaces.append(imported_namespace)
         imported_namespaces.sort(key=lambda n: n.name)
         return imported_namespaces

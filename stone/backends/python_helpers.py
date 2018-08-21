@@ -124,7 +124,7 @@ def generate_imports_for_referenced_namespaces(
         the except: clause.
     """
 
-    imported_namespaces = namespace.get_imported_namespaces()
+    imported_namespaces = namespace.get_imported_namespaces(consider_annotations=True)
     if not imported_namespaces:
         return
 

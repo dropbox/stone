@@ -488,7 +488,7 @@ class IRGenerator(object):
             if item.annotation_type_ns is not None:
                 namespace.add_imported_namespace(
                     self.api.ensure_namespace(item.annotation_type_ns),
-                    imported_data_type=True)
+                    imported_annotation_type=True)
 
             annotation = CustomAnnotation(item.name, namespace, item,
                 item.annotation_type, item.annotation_type_ns, item.args,

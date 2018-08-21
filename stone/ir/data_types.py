@@ -777,10 +777,17 @@ class UserDefined(Composite):
         # Import namespaces containing any custom annotations
         for field in self.fields:
             for annotation in field.custom_annotations:
+                # first, check if we need to import the annotation itself
                 if annotation.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
                         annotation.namespace,
-                        imported_data_type=True)
+                        imported_annotation=True)
+                # then also check the annotation *type*
+                if annotation.annotation_type.namespace.name != self.namespace.name:
+                    self.namespace.add_imported_namespace(
+                        annotation.annotation_type.namespace,
+                        imported_annotation_type=True)
+
 
         # Indicate that the attributes of the type have been populated.
         self._is_forward_ref = False
@@ -1789,10 +1796,16 @@ class Alias(Composite):
                                       str(self.redactor), self._ast_node.lineno)
                 self.redactor = annotation
             elif isinstance(annotation, CustomAnnotation):
+                # first, check if we need to import the annotation itself
                 if annotation.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
                         annotation.namespace,
-                        imported_data_type=True)
+                        imported_annotation=True)
+                # then also check the annotation *type*
+                if annotation.annotation_type.namespace.name != self.namespace.name:
+                    self.namespace.add_imported_namespace(
+                        annotation.annotation_type.namespace,
+                        imported_annotation_type=True)
 
                 self.custom_annotations.append(annotation)
             else:
