@@ -261,7 +261,7 @@ class PythonTypesBackend(CodeBackend):
                     if not param.doc:
                         continue
                     self.emit_wrapped_text(':ivar {}: {}'.format(
-                        fmt_var(param.name),
+                        fmt_var(param.name, True),
                         self.process_doc(param.doc, self._docf)),
                         subsequent_prefix='    ')
                 self.emit('"""')
@@ -276,7 +276,7 @@ class PythonTypesBackend(CodeBackend):
         # type: (ApiNamespace, AnnotationType) -> None
         with self.block('__slots__ =', delim=('[', ']')):
             for param in annotation_type.params:
-                param_name = fmt_var(param.name)
+                param_name = fmt_var(param.name, True)
                 self.emit("'_{}',".format(param_name))
         self.emit()
 
@@ -719,7 +719,7 @@ class PythonTypesBackend(CodeBackend):
                 self.emit()
 
             for field in data_type.fields:
-                field_name = fmt_func(field.name, check_reserved=True)
+                field_name = fmt_var(field.name, check_reserved=True)
                 # first, recurse into any submembers of the field that have annotations
                 for annotation_type, processor in self._generate_custom_annotation_processors(
                         ns, field.data_type):
