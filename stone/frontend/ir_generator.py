@@ -522,15 +522,17 @@ class IRGenerator(object):
 
             if isinstance(dt, Void):
                 raise InvalidSpec(
-                    'Parameters of annotation types cannot be Void',
+                    'Parameter {} cannot be Void.'.format(quote(param.name)),
                     param.lineno, param.path)
             if nullable_dt and param.has_default:
                 raise InvalidSpec(
-                    'Nullable parameters cannot have default values',
+                    'Parameter {} cannot be a nullable type and have '
+                    'a default specified.'.format(quote(param.name)),
                     param.lineno, param.path)
             if not is_primitive_type(dt):
                 raise InvalidSpec(
-                    'Parameters of annotation types must be primitive or Nullable',
+                    'Parameter {} must have a primitive type (possibly '
+                    'nullable).'.format(quote(param.name)),
                     param.lineno, param.path)
 
             params.append(AnnotationTypeParam(param.name, param_type, param.doc,
@@ -667,7 +669,7 @@ class IRGenerator(object):
 
                     if annotation.annotation_type_name not in annotation_type_env:
                         raise InvalidSpec(
-                            'Symbol %s is undefined' % quote(annotation.annotation_type_name), *loc)
+                            'Annotation type %s does not exist' % quote(annotation.annotation_type_name), *loc)
 
                     annotation_type = annotation_type_env[annotation.annotation_type_name]
 
@@ -1142,7 +1144,7 @@ class IRGenerator(object):
 
         if annotation_ref.annotation not in env:
             raise InvalidSpec(
-                'Symbol %s is undefined.' % quote(annotation_ref.annotation), *loc)
+                'Annotation %s does not exist.' % quote(annotation_ref.annotation), *loc)
 
         return env[annotation_ref.annotation]
 

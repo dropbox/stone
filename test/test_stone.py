@@ -4296,7 +4296,7 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual(
-            "Symbol 'NonExistantType' is undefined",
+            "Annotation type 'NonExistantType' does not exist",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
@@ -4329,7 +4329,7 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual(
-            "Symbol 'NonExistant' is undefined.",
+            "Annotation 'NonExistant' does not exist.",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
@@ -4768,7 +4768,7 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual(
-            "Parameters of annotation types must be primitive or Nullable",
+            "Parameter 's' must have a primitive type (possibly nullable).",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 7)
 
@@ -4788,6 +4788,20 @@ class TestStone(unittest.TestCase):
             "Annotations cannot be applied to parameters of annotation types",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
+
+        # Test redefining built-in annotation types
+        text = textwrap.dedent("""\
+            namespace test
+
+            custom_annotation_type Deprecated
+                s String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Cannot redefine built-in annotation type 'Deprecated'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
 
         # Test custom annotation type, instance, and application
         text = textwrap.dedent("""\
@@ -4814,17 +4828,17 @@ class TestStone(unittest.TestCase):
         self.assertEqual(annotation_type.params[0].name, 'importance')
         self.assertTrue(annotation_type.params[0].has_default)
         self.assertEqual(annotation_type.params[0].default, 'very')
+        self.assertTrue(isinstance(annotation_type.params[0].data_type, String))
 
         annotation = api.namespaces['test'].annotation_by_name['SortaImportant']
         self.assertTrue(annotation.annotation_type is annotation_type)
+        self.assertEqual(annotation.kwargs['importance'], 'sorta')
 
         alias = api.namespaces['test'].alias_by_name['TestAlias']
         self.assertTrue(alias.custom_annotations[0].annotation_type is annotation_type)
 
         struct = api.namespaces['test'].data_type_by_name['TestStruct']
-        field_annotation = struct.fields[0].custom_annotations[0]
-        self.assertTrue(field_annotation.annotation_type is annotation_type)
-        self.assertEqual(field_annotation.kwargs['importance'], 'sorta')
+        self.assertEqual(struct.fields[0].custom_annotations[0], annotation)
 
 
 if __name__ == '__main__':
