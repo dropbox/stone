@@ -173,6 +173,19 @@ validators_import_with_type_ignore = _validators_import_template.format(
     type_ignore_comment=TYPE_IGNORE_COMMENT
 )
 
+def prefix_with_ns_if_necessary(name, name_ns, source_ns):
+    # type: (str, ApiNamespace, ApiNamespace) -> str
+    """
+    Returns a name that can be used to reference `name` in namespace `name_ns`
+    from `source_ns`.
+
+    If `source_ns` and `name_ns` are the same, that's just `name`. Otherwise
+    it's `name_ns`.`name`.
+    """
+    if source_ns == name_ns:
+        return name
+    return '{}.{}'.format(fmt_namespace(name_ns.name), name)
+
 def class_name_for_data_type(data_type, ns=None):
     """
     Returns the name of the Python class that maps to a user-defined type.
@@ -185,9 +198,8 @@ def class_name_for_data_type(data_type, ns=None):
     assert is_user_defined_type(data_type) or is_alias(data_type), \
         'Expected composite type, got %r' % type(data_type)
     name = fmt_class(data_type.name)
-    if ns and data_type.namespace != ns:
-        # If from an imported namespace, add a namespace prefix.
-        name = '{}.{}'.format(fmt_namespace(data_type.namespace.name), name)
+    if ns:
+        return prefix_with_ns_if_necessary(name, data_type.namespace, ns)
     return name
 
 def class_name_for_annotation_type(annotation_type, ns=None):
@@ -196,7 +208,6 @@ def class_name_for_annotation_type(annotation_type, ns=None):
     """
     assert isinstance(annotation_type, AnnotationType)
     name = fmt_class(annotation_type.name)
-    if ns and annotation_type.namespace != ns:
-        # If from an imported namespace, add a namespace prefix.
-        name = '{}.{}'.format(fmt_namespace(annotation_type.namespace.name), name)
+    if ns:
+        return prefix_with_ns_if_necessary(name, annotation_type.namespace, ns)
     return name
