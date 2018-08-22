@@ -1756,6 +1756,13 @@ class CustomAnnotation(Annotation):
                     (param.name, self.annotation_type.name), self._ast_node.lineno,
                     self._ast_node.path)
 
+        acceptable_param_names = set((param.name for param in self.annotation_type.params))
+        for param_name in self.kwargs:
+            if param_name not in acceptable_param_names:
+                raise InvalidSpec('Unknown parameter %s passed to annotation type %s' %
+                    (param_name, self.annotation_type.name), self._ast_node.lineno,
+                    self._ast_node.path)
+
 
 class Alias(Composite):
     """
