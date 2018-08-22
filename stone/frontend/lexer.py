@@ -165,7 +165,7 @@ class Lexer(object):
     KEYWORDS = [
         'alias',
         'annotation',
-        'custom_annotation_type',
+        'annotation_type',
         'attrs',
         'by',
         'deprecated',
@@ -184,7 +184,7 @@ class Lexer(object):
 
     RESERVED = {
         'annotation': 'ANNOTATION',
-        'custom_annotation_type': 'ANNOTATION_TYPE',
+        'annotation_type': 'ANNOTATION_TYPE',
         'attrs': 'ATTRS',
         'deprecated': 'DEPRECATED',
         'by': 'BY',
@@ -223,6 +223,17 @@ class Lexer(object):
     def t_ANY_ID(self, token):
         r'[a-zA-Z_][a-zA-Z0-9_-]*'
         if token.value in self.KEYWORDS:
+            if (token.value == 'annotation_type') and self.cur_indent:
+                # annotation_type was added as a reserved keyword relatively
+                # late, when there was already an identifer with the same name
+                # in an internal spec. because annotation_type-the-keyword can
+                # only be used at the beginning of a non-indented line, this
+                # check lets both the keyword and the identifer coexist and
+                # maintains backward compatibility.
+                # TODO: this is kind of a hack, and we should get rid of it if
+                # the internal spec no longer exists or the lexer gets better
+                # at telling keywords from identifiers in general.
+                return token
             token.type = self.RESERVED.get(token.value, 'KEYWORD')
             return token
         else:

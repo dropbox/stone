@@ -4762,7 +4762,7 @@ class TestStone(unittest.TestCase):
             struct S
                 f String
 
-            custom_annotation_type AT
+            annotation_type AT
                 s S
             """)
         with self.assertRaises(InvalidSpec) as cm:
@@ -4778,7 +4778,7 @@ class TestStone(unittest.TestCase):
 
             annotation Deprecated = Deprecated()
 
-            custom_annotation_type AT
+            annotation_type AT
                 s String
                     @Deprecated
             """)
@@ -4793,7 +4793,7 @@ class TestStone(unittest.TestCase):
         text = textwrap.dedent("""\
             namespace test
 
-            custom_annotation_type Deprecated
+            annotation_type Deprecated
                 s String
             """)
         with self.assertRaises(InvalidSpec) as cm:
@@ -4807,7 +4807,7 @@ class TestStone(unittest.TestCase):
         text = textwrap.dedent("""\
             namespace test
 
-            custom_annotation_type Important
+            annotation_type Important
                 importance String = "very"
 
             annotation VeryImportant = Important()

@@ -913,7 +913,7 @@ Note that the parameters can only be primitives (possibly nullable).
 
     namespace custom_annotation_demo
 
-    custom_annotation_type Noteworthy
+    annotation_type Noteworthy
         "Describes a field with noteworthy information"
         importance String = "low"
             "The level of importance for this field (one of 'low', 'med',
