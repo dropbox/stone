@@ -180,7 +180,7 @@ class PythonClientBackend(CodeBackend):
         for route in namespace.routes:
             route_auth_modes = [mode.strip().lower() for mode in route.attrs.get('auth').split(',')]
             for base_auth_type in self.supported_auth_types:
-                if base_auth_type in route_auth_modes or (base_auth_type == 'user' and 'noauth' in route_auth_modes):
+                if base_auth_type in route_auth_modes:
                     self._generate_route_helper(namespace, route)
                     if route.attrs.get('style') == 'download':
                         self._generate_route_helper(namespace, route, True)
