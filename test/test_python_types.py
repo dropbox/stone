@@ -96,7 +96,6 @@ class TestGeneratedPythonTypes(unittest.TestCase):
     def test_custom_annotations(self):
         # type: () -> None
 
-
         route1 = ApiRoute('alpha/get_metadata', 1, None)
         route1.set_attributes(None, None, Void(), Void(), Void(), {})
         route2 = ApiRoute('alpha/get_metadata', 2, None)
@@ -251,7 +250,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
             MyStruct_validator = bv.Struct(MyStruct)
 
-        ''')
+        ''') # noqa
 
         self.assertEqual(result, expected)
 

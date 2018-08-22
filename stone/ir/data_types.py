@@ -788,7 +788,6 @@ class UserDefined(Composite):
                         annotation.annotation_type.namespace,
                         imported_annotation_type=True)
 
-
         # Indicate that the attributes of the type have been populated.
         self._is_forward_ref = False
 

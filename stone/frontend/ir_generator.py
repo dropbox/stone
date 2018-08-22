@@ -669,7 +669,8 @@ class IRGenerator(object):
 
                     if annotation.annotation_type_name not in annotation_type_env:
                         raise InvalidSpec(
-                            'Annotation type %s does not exist' % quote(annotation.annotation_type_name), *loc)
+                            'Annotation type %s does not exist' %
+                            quote(annotation.annotation_type_name), *loc)
 
                     annotation_type = annotation_type_env[annotation.annotation_type_name]
 
