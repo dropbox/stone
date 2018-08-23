@@ -7,7 +7,8 @@ than being added to a project.
 """
 
 from __future__ import absolute_import, unicode_literals
-from functools import partial as partially_apply
+
+import functools
 
 try:
     from . import stone_validators as bv
@@ -124,6 +125,9 @@ class Route(object):
             self.attrs)
 
 # helper functions used when constructing custom annotation processors
+
+# put this here so that every other file doesn't need to import functools
+partially_apply = functools.partial
 
 def make_struct_annotation_processor(annotation_type, f):
     def g(struct):
