@@ -22,8 +22,8 @@ argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.ir import AnnotationType, ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
-    Struct,
-    Union,
+    get_custom_annotations_for_alias,
+    get_custom_annotations_recursive,
     is_alias,
     is_boolean_type,
     is_bytes_type,
@@ -40,6 +40,8 @@ from stone.ir import (
     is_void_type,
     RedactedBlot,
     RedactedHash,
+    Struct,
+    Union,
     unwrap,
     unwrap_aliases,
     unwrap_nullable,
@@ -695,7 +697,7 @@ class PythonTypesBackend(CodeBackend):
                        ))
 
         # annotations applied to this specific type (through aliases)
-        for annotation in get_custom_annotations_for_type(data_type):
+        for annotation in get_custom_annotations_for_alias(data_type):
             yield (annotation.annotation_type,
                    generate_func_call(
                        'bb.partially_apply',
@@ -1134,53 +1136,6 @@ class PythonTypesBackend(CodeBackend):
             self.emit("{}._redact = bv.HashRedactor({})".format(validator_name, regex))
         elif isinstance(redactor, RedactedBlot):
             self.emit("{}._redact = bv.BlotRedactor({})".format(validator_name, regex))
-
-def get_custom_annotations_for_type(data_type):
-    """
-    Given a Stone data type, returns all custom annotations applied to it.
-    """
-    # annotations can only be applied to Aliases, but they can be wrapped in
-    # Nullable. also, Aliases pointing to other Aliases don't automatically
-    # inherit their custom annotations, so we might have to traverse.
-    result = []
-    data_type, _ = unwrap_nullable(data_type)
-    while is_alias(data_type):
-        result.extend(data_type.custom_annotations)
-        data_type, _ = unwrap_nullable(data_type.data_type)
-    return result
-
-def get_custom_annotations_recursive(data_type):
-    """
-    Given a Stone data type, returns all custom annotations applied to any of
-    its memebers, as well as submembers, ..., to an arbitrary depth.
-    """
-    # because Stone structs can contain references to themselves (or otherwise
-    # be cyclical), we need ot keep track of the data types we've already seen
-    data_types_seen = set()
-
-    def recurse(data_type):
-        if data_type in data_types_seen:
-            return
-        data_types_seen.add(data_type)
-
-        dt, _, _ = unwrap(data_type)
-        if is_struct_type(dt) or is_union_type(dt):
-            for field in dt.fields:
-                for annotation in recurse(field.data_type):
-                    yield annotation
-                for annotation in field.custom_annotations:
-                    yield annotation
-        elif is_list_type(dt):
-            for annotation in recurse(dt.data_type):
-                yield annotation
-        elif is_map_type(dt):
-            for annotation in recurse(dt.value_data_type):
-                yield annotation
-
-        for annotation in get_custom_annotations_for_type(data_type):
-            yield annotation
-
-    return recurse(data_type)
 
 def generate_validator_constructor(ns, data_type):
     """
