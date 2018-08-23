@@ -7,6 +7,7 @@ than being added to a project.
 """
 
 from __future__ import absolute_import, unicode_literals
+from functools import partial as partially_apply
 
 try:
     from . import stone_validators as bv
@@ -121,11 +122,6 @@ class Route(object):
             self.result_type,
             self.error_type,
             self.attrs)
-
-def partially_apply(f, arg):
-    def g(*args, **kwargs):
-        return f(arg, *args, **kwargs)
-    return g
 
 # helper functions used when constructing custom annotation processors
 
