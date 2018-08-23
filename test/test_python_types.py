@@ -93,48 +93,6 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
         self.assertEqual(result, expected)
 
-    def test_custom_annotations(self):
-        # type: () -> None
-
-        route1 = ApiRoute('alpha/get_metadata', 1, None)
-        route1.set_attributes(None, None, Void(), Void(), Void(), {})
-        route2 = ApiRoute('alpha/get_metadata', 2, None)
-        route2.set_attributes(None, None, Void(), Int32(), Void(), {})
-        ns = ApiNamespace('files')
-        ns.add_route(route1)
-        ns.add_route(route2)
-
-        result = self._evaluate_namespace(ns)
-
-        expected = textwrap.dedent("""\
-            alpha_get_metadata = bb.Route(
-                'alpha/get_metadata',
-                1,
-                False,
-                bv.Void(),
-                bv.Void(),
-                bv.Void(),
-                {},
-            )
-            alpha_get_metadata_v2 = bb.Route(
-                'alpha/get_metadata',
-                2,
-                False,
-                bv.Void(),
-                bv.Int32(),
-                bv.Void(),
-                {},
-            )
-
-            ROUTES = {
-                'alpha/get_metadata': alpha_get_metadata,
-                'alpha/get_metadata:2': alpha_get_metadata_v2,
-            }
-
-        """)
-
-        self.assertEqual(result, expected)
-
     def test_route_with_version_number_name_conflict(self):
         # type: () -> None
 
