@@ -4,6 +4,7 @@ Backend for generating Python types that match the spec.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import itertools
 import os
 import re
 import shutil
@@ -654,11 +655,14 @@ class PythonTypesBackend(CodeBackend):
                     for k, v in annotation.kwargs.items())
         )
 
-    def _generate_custom_annotation_processors(self, ns, data_type):
+    def _generate_custom_annotation_processors(self, ns, data_type, extra_annotations=()):
         """
         Generates code that will run a custom processor function f on every
         field with a custom annotation, no matter how deep (recursively) it
         might be located in data_type (incl. in elements of lists or maps).
+        If extra_annotations is passed, it's assumed to be a list of custom
+        annotation applied directly onto data_type (e.g. because it's a field
+        in a struct).
         Yields pairs of (annotation_type, code) where code is code that
         evaluates to a function that should be executed with an instance of
         data_type as the only parameter, and whose return value should replace
@@ -696,8 +700,10 @@ class PythonTypesBackend(CodeBackend):
                            args=[processor]
                        ))
 
-        # annotations applied to this specific type (through aliases)
-        for annotation in get_custom_annotations_for_alias(data_type):
+        # annotations applied directly to this type (through aliases or
+        # passed in from the caller)
+        for annotation in itertools.chain(get_custom_annotations_for_alias(data_type),
+                                          extra_annotations):
             yield (annotation.annotation_type,
                    generate_func_call(
                        'bb.partially_apply',
@@ -722,27 +728,14 @@ class PythonTypesBackend(CodeBackend):
 
             for field in data_type.fields:
                 field_name = fmt_var(field.name, check_reserved=True)
-                # first, recurse into any submembers of the field that have annotations
                 for annotation_type, processor in self._generate_custom_annotation_processors(
-                        ns, field.data_type):
+                        ns, field.data_type, field.custom_annotations):
                     annotation_class = class_name_for_annotation_type(annotation_type, ns)
                     self.emit('if annotation_type is {}:'.format(annotation_class))
                     with self.indent():
                         self.emit('self.{} = {}'.format(
                             field_name,
                             generate_func_call(processor, args=['self.{}'.format(field_name)])
-                        ))
-                    self.emit()
-
-                # now process any annotations applied directly onto this field
-                for annotation in field.custom_annotations:
-                    annotation_class = class_name_for_annotation_type(
-                        annotation.annotation_type, ns)
-                    self.emit('if annotation_type is {}:'.format(annotation_class))
-                    with self.indent():
-                        self.emit('self.{field} = f({annotation}, self.{field})'.format(
-                            field=field_name,
-                            annotation=self._generate_custom_annotation_instance(ns, annotation),
                         ))
                     self.emit()
 
@@ -1041,33 +1034,22 @@ class PythonTypesBackend(CodeBackend):
 
             for field in data_type.fields:
                 recursive_processors = list(self._generate_custom_annotation_processors(
-                    ns, field.data_type))
+                    ns, field.data_type, field.custom_annotations))
+
                 # check if we have any annotations that apply to this field at all
-                if len(recursive_processors) == len(field.custom_annotations) == 0:
+                if len(recursive_processors) == 0:
                     continue
 
                 field_name = fmt_func(field.name)
                 self.emit('if self.is_{}():'.format(field_name))
 
                 with self.indent():
-                    # first, recurse into any submembers of the field that have annotations
                     for annotation_type, processor in recursive_processors:
                         annotation_class = class_name_for_annotation_type(annotation_type, ns)
                         self.emit('if annotation_type is {}:'.format(annotation_class))
                         with self.indent():
                             self.emit('self._value = {}'.format(
                                 generate_func_call(processor, args=['self._value'])
-                            ))
-                        self.emit()
-
-                    # now process any annotations applied directly onto this field
-                    for annotation in field.custom_annotations:
-                        annotation_class = class_name_for_annotation_type(
-                            annotation.annotation_type, ns)
-                        self.emit('if annotation_type is {}:'.format(annotation_class))
-                        with self.indent():
-                            self.emit('self._value = f({}, self._value)'.format(
-                                self._generate_custom_annotation_instance(ns, annotation),
                             ))
                         self.emit()
 

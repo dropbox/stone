@@ -198,7 +198,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
                 def _process_custom_annotations(self, annotation_type, f):
                     if annotation_type is MyAnnotationType:
-                        self.annotated_field = f(MyAnnotationType(test_param=42), self.annotated_field)
+                        self.annotated_field = bb.partially_apply(f, MyAnnotationType(test_param=42))(self.annotated_field)
 
                 def __repr__(self):
                     return 'MyStruct(annotated_field={!r}, unannotated_field={!r})'.format(
