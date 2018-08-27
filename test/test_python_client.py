@@ -19,7 +19,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
 
         backend = PythonClientBackend(
             target_folder_path='output',
-            args=['-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
+            args=['-w', 'user', '-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
         emitted = _mock_emit(backend)
         backend._generate_routes(ns)
         result = "".join(emitted)

@@ -171,6 +171,7 @@ class PythonClientBackend(CodeBackend):
         """
         Generates Python methods that correspond to routes in the namespace.
         """
+        print("----------> in _generate_routes()")
 
         # Hack: needed for _docf()
         self.cur_namespace = namespace
@@ -178,7 +179,11 @@ class PythonClientBackend(CodeBackend):
         check_route_name_conflict(namespace)
 
         for route in namespace.routes:
-            route_auth_modes = [mode.strip().lower() for mode in route.attrs.get('auth').split(',')]
+            print(route.attrs.get('auth'))
+            route_auth_attr = route.attrs.get('auth')
+            if route_auth_attr is None:
+               continue
+            route_auth_modes = [mode.strip().lower() for mode in route_auth_attr.split(',')]
             for base_auth_type in self.supported_auth_types:
                 if base_auth_type in route_auth_modes:
                     self._generate_route_helper(namespace, route)
