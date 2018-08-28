@@ -17,11 +17,12 @@ class TestGeneratedPythonClient(unittest.TestCase):
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text
 
+        # supply supported auth modes to the SDK generator using the new syntax
         backend = PythonClientBackend(
             target_folder_path='output',
             args=['-w', 'user', '-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
         emitted = _mock_emit(backend)
-        backend._generate_routes(ns)
+        backend._generate_route_methods({ns})
         result = "".join(emitted)
         return result
 
@@ -29,9 +30,9 @@ class TestGeneratedPythonClient(unittest.TestCase):
         # type: () -> None
 
         route1 = ApiRoute('get_metadata', 1, None)
-        route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(), {})
+        route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(), {'auth': 'user'})
         route2 = ApiRoute('get_metadata', 2, None)
-        route2.set_attributes(None, None, Void(), Int32(), Void(), {})
+        route2.set_attributes(None, None, Void(), Int32(), Void(), {'auth': 'user'})
         ns = ApiNamespace('files')
         ns.add_route(route1)
         ns.add_route(route2)
@@ -39,6 +40,9 @@ class TestGeneratedPythonClient(unittest.TestCase):
         result = self._evaluate_namespace(ns)
 
         expected = textwrap.dedent('''\
+            # ------------------------------------------
+            # Routes in files namespace
+
             def files_get_metadata(self):
                 """
                 :meth:`files_get_metadata_v2`

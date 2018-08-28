@@ -117,7 +117,6 @@ class PythonClientBackend(CodeBackend):
         The module will contain a base class that will have a method for
         each route across all namespaces.
         """
-        self.supported_auth_types = [auth_type.strip().lower() for auth_type in self.args.auth_type.split(',')]
 
         with self.output_to_relative_path('%s.py' % self.args.module_name):
             self.emit_raw(base)
@@ -171,17 +170,17 @@ class PythonClientBackend(CodeBackend):
         """
         Generates Python methods that correspond to routes in the namespace.
         """
-        print("----------> in _generate_routes()")
 
         # Hack: needed for _docf()
         self.cur_namespace = namespace
+        # list of auth_types supported in this base class.
+        self.supported_auth_types = [auth_type.strip().lower() for auth_type in self.args.auth_type.split(',')]
 
         check_route_name_conflict(namespace)
 
         for route in namespace.routes:
-            print(route.attrs.get('auth'))
             route_auth_attr = route.attrs.get('auth')
-            if route_auth_attr is None:
+            if route_auth_attr is None or self.supported_auth_types is None:
                continue
             route_auth_modes = [mode.strip().lower() for mode in route_auth_attr.split(',')]
             for base_auth_type in self.supported_auth_types:
