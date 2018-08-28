@@ -93,7 +93,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
         ns.add_route(route1)
         ns.add_route(route2)
 
-        result = self._evaluate_namespace_with_auth_mode(ns,'user')
+        result = self._evaluate_namespace_with_auth_mode(ns, 'user')
 
         expected = textwrap.dedent('''\
             # ------------------------------------------
@@ -126,7 +126,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
         ns.add_route(route1)
         ns.add_route(route2)
 
-        result = self._evaluate_namespace_with_auth_mode(ns,'user')
+        result = self._evaluate_namespace_with_auth_mode(ns, 'user')
 
         expected = textwrap.dedent('''\
             # ------------------------------------------
