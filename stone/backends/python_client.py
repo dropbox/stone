@@ -97,12 +97,19 @@ _cmdline_parser.add_argument(
         "The path to the class that's raised when a route returns an error. "
         "The class name is inserted into the doc for route methods."),
 )
+_cmdline_parser.add_argument(
+    '-w',
+    '--auth-type',
+    type=str,
+    help='The auth type of the client to generate.', 
+)
 
 
 class PythonClientBackend(CodeBackend):
     # pylint: disable=attribute-defined-outside-init
 
     cmdline_parser = _cmdline_parser
+    supported_auth_types = None
 
     def generate(self, api):
         """Generates a module called "base".
@@ -110,6 +117,7 @@ class PythonClientBackend(CodeBackend):
         The module will contain a base class that will have a method for
         each route across all namespaces.
         """
+
         with self.output_to_relative_path('%s.py' % self.args.module_name):
             self.emit_raw(base)
             # Import "warnings" if any of the routes are deprecated.
@@ -165,13 +173,33 @@ class PythonClientBackend(CodeBackend):
 
         # Hack: needed for _docf()
         self.cur_namespace = namespace
+        # list of auth_types supported in this base class.
+        # this is passed with the new -w flag
+        if self.args.auth_type is not None:
+            self.supported_auth_types = [auth_type.strip().lower() for auth_type in self.args.auth_type.split(',')]
 
         check_route_name_conflict(namespace)
 
         for route in namespace.routes:
-            self._generate_route_helper(namespace, route)
-            if route.attrs.get('style') == 'download':
-                self._generate_route_helper(namespace, route, True)
+            # compatibility mode : included routes are passed by whitelist
+            # actual auth attr inluded in the route is ignored in this mode.
+            if self.supported_auth_types is None:
+                self._generate_route_helper(namespace, route)
+                if route.attrs.get('style') == 'download':
+                    self._generate_route_helper(namespace, route, True)
+            else:
+                route_auth_attr = None
+                if route.attrs is not None:
+                    route_auth_attr = route.attrs.get('auth')
+                if route_auth_attr is None:
+                    continue
+                route_auth_modes = [mode.strip().lower() for mode in route_auth_attr.split(',')]
+                for base_auth_type in self.supported_auth_types:
+                    if base_auth_type in route_auth_modes:
+                        self._generate_route_helper(namespace, route)
+                        if route.attrs.get('style') == 'download':
+                            self._generate_route_helper(namespace, route, True)
+                        break # to avoid duplicate method declaration in the same base class
 
     def _generate_route_helper(self, namespace, route, download_to_file=False):
         """Generate a Python method that corresponds to a route.
