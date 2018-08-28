@@ -30,7 +30,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
         # type: () -> None
 
         route1 = ApiRoute('get_metadata', 1, None)
-        route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(), 
+        route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(),
                               {'auth': 'user'})
         route2 = ApiRoute('get_metadata', 2, None)
         route2.set_attributes(None, None, Void(), Int32(), Void(), {'auth': 'user'})
