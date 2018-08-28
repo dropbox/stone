@@ -164,25 +164,25 @@ class TestGeneratedPythonClient(unittest.TestCase):
     def test_route_with_auth_mode3(self):
             # type: () -> None
 
-            route1 = ApiRoute('get_metadata', 1, None)
-            route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(),
-                                  {'auth': 'app'})
-            route2 = ApiRoute('get_metadata', 2, None)
-            route2.set_attributes(None, None, Void(), Int32(), Void(),
-                                  {'auth': 'app, team'})
-            ns = ApiNamespace('files')
-            ns.add_route(route1)
-            ns.add_route(route2)
+        route1 = ApiRoute('get_metadata', 1, None)
+        route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(),
+                             {'auth': 'app'})
+        route2 = ApiRoute('get_metadata', 2, None)
+        route2.set_attributes(None, None, Void(), Int32(), Void(),
+                             {'auth': 'app, team'})
+        ns = ApiNamespace('files')
+        ns.add_route(route1)
+        ns.add_route(route2)
 
-            result = self._evaluate_namespace_with_auth_mode(ns, 'user')
+        result = self._evaluate_namespace_with_auth_mode(ns, 'user')
 
-            expected = textwrap.dedent('''\
-                # ------------------------------------------
-                # Routes in files namespace
+        expected = textwrap.dedent('''\
+            # ------------------------------------------
+            # Routes in files namespace
 
-            ''')
+        ''')
 
-            self.assertEqual(result, expected)
+        self.assertEqual(result, expected)
 
     def test_route_with_version_number_name_conflict(self):
         # type: () -> None
