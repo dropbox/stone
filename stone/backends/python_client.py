@@ -181,7 +181,7 @@ class PythonClientBackend(CodeBackend):
         for route in namespace.routes:
             route_auth_attr = route.attrs.get('auth')
             if route_auth_attr is None or self.supported_auth_types is None:
-               continue
+                continue
             route_auth_modes = [mode.strip().lower() for mode in route_auth_attr.split(',')]
             for base_auth_type in self.supported_auth_types:
                 if base_auth_type in route_auth_modes:
