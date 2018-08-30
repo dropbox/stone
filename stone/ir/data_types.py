@@ -775,18 +775,26 @@ class UserDefined(Composite):
             cur_type = cur_type.parent_type
 
         # Import namespaces containing any custom annotations
+        # Note: we don't need to do this for builtin annotations because
+        # they are treated as globals at the IR level
         for field in self.fields:
             for annotation in field.custom_annotations:
-                # first, check if we need to import the annotation itself
-                if annotation.namespace.name != self.namespace.name:
-                    self.namespace.add_imported_namespace(
-                        annotation.namespace,
-                        imported_annotation=True)
-                # then also check the annotation *type*
+                # first, check the annotation *type*
                 if annotation.annotation_type.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
                         annotation.annotation_type.namespace,
                         imported_annotation_type=True)
+
+                # second, check if we need to import the annotation itself
+
+                # the annotation namespace is currently not actually used in the
+                # backends, which reconstruct the annotation from the annotation
+                # type directly. This could be changed in the future, and at
+                # the IR level it makes sense to include the dependency
+                if annotation.namespace.name != self.namespace.name:
+                    self.namespace.add_imported_namespace(
+                        annotation.namespace,
+                        imported_annotation=True)
 
         # Indicate that the attributes of the type have been populated.
         self._is_forward_ref = False
@@ -1676,9 +1684,9 @@ class Omitted(Annotation):
     """
     Used when a field is annotated for omission.
     """
-    def __init__(self, name, namespace, ast_node, omitted_caller):
+    def __init__(self, name, namespace, ast_node, permission):
         super(Omitted, self).__init__(name, namespace, ast_node)
-        self.omitted_caller = omitted_caller
+        self.omitted_caller = permission
 
     def __repr__(self):
         return 'Omitted(%r, %r, %r)' % (self.name, self.namespace, self.omitted_caller)
@@ -1734,33 +1742,49 @@ class CustomAnnotation(Annotation):
     def set_attributes(self, annotation_type):
         self.annotation_type = annotation_type
 
-        if self.args:
-            raise InvalidSpec('Annotations cannot accept positional arguments',
-                self._ast_node.lineno, self._ast_node.path)
+        # check for too many parameters for args
+        if len(self.args) > len(self.annotation_type.params):
+            raise InvalidSpec('Too many parameters passed to annotation type %s' %
+                              (self.annotation_type.name), self._ast_node.lineno,
+                              self._ast_node.path)
 
-        for param in self.annotation_type.params:
-            if param.name in self.kwargs:
-                try:
-                    param.data_type.check(self.kwargs[param.name])
-                except ValueError as e:
-                    raise InvalidSpec('Invalid value for parameter %s of annotation type %s: %s' %
-                        (param.name, self.annotation_type.name, e), self._ast_node.lineno,
-                        self._ast_node.path)
-            elif isinstance(param.data_type, Nullable):
-                self.kwargs[param.name] = None
-            elif param.has_default:
-                self.kwargs[param.name] = param.default
-            else:
-                raise InvalidSpec('No value specified for parameter %s of annotation type %s' %
-                    (param.name, self.annotation_type.name), self._ast_node.lineno,
-                    self._ast_node.path)
-
+        # check for unknown keyword arguments
         acceptable_param_names = set((param.name for param in self.annotation_type.params))
         for param_name in self.kwargs:
             if param_name not in acceptable_param_names:
                 raise InvalidSpec('Unknown parameter %s passed to annotation type %s' %
                     (param_name, self.annotation_type.name), self._ast_node.lineno,
                     self._ast_node.path)
+
+        for i, param in enumerate(self.annotation_type.params):
+            # first figure out and validate value for this param
+
+            # arguments are either all kwargs or all args, so don't need to worry about
+            # providing both positional and keyword argument for same parameter
+            if param.name in self.kwargs or i < len(self.args):
+                param_value = self.kwargs[param.name] if self.kwargs else self.args[i]
+                try:
+                    param.data_type.check(param_value)
+                except ValueError as e:
+                    raise InvalidSpec('Invalid value for parameter %s of annotation type %s: %s' %
+                        (param.name, self.annotation_type.name, e), self._ast_node.lineno,
+                        self._ast_node.path)
+            elif isinstance(param.data_type, Nullable):
+                param_value = None
+            elif param.has_default:
+                param_value = param.default
+            else:
+                raise InvalidSpec('No value specified for parameter %s of annotation type %s' %
+                    (param.name, self.annotation_type.name), self._ast_node.lineno,
+                    self._ast_node.path)
+
+            # now set both kwargs and args to correct value so backend code generators can use
+            # whichever is more convenient (like if kwargs are not supported in a language)
+            self.kwargs[param.name] = param_value
+            if i < len(self.args):
+                self.args[i] = param_value
+            else:
+                self.args.append(param_value)
 
 
 class Alias(Composite):
@@ -1802,16 +1826,26 @@ class Alias(Composite):
                                       str(self.redactor), self._ast_node.lineno)
                 self.redactor = annotation
             elif isinstance(annotation, CustomAnnotation):
-                # first, check if we need to import the annotation itself
-                if annotation.namespace.name != self.namespace.name:
-                    self.namespace.add_imported_namespace(
-                        annotation.namespace,
-                        imported_annotation=True)
-                # then also check the annotation *type*
+                # Note: we don't need to do this for builtin annotations because
+                # they are treated as globals at the IR level
+
+                # first, check the annotation *type*
                 if annotation.annotation_type.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
                         annotation.annotation_type.namespace,
                         imported_annotation_type=True)
+
+                # second, check if we need to import the annotation itself
+
+                # the annotation namespace is currently not actually used in the
+                # backends, which reconstruct the annotation from the annotation
+                # type directly. This could be changed in the future, and at
+                # the IR level it makes sense to include the dependency
+
+                if annotation.namespace.name != self.namespace.name:
+                    self.namespace.add_imported_namespace(
+                        annotation.namespace,
+                        imported_annotation=True)
 
                 self.custom_annotations.append(annotation)
             else:

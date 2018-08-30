@@ -183,7 +183,7 @@ class PythonTypeStubsBackend(CodeBackend):
         self.emit()
 
     def _generate_annotation_type_class_properties(self, ns, annotation_type):
-        # type: (ApiNamespace, Struct) -> None
+        # type: (ApiNamespace, AnnotationType) -> None
         for param in annotation_type.params:
             prop_name = fmt_var(param.name, True)
             param_type = self.map_stone_type_to_pep484_type(ns, param.data_type)

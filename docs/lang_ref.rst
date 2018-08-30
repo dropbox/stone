@@ -902,12 +902,16 @@ compile-time warnings if the field is referenced.
 Custom annotations
 ----------
 
-**NB:** only the `python_types` backend supports custom annotations at this
+**Note:** only the `python_types` backend supports custom annotations at this
 time.
 
 A custom annotation type, possibly taking some arguments, can be defined
 similarly to structs, and then applied the same way built-in annotations are.
 Note that the parameters can only be primitives (possibly nullable).
+
+Arguments can be provided as either all positional or all keyword arguments, but
+not a mix of both. Keyword arguments are recommended to avoid depending on the
+order fields are listed in the custom annotation definition.
 
 ::
 
@@ -920,6 +924,7 @@ Note that the parameters can only be primitives (possibly nullable).
             'high')."
 
     annotation KindaNoteworthy = Noteworthy()
+    annotation MediumNoteworthy = Noteworthy("med")
     annotation ReallyNoteworthy = Noteworthy(importance="high")
 
     alias ImportantString = String
@@ -936,14 +941,14 @@ custom annotation by calling ``._process_custom_annotations(custom_annotation,
 processor)`` on the struct. ``processor`` will then be called with two
 parameters---an instance of the annotation type with all the parameters
 populated and the value of the field. The value of the field will then be
-replaced with the return value of ``f``.
+replaced with the return value of ``processor``.
 
 Note that this will also affect annotated fields that are located arbitrarily
 deep in the struct. In the example above, if ``secret`` is a struct of type
-``Secrets``, then calling ``secret._process_custom_annotations(Noteworthy, f)``
-will result in ``f`` being called once as
-``f(Noteworthy("low"), secret.small_secret)`` and once as
-``f(Noteworthy("high"), x)`` for each element ``x`` of
+``Secrets``, then calling ``secret._process_custom_annotations(Noteworthy, processor)``
+will result in ``processor`` being called once as
+``processor(Noteworthy("low"), secret.small_secret)`` and once as
+``processor(Noteworthy("high"), x)`` for each element ``x`` of
 ``secret.lots_of_big_ones``.
 
 .. _doc:

@@ -276,7 +276,7 @@ class PythonTypesBackend(CodeBackend):
             self.emit()
 
     def _generate_annotation_type_class_slots(self, annotation_type):
-        # type: (ApiNamespace, AnnotationType) -> None
+        # type: (AnnotationType) -> None
         with self.block('__slots__ =', delim=('[', ']')):
             for param in annotation_type.params:
                 param_name = fmt_var(param.name, True)

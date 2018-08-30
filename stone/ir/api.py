@@ -171,7 +171,7 @@ class ApiNamespace(object):
                                imported_data_type=False,
                                imported_annotation=False,
                                imported_annotation_type=False):
-        # type: (ApiNamespace, bool, bool, bool) -> None
+        # type: (ApiNamespace, bool, bool, bool, bool) -> None
         """
         Keeps track of namespaces that this namespace imports.
 
@@ -282,9 +282,11 @@ class ApiNamespace(object):
                 data_types.add(data_user_type)
         return data_types
 
-    def get_imported_namespaces(self, must_have_imported_data_type=False,
-                                consider_annotations=False):
-        # type: (bool) -> typing.List[ApiNamespace]
+    def get_imported_namespaces(self,
+                                must_have_imported_data_type=False,
+                                consider_annotations=False,
+                                consider_annotation_types=False):
+        # type: (bool, bool, bool) -> typing.List[ApiNamespace]
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and a data type is
@@ -294,8 +296,9 @@ class ApiNamespace(object):
             must_have_imported_data_type (bool): If true, result does not
                 include namespaces that were not imported for data types.
             consider_annotations (bool): If false, result does not include
-                namespaces that were only imported for annotations or
-                annotation types.
+                namespaces that were only imported for annotations
+            consider_annotation_types (bool): If false, result does not
+                include namespaces that were only imported for annotation types.
 
         Returns:
             List[Namespace]: A list of imported namespaces.
@@ -304,7 +307,13 @@ class ApiNamespace(object):
         for imported_namespace, reason in self._imported_namespaces.items():
             if must_have_imported_data_type and not reason.data_type:
                 continue
-            if (not consider_annotations) and not (reason.data_type or reason.alias):
+            if (not consider_annotations) and not (
+                    reason.data_type or reason.alias or reason.annotation_type
+            ):
+                continue
+            if (not consider_annotation_types) and not (
+                    reason.data_type or reason.alias or reason.annotation
+            ):
                 continue
 
             imported_namespaces.append(imported_namespace)

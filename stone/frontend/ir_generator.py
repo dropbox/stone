@@ -480,10 +480,16 @@ class IRGenerator(object):
 
         namespace = self.api.ensure_namespace(env.namespace_name)
 
+        if item.args and item.kwargs:
+            raise InvalidSpec(
+                'Annotations accept either positional or keyword arguments, not both',
+                item.lineno, item.path,
+            )
+
         if ((item.annotation_type_ns is None)
                 and (item.annotation_type in BUILTIN_ANNOTATION_CLASS_BY_STRING)):
             annotation_class = BUILTIN_ANNOTATION_CLASS_BY_STRING[item.annotation_type]
-            annotation = annotation_class(item.name, namespace, item, *item.args)
+            annotation = annotation_class(item.name, namespace, item, *item.args, **item.kwargs)
         else:
             if item.annotation_type_ns is not None:
                 namespace.add_imported_namespace(

@@ -124,7 +124,7 @@ def generate_imports_for_referenced_namespaces(
         the except: clause.
     """
 
-    imported_namespaces = namespace.get_imported_namespaces(consider_annotations=True)
+    imported_namespaces = namespace.get_imported_namespaces(consider_annotation_types=True)
     if not imported_namespaces:
         return
 
@@ -174,7 +174,7 @@ validators_import_with_type_ignore = _validators_import_template.format(
 )
 
 def prefix_with_ns_if_necessary(name, name_ns, source_ns):
-    # type: (str, ApiNamespace, ApiNamespace) -> str
+    # type: (typing.Text, ApiNamespace, ApiNamespace) -> typing.Text
     """
     Returns a name that can be used to reference `name` in namespace `name_ns`
     from `source_ns`.

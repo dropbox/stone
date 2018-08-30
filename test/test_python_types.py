@@ -29,13 +29,17 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         s.set_attributes(None, [], None)
         return s
 
-    def _evaluate_namespace(self, ns):
-        # type: (ApiNamespace) -> typing.Text
-
+    def _mock_backend(self):
+        # type: () -> typing.Tuple[PythonTypesBackend, typing.List]
         backend = PythonTypesBackend(
             target_folder_path='output',
             args=['-r', 'dropbox.dropbox.Dropbox.{ns}_{route}'])
         emitted = _mock_emit(backend)
+        return backend, emitted
+
+    def _evaluate_namespace(self, ns):
+        # type: (ApiNamespace) -> typing.Text
+        backend, emitted = self._mock_backend()
         route_schema = self._mk_route_schema()
         backend._generate_routes(route_schema, ns)
         result = "".join(emitted)
@@ -43,11 +47,15 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
     def _evaluate_struct(self, ns, struct):
         # type: (ApiNamespace, Struct) -> typing.Text
-        backend = PythonTypesBackend(
-            target_folder_path='output',
-            args=['-r', 'dropbox.dropbox.Dropbox.{ns}_{route}'])
-        emitted = _mock_emit(backend)
+        backend, emitted = self._mock_backend()
         backend._generate_struct_class(ns, struct)
+        result = "".join(emitted)
+        return result
+
+    def _evaluate_annotation_type(self, ns, annotation_type):
+        # type: (ApiNamespace, AnnotationType) -> typing.Text
+        backend, emitted = self._mock_backend()
+        backend._generate_annotation_type_class(ns, annotation_type)
         result = "".join(emitted)
         return result
 
@@ -210,6 +218,67 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
         ''') # noqa
 
+        self.assertEqual(result, expected)
+
+    def test_annotation_type_class(self):
+        # type: () -> None
+        ns = ApiNamespace('files')
+        annotation_type = AnnotationType('MyAnnotationType', ns, "documented", [
+            AnnotationTypeParam(
+                'test_param',
+                Int32(),
+                "test parameter",
+                False,
+                None,
+                None,
+            ),
+            AnnotationTypeParam(
+                'test_default_param',
+                Int32(),
+                None,
+                True,
+                5,
+                None,
+            ),
+        ])
+        result = self._evaluate_annotation_type(ns, annotation_type)
+        expected = textwrap.dedent('''\
+            class MyAnnotationType(bb.AnnotationType):
+                """
+                documented
+
+                :ivar test_param: test parameter
+                """
+
+                __slots__ = [
+                    '_test_param',
+                    '_test_default_param',
+                ]
+
+                def __init__(self,
+                             test_param=None,
+                             test_default_param=5):
+                    self._test_param = test_param
+                    self._test_default_param = test_default_param
+
+                @property
+                def test_param(self):
+                    """
+                    test parameter
+
+                    :rtype: long
+                    """
+                    return self._test_param
+
+                @property
+                def test_default_param(self):
+                    """
+                    :rtype: long
+                    """
+                    return self._test_default_param
+
+
+        ''')
         self.assertEqual(result, expected)
 
     # TODO: add more unit tests for client code generation

@@ -4803,15 +4803,33 @@ class TestStone(unittest.TestCase):
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
+        # Test not mixing keyword and positional arguments
+        text = textwrap.dedent("""\
+            namespace test
+            annotation_type Important
+                owner String
+                importance String = "very"
+
+            annotation VeryImportant = Important("test-team", importance="very")
+        """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Annotations accept either positional or keyword arguments, not both",
+            cm.exception.msg,
+        )
+        self.assertEqual(cm.exception.lineno, 6)
+
         # Test custom annotation type, instance, and application
         text = textwrap.dedent("""\
             namespace test
 
             annotation_type Important
+                owner String
                 importance String = "very"
 
-            annotation VeryImportant = Important()
-            annotation SortaImportant = Important(importance="sorta")
+            annotation VeryImportant = Important("test-team")
+            annotation SortaImportant = Important(owner="test-team", importance="sorta")
 
             alias TestAlias = String
                 @VeryImportant
@@ -4824,15 +4842,29 @@ class TestStone(unittest.TestCase):
         api = specs_to_ir([('test.stone', text)])
 
         annotation_type = api.namespaces['test'].annotation_type_by_name['Important']
-        self.assertEqual(len(annotation_type.params), 1)
-        self.assertEqual(annotation_type.params[0].name, 'importance')
-        self.assertTrue(annotation_type.params[0].has_default)
-        self.assertEqual(annotation_type.params[0].default, 'very')
+        self.assertEqual(len(annotation_type.params), 2)
+        self.assertEqual(annotation_type.params[0].name, 'owner')
+        self.assertFalse(annotation_type.params[0].has_default)
         self.assertTrue(isinstance(annotation_type.params[0].data_type, String))
+        self.assertEqual(annotation_type.params[1].name, 'importance')
+        self.assertTrue(annotation_type.params[1].has_default)
+        self.assertEqual(annotation_type.params[1].default, 'very')
+        self.assertTrue(isinstance(annotation_type.params[1].data_type, String))
+
+        # test both args and kwargs are set consistently in IR
+        annotation = api.namespaces['test'].annotation_by_name['VeryImportant']
+        self.assertTrue(annotation.annotation_type is annotation_type)
+        self.assertEqual(annotation.kwargs['owner'], 'test-team')
+        self.assertEqual(annotation.kwargs['importance'], 'very')
+        self.assertEqual(annotation.args[0], 'test-team')
+        self.assertEqual(annotation.args[1], 'very')
 
         annotation = api.namespaces['test'].annotation_by_name['SortaImportant']
         self.assertTrue(annotation.annotation_type is annotation_type)
+        self.assertEqual(annotation.kwargs['owner'], 'test-team')
         self.assertEqual(annotation.kwargs['importance'], 'sorta')
+        self.assertEqual(annotation.args[0], 'test-team')
+        self.assertEqual(annotation.args[1], 'sorta')
 
         alias = api.namespaces['test'].alias_by_name['TestAlias']
         self.assertTrue(alias.custom_annotations[0].annotation_type is annotation_type)
