@@ -118,6 +118,12 @@ aliases
 alias_type_by_name
     A map from alias name to Alias object.
 
+annotation_types
+    A list of user-defined AnnotationType objects.
+
+annotation_type_by_name
+    A map from annotation name to AnnotationType object.
+
 get_imported_namespaces(must_have_imported_data_type=False)
     A list of Namespace objects. A namespace is a member of this list if it is
     imported by the current namespace and a data type or alias is referenced
