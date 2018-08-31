@@ -124,12 +124,15 @@ annotation_types
 annotation_type_by_name
     A map from annotation name to AnnotationType object.
 
-get_imported_namespaces(must_have_imported_data_type=False)
+get_imported_namespaces(must_have_imported_data_type=False, consider_annotations=False, consider_annotation_types=False)
     A list of Namespace objects. A namespace is a member of this list if it is
     imported by the current namespace and a data type or alias is referenced
     from it. If you want only namespaces with aliases referenced, set the
     ``must_have_imported_data_type`` parameter to true. Namespaces are in ASCII
-    order by name.
+    order by name. By default, namespaces where only annotations or annotation
+    types are referenced are not returned. To include these namespaces,
+    set ``consider_annotations`` or ``consider_annotation_types`` parameters
+    to true.
 
 get_namespaces_imported_by_route_io()
     A list of Namespace objects. A namespace is a member of this list if it is

@@ -1684,9 +1684,9 @@ class Omitted(Annotation):
     """
     Used when a field is annotated for omission.
     """
-    def __init__(self, name, namespace, ast_node, permission):
+    def __init__(self, name, namespace, ast_node, omitted_caller):
         super(Omitted, self).__init__(name, namespace, ast_node)
-        self.omitted_caller = permission
+        self.omitted_caller = omitted_caller
 
     def __repr__(self):
         return 'Omitted(%r, %r, %r)' % (self.name, self.namespace, self.omitted_caller)
