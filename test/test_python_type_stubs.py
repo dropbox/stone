@@ -227,7 +227,10 @@ except (ImportError, SystemError, ValueError):
     # Catch errors raised when importing a relative module when not in a package.
     # This makes testing this file directly (outside of a package) easier.
     import stone_validators as bv  # type: ignore
-    import stone_base as bb  # type: ignore"""
+    import stone_base as bb  # type: ignore
+
+T = TypeVar('T', bound=bb.AnnotationType)
+U = TypeVar('U')"""
 
 class TestPythonTypeStubs(unittest.TestCase):
     def __init__(self, *args, **kwargs):
@@ -262,6 +265,12 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 @f1.deleter
                 def f1(self) -> None: ...
+
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    f: Callable[[T, U], U],
+                ) -> None: ...
 
             Struct1_validator: bv.Validator = ...
 
@@ -300,13 +309,22 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @f4.deleter
                 def f4(self) -> None: ...
 
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    f: Callable[[T, U], U],
+                ) -> None: ...
+
             Struct2_validator: bv.Validator = ...
 
 
             from typing import (
+                Callable,
                 Dict,
                 List,
                 Text,
+                Type,
+                TypeVar,
             )
 
             import datetime
@@ -344,12 +362,21 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @nullable_list.deleter
                 def nullable_list(self) -> None: ...
 
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    f: Callable[[T, U], U],
+                ) -> None: ...
+
             NestedTypes_validator: bv.Validator = ...
 
 
             from typing import (
+                Callable,
                 List,
                 Optional,
+                Type,
+                TypeVar,
             )
             """).format(headers=_headers)
         self.assertEqual(result, expected)
@@ -369,6 +396,12 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 def is_last(self) -> bool: ...
 
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    f: Callable[[T, U], U],
+                ) -> None: ...
+
             Union_validator: bv.Validator = ...
 
             class Shape(bb.Union):
@@ -383,12 +416,24 @@ class TestPythonTypeStubs(unittest.TestCase):
 
                 def get_circle(self) -> float: ...
 
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    f: Callable[[T, U], U],
+                ) -> None: ...
+
             Shape_validator: bv.Validator = ...
 
+
+            from typing import (
+                Callable,
+                Type,
+                TypeVar,
+            )
             """).format(headers=_headers)
         self.assertEqual(result, expected)
 
-    def test__generate_base_namespace_module_with_empty_union__generates_pass(self):
+    def test__generate_base_namespace_module_with_empty_union(self):
         # type: () -> None
         ns = _make_namespace_with_empty_union()
         result = self._evaluate_namespace(ns)
@@ -396,10 +441,20 @@ class TestPythonTypeStubs(unittest.TestCase):
             {headers}
 
             class EmptyUnion(bb.Union):
-                pass
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    f: Callable[[T, U], U],
+                ) -> None: ...
 
             EmptyUnion_validator: bv.Validator = ...
 
+
+            from typing import (
+                Callable,
+                Type,
+                TypeVar,
+            )
             """).format(headers=_headers)
         self.assertEqual(result, expected)
 
@@ -413,6 +468,10 @@ class TestPythonTypeStubs(unittest.TestCase):
             route_one: bb.Route = ...
             route_one_v2: bb.Route = ...
 
+
+            from typing import (
+                TypeVar,
+            )
             """).format(headers=_headers)
         self.assertEqual(result, expected)
 
@@ -446,10 +505,22 @@ class TestPythonTypeStubs(unittest.TestCase):
                 @f1.deleter
                 def f1(self) -> None: ...
 
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    f: Callable[[T, U], U],
+                ) -> None: ...
+
             Struct1_validator: bv.Validator = ...
 
             AliasToStruct1_validator: bv.Validator = ...
             AliasToStruct1 = Struct1
             NotUserDefinedAlias_validator: bv.Validator = ...
+
+            from typing import (
+                Callable,
+                Type,
+                TypeVar,
+            )
             """).format(headers=_headers)
         self.assertEqual(result, expected)

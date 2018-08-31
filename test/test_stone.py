@@ -4287,25 +4287,51 @@ class TestStone(unittest.TestCase):
         self.assertEqual(cm.exception.path, 'ns1.stone')
 
     def test_annotations(self):
-        # Test non-existant annotation
+        # Test non-existant annotation type
         text = textwrap.dedent("""\
             namespace test
 
-            annotation NonExistant = NonExistant()
+            annotation Broken = NonExistantType()
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Annotation type 'NonExistantType' does not exist",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test annotation that refers to something of the wrong type
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct ItsAStruct
+                f String
+
+            annotation NonExistant = ItsAStruct()
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "'ItsAStruct' is not an annotation type",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test non-existant annotation
+        text = textwrap.dedent("""\
+            namespace test
 
             struct S
 
                 f String
                     @NonExistant
-                    "Test field with two non-existant tag."
-
+                    "Test field with a non-existant tag."
             """)
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertEqual(
-            "Unknown Annotation type 'NonExistant'.",
+            "Annotation 'NonExistant' does not exist.",
             cm.exception.msg)
-        self.assertEqual(cm.exception.lineno, 3)
+        self.assertEqual(cm.exception.lineno, 6)
 
         # Test omission tag
         text = textwrap.dedent("""\
@@ -4601,7 +4627,7 @@ class TestStone(unittest.TestCase):
         with self.assertRaises(InvalidSpec) as cm:
             specs_to_ir([('test.stone', text)])
         self.assertIn(
-            "Aliases only support 'Redacted', not",
+            "Aliases only support 'Redacted' and custom annotations, not",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 5)
 
@@ -4727,6 +4753,124 @@ class TestStone(unittest.TestCase):
             "Redactors can't be applied to user-defined or void types.",
             cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
+
+    def test_custom_annotations(self):
+        # Test annotation type with non-primitive parameter
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct S
+                f String
+
+            annotation_type AT
+                s S
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Parameter 's' must have a primitive type (possibly nullable).",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 7)
+
+        # Test annotation type with an annotation applied to a parameter
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation Deprecated = Deprecated()
+
+            annotation_type AT
+                s String
+                    @Deprecated
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Annotations cannot be applied to parameters of annotation types",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test redefining built-in annotation types
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation_type Deprecated
+                s String
+            """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Cannot redefine built-in annotation type 'Deprecated'.",
+            cm.exception.msg)
+        self.assertEqual(cm.exception.lineno, 3)
+
+        # Test not mixing keyword and positional arguments
+        text = textwrap.dedent("""\
+            namespace test
+            annotation_type Important
+                owner String
+                importance String = "very"
+
+            annotation VeryImportant = Important("test-team", importance="very")
+        """)
+        with self.assertRaises(InvalidSpec) as cm:
+            specs_to_ir([('test.stone', text)])
+        self.assertEqual(
+            "Annotations accept either positional or keyword arguments, not both",
+            cm.exception.msg,
+        )
+        self.assertEqual(cm.exception.lineno, 6)
+
+        # Test custom annotation type, instance, and application
+        text = textwrap.dedent("""\
+            namespace test
+
+            annotation_type Important
+                owner String
+                importance String = "very"
+
+            annotation VeryImportant = Important("test-team")
+            annotation SortaImportant = Important(owner="test-team", importance="sorta")
+
+            alias TestAlias = String
+                @VeryImportant
+
+            struct TestStruct
+                f String
+                    @SortaImportant
+                g List(TestAlias)
+            """)
+        api = specs_to_ir([('test.stone', text)])
+
+        annotation_type = api.namespaces['test'].annotation_type_by_name['Important']
+        self.assertEqual(len(annotation_type.params), 2)
+        self.assertEqual(annotation_type.params[0].name, 'owner')
+        self.assertFalse(annotation_type.params[0].has_default)
+        self.assertTrue(isinstance(annotation_type.params[0].data_type, String))
+        self.assertEqual(annotation_type.params[1].name, 'importance')
+        self.assertTrue(annotation_type.params[1].has_default)
+        self.assertEqual(annotation_type.params[1].default, 'very')
+        self.assertTrue(isinstance(annotation_type.params[1].data_type, String))
+
+        # test both args and kwargs are set consistently in IR
+        annotation = api.namespaces['test'].annotation_by_name['VeryImportant']
+        self.assertTrue(annotation.annotation_type is annotation_type)
+        self.assertEqual(annotation.kwargs['owner'], 'test-team')
+        self.assertEqual(annotation.kwargs['importance'], 'very')
+        self.assertEqual(annotation.args[0], 'test-team')
+        self.assertEqual(annotation.args[1], 'very')
+
+        annotation = api.namespaces['test'].annotation_by_name['SortaImportant']
+        self.assertTrue(annotation.annotation_type is annotation_type)
+        self.assertEqual(annotation.kwargs['owner'], 'test-team')
+        self.assertEqual(annotation.kwargs['importance'], 'sorta')
+        self.assertEqual(annotation.args[0], 'test-team')
+        self.assertEqual(annotation.args[1], 'sorta')
+
+        alias = api.namespaces['test'].alias_by_name['TestAlias']
+        self.assertTrue(alias.custom_annotations[0].annotation_type is annotation_type)
+
+        struct = api.namespaces['test'].data_type_by_name['TestStruct']
+        self.assertEqual(struct.fields[0].custom_annotations[0], annotation)
 
 
 if __name__ == '__main__':

@@ -20,12 +20,15 @@ re = importlib.import_module(str('re'))  # type: typing.Any
 
 from ..ir import (
     Alias,
+    AnnotationType,
+    AnnotationTypeParam,
     Api,
     ApiNamespace,
     ApiRoute,
     ApiRoutesByVersion,
     Boolean,
     Bytes,
+    CustomAnnotation,
     DataType,
     Deprecated,
     DeprecationInfo,
@@ -63,12 +66,14 @@ from ..ir import (
     UserDefined,
     Void,
     unwrap_aliases,
+    unwrap_nullable,
 )
 
 from .exception import InvalidSpec
 from .ast import (
     AstAlias,
     AstAnnotationDef,
+    AstAnnotationTypeDef,
     AstImport,
     AstNamespace,
     AstRouteDef,
@@ -207,7 +212,7 @@ doc_ref_val_re = re.compile(
     r'^(null|true|false|-?\d+(\.\d*)?(e-?\d+)?|"[^\\"]*")$')
 
 # Defined Annotations
-ANNOTATION_CLASS_BY_STRING = {
+BUILTIN_ANNOTATION_CLASS_BY_STRING = {
     'Deprecated': Deprecated,
     'Omitted': Omitted,
     'Preview': Preview,
@@ -364,6 +369,10 @@ class IRGenerator(object):
                 annotation = self._create_annotation(env, item)
                 namespace.add_annotation(annotation)
                 self._check_canonical_name_available(item, namespace.name)
+            elif isinstance(item, AstAnnotationTypeDef):
+                annotation_type = self._create_annotation_type(env, item)
+                namespace.add_annotation_type(annotation_type)
+                self._check_canonical_name_available(item, namespace.name)
             else:
                 raise AssertionError('Unknown AST node type %r' %
                                      item.__class__.__name__)
@@ -401,6 +410,8 @@ class IRGenerator(object):
             return 'alias'
         elif isinstance(item, AstNamespace):
             return 'namespace'
+        elif isinstance(item, AstAnnotationTypeDef):
+            return 'annotation type'
         else:
             raise AssertionError('unhandled type %r' % item)
 
@@ -455,6 +466,7 @@ class IRGenerator(object):
 
         namespace = self.api.ensure_namespace(env.namespace_name)
         alias = Alias(item.name, namespace, item)
+
         env[item.name] = alias
         return alias
 
@@ -468,14 +480,74 @@ class IRGenerator(object):
 
         namespace = self.api.ensure_namespace(env.namespace_name)
 
-        if item.annotation_type not in ANNOTATION_CLASS_BY_STRING:
-            raise InvalidSpec("Unknown Annotation type '%s'." %
-                              item.annotation_type, item.lineno, item.path)
+        if item.args and item.kwargs:
+            raise InvalidSpec(
+                'Annotations accept either positional or keyword arguments, not both',
+                item.lineno, item.path,
+            )
 
-        annotation_class = ANNOTATION_CLASS_BY_STRING[item.annotation_type]
-        annotation = annotation_class(item.name, namespace, item, *item.args)
+        if ((item.annotation_type_ns is None)
+                and (item.annotation_type in BUILTIN_ANNOTATION_CLASS_BY_STRING)):
+            annotation_class = BUILTIN_ANNOTATION_CLASS_BY_STRING[item.annotation_type]
+            annotation = annotation_class(item.name, namespace, item, *item.args, **item.kwargs)
+        else:
+            if item.annotation_type_ns is not None:
+                namespace.add_imported_namespace(
+                    self.api.ensure_namespace(item.annotation_type_ns),
+                    imported_annotation_type=True)
+
+            annotation = CustomAnnotation(item.name, namespace, item,
+                item.annotation_type, item.annotation_type_ns, item.args,
+                item.kwargs)
+
         env[item.name] = annotation
         return annotation
+
+    def _create_annotation_type(self, env, item):
+        if item.name in env:
+            existing_dt = env[item.name]
+            raise InvalidSpec(
+                'Symbol %s already defined (%s:%d).' %
+                (quote(item.name), existing_dt._ast_node.path,
+                existing_dt._ast_node.lineno), item.lineno, item.path)
+
+        namespace = self.api.ensure_namespace(env.namespace_name)
+
+        if item.name in BUILTIN_ANNOTATION_CLASS_BY_STRING:
+            raise InvalidSpec('Cannot redefine built-in annotation type %s.' %
+                              (quote(item.name), ), item.lineno, item.path)
+
+        params = []
+        for param in item.params:
+            if param.annotations:
+                raise InvalidSpec(
+                    'Annotations cannot be applied to parameters of annotation types',
+                    param.lineno, param.path)
+            param_type = self._resolve_type(env, param.type_ref, True)
+            dt, nullable_dt = unwrap_nullable(param_type)
+
+            if isinstance(dt, Void):
+                raise InvalidSpec(
+                    'Parameter {} cannot be Void.'.format(quote(param.name)),
+                    param.lineno, param.path)
+            if nullable_dt and param.has_default:
+                raise InvalidSpec(
+                    'Parameter {} cannot be a nullable type and have '
+                    'a default specified.'.format(quote(param.name)),
+                    param.lineno, param.path)
+            if not is_primitive_type(dt):
+                raise InvalidSpec(
+                    'Parameter {} must have a primitive type (possibly '
+                    'nullable).'.format(quote(param.name)),
+                    param.lineno, param.path)
+
+            params.append(AnnotationTypeParam(param.name, param_type, param.doc,
+                param.has_default, param.default, param))
+
+        annotation_type = AnnotationType(item.name, namespace, item.doc, params)
+
+        env[item.name] = annotation_type
+        return annotation_type
 
     def _create_type(self, env, item):
         """Create a forward reference for a union or struct."""
@@ -582,6 +654,39 @@ class IRGenerator(object):
         """
         for namespace in self.api.namespaces.values():
             env = self._get_or_create_env(namespace.name)
+
+            # do annotations before everything else, since populating aliases
+            # and datatypes involves setting annotations
+            for annotation in namespace.annotations:
+                if isinstance(annotation, CustomAnnotation):
+                    loc = annotation._ast_node.lineno, annotation._ast_node.path
+                    if annotation.annotation_type_ns:
+                        if annotation.annotation_type_ns not in env:
+                            raise InvalidSpec(
+                                'Namespace %s is not imported' %
+                                quote(annotation.annotation_type_ns), *loc)
+                        annotation_type_env = env[annotation.annotation_type_ns]
+                        if not isinstance(annotation_type_env, Environment):
+                            raise InvalidSpec(
+                                '%s is not a namespace.' %
+                                quote(annotation.annotation_type_ns), *loc)
+                    else:
+                        annotation_type_env = env
+
+                    if annotation.annotation_type_name not in annotation_type_env:
+                        raise InvalidSpec(
+                            'Annotation type %s does not exist' %
+                            quote(annotation.annotation_type_name), *loc)
+
+                    annotation_type = annotation_type_env[annotation.annotation_type_name]
+
+                    if not isinstance(annotation_type, AnnotationType):
+                        raise InvalidSpec(
+                            '%s is not an annotation type' % quote(annotation.annotation_type_name),
+                            *loc
+                        )
+
+                    annotation.set_attributes(annotation_type)
 
             for alias in namespace.aliases:
                 data_type = self._resolve_type(env, alias._ast_node.type_ref)
@@ -1046,7 +1151,7 @@ class IRGenerator(object):
 
         if annotation_ref.annotation not in env:
             raise InvalidSpec(
-                'Symbol %s is undefined.' % quote(annotation_ref.annotation), *loc)
+                'Annotation %s does not exist.' % quote(annotation_ref.annotation), *loc)
 
         return env[annotation_ref.annotation]
 

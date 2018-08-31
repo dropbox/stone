@@ -14,6 +14,7 @@ from .ast import (
     AstAlias,
     AstAnnotationDef,
     AstAnnotationRef,
+    AstAnnotationTypeDef,
     AstAttrField,
     AstExample,
     AstExampleField,
@@ -145,6 +146,7 @@ class ParserFactory(object):
     def p_definition(self, p):
         """definition : alias
                       | annotation
+                      | annotation_type
                       | struct
                       | struct_patch
                       | union
@@ -300,6 +302,31 @@ class ParserFactory(object):
         )
 
     # --------------------------------------------------------------
+    # Annotation types
+    #
+    # An example annotation type:
+    #
+    # annotation_type Sensitive
+    #     "This is a docstring for the annotation type"
+    #
+    #     sensitivity Int32
+    #
+    #     reason String?
+    #         "This is a docstring for the field"
+    #
+
+    def p_annotation_type(self, p):
+        """annotation_type : ANNOTATION_TYPE ID NL \
+                              INDENT docsection field_list DEDENT"""
+        p[0] = AstAnnotationTypeDef(
+            path=self.path,
+            lineno=p.lineno(1),
+            lexpos=p.lexpos(1),
+            name=p[2],
+            doc=p[5],
+            params=p[6])
+
+    # --------------------------------------------------------------
     # Structs
     #
     # An example struct looks as follows:
@@ -453,9 +480,16 @@ class ParserFactory(object):
         p[0] = AstTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     def p_annotation(self, p):
-        """annotation : ANNOTATION ID EQ ID args NL"""
-        args, kwargs = p[5]
-        p[0] = AstAnnotationDef(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], args, kwargs)
+        """annotation : ANNOTATION ID EQ ID args NL
+                      | ANNOTATION ID EQ ID DOT ID args NL"""
+        if len(p) < 8:
+            args, kwargs = p[5]
+            p[0] = AstAnnotationDef(
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[4], None, args, kwargs)
+        else:
+            args, kwargs = p[7]
+            p[0] = AstAnnotationDef(
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[6], p[4], args, kwargs)
 
     def p_annotation_ref_list_create(self, p):
         """annotation_ref_list : annotation_ref

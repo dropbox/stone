@@ -20,6 +20,7 @@ if _MYPY:
     from .data_types import (  # noqa: F401 # pylint: disable=unused-import
         Alias,
         Annotation,
+        AnnotationType,
         DataType,
         List as DataTypeList,
         Nullable,
@@ -92,6 +93,7 @@ class _ImportReason(object):
         self.alias = False
         self.data_type = False
         self.annotation = False
+        self.annotation_type = False
 
 
 class ApiNamespace(object):
@@ -102,18 +104,20 @@ class ApiNamespace(object):
     def __init__(self, name):
         # type: (typing.Text) -> None
         self.name = name
-        self.doc = None                 # type: typing.Optional[six.text_type]
-        self.routes = []                # type: typing.List[ApiRoute]
+        self.doc = None                    # type: typing.Optional[six.text_type]
+        self.routes = []                   # type: typing.List[ApiRoute]
         # TODO (peichao): route_by_name is deprecated by routes_by_name and should be removed.
-        self.route_by_name = {}         # type: typing.Dict[typing.Text, ApiRoute]
-        self.routes_by_name = {}        # type: typing.Dict[typing.Text, ApiRoutesByVersion]
-        self.data_types = []            # type: typing.List[UserDefined]
-        self.data_type_by_name = {}     # type: typing.Dict[str, UserDefined]
-        self.aliases = []               # type: typing.List[Alias]
-        self.alias_by_name = {}         # type: typing.Dict[str, Alias]
-        self.annotations = []           # type: typing.List[Annotation]
-        self.annotation_by_name = {}    # type: typing.Dict[str, Annotation]
-        self._imported_namespaces = {}  # type: typing.Dict[ApiNamespace, _ImportReason]
+        self.route_by_name = {}            # type: typing.Dict[typing.Text, ApiRoute]
+        self.routes_by_name = {}           # type: typing.Dict[typing.Text, ApiRoutesByVersion]
+        self.data_types = []               # type: typing.List[UserDefined]
+        self.data_type_by_name = {}        # type: typing.Dict[str, UserDefined]
+        self.aliases = []                  # type: typing.List[Alias]
+        self.alias_by_name = {}            # type: typing.Dict[str, Alias]
+        self.annotations = []              # type: typing.List[Annotation]
+        self.annotation_by_name = {}       # type: typing.Dict[str, Annotation]
+        self.annotation_types = []         # type: typing.List[AnnotationType]
+        self.annotation_type_by_name = {}  # type: typing.Dict[str, AnnotationType]
+        self._imported_namespaces = {}     # type: typing.Dict[ApiNamespace, _ImportReason]
 
     def add_doc(self, docstring):
         # type: (six.text_type) -> None
@@ -156,12 +160,18 @@ class ApiNamespace(object):
         self.annotations.append(annotation)
         self.annotation_by_name[annotation.name] = annotation
 
+    def add_annotation_type(self, annotation_type):
+        # type: (AnnotationType) -> None
+        self.annotation_types.append(annotation_type)
+        self.annotation_type_by_name[annotation_type.name] = annotation_type
+
     def add_imported_namespace(self,
                                namespace,
                                imported_alias=False,
                                imported_data_type=False,
-                               imported_annotation=False):
-        # type: (ApiNamespace, bool, bool, bool) -> None
+                               imported_annotation=False,
+                               imported_annotation_type=False):
+        # type: (ApiNamespace, bool, bool, bool, bool) -> None
         """
         Keeps track of namespaces that this namespace imports.
 
@@ -173,6 +183,9 @@ class ApiNamespace(object):
                 data type in the imported namespace.
             imported_annotation (bool): Set if this namespace references a
                 annotation in the imported namespace.
+            imported_annotation_type (bool): Set if this namespace references an
+                annotation in the imported namespace, possibly indirectly (by
+                referencing an annotation elsewhere that has this type).
         """
         assert self.name != namespace.name, \
             'Namespace cannot import itself.'
@@ -183,6 +196,8 @@ class ApiNamespace(object):
             reason.data_type = True
         if imported_annotation:
             reason.annotation = True
+        if imported_annotation_type:
+            reason.annotation_type = True
 
     def linearize_data_types(self):
         # type: () -> typing.List[UserDefined]
@@ -267,16 +282,23 @@ class ApiNamespace(object):
                 data_types.add(data_user_type)
         return data_types
 
-    def get_imported_namespaces(self, must_have_imported_data_type=False):
-        # type: (bool) -> typing.List[ApiNamespace]
+    def get_imported_namespaces(self,
+                                must_have_imported_data_type=False,
+                                consider_annotations=False,
+                                consider_annotation_types=False):
+        # type: (bool, bool, bool) -> typing.List[ApiNamespace]
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and a data type is
         referenced from it. Namespaces are in ASCII order by name.
 
         Args:
-            must_have_imported_data_type (bool): If true, return does not
-                include namespaces that were imported only for aliases.
+            must_have_imported_data_type (bool): If true, result does not
+                include namespaces that were not imported for data types.
+            consider_annotations (bool): If false, result does not include
+                namespaces that were only imported for annotations
+            consider_annotation_types (bool): If false, result does not
+                include namespaces that were only imported for annotation types.
 
         Returns:
             List[Namespace]: A list of imported namespaces.
@@ -285,6 +307,15 @@ class ApiNamespace(object):
         for imported_namespace, reason in self._imported_namespaces.items():
             if must_have_imported_data_type and not reason.data_type:
                 continue
+            if (not consider_annotations) and not (
+                    reason.data_type or reason.alias or reason.annotation_type
+            ):
+                continue
+            if (not consider_annotation_types) and not (
+                    reason.data_type or reason.alias or reason.annotation
+            ):
+                continue
+
             imported_namespaces.append(imported_namespace)
         imported_namespaces.sort(key=lambda n: n.name)
         return imported_namespaces

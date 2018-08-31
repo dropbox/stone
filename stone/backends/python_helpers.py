@@ -1,14 +1,17 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from contextlib import contextmanager
+
 import pprint
 
-from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
+from stone.backend import Backend, CodeBackend  # noqa: F401 # pylint: disable=unused-import
 from stone.backends.helpers import (
     fmt_pascal,
     fmt_underscores,
 )
 from stone.ir import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
 from stone.ir import (
+    AnnotationType,
     Boolean,
     Bytes,
     Float32,
@@ -23,6 +26,10 @@ from stone.ir import (
     is_user_defined_type,
     is_alias,
 )
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 _type_table = {
     Boolean: 'bool',
@@ -47,6 +54,16 @@ _reserved_keywords = {
     'while',
     'async',
 }
+
+@contextmanager
+def emit_pass_if_nothing_emitted(codegen):
+    # type: (CodeBackend) -> typing.Iterator[None]
+    starting_lineno = codegen.lineno
+    yield
+    ending_lineno = codegen.lineno
+    if starting_lineno == ending_lineno:
+        codegen.emit("pass")
+        codegen.emit()
 
 def _rename_if_reserved(s):
     if s in _reserved_keywords:
@@ -107,7 +124,7 @@ def generate_imports_for_referenced_namespaces(
         the except: clause.
     """
 
-    imported_namespaces = namespace.get_imported_namespaces()
+    imported_namespaces = namespace.get_imported_namespaces(consider_annotation_types=True)
     if not imported_namespaces:
         return
 
@@ -156,6 +173,19 @@ validators_import_with_type_ignore = _validators_import_template.format(
     type_ignore_comment=TYPE_IGNORE_COMMENT
 )
 
+def prefix_with_ns_if_necessary(name, name_ns, source_ns):
+    # type: (typing.Text, ApiNamespace, ApiNamespace) -> typing.Text
+    """
+    Returns a name that can be used to reference `name` in namespace `name_ns`
+    from `source_ns`.
+
+    If `source_ns` and `name_ns` are the same, that's just `name`. Otherwise
+    it's `name_ns`.`name`.
+    """
+    if source_ns == name_ns:
+        return name
+    return '{}.{}'.format(fmt_namespace(name_ns.name), name)
+
 def class_name_for_data_type(data_type, ns=None):
     """
     Returns the name of the Python class that maps to a user-defined type.
@@ -168,7 +198,16 @@ def class_name_for_data_type(data_type, ns=None):
     assert is_user_defined_type(data_type) or is_alias(data_type), \
         'Expected composite type, got %r' % type(data_type)
     name = fmt_class(data_type.name)
-    if ns and data_type.namespace != ns:
-        # If from an imported namespace, add a namespace prefix.
-        name = '{}.{}'.format(fmt_namespace(data_type.namespace.name), name)
+    if ns:
+        return prefix_with_ns_if_necessary(name, data_type.namespace, ns)
+    return name
+
+def class_name_for_annotation_type(annotation_type, ns=None):
+    """
+    Same as class_name_for_data_type, but works with annotation types.
+    """
+    assert isinstance(annotation_type, AnnotationType)
+    name = fmt_class(annotation_type.name)
+    if ns:
+        return prefix_with_ns_if_necessary(name, annotation_type.namespace, ns)
     return name
