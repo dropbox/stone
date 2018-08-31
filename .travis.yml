@@ -18,9 +18,6 @@ matrix:
           dist: xenial
           sudo: true
     allow_failures:
-        # PyPy 3k probably won't work until it acquires compatibility with
-        # >= 3.4
-        - python: pypy3
 
 script:
     - tox
