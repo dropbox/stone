@@ -2,11 +2,11 @@ language: python
 
 python:
     - "2.7"
-    - pypy
-    - "3.3"
     - "3.4"
     - "3.5"
     - "3.6"
+    - "3.7"
+    - pypy
     - pypy3
 
 install:
@@ -17,11 +17,6 @@ matrix:
         # PyPy 3k probably won't work until it acquires compatibility with
         # >= 3.4
         - python: pypy3
-
-        # Python 3.3 is causing some weird issues around setuptools.
-        # We'll turn this off for now and see if it persists over time.
-        # Since 3.3 has reached end of life, we may end up removing this from settings.
-        - python: "3.3"
 
 script:
     - tox
