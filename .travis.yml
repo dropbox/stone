@@ -17,6 +17,7 @@ matrix:
         - python: 3.7
           dist: xenial
           sudo: true
+    # Add entries here to ignore failures on certain configurations that are not caused by our code.
     allow_failures:
 
 script:
