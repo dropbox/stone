@@ -26,7 +26,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
         return result
 
     def _evaluate_namespace_with_auth_mode(self, ns, auth_mode):
-        # type: (ApiNamespace) -> typing.Text
+        # type: (ApiNamespace, str) -> typing.Text
 
         # supply supported auth modes to the SDK generator using the new syntax
         backend = PythonClientBackend(

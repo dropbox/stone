@@ -1,27 +1,24 @@
 language: python
 
 python:
-    - "2.7"
+    - 2.7
+    - 3.4
+    - 3.5
+    - 3.6
     - pypy
-    - "3.3"
-    - "3.4"
-    - "3.5"
-    - "3.6"
     - pypy3
 
 install:
     - pip install tox-travis
 
 matrix:
+    include:
+        # Workaround to enable Python 3.7: https://github.com/travis-ci/travis-ci/issues/9815
+        - python: 3.7
+          dist: xenial
+          sudo: true
+    # Add entries here to ignore failures on certain configurations that are not caused by our code.
     allow_failures:
-        # PyPy 3k probably won't work until it acquires compatibility with
-        # >= 3.4
-        - python: pypy3
-
-        # Python 3.3 is causing some weird issues around setuptools.
-        # We'll turn this off for now and see if it persists over time.
-        # Since 3.3 has reached end of life, we may end up removing this from settings.
-        - python: "3.3"
 
 script:
     - tox
