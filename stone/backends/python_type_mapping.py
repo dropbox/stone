@@ -75,7 +75,7 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
         user_defined_type = cast(UserDefined, data_type)
         class_name = class_name_for_data_type(user_defined_type)
         if user_defined_type.namespace.name != ns.name:
-            return '{}.{}_validator'.format(
+            return '{}.{}'.format(
                 fmt_namespace(user_defined_type.namespace.name), class_name)
         else:
             return class_name
