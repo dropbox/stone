@@ -657,7 +657,7 @@ class PythonTypesBackend(CodeBackend):
 
     def _generate_custom_annotation_processors(self, ns, data_type, extra_annotations=()):
         """
-        Generates code that will run a custom processor function f on every
+        Generates code that will run a custom function 'processor' on every
         field with a custom annotation, no matter how deep (recursively) it
         might be located in data_type (incl. in elements of lists or maps).
         If extra_annotations is passed, it's assumed to be a list of custom
@@ -678,26 +678,26 @@ class PythonTypesBackend(CodeBackend):
                            generate_func_call(
                                'bb.make_struct_annotation_processor',
                                args=[class_name_for_annotation_type(annotation.annotation_type, ns),
-                                     'f']
+                                     'processor']
                            ))
                     annotation_types_seen.add(annotation.annotation_type)
         elif is_list_type(dt):
-            for annotation_type, processor in self._generate_custom_annotation_processors(
+            for annotation_type, recursive_processor in self._generate_custom_annotation_processors(
                     ns, dt.data_type):
                 # every member needs to be replaced---use handwritten processor
                 yield (annotation_type,
                        generate_func_call(
                            'bb.make_list_annotation_processor',
-                           args=[processor]
+                           args=[recursive_processor]
                        ))
         elif is_map_type(dt):
-            for annotation_type, processor in self._generate_custom_annotation_processors(
+            for annotation_type, recursive_processor in self._generate_custom_annotation_processors(
                     ns, dt.value_data_type):
                 # every value needs to be replaced---use handwritten processor
                 yield (annotation_type,
                        generate_func_call(
                            'bb.make_map_value_annotation_processor',
-                           args=[processor]
+                           args=[recursive_processor]
                        ))
 
         # annotations applied directly to this type (through aliases or
@@ -707,7 +707,7 @@ class PythonTypesBackend(CodeBackend):
             yield (annotation.annotation_type,
                    generate_func_call(
                        'bb.partially_apply',
-                       args=['f', self._generate_custom_annotation_instance(ns, annotation)]
+                       args=['processor', self._generate_custom_annotation_instance(ns, annotation)]
                    ))
 
     def _generate_struct_class_custom_annotations(self, ns, data_type):
@@ -715,16 +715,15 @@ class PythonTypesBackend(CodeBackend):
         The _process_custom_annotations function allows client code to access
         custom annotations defined in the spec.
         """
-        self.emit('def _process_custom_annotations(self, annotation_type, f):')
+        self.emit('def _process_custom_annotations(self, annotation_type, processor):')
 
         with self.indent(), emit_pass_if_nothing_emitted(self):
-            if data_type.parent_type:
-                self.emit(
-                    'super({}, self)._process_custom_annotations(annotation_type, f)'.format(
-                        class_name_for_data_type(data_type)
-                    )
+            self.emit(
+                'super({}, self)._process_custom_annotations(annotation_type, processor)'.format(
+                    class_name_for_data_type(data_type)
                 )
-                self.emit()
+            )
+            self.emit()
 
             for field in data_type.fields:
                 field_name = fmt_var(field.name, check_reserved=True)
@@ -1022,15 +1021,14 @@ class PythonTypesBackend(CodeBackend):
         The _process_custom_annotations function allows client code to access
         custom annotations defined in the spec.
         """
-        self.emit('def _process_custom_annotations(self, annotation_type, f):')
+        self.emit('def _process_custom_annotations(self, annotation_type, processor):')
         with self.indent(), emit_pass_if_nothing_emitted(self):
-            if data_type.parent_type:
-                self.emit(
-                    'super({}, self)._process_custom_annotations(annotation_type, f)'.format(
-                        class_name_for_data_type(data_type)
-                    )
+            self.emit(
+                'super({}, self)._process_custom_annotations(annotation_type, processor)'.format(
+                    class_name_for_data_type(data_type)
                 )
-                self.emit()
+            )
+            self.emit()
 
             for field in data_type.fields:
                 recursive_processors = list(self._generate_custom_annotation_processors(
