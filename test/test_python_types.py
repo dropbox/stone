@@ -204,9 +204,11 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                     self._unannotated_field_value = None
                     self._unannotated_field_present = False
 
-                def _process_custom_annotations(self, annotation_type, f):
+                def _process_custom_annotations(self, annotation_type, processor):
+                    super(MyStruct, self)._process_custom_annotations(annotation_type, processor)
+
                     if annotation_type is MyAnnotationType:
-                        self.annotated_field = bb.partially_apply(f, MyAnnotationType(test_param=42))(self.annotated_field)
+                        self.annotated_field = bb.partially_apply(processor, MyAnnotationType(test_param=42))(self.annotated_field)
 
                 def __repr__(self):
                     return 'MyStruct(annotated_field={!r}, unannotated_field={!r})'.format(

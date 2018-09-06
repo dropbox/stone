@@ -269,7 +269,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    f: Callable[[T, U], U],
+                    processor: Callable[[T, U], U],
                 ) -> None: ...
 
             Struct1_validator: bv.Validator = ...
@@ -312,7 +312,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    f: Callable[[T, U], U],
+                    processor: Callable[[T, U], U],
                 ) -> None: ...
 
             Struct2_validator: bv.Validator = ...
@@ -365,7 +365,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    f: Callable[[T, U], U],
+                    processor: Callable[[T, U], U],
                 ) -> None: ...
 
             NestedTypes_validator: bv.Validator = ...
@@ -399,7 +399,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    f: Callable[[T, U], U],
+                    processor: Callable[[T, U], U],
                 ) -> None: ...
 
             Union_validator: bv.Validator = ...
@@ -419,7 +419,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    f: Callable[[T, U], U],
+                    processor: Callable[[T, U], U],
                 ) -> None: ...
 
             Shape_validator: bv.Validator = ...
@@ -444,7 +444,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    f: Callable[[T, U], U],
+                    processor: Callable[[T, U], U],
                 ) -> None: ...
 
             EmptyUnion_validator: bv.Validator = ...
@@ -508,7 +508,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    f: Callable[[T, U], U],
+                    processor: Callable[[T, U], U],
                 ) -> None: ...
 
             Struct1_validator: bv.Validator = ...
