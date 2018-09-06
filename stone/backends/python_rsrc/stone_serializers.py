@@ -127,7 +127,7 @@ class StoneSerializerBase(StoneEncoderInterface):
             # Because Lists are mutable, we always validate them during
             # serialization
             validate_f = validator.validate  # type: typing.Callable[[typing.Any], None]
-            encode_f = self.encode_list  # type: typing.Callable[[typing.Any, typing.Any], typing.Any]
+            encode_f = self.encode_list  # type: typing.Callable[[typing.Any, typing.Any], typing.Any] # noqa: E501
         elif isinstance(validator, bv.Map):
             # Also validate maps during serialization because they are also mutable
             validate_f = validator.validate
