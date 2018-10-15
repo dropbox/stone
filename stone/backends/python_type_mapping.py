@@ -60,7 +60,7 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
     elif is_float_type(data_type):
         return 'float'
     elif is_integer_type(data_type):
-        return 'long'
+        return 'int'
     elif is_void_type(data_type):
         return 'None'
     elif is_timestamp_type(data_type):

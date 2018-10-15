@@ -165,7 +165,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 @property
                 def annotated_field(self):
                     """
-                    :rtype: long
+                    :rtype: int
                     """
                     if self._annotated_field_present:
                         return self._annotated_field_value
@@ -186,7 +186,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 @property
                 def unannotated_field(self):
                     """
-                    :rtype: long
+                    :rtype: int
                     """
                     if self._unannotated_field_present:
                         return self._unannotated_field_value
@@ -268,14 +268,14 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                     """
                     test parameter
 
-                    :rtype: long
+                    :rtype: int
                     """
                     return self._test_param
 
                 @property
                 def test_default_param(self):
                     """
-                    :rtype: long
+                    :rtype: int
                     """
                     return self._test_default_param
 
