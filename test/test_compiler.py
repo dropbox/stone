@@ -67,6 +67,7 @@ union TestError
 """
 
 class TestCompiler(unittest.TestCase):
+    """Tests for compiler module"""
 
     def test_preserve_aliases_true(self):
         # Use a modified version of the Python types backend
