@@ -6,13 +6,6 @@ import os
 import unittest
 import sys
 
-try:
-    # Works for Py 3.3+
-    from unittest.mock import Mock
-except ImportError:
-    # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
-    from mock import Mock  # type: ignore
-
 from stone.backends.python_types import (
     PythonTypesBackend
 )
@@ -114,11 +107,11 @@ class TestCompiler(unittest.TestCase):
         # StructAlias should point to TestStruct
         self.assertEquals(ns.StructAlias, ns.TestStruct)
 
-        # StructAlias field should exist and point to PathRootId alias (String)
+        # Alias for struct field should exist and point to PathRootId alias (String)
         self.assertTrue(hasattr(ns.TestStruct, 'field1'))
         self.assertEquals(ns.TestStruct._field1_validator, ns.PathRootId_validator)
 
-        # Alias for union field should exist and point to PathRootId alias (String)
+        # Alias for union tag should exist and point to PathRootId alias (String)
         self.assertTrue(hasattr(ns.TestError, 'test'))
         self.assertEquals(ns.TestError._tagmap['test'], ns.PathRootId_validator)
 

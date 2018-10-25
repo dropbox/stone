@@ -41,6 +41,8 @@ def remove_aliases_from_api(api):
         # Remove nested aliases first. This way, when we replace an alias with
         # its source later on, it too is alias free.
         for alias in namespace.aliases:
+            # For better or for worse, all non-user-defined types that
+            # reference other types do so with a 'data_type' attribute.
             if hasattr(alias, 'data_type'):
                 resolve_aliases(alias.data_type)
         for data_type in namespace.data_types:
