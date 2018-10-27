@@ -161,7 +161,7 @@ class SwiftBackend(SwiftBaseBackend):
         self.emit('/// Routes for the {} namespace'.format(namespace.name))
 
         with self.block('open class {}Routes'.format(ns_class)):
-            self.emit('open let client: {}'.format(self.args.transport_client_name))
+            self.emit('public let client: {}'.format(self.args.transport_client_name))
             args = [('client', '{}'.format(self.args.transport_client_name))]
 
             with self.function_block('init', self._func_args(args)):

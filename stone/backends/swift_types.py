@@ -179,7 +179,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 fdoc = self.process_doc(field.doc,
                     self._docf) if field.doc else undocumented
                 self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('open let {}: {}'.format(
+                self.emit('public let {}: {}'.format(
                     fmt_var(field.name),
                     fmt_type(field.data_type),
                 ))
