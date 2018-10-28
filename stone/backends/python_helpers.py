@@ -37,12 +37,12 @@ _type_table = {
     Float32: 'float',
     Float64: 'float',
     Int32: 'int',
-    Int64: 'long',
+    Int64: 'int',
     List: 'list',
     String: 'str',
     Timestamp: 'datetime',
-    UInt32: 'long',
-    UInt64: 'long',
+    UInt32: 'int',
+    UInt64: 'int',
 }
 
 _reserved_keywords = {
