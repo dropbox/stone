@@ -1933,7 +1933,7 @@ def unwrap_aliases(data_type):
         data_type = data_type.data_type
     return data_type, unwrapped_alias
 
-def resolve_aliases(data_type):
+def resolve_aliases(alias):
     """
     Resolve all chained / nested Aliases - this will recursively point
     nested aliases to their resolved data type (first non-alias in the chain).
@@ -1942,17 +1942,23 @@ def resolve_aliases(data_type):
     the resolved data type.
 
     Args:
-        data_type (DataType): The target DataType (Alias) to resolve.
+        alias (Alias): The target Alias to resolve.
     Return:
-        DataType: The resolved data type.
+        Alias: The resolved parent object.
     """
-    if not is_alias(data_type):
-        return data_type
+    def _resolve_data_type_chain(data_type):
+        if not is_alias(data_type):
+            return data_type
+        
+        resolved = _resolve_data_type_chain(data_type.data_type)
+        data_type.data_type = resolved
 
-    resolved = resolve_aliases(data_type.data_type)
-    data_type.data_type = resolved
+        return resolved
 
-    return resolved
+    if hasattr(alias, 'data_type'):
+        alias.data_type = _resolve_data_type_chain(alias.data_type)
+    
+    return alias
 
 def unwrap(data_type):
     """
