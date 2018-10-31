@@ -307,18 +307,18 @@ union TestError
         # Ensure struct and union field aliases resolve to proper types
         self.assertIsInstance(data_types['TestStruct'], Struct)
 
-        test_struct = data_types['TestStruct']
+        test_struct = data_types.get('TestStruct')
 
         self.assertTrue(len(test_struct.fields), 1)
-        field = data_types['TestStruct'].fields[0]
-        
+
+        field = test_struct.fields[0]
         self.assertEqual(field.name, 'field1')
         self.assertIsInstance(field.data_type, Alias)
 
         test_union = data_types['TestError']
 
         self.assertTrue(len(test_union.fields), 1)
-        field = data_types['TestError'].fields[0]
+        field = test_union.fields[0]
         
         self.assertEqual(field.name, 'test')
         self.assertIsInstance(field.data_type, Alias)
@@ -365,20 +365,19 @@ union TestError
         }
 
         # Ensure struct and union field aliases resolve to proper types
-        self.assertIsInstance(data_types['TestStruct'], Struct)
-
-        test_struct = data_types['TestStruct']
+        test_struct = data_types.get('TestStruct')
+        self.assertIsInstance(test_struct, Struct)
 
         self.assertTrue(len(test_struct.fields), 1)
-        field = data_types['TestStruct'].fields[0]
-        
+
+        field = test_struct.fields[0]
         self.assertEqual(field.name, 'field1')
         self.assertIsInstance(field.data_type, String)
 
         test_union = data_types['TestError']
 
         self.assertTrue(len(test_union.fields), 1)
-        field = data_types['TestError'].fields[0]
+        field = test_union.fields[0]
         
         self.assertEqual(field.name, 'test')
         self.assertIsInstance(field.data_type, String)
