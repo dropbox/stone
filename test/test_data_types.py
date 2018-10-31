@@ -10,13 +10,6 @@ class TestDataTypes(unittest.TestCase):
     """Tests for the data_types module"""
 
     def test_resolve_aliases(self):
-
-        data_type = String()
-        returned_alias = resolve_aliases(data_type)
-
-        # Test that non alias returns itself
-        self.assertEqual(returned_alias, data_type)
-
         first_alias = Alias(None, None, None)
         first_alias.data_type = String()
         returned_alias = resolve_aliases(first_alias)

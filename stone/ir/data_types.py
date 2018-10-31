@@ -1955,8 +1955,7 @@ def resolve_aliases(alias):
 
         return resolved
 
-    if hasattr(alias, 'data_type'):
-        alias.data_type = _resolve_data_type_chain(alias.data_type)
+    alias.data_type = _resolve_data_type_chain(alias.data_type)
 
     return alias
 
