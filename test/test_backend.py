@@ -15,7 +15,13 @@ from stone.ir import (
     StructField,
     resolve_aliases
 )
-from stone.backend import CodeBackend
+from stone.frontend.frontend import (
+    specs_to_ir
+)
+from stone.backend import (
+    remove_aliases_from_api,
+    CodeBackend
+)
 
 _MYPY = False
 if _MYPY:
@@ -246,6 +252,136 @@ int sq(int x) <
         self.assertEqual(returned_alias, first_alias)
         self.assertIsInstance(first_alias.data_type, String)
         self.assertIsInstance(second_alias.data_type, String)
+
+    def test_preserve_aliases_from_api(self):
+        spec = """\
+namespace preserve_alias
+
+route eval(TestStruct, TestResult, TestError)
+
+alias NamespaceId = String(pattern="[-_0-9a-zA-Z:]+")
+alias SharedFolderId = NamespaceId
+alias PathRootId = SharedFolderId
+
+struct TestStruct
+    field1 PathRootId
+
+alias StructAlias = TestStruct
+
+struct TestResult
+    field1 PathRootId
+
+union TestError
+    test PathRootId
+"""
+
+        api = specs_to_ir(
+            [(None, spec)]
+        )
+        
+        # Ensure namespace exists
+        self.assertEqual(len(api.namespaces), 1)
+        self.assertTrue('preserve_alias' in api.namespaces)
+
+        ns = api.namespaces['preserve_alias']
+    
+        aliases = {
+            alias._name: alias for alias in ns.aliases 
+        }
+        data_types = {
+            data_type._name: data_type for data_type in ns.data_types
+        }
+
+        # Ensure aliases are in the namespace
+        self.assertTrue('NamespaceId' in aliases)
+        self.assertTrue('SharedFolderId' in aliases)
+        self.assertTrue('PathRootId' in aliases)
+        self.assertTrue('StructAlias' in aliases)
+
+        # Ensure aliases resolve to proper types
+        self.assertIsInstance(aliases['NamespaceId'].data_type, String)
+        self.assertIsInstance(aliases['SharedFolderId'].data_type, Alias)
+        self.assertIsInstance(aliases['PathRootId'].data_type, Alias)
+        self.assertIsInstance(aliases['StructAlias'].data_type, Struct)
+
+        # Ensure struct and union field aliases resolve to proper types
+        self.assertIsInstance(data_types['TestStruct'], Struct)
+
+        test_struct = data_types['TestStruct']
+
+        self.assertTrue(len(test_struct.fields), 1)
+        field = data_types['TestStruct'].fields[0]
+        
+        self.assertEqual(field.name, 'field1')
+        self.assertIsInstance(field.data_type, Alias)
+
+        test_union = data_types['TestError']
+
+        self.assertTrue(len(test_union.fields), 1)
+        field = data_types['TestError'].fields[0]
+        
+        self.assertEqual(field.name, 'test')
+        self.assertIsInstance(field.data_type, Alias)
+
+    def test_no_preserve_aliases_from_api(self):
+        spec = """\
+namespace preserve_alias
+
+route eval(TestStruct, TestResult, TestError)
+
+alias NamespaceId = String(pattern="[-_0-9a-zA-Z:]+")
+alias SharedFolderId = NamespaceId
+alias PathRootId = SharedFolderId
+
+struct TestStruct
+    field1 PathRootId
+
+alias StructAlias = TestStruct
+
+struct TestResult
+    field1 PathRootId
+
+union TestError
+    test PathRootId
+"""
+
+        api = specs_to_ir(
+            [(None, spec)]
+        )
+
+        api = remove_aliases_from_api(api)
+        
+        # Ensure namespace exists
+        self.assertEqual(len(api.namespaces), 1)
+        self.assertTrue('preserve_alias' in api.namespaces)
+
+        ns = api.namespaces['preserve_alias']
+
+        # Ensure aliases are gone
+        self.assertEqual(len(ns.aliases), 0)
+    
+        data_types = {
+            data_type._name: data_type for data_type in ns.data_types
+        }
+
+        # Ensure struct and union field aliases resolve to proper types
+        self.assertIsInstance(data_types['TestStruct'], Struct)
+
+        test_struct = data_types['TestStruct']
+
+        self.assertTrue(len(test_struct.fields), 1)
+        field = data_types['TestStruct'].fields[0]
+        
+        self.assertEqual(field.name, 'field1')
+        self.assertIsInstance(field.data_type, String)
+
+        test_union = data_types['TestError']
+
+        self.assertTrue(len(test_union.fields), 1)
+        field = data_types['TestError'].fields[0]
+        
+        self.assertEqual(field.name, 'test')
+        self.assertIsInstance(field.data_type, String)
 
 if __name__ == '__main__':
     unittest.main()
