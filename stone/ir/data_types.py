@@ -1949,7 +1949,7 @@ def resolve_aliases(alias):
     def _resolve_data_type_chain(data_type):
         if not is_alias(data_type):
             return data_type
-        
+
         resolved = _resolve_data_type_chain(data_type.data_type)
         data_type.data_type = resolved
 
@@ -1957,7 +1957,7 @@ def resolve_aliases(alias):
 
     if hasattr(alias, 'data_type'):
         alias.data_type = _resolve_data_type_chain(alias.data_type)
-    
+
     return alias
 
 def unwrap(data_type):

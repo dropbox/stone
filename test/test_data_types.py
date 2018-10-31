@@ -10,7 +10,7 @@ class TestDataTypes(unittest.TestCase):
     """Tests for the data_types module"""
 
     def test_resolve_aliases(self):
-        
+
         data_type = String()
         returned_alias = resolve_aliases(data_type)
 
@@ -35,4 +35,3 @@ class TestDataTypes(unittest.TestCase):
         self.assertEqual(returned_alias, first_alias)
         self.assertIsInstance(first_alias.data_type, String)
         self.assertIsInstance(second_alias.data_type, String)
-
