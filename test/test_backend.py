@@ -278,15 +278,15 @@ union TestError
         api = specs_to_ir(
             [(None, spec)]
         )
-        
+
         # Ensure namespace exists
         self.assertEqual(len(api.namespaces), 1)
         self.assertTrue('preserve_alias' in api.namespaces)
 
         ns = api.namespaces['preserve_alias']
-    
+
         aliases = {
-            alias._name: alias for alias in ns.aliases 
+            alias._name: alias for alias in ns.aliases
         }
         data_types = {
             data_type._name: data_type for data_type in ns.data_types
@@ -319,7 +319,7 @@ union TestError
 
         self.assertTrue(len(test_union.fields), 1)
         field = test_union.fields[0]
-        
+
         self.assertEqual(field.name, 'test')
         self.assertIsInstance(field.data_type, Alias)
 
@@ -350,7 +350,7 @@ union TestError
         )
 
         api = remove_aliases_from_api(api)
-        
+
         # Ensure namespace exists
         self.assertEqual(len(api.namespaces), 1)
         self.assertTrue('preserve_alias' in api.namespaces)
@@ -359,7 +359,7 @@ union TestError
 
         # Ensure aliases are gone
         self.assertEqual(len(ns.aliases), 0)
-    
+
         data_types = {
             data_type._name: data_type for data_type in ns.data_types
         }
@@ -378,7 +378,7 @@ union TestError
 
         self.assertTrue(len(test_union.fields), 1)
         field = test_union.fields[0]
-        
+
         self.assertEqual(field.name, 'test')
         self.assertIsInstance(field.data_type, String)
 
