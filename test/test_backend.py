@@ -6,6 +6,7 @@ import unittest
 
 from stone.ir import (
     Alias,
+    Api,
     ApiNamespace,
     ApiRoute,
     List,
@@ -13,10 +14,9 @@ from stone.ir import (
     String,
     Struct,
     StructField,
+    Union,
+    UnionField,
     resolve_aliases
-)
-from stone.frontend.frontend import (
-    specs_to_ir
 )
 from stone.backend import (
     remove_aliases_from_api,
@@ -254,30 +254,34 @@ int sq(int x) <
         self.assertIsInstance(second_alias.data_type, String)
 
     def test_preserve_aliases_from_api(self):
-        spec = """\
-namespace preserve_alias
+        api = Api(version=None)
+        api.ensure_namespace('preserve_alias')
 
-route eval(TestStruct, TestResult, TestError)
+        ns = api.namespaces['preserve_alias']
 
-alias NamespaceId = String(pattern="[-_0-9a-zA-Z:]+")
-alias SharedFolderId = NamespaceId
-alias PathRootId = SharedFolderId
+        namespace_id = Alias('NamespaceId', ns, None)
+        namespace_id.data_type = String()
+        shared_folder_id = Alias('SharedFolderId', ns, None)
+        shared_folder_id.set_attributes(None, namespace_id)
+        path_root_id = Alias('PathRootId', ns, None)
+        path_root_id.set_attributes(None, shared_folder_id)
 
-struct TestStruct
-    field1 PathRootId
+        ns.add_alias(namespace_id)
+        ns.add_alias(shared_folder_id)
+        ns.add_alias(path_root_id)
 
-alias StructAlias = TestStruct
+        test_struct = Struct('TestStruct', ns, None)
+        test_struct.set_attributes(None, [StructField('field1', path_root_id, None, None)])
+        test_union = Union('TestUnion', ns, None, None)
+        test_union.set_attributes(None, [UnionField('test', path_root_id, None, None)])
 
-struct TestResult
-    field1 PathRootId
+        ns.add_data_type(test_struct)
+        ns.add_data_type(test_union)
 
-union TestError
-    test PathRootId
-"""
+        struct_alias = Alias('StructAlias', ns, None)
+        struct_alias.set_attributes(None, test_struct)
 
-        api = specs_to_ir(
-            [(None, spec)]
-        )
+        ns.add_alias(struct_alias)
 
         # Ensure namespace exists
         self.assertEqual(len(api.namespaces), 1)
@@ -315,7 +319,7 @@ union TestError
         self.assertEqual(field.name, 'field1')
         self.assertIsInstance(field.data_type, Alias)
 
-        test_union = data_types['TestError']
+        test_union = data_types['TestUnion']
 
         self.assertTrue(len(test_union.fields), 1)
         field = test_union.fields[0]
@@ -324,30 +328,34 @@ union TestError
         self.assertIsInstance(field.data_type, Alias)
 
     def test_no_preserve_aliases_from_api(self):
-        spec = """\
-namespace preserve_alias
+        api = Api(version=None)
+        api.ensure_namespace('preserve_alias')
 
-route eval(TestStruct, TestResult, TestError)
+        ns = api.namespaces['preserve_alias']
 
-alias NamespaceId = String(pattern="[-_0-9a-zA-Z:]+")
-alias SharedFolderId = NamespaceId
-alias PathRootId = SharedFolderId
+        namespace_id = Alias('NamespaceId', ns, None)
+        namespace_id.data_type = String()
+        shared_folder_id = Alias('SharedFolderId', ns, None)
+        shared_folder_id.set_attributes(None, namespace_id)
+        path_root_id = Alias('PathRootId', ns, None)
+        path_root_id.set_attributes(None, shared_folder_id)
 
-struct TestStruct
-    field1 PathRootId
+        ns.add_alias(namespace_id)
+        ns.add_alias(shared_folder_id)
+        ns.add_alias(path_root_id)
 
-alias StructAlias = TestStruct
+        test_struct = Struct('TestStruct', ns, None)
+        test_struct.set_attributes(None, [StructField('field1', path_root_id, None, None)])
+        test_union = Union('TestUnion', ns, None, None)
+        test_union.set_attributes(None, [UnionField('test', path_root_id, None, None)])
 
-struct TestResult
-    field1 PathRootId
+        ns.add_data_type(test_struct)
+        ns.add_data_type(test_union)
 
-union TestError
-    test PathRootId
-"""
+        struct_alias = Alias('StructAlias', ns, None)
+        struct_alias.set_attributes(None, test_struct)
 
-        api = specs_to_ir(
-            [(None, spec)]
-        )
+        ns.add_alias(struct_alias)
 
         api = remove_aliases_from_api(api)
 
@@ -374,7 +382,7 @@ union TestError
         self.assertEqual(field.name, 'field1')
         self.assertIsInstance(field.data_type, String)
 
-        test_union = data_types['TestError']
+        test_union = data_types['TestUnion']
 
         self.assertTrue(len(test_union.fields), 1)
         field = test_union.fields[0]
