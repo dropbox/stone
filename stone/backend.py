@@ -41,7 +41,7 @@ def remove_aliases_from_api(api):
         # Remove nested aliases first. This way, when we replace an alias with
         # its source later on, it too is alias free.
         for alias in namespace.aliases:
-            resolve_aliases(alias)
+            alias.data_type = resolve_aliases(alias.data_type)
         for data_type in namespace.data_types:
             for field in data_type.fields:
                 # Unwrap alias for field

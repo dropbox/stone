@@ -236,11 +236,11 @@ int sq(int x) <
     def test_resolve_aliases(self):
         first_alias = Alias(None, None, None)
         first_alias.data_type = String()
-        returned_alias = resolve_aliases(first_alias)
+        resolved_type = resolve_aliases(first_alias.data_type)
 
         # Test that single-level alias chain resolves
-        self.assertEqual(returned_alias, first_alias)
-        self.assertIsInstance(returned_alias.data_type, String)
+        self.assertIsInstance(resolved_type, String)
+        self.assertIsInstance(first_alias.data_type, String)
 
         first_alias = Alias(None, None, None)
         second_alias = Alias(None, None, None)
@@ -248,8 +248,10 @@ int sq(int x) <
         second_alias.data_type = String()
 
         # Test that a two-level alias chain resolves
-        returned_alias = resolve_aliases(first_alias)
-        self.assertEqual(returned_alias, first_alias)
+        resolved_type = resolve_aliases(first_alias.data_type)
+        first_alias.data_type = resolved_type
+
+        self.assertIsInstance(resolved_type, String)
         self.assertIsInstance(first_alias.data_type, String)
         self.assertIsInstance(second_alias.data_type, String)
 
