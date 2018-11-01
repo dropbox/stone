@@ -1942,7 +1942,7 @@ def resolve_aliases(data_type):
     the resolved data type.
 
     Args:
-        alias (Alias): The target Alias to resolve.
+        data_type (DataType): The target DataType/Alias to resolve.
     Return:
         DataType: The resolved type.
     """
