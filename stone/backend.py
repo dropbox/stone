@@ -9,7 +9,6 @@ import textwrap
 from stone.frontend.ir_generator import doc_ref_re
 from stone.ir import (
     is_alias,
-    resolve_aliases
 )
 
 _MYPY = False
@@ -41,12 +40,29 @@ def remove_aliases_from_api(api):
         # Remove nested aliases first. This way, when we replace an alias with
         # its source later on, it too is alias free.
         for alias in namespace.aliases:
-            alias.data_type = resolve_aliases(alias.data_type)
+            data_type = alias
+            while True:
+                # For better or for worse, all non-user-defined types that
+                # reference other types do so with a 'data_type' attribute.
+                if hasattr(data_type, 'data_type'):
+                    if is_alias(data_type.data_type):
+                        # Skip the alias (this looks so terrible...)
+                        data_type.data_type = data_type.data_type.data_type
+                    data_type = data_type.data_type
+                else:
+                    break
+
         for data_type in namespace.data_types:
             for field in data_type.fields:
-                # Unwrap alias for field
-                if is_alias(field.data_type):
-                    field.data_type = field.data_type.data_type
+                data_type = field
+                while True:
+                    if hasattr(data_type, 'data_type'):
+                        if is_alias(data_type.data_type):
+                            data_type.data_type = data_type.data_type.data_type
+                        data_type = data_type.data_type
+                    else:
+                        break
+
         for route in namespace.routes:
             if is_alias(route.arg_data_type):
                 route.arg_data_type = route.arg_data_type.data_type
