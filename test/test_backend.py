@@ -10,6 +10,7 @@ from stone.ir import (
     ApiNamespace,
     ApiRoute,
     List,
+    Nullable,
     Boolean,
     String,
     Struct,
@@ -341,13 +342,20 @@ int sq(int x) <
         shared_folder_id.set_attributes(None, namespace_id)
         path_root_id = Alias('PathRootId', ns, None)
         path_root_id.set_attributes(None, shared_folder_id)
+        nullable_alias = Alias('NullableAlias', ns, None)
+        nullable_alias.set_attributes(None, Nullable(path_root_id))
 
         ns.add_alias(namespace_id)
         ns.add_alias(shared_folder_id)
         ns.add_alias(path_root_id)
+        ns.add_alias(nullable_alias)
 
         test_struct = Struct('TestStruct', ns, None)
-        test_struct.set_attributes(None, [StructField('field1', path_root_id, None, None)])
+        test_struct.set_attributes(None, [
+            StructField('field_alias', path_root_id, None, None),
+            StructField('field_nullable_alias', nullable_alias, None, None),
+            StructField('field_list_of_alias', List(path_root_id), None, None)
+        ])
         test_union = Union('TestUnion', ns, None, None)
         test_union.set_attributes(None, [UnionField('test', path_root_id, None, None)])
 
@@ -378,11 +386,19 @@ int sq(int x) <
         test_struct = data_types.get('TestStruct')
         self.assertIsInstance(test_struct, Struct)
 
-        self.assertTrue(len(test_struct.fields), 1)
+        self.assertEqual(len(test_struct.fields), 3)
 
-        field = test_struct.fields[0]
-        self.assertEqual(field.name, 'field1')
-        self.assertIsInstance(field.data_type, String)
+        for field in test_struct.fields:
+            if field.name == 'field_list_of_alias':
+                self.assertIsInstance(field.data_type, List)
+                list_type = field.data_type.data_type
+                self.assertIsInstance(list_type, String)
+            elif field.name == 'field_nullable_alias':
+                field_type = field.data_type
+                self.assertIsInstance(field_type, Nullable)
+                self.assertIsInstance(field_type.data_type, String)
+            else:
+                self.assertIsInstance(field.data_type, String)
 
         test_union = data_types['TestUnion']
 

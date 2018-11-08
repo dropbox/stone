@@ -1935,7 +1935,7 @@ def unwrap_aliases(data_type):
 
 def resolve_aliases(data_type):
     """
-    Resolve all chained / nested Aliases - this will recursively point
+    Resolve all chained / nested aliases. This will recursively point
     nested aliases to their resolved data type (first non-alias in the chain).
 
     Note: This differs from unwrap_alias which simply identifies/returns

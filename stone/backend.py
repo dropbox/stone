@@ -41,12 +41,30 @@ def remove_aliases_from_api(api):
         # Remove nested aliases first. This way, when we replace an alias with
         # its source later on, it too is alias free.
         for alias in namespace.aliases:
-            alias.data_type = resolve_aliases(alias.data_type)
+            # This loops through each alias type chain, resolving each (nested) alias
+            # to its underlying type at the end of the chain (see resolve_aliases fn).
+            #
+            # It will continue until it no longer encounters a type
+            # with a data_type attribute - this ensures it resolves aliases
+            # that are subtypes of composites e.g. Lists
+            curr_type = alias
+            while hasattr(curr_type, 'data_type'):
+                curr_type.data_type = resolve_aliases(curr_type.data_type)
+                curr_type = curr_type.data_type
         for data_type in namespace.data_types:
             for field in data_type.fields:
-                # Unwrap alias for field
-                if is_alias(field.data_type):
-                    field.data_type = field.data_type.data_type
+                # This loops through each (composite) data type chain, removing any
+                # alias layers it encounters.
+                #
+                # Aliases have been previously resolved to their underlying types above
+                # so we just need to point to each aliases data type.
+                #
+                # Note: Nullables and other wrapping types will not be affected here.
+                curr_type = field
+                while hasattr(curr_type, 'data_type'):
+                    if is_alias(curr_type.data_type):
+                        curr_type.data_type = curr_type.data_type.data_type
+                    curr_type = curr_type.data_type
         for route in namespace.routes:
             if is_alias(route.arg_data_type):
                 route.arg_data_type = route.arg_data_type.data_type
