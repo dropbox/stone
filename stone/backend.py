@@ -55,12 +55,18 @@ def remove_aliases_from_api(api):
             for field in data_type.fields:
                 strip_alias(field)
         for route in namespace.routes:
+            # Strip inner aliases
+            strip_alias(route.arg_data_type)
+            strip_alias(route.result_data_type)
+            strip_alias(route.error_data_type)
+
+            # Strip top-level aliases
             if is_alias(route.arg_data_type):
-                strip_alias(route.arg_data_type)
+                route.arg_data_type = route.arg_data_type.data_type
             if is_alias(route.result_data_type):
-                strip_alias(route.result_data_type)
+                route.result_data_type = route.result_data_type.data_type
             if is_alias(route.error_data_type):
-                strip_alias(route.error_data_type)
+                route.error_data_type = route.error_data_type.data_type
 
         # Clear aliases
         namespace.aliases = []
