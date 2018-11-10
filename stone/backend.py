@@ -9,7 +9,8 @@ import textwrap
 from stone.frontend.ir_generator import doc_ref_re
 from stone.ir import (
     is_alias,
-    resolve_aliases
+    resolve_aliases,
+    strip_alias
 )
 
 _MYPY = False
@@ -34,12 +35,9 @@ open = open  # type: typing.Any # pylint: disable=redefined-builtin
 
 
 def remove_aliases_from_api(api):
+    # Resolve nested aliases from each namespace first. This way, when we replace an alias with
+    # its source later on, it too is alias free.
     for namespace in api.namespaces.values():
-        # Important: Even if this namespace has no aliases, it may reference
-        # an alias in an imported namespace.
-
-        # Remove nested aliases first. This way, when we replace an alias with
-        # its source later on, it too is alias free.
         for alias in namespace.aliases:
             # This loops through each alias type chain, resolving each (nested) alias
             # to its underlying type at the end of the chain (see resolve_aliases fn).
@@ -51,27 +49,18 @@ def remove_aliases_from_api(api):
             while hasattr(curr_type, 'data_type'):
                 curr_type.data_type = resolve_aliases(curr_type.data_type)
                 curr_type = curr_type.data_type
+    # Remove alias layers from each data type
+    for namespace in api.namespaces.values():
         for data_type in namespace.data_types:
             for field in data_type.fields:
-                # This loops through each (composite) data type chain, removing any
-                # alias layers it encounters.
-                #
-                # Aliases have been previously resolved to their underlying types above
-                # so we just need to point to each aliases data type.
-                #
-                # Note: Nullables and other wrapping types will not be affected here.
-                curr_type = field
-                while hasattr(curr_type, 'data_type'):
-                    if is_alias(curr_type.data_type):
-                        curr_type.data_type = curr_type.data_type.data_type
-                    curr_type = curr_type.data_type
+                strip_alias(field)
         for route in namespace.routes:
             if is_alias(route.arg_data_type):
-                route.arg_data_type = route.arg_data_type.data_type
+                strip_alias(route.arg_data_type)
             if is_alias(route.result_data_type):
-                route.result_data_type = route.result_data_type.data_type
+                strip_alias(route.result_data_type)
             if is_alias(route.error_data_type):
-                route.error_data_type = route.error_data_type.data_type
+                strip_alias(route.error_data_type)
 
         # Clear aliases
         namespace.aliases = []
