@@ -9,6 +9,8 @@ import textwrap
 from stone.frontend.ir_generator import doc_ref_re
 from stone.ir import (
     is_alias,
+    resolve_aliases,
+    strip_alias
 )
 
 _MYPY = False
@@ -33,37 +35,32 @@ open = open  # type: typing.Any # pylint: disable=redefined-builtin
 
 
 def remove_aliases_from_api(api):
+    # Resolve nested aliases from each namespace first. This way, when we replace an alias with
+    # its source later on, it too is alias free.
     for namespace in api.namespaces.values():
-        # Important: Even if this namespace has no aliases, it may reference
-        # an alias in an imported namespace.
-
-        # Remove nested aliases first. This way, when we replace an alias with
-        # its source later on, it too is alias free.
         for alias in namespace.aliases:
-            data_type = alias
-            while True:
-                # For better or for worse, all non-user-defined types that
-                # reference other types do so with a 'data_type' attribute.
-                if hasattr(data_type, 'data_type'):
-                    if is_alias(data_type.data_type):
-                        # Skip the alias (this looks so terrible...)
-                        data_type.data_type = data_type.data_type.data_type
-                    data_type = data_type.data_type
-                else:
-                    break
-
+            # This loops through each alias type chain, resolving each (nested) alias
+            # to its underlying type at the end of the chain (see resolve_aliases fn).
+            #
+            # It will continue until it no longer encounters a type
+            # with a data_type attribute - this ensures it resolves aliases
+            # that are subtypes of composites e.g. Lists
+            curr_type = alias
+            while hasattr(curr_type, 'data_type'):
+                curr_type.data_type = resolve_aliases(curr_type.data_type)
+                curr_type = curr_type.data_type
+    # Remove alias layers from each data type
+    for namespace in api.namespaces.values():
         for data_type in namespace.data_types:
             for field in data_type.fields:
-                data_type = field
-                while True:
-                    if hasattr(data_type, 'data_type'):
-                        if is_alias(data_type.data_type):
-                            data_type.data_type = data_type.data_type.data_type
-                        data_type = data_type.data_type
-                    else:
-                        break
-
+                strip_alias(field)
         for route in namespace.routes:
+            # Strip inner aliases
+            strip_alias(route.arg_data_type)
+            strip_alias(route.result_data_type)
+            strip_alias(route.error_data_type)
+
+            # Strip top-level aliases
             if is_alias(route.arg_data_type):
                 route.arg_data_type = route.arg_data_type.data_type
             if is_alias(route.result_data_type):
