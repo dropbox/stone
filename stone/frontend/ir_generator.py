@@ -1351,11 +1351,13 @@ class IRGenerator(object):
                     if isinstance(env[type_name], Environment):
                         # Handle reference to field in imported namespace.
                         namespace_name, type_name, field_name = val.split('.', 2)
-                        env_to_check = env[namespace_name]
+                        data_type_to_check = env[namespace_name][type_name]
+                    elif isinstance(env[type_name], Alias):
+                        data_type_to_check = env[type_name].data_type
                     else:
-                        env_to_check = env
+                        data_type_to_check = env[type_name]
                     if not any(field.name == field_name
-                               for field in env_to_check[type_name].all_fields):
+                               for field in data_type_to_check.all_fields):
                         raise InvalidSpec(
                             'Bad doc reference to unknown field %s.' % quote(val),
                             *loc)

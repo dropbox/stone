@@ -2300,6 +2300,21 @@ class TestStone(unittest.TestCase):
         self.assertEqual(cm.exception.lineno, 6)
         self.assertEqual(cm.exception.path, 'test.stone')
 
+        # Test referencing a field of alias
+        text = textwrap.dedent("""\
+                    namespace test
+
+                    struct T
+                        f String
+
+                    alias A = T
+
+                    struct B
+                        "ref to alias field :field:`A.f`."
+                    """)
+
+        specs_to_ir([('test.stone', text)])
+
     def test_namespace(self):
         # Test that namespace docstrings are combined
         ns1_text = textwrap.dedent("""\
