@@ -909,8 +909,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     ]))
         elif is_string_type(data_type):
             if data_type.pattern or data_type.min_length or data_type.max_length:
-                pattern = data_type.pattern.encode('unicode_escape').replace(
-                    "\"", "\\\"") if data_type.pattern else None
+                pat = data_type.pattern if data_type.pattern else None
+                pat = pat.replace("\\", "\\\\").replace("\"", "\\\"") if pat else pat
                 validator = '{}:{}'.format(
                     fmt_validator(data_type),
                     fmt_func_args([
@@ -918,8 +918,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(pattern)
-                         if pattern else 'nil'),
+                        ('pattern', '@"{}"'.format(pat)
+                         if pat else 'nil'),
                     ]))
 
         if nullable:

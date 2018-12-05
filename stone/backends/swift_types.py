@@ -235,7 +235,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
             )
         elif is_string_type(data_type):
             pat = data_type.pattern if data_type.pattern else None
-            pat = pat.encode('unicode_escape').replace("\"", "\\\"") if pat else pat
+            pat = pat.replace("\\", "\\\\").replace("\"", "\\\"") if pat else pat
             v = "stringValidator({})".format(
                 self._func_args([
                     ("minLength", data_type.min_length),
