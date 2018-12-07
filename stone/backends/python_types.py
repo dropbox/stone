@@ -1169,7 +1169,7 @@ def generate_validator_constructor(ns, data_type):
             v = '{}.{}'.format(fmt_namespace(dt.namespace.name), v)
     elif is_alias(dt):
         # Assume that the alias has already been declared elsewhere.
-        name = fmt_class(dt.name) + '_validator'
+        name = dt.name + '_validator'
         if ns.name != dt.namespace.name:
             name = '{}.{}'.format(fmt_namespace(dt.namespace.name), name)
         v = name
