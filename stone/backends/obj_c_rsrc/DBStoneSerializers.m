@@ -5,23 +5,32 @@
 #import "DBStoneSerializers.h"
 #import "DBStoneValidators.h"
 
+static NSDateFormatter *sFormatter = nil;
+static NSString *sDateFormat = nil;
+
 @implementation DBNSDateSerializer
+
++ (void)initialize
+{
+    if (self == [DBNSDateSerializer class]) {
+        sFormatter = [[NSDateFormatter alloc] init];
+        [sFormatter setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
+        [sFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+    }
+}
 
 + (NSString *)serialize:(NSDate *)value dateFormat:(NSString *)dateFormat
 {
     if (value == nil) {
         [DBStoneValidators raiseIllegalStateErrorWithMessage:@"Value must not be `nil`"];
     }
-    static NSDateFormatter *formatter;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        formatter = [[NSDateFormatter alloc] init];
-        [formatter setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
-        [formatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
-        [formatter setDateFormat:[self convertFormat:dateFormat]];
-    });
-
-    return [formatter stringFromDate:value];
+    @synchronized (sFormatter) {
+        if (![dateFormat isEqualToString:sDateFormat]) {
+            [sFormatter setDateFormat:[self convertFormat:dateFormat]];
+            sDateFormat = [dateFormat copy];
+        }
+        return [sFormatter stringFromDate:value];
+    }
 }
 
 + (NSDate *)deserialize:(NSString *)value dateFormat:(NSString *)dateFormat
@@ -29,16 +38,13 @@
     if (value == nil) {
         [DBStoneValidators raiseIllegalStateErrorWithMessage:@"Value must not be `nil`"];
     }
-    static NSDateFormatter *formatter;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        formatter = [[NSDateFormatter alloc] init];
-        [formatter setTimeZone:[NSTimeZone timeZoneWithName:@"UTC"]];
-        [formatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
-        [formatter setDateFormat:[self convertFormat:dateFormat]];
-    });
-
-    return [formatter dateFromString:value];
+    @synchronized (sFormatter) {
+        if (![dateFormat isEqualToString:sDateFormat]) {
+            [sFormatter setDateFormat:[self convertFormat:dateFormat]];
+            sDateFormat = [dateFormat copy];
+        }
+        return [sFormatter dateFromString:value];
+    }
 }
 
 + (NSString *)formatDateToken:(NSString *)token
