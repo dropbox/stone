@@ -93,6 +93,9 @@ def fmt_var(name, check_reserved=False):
     s = fmt_underscores(name)
     return _rename_if_reserved(s) if check_reserved else s
 
+def fmt_namespaced_var(ns_name, data_type_name, field_name):
+    return ".".join([ns_name, data_type_name, fmt_var(field_name)])
+
 def fmt_namespace(name):
     return _rename_if_reserved(name)
 

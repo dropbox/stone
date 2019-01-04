@@ -74,11 +74,8 @@ def map_stone_type_to_python_type(ns, data_type, override_dict=None):
     elif is_user_defined_type(data_type):
         user_defined_type = cast(UserDefined, data_type)
         class_name = class_name_for_data_type(user_defined_type)
-        if user_defined_type.namespace.name != ns.name:
-            return '{}.{}'.format(
-                fmt_namespace(user_defined_type.namespace.name), class_name)
-        else:
-            return class_name
+        return '{}.{}'.format(
+            fmt_namespace(user_defined_type.namespace.name), class_name)
     elif is_list_type(data_type):
         list_type = cast(List, data_type)
         if List in override_dict:

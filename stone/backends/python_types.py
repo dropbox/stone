@@ -57,6 +57,7 @@ from stone.backends.python_helpers import (
     fmt_class,
     fmt_func,
     fmt_namespace,
+    fmt_namespaced_var,
     fmt_obj,
     fmt_var,
     generate_imports_for_referenced_namespaces,
@@ -339,7 +340,7 @@ class PythonTypesBackend(CodeBackend):
                     if not field.doc:
                         continue
                     self.emit_wrapped_text(':ivar {}: {}'.format(
-                        fmt_var(field.name),
+                        fmt_namespaced_var(ns.name, data_type.name, field.name),
                         self.process_doc(field.doc, self._docf)),
                         subsequent_prefix='    ')
                 self.emit('"""')
@@ -841,17 +842,17 @@ class PythonTypesBackend(CodeBackend):
                     continue
                 if is_void_type(field.data_type):
                     ivar_doc = ':ivar {}: {}'.format(
-                        fmt_var(field.name),
+                        fmt_namespaced_var(ns.name, data_type.name, field.name),
                         self.process_doc(field.doc, self._docf))
                 elif is_user_defined_type(field.data_type):
                     ivar_doc = ':ivar {} {}: {}'.format(
                         fmt_class(field.data_type.name),
-                        fmt_var(field.name),
+                        fmt_namespaced_var(ns.name, data_type.name, field.name),
                         self.process_doc(field.doc, self._docf))
                 else:
                     ivar_doc = ':ivar {} {}: {}'.format(
                         self._python_type_mapping(ns, field.data_type),
-                        fmt_var(field.name), field.doc)
+                        fmt_namespaced_var(ns.name, data_type.name, field.name), field.doc)
                 self.emit_wrapped_text(ivar_doc, subsequent_prefix='    ')
             self.emit('"""')
             self.emit()
@@ -960,7 +961,7 @@ class PythonTypesBackend(CodeBackend):
                     self.emit(':param {} val:'.format(
                         self._python_type_mapping(ns, field_dt)))
                     self.emit(':rtype: {}'.format(
-                        fmt_class(data_type.name)))
+                        self._python_type_mapping(ns, data_type)))
                     self.emit('"""')
                     self.emit("return cls('{}', val)".format(field_name))
                 self.emit()
