@@ -255,10 +255,10 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct1(object):
                 def __init__(self,
-                             f1: bool = ...) -> None: ...
+                             f1: Optional[bool] = ...) -> None: ...
 
                 @property
-                def f1(self) -> bool: ...
+                def f1(self) -> Optional[bool]: ...
 
                 @f1.setter
                 def f1(self, val: bool) -> None: ...
@@ -276,12 +276,12 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct2(object):
                 def __init__(self,
-                             f2: List[int] = ...,
-                             f3: datetime.datetime = ...,
-                             f4: Dict[Text, int] = ...) -> None: ...
+                             f2: Optional[List[int]] = ...,
+                             f3: Optional[datetime.datetime] = ...,
+                             f4: Optional[Dict[Text, int]] = ...) -> None: ...
 
                 @property
-                def f2(self) -> List[int]: ...
+                def f2(self) -> Optional[List[int]]: ...
 
                 @f2.setter
                 def f2(self, val: List[int]) -> None: ...
@@ -291,7 +291,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
 
                 @property
-                def f3(self) -> datetime.datetime: ...
+                def f3(self) -> Optional[datetime.datetime]: ...
 
                 @f3.setter
                 def f3(self, val: datetime.datetime) -> None: ...
@@ -301,7 +301,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
 
                 @property
-                def f4(self) -> Dict[Text, int]: ...
+                def f4(self) -> Optional[Dict[Text, int]]: ...
 
                 @f4.setter
                 def f4(self, val: Dict[Text, int]) -> None: ...
@@ -322,6 +322,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 Callable,
                 Dict,
                 List,
+                Optional,
                 Text,
                 Type,
                 TypeVar,
@@ -340,11 +341,11 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class NestedTypes(object):
                 def __init__(self,
-                             list_of_nullables: List[Optional[int]] = ...,
+                             list_of_nullables: Optional[List[Optional[int]]] = ...,
                              nullable_list: Optional[List[int]] = ...) -> None: ...
 
                 @property
-                def list_of_nullables(self) -> List[Optional[int]]: ...
+                def list_of_nullables(self) -> Optional[List[Optional[int]]]: ...
 
                 @list_of_nullables.setter
                 def list_of_nullables(self, val: List[Optional[int]]) -> None: ...
@@ -494,10 +495,10 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct1(object):
                 def __init__(self,
-                             f1: bool = ...) -> None: ...
+                             f1: Optional[bool] = ...) -> None: ...
 
                 @property
-                def f1(self) -> bool: ...
+                def f1(self) -> Optional[bool]: ...
 
                 @f1.setter
                 def f1(self, val: bool) -> None: ...
@@ -519,6 +520,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             from typing import (
                 Callable,
+                Optional,
                 Type,
                 TypeVar,
             )

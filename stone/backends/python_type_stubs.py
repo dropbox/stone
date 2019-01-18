@@ -2,35 +2,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import textwrap
 
-from stone.ir.data_types import String
-from stone.typing_hacks import cast
-
-_MYPY = False
-if _MYPY:
-    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-
-from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
-    Api,
-    ApiNamespace,
-    Alias,
-    AnnotationType,
-    DataType,
-    List,
-    Map,
-    Nullable,
-    Struct,
-    Timestamp,
-    Union,
-    is_union_type,
-    is_user_defined_type,
-    is_void_type,
-    unwrap_aliases,
-)
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
+    check_route_name_conflict,
     class_name_for_annotation_type,
     class_name_for_data_type,
-    check_route_name_conflict,
     emit_pass_if_nothing_emitted,
     fmt_func,
     fmt_namespace,
@@ -40,9 +16,34 @@ from stone.backends.python_helpers import (
     validators_import_with_type_ignore,
 )
 from stone.backends.python_type_mapping import (  # noqa: F401 # pylint: disable=unused-import
-    OverrideDefaultTypesDict,
     map_stone_type_to_python_type,
+    OverrideDefaultTypesDict,
 )
+from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
+    Alias,
+    AnnotationType,
+    Api,
+    ApiNamespace,
+    DataType,
+    is_nullable_type,
+    is_union_type,
+    is_user_defined_type,
+    is_void_type,
+    List,
+    Map,
+    Nullable,
+    Struct,
+    Timestamp,
+    Union,
+    unwrap_aliases,
+)
+from stone.ir.data_types import String
+from stone.typing_hacks import cast
+
+_MYPY = False
+if _MYPY:
+    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
+
 
 class ImportTracker(object):
     def __init__(self):
@@ -326,6 +327,12 @@ class PythonTypeStubsBackend(CodeBackend):
         for field in struct.all_fields:
             field_name_reserved_check = fmt_var(field.name, True)
             field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
+
+            # The constructor takes all possible fields as optional arguments
+            if not is_nullable_type(field.data_type) and not is_void_type(field.data_type):
+                self.import_tracker._register_typing_import('Optional')
+                field_type = 'Optional[{}]'.format(field_type)
+
             args.append(
                 "{field_name}: {field_type} = ...".format(
                     field_name=field_name_reserved_check,
@@ -341,10 +348,10 @@ class PythonTypeStubsBackend(CodeBackend):
     property_template = textwrap.dedent(
         """
         @property
-        def {field_name}(self) -> {field_type}: ...
+        def {field_name}(self) -> {getter_field_type}: ...
 
         @{field_name}.setter
-        def {field_name}(self, val: {field_type}) -> None: ...
+        def {field_name}(self, val: {setter_field_type}) -> None: ...
 
         @{field_name}.deleter
         def {field_name}(self) -> None: ...
@@ -355,12 +362,19 @@ class PythonTypeStubsBackend(CodeBackend):
         to_emit = []  # type: typing.List[typing.Text]
         for field in struct.all_fields:
             field_name_reserved_check = fmt_func(field.name, check_reserved=True)
-            field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
+            setter_field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
+
+            # The field might not have been set since it is optional in the constructor.
+            getter_field_type = setter_field_type
+            if not is_nullable_type(field.data_type) and not is_void_type(field.data_type):
+                self.import_tracker._register_typing_import('Optional')
+                getter_field_type = 'Optional[{}]'.format(setter_field_type)
 
             to_emit.extend(
                 self.property_template.format(
                     field_name=field_name_reserved_check,
-                    field_type=field_type
+                    getter_field_type=getter_field_type,
+                    setter_field_type=setter_field_type
                 ).split("\n")
             )
 
