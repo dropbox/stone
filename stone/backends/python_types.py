@@ -845,9 +845,13 @@ class PythonTypesBackend(CodeBackend):
                         fmt_namespaced_var(ns.name, data_type.name, field.name),
                         self.process_doc(field.doc, self._docf))
                 elif is_user_defined_type(field.data_type):
+                    if data_type.namespace.name != ns.name:
+                        formatted_var = fmt_namespaced_var(ns.name, data_type.name, field.name)
+                    else:
+                        formatted_var = '{}.{}'.format(data_type.name, fmt_var(field.name))
                     ivar_doc = ':ivar {} {}: {}'.format(
                         fmt_class(field.data_type.name),
-                        fmt_namespaced_var(ns.name, data_type.name, field.name),
+                        formatted_var,
                         self.process_doc(field.doc, self._docf))
                 else:
                     ivar_doc = ':ivar {} {}: {}'.format(
