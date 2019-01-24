@@ -12,7 +12,6 @@ from stone.ir import (
     StructField,
     Void,
 )
-from test.backend_test_util import _mock_emit
 
 MYPY = False
 if MYPY:
@@ -30,34 +29,29 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         return s
 
     def _mock_backend(self):
-        # type: () -> typing.Tuple[PythonTypesBackend, typing.List]
-        backend = PythonTypesBackend(
+        # type: () -> PythonTypesBackend
+        return PythonTypesBackend(
             target_folder_path='output',
             args=['-r', 'dropbox.dropbox.Dropbox.{ns}_{route}'])
-        emitted = _mock_emit(backend)
-        return backend, emitted
 
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text
-        backend, emitted = self._mock_backend()
+        backend = self._mock_backend()
         route_schema = self._mk_route_schema()
         backend._generate_routes(route_schema, ns)
-        result = "".join(emitted)
-        return result
+        return backend.output_buffer_to_string()
 
     def _evaluate_struct(self, ns, struct):
         # type: (ApiNamespace, Struct) -> typing.Text
-        backend, emitted = self._mock_backend()
+        backend = self._mock_backend()
         backend._generate_struct_class(ns, struct)
-        result = "".join(emitted)
-        return result
+        return backend.output_buffer_to_string()
 
     def _evaluate_annotation_type(self, ns, annotation_type):
         # type: (ApiNamespace, AnnotationType) -> typing.Text
-        backend, emitted = self._mock_backend()
+        backend = self._mock_backend()
         backend._generate_annotation_type_class(ns, annotation_type)
-        result = "".join(emitted)
-        return result
+        return backend.output_buffer_to_string()
 
     def test_route_with_version_number(self):
         # type: () -> None
@@ -219,7 +213,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
             MyStruct_validator = bv.Struct(MyStruct)
 
         ''') # noqa
-
+        self.maxDiff = None
         self.assertEqual(result, expected)
 
     def test_annotation_type_class(self):

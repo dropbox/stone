@@ -33,7 +33,7 @@ from stone.ir import (
     Float64)
 from stone.ir.api import ApiRoute
 from stone.backends.python_type_stubs import PythonTypeStubsBackend
-from test.backend_test_util import _mock_emit
+
 
 ISO_8601_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
@@ -220,6 +220,8 @@ _headers = """\
 # @generated
 # flake8: noqa
 # pylint: skip-file
+
+{}
 try:
     from . import stone_validators as bv
     from . import stone_base as bb
@@ -240,11 +242,8 @@ class TestPythonTypeStubs(unittest.TestCase):
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text
         backend = _make_backend()
-        emitted = _mock_emit(backend)
         backend._generate_base_namespace_module(ns)
-
-        result = "".join(emitted)
-        return result
+        return backend.output_buffer_to_string()
 
     def test__generate_base_namespace_module__with_many_structs(self):
         # type: () -> None
@@ -258,7 +257,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                              f1: Optional[bool] = ...) -> None: ...
 
                 @property
-                def f1(self) -> Optional[bool]: ...
+                def f1(self) -> bool: ...
 
                 @f1.setter
                 def f1(self, val: bool) -> None: ...
@@ -278,10 +277,10 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def __init__(self,
                              f2: Optional[List[int]] = ...,
                              f3: Optional[datetime.datetime] = ...,
-                             f4: Optional[Dict[Text, int]] = ...) -> None: ...
+                             f4: Optional[Dict[Any, int]] = ...) -> None: ...
 
                 @property
-                def f2(self) -> Optional[List[int]]: ...
+                def f2(self) -> List[int]: ...
 
                 @f2.setter
                 def f2(self, val: List[int]) -> None: ...
@@ -291,7 +290,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
 
                 @property
-                def f3(self) -> Optional[datetime.datetime]: ...
+                def f3(self) -> datetime.datetime: ...
 
                 @f3.setter
                 def f3(self, val: datetime.datetime) -> None: ...
@@ -301,10 +300,10 @@ class TestPythonTypeStubs(unittest.TestCase):
 
 
                 @property
-                def f4(self) -> Optional[Dict[Text, int]]: ...
+                def f4(self) -> Dict[Any, int]: ...
 
                 @f4.setter
-                def f4(self, val: Dict[Text, int]) -> None: ...
+                def f4(self, val: Dict[Any, int]) -> None: ...
 
                 @f4.deleter
                 def f4(self) -> None: ...
@@ -317,19 +316,18 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             Struct2_validator: bv.Validator = ...
 
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    Any,
+                    Callable,
+                    Dict,
+                    List,
+                    Optional,
+                    Type,
+                    TypeVar,
+                )
 
-            from typing import (
-                Callable,
-                Dict,
-                List,
-                Optional,
-                Text,
-                Type,
-                TypeVar,
-            )
-
-            import datetime
-            """).format(headers=_headers)
+                import datetime""")))
         self.assertEqual(result, expected)
 
     def test__generate_base_namespace_module__with_nested_types(self):
@@ -345,7 +343,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                              nullable_list: Optional[List[int]] = ...) -> None: ...
 
                 @property
-                def list_of_nullables(self) -> Optional[List[Optional[int]]]: ...
+                def list_of_nullables(self) -> List[Optional[int]]: ...
 
                 @list_of_nullables.setter
                 def list_of_nullables(self, val: List[Optional[int]]) -> None: ...
@@ -371,15 +369,14 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             NestedTypes_validator: bv.Validator = ...
 
-
-            from typing import (
-                Callable,
-                List,
-                Optional,
-                Type,
-                TypeVar,
-            )
-            """).format(headers=_headers)
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    Callable,
+                    List,
+                    Optional,
+                    Type,
+                    TypeVar,
+                )""")))
         self.assertEqual(result, expected)
 
     def test__generate_base_namespace_module_with_union__generates_stuff(self):
@@ -425,13 +422,12 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             Shape_validator: bv.Validator = ...
 
-
-            from typing import (
-                Callable,
-                Type,
-                TypeVar,
-            )
-            """).format(headers=_headers)
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    Callable,
+                    Type,
+                    TypeVar,
+                )""")))
         self.assertEqual(result, expected)
 
     def test__generate_base_namespace_module_with_empty_union(self):
@@ -450,13 +446,12 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             EmptyUnion_validator: bv.Validator = ...
 
-
-            from typing import (
-                Callable,
-                Type,
-                TypeVar,
-            )
-            """).format(headers=_headers)
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    Callable,
+                    Type,
+                    TypeVar,
+                )""")))
         self.assertEqual(result, expected)
 
     def test__generate_routes(self):
@@ -469,11 +464,10 @@ class TestPythonTypeStubs(unittest.TestCase):
             route_one: bb.Route = ...
             route_one_v2: bb.Route = ...
 
-
-            from typing import (
-                TypeVar,
-            )
-            """).format(headers=_headers)
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    TypeVar,
+                )""")))
         self.assertEqual(result, expected)
 
     def test__generate_routes_name_conflict(self):
@@ -498,7 +492,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                              f1: Optional[bool] = ...) -> None: ...
 
                 @property
-                def f1(self) -> Optional[bool]: ...
+                def f1(self) -> bool: ...
 
                 @f1.setter
                 def f1(self, val: bool) -> None: ...
@@ -517,12 +511,11 @@ class TestPythonTypeStubs(unittest.TestCase):
             AliasToStruct1_validator: bv.Validator = ...
             AliasToStruct1 = Struct1
             NotUserDefinedAlias_validator: bv.Validator = ...
-
-            from typing import (
-                Callable,
-                Optional,
-                Type,
-                TypeVar,
-            )
-            """).format(headers=_headers)
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    Callable,
+                    Optional,
+                    Type,
+                    TypeVar,
+                )""")))
         self.assertEqual(result, expected)

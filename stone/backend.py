@@ -123,6 +123,8 @@ class Backend(object):
         self.output = []  # type: typing.List[typing.Text]
         self.lineno = 1
         self.cur_indent = 0
+        self.positional_placeholders = []  # type: typing.List[typing.Text]
+        self.named_placeholders = {}  # type: typing.Dict[typing.Text, typing.Text]
 
         self.args = None  # type: typing.Optional[argparse.Namespace]
 
@@ -165,19 +167,23 @@ class Backend(object):
             os.makedirs(directory)
 
         self.logger.info('Generating %s', full_path)
-        self.output = []
+        self.clear_output_buffer()
         yield
         with open(full_path, 'wb') as f:
-            f.write(''.join(self.output).encode('utf-8'))
-        self.output = []
+            f.write(self.output_buffer_to_string().encode('utf-8'))
+        self.clear_output_buffer()
 
     def output_buffer_to_string(self):
         # type: () -> typing.Text
         """Returns the contents of the output buffer as a string."""
-        return ''.join(self.output)
+        return ''.join(self.output).format(
+            *self.positional_placeholders,
+            **self.named_placeholders)
 
     def clear_output_buffer(self):
         self.output = []
+        self.positional_placeholders = []
+        self.named_placeholders = {}
 
     def indent_step(self):
         # type: () -> int
@@ -214,6 +220,15 @@ class Backend(object):
         else:
             return ' ' * self.cur_indent
 
+    @contextmanager
+    def capture_emitted_output(self, output_buffer):
+        # type: (six.StringIO) -> typing.Iterator[None]
+        original_output = self.output
+        self.output = []
+        yield
+        output_buffer.write(''.join(self.output))
+        self.output = original_output
+
     def emit_raw(self, s):
         # type: (typing.Text) -> None
         """
@@ -222,7 +237,7 @@ class Backend(object):
         indentation is generated.
         """
         self.lineno += s.count('\n')
-        self._append_output(s)
+        self._append_output(s.replace('{', '{{').replace('}', '}}'))
         if len(s) > 0 and s[-1] != '\n':
             raise AssertionError(
                 'Input string to emit_raw must end with a newline.')
@@ -290,6 +305,27 @@ class Backend(object):
                                     break_long_words=break_long_words,
                                     break_on_hyphens=break_on_hyphens,
                                     ) + '\n')
+
+    def emit_placeholder(self, s=''):
+        # type: (typing.Text) -> None
+        """
+        Emits replacements fields that can be used to format the output string later.
+        """
+        self._append_output('{%s}' % s)
+
+    def add_positional_placeholder(self, s):
+        # type: (typing.Text) -> None
+        """
+        Format replacement fields corresponding to empty calls to emit_placeholder.
+        """
+        self.positional_placeholders.append(s)
+
+    def add_named_placeholder(self, name, s):
+        # type: (typing.Text, typing.Text) -> None
+        """
+        Format replacement fields corresponding to non-empty calls to emit_placeholder.
+        """
+        self.named_placeholders[name] = s
 
     @classmethod
     def process_doc(cls, doc, handler):

@@ -24,7 +24,7 @@ from stone.ir import (
     Struct,
     StructField)
 from stone.backends.tsd_types import TSDTypesBackend
-from test.backend_test_util import _mock_emit
+from test.backend_test_util import _mock_output
 
 
 def _make_backend(target_folder_path, template_path):
@@ -57,7 +57,7 @@ def _make_struct(struct_name, struct_field_name, namespace):
 def _evaluate_namespace(backend, namespace_list):
     # type: (TSDTypesBackend, typing.List[ApiNamespace]) -> typing.Text
 
-    emitted = _mock_emit(backend)
+    get_result = _mock_output(backend)
     filename = "types.d.ts"
     backend.split_by_namespace = False
     backend._generate_base_namespace_module(namespace_list=namespace_list,
@@ -65,8 +65,7 @@ def _evaluate_namespace(backend, namespace_list):
                                             extra_args={},
                                             template="""/*TYPES*/""",
                                             exclude_error_types=True)
-    result = "".join(emitted)
-    return result
+    return get_result()
 
 
 class TestTSDTypes(unittest.TestCase):

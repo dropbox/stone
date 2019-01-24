@@ -3,7 +3,6 @@ import unittest
 
 from stone.backends.tsd_client import TSDClientBackend
 from stone.ir import Api, ApiNamespace, ApiRoute, Void, Int32
-from test.backend_test_util import _mock_emit
 from stone.ir.data_types import Struct
 
 MYPY = False
@@ -36,9 +35,8 @@ class TestGeneratedTSDClient(unittest.TestCase):
             target_folder_path="output",
             args=['files', 'files']
         )
-        emitted = _mock_emit(backend)
         backend._generate_routes(api, 0, 0)
-        result = "".join(emitted)
+        result = backend.output_buffer_to_string()
         expected = textwrap.dedent(
             '''\
 

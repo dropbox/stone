@@ -530,6 +530,7 @@ class PythonTypesBackend(CodeBackend):
         for field in data_type.all_fields:
             field_name_reserved_check = fmt_var(field.name, True)
             args.append('%s=None' % field_name_reserved_check)
+
         self.generate_multiline_list(args, before='def __init__', after=':')
 
         with self.indent():
