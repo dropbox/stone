@@ -175,7 +175,7 @@ doc
 arg_data_type
     A DataType object of the arg to the route.
 
-arg_data_type
+result_data_type
     A DataType object of the result of the route.
 
 error_data_type
