@@ -363,12 +363,7 @@ class PythonTypeStubsBackend(CodeBackend):
         for field in struct.all_fields:
             field_name_reserved_check = fmt_func(field.name, check_reserved=True)
             setter_field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
-
-            # The field might not have been set since it is optional in the constructor.
             getter_field_type = setter_field_type
-            if not is_nullable_type(field.data_type) and not is_void_type(field.data_type):
-                self.import_tracker._register_typing_import('Optional')
-                getter_field_type = 'Optional[{}]'.format(setter_field_type)
 
             to_emit.extend(
                 self.property_template.format(
