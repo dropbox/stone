@@ -162,7 +162,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
         self.assertEqual(result, expected)
 
     def test_route_with_auth_mode3(self):
-            # type: () -> None
+        # type: () -> None
 
         route1 = ApiRoute('get_metadata', 1, None)
         route1.set_attributes(None, ':route:`get_metadata:2`', Void(), Void(), Void(),
