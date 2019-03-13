@@ -15,7 +15,7 @@
       if (minLength != nil) {
           if ([value length] < [minLength unsignedIntegerValue]) {
               NSString *exceptionMessage =
-                  [NSString stringWithFormat:@"\"%@\" must be at least %@ characters", value, [minLength stringValue]];
+                  [NSString stringWithFormat:@"value must be at least %@ characters", [minLength stringValue]];
               [[self class] raiseIllegalStateErrorWithMessage:exceptionMessage];
           }
       }
@@ -23,7 +23,7 @@
       if (maxLength != nil) {
           if ([value length] > [maxLength unsignedIntegerValue]) {
               NSString *exceptionMessage =
-                  [NSString stringWithFormat:@"\"%@\" must be at most %@ characters", value, [minLength stringValue]];
+                  [NSString stringWithFormat:@"value must be at most %@ characters", [minLength stringValue]];
               [[self class] raiseIllegalStateErrorWithMessage:exceptionMessage];
           }
       }
@@ -34,7 +34,7 @@
           NSArray *matches = [re matchesInString:value options:0 range:NSMakeRange(0, [value length])];
           if ([matches count] == 0) {
               NSString *exceptionMessage =
-                  [NSString stringWithFormat:@"\"%@\" must match pattern \"%@\"", value, [re pattern]];
+                  [NSString stringWithFormat:@"value must match pattern \"%@\"", [re pattern]];
               [[self class] raiseIllegalStateErrorWithMessage:exceptionMessage];
           }
       }
@@ -49,7 +49,7 @@
       if (minValue != nil) {
           if ([value unsignedIntegerValue] < [minValue unsignedIntegerValue]) {
               NSString *exceptionMessage =
-                  [NSString stringWithFormat:@"\"%@\" must be at least %@", value, [minValue stringValue]];
+                  [NSString stringWithFormat:@"value must be at least %@", [minValue stringValue]];
               [[self class] raiseIllegalStateErrorWithMessage:exceptionMessage];
           }
       }
@@ -57,7 +57,7 @@
       if (maxValue != nil) {
           if ([value unsignedIntegerValue] > [maxValue unsignedIntegerValue]) {
               NSString *exceptionMessage =
-                  [NSString stringWithFormat:@"\"%@\" must be at most %@", value, [maxValue stringValue]];
+                  [NSString stringWithFormat:@"value must be at most %@", [maxValue stringValue]];
               [[self class] raiseIllegalStateErrorWithMessage:exceptionMessage];
           }
       }
@@ -74,7 +74,7 @@
       if (minItems != nil) {
           if ([value count] < [minItems unsignedIntegerValue]) {
               NSString *exceptionMessage =
-                  [NSString stringWithFormat:@"\"%@\" must be at least %@ items", value, [minItems stringValue]];
+                  [NSString stringWithFormat:@"value must be at least %@ items", [minItems stringValue]];
               [[self class] raiseIllegalStateErrorWithMessage:exceptionMessage];
           }
       }
@@ -82,7 +82,7 @@
       if (maxItems != nil) {
           if ([value count] > [maxItems unsignedIntegerValue]) {
               NSString *exceptionMessage =
-                  [NSString stringWithFormat:@"\"%@\" must be at most %@ items", value, [maxItems stringValue]];
+                  [NSString stringWithFormat:@"value must be at most %@ items", [maxItems stringValue]];
               [[self class] raiseIllegalStateErrorWithMessage:exceptionMessage];
           }
       }
