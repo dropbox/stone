@@ -2,7 +2,6 @@ import textwrap
 
 from stone.backends.python_client import PythonClientBackend
 from stone.ir import ApiNamespace, ApiRoute, Void, Int32
-from test.backend_test_util import _mock_emit
 
 MYPY = False
 if MYPY:
@@ -20,10 +19,8 @@ class TestGeneratedPythonClient(unittest.TestCase):
         backend = PythonClientBackend(
             target_folder_path='output',
             args=['-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
-        emitted = _mock_emit(backend)
         backend._generate_routes(ns)
-        result = "".join(emitted)
-        return result
+        return backend.output_buffer_to_string()
 
     def _evaluate_namespace_with_auth_mode(self, ns, auth_mode):
         # type: (ApiNamespace, str) -> typing.Text
@@ -32,10 +29,8 @@ class TestGeneratedPythonClient(unittest.TestCase):
         backend = PythonClientBackend(
             target_folder_path='output',
             args=['-w', auth_mode, '-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
-        emitted = _mock_emit(backend)
         backend._generate_route_methods({ns})
-        result = "".join(emitted)
-        return result
+        return backend.output_buffer_to_string()
 
     def test_route_with_version_number(self):
         # type: () -> None
