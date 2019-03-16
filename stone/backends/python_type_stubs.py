@@ -28,6 +28,7 @@ from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
     ApiNamespace,
     DataType,
     is_nullable_type,
+    is_struct_type,
     is_union_type,
     is_user_defined_type,
     is_void_type,
@@ -316,8 +317,10 @@ class PythonTypeStubsBackend(CodeBackend):
         if data_type.parent_type:
             extends = class_name_for_data_type(data_type.parent_type, ns)
         else:
-            if is_union_type(data_type):
+            if is_struct_type(data_type):
                 # Use a handwritten base class
+                extends = 'bb.Struct'
+            elif is_union_type(data_type):
                 extends = 'bb.Union'
             else:
                 extends = 'object'
