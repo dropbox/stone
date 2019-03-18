@@ -252,7 +252,7 @@ class TestPythonTypeStubs(unittest.TestCase):
         expected = textwrap.dedent("""\
             {headers}
 
-            class Struct1(object):
+            class Struct1(bb.Struct):
                 def __init__(self,
                              f1: Optional[bool] = ...) -> None: ...
 
@@ -273,7 +273,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             Struct1_validator: bv.Validator = ...
 
-            class Struct2(object):
+            class Struct2(bb.Struct):
                 def __init__(self,
                              f2: Optional[List[int]] = ...,
                              f3: Optional[datetime.datetime] = ...,
@@ -337,7 +337,7 @@ class TestPythonTypeStubs(unittest.TestCase):
         expected = textwrap.dedent("""\
             {headers}
 
-            class NestedTypes(object):
+            class NestedTypes(bb.Struct):
                 def __init__(self,
                              list_of_nullables: Optional[List[Optional[int]]] = ...,
                              nullable_list: Optional[List[int]] = ...) -> None: ...
@@ -487,7 +487,7 @@ class TestPythonTypeStubs(unittest.TestCase):
         expected = textwrap.dedent("""\
             {headers}
 
-            class Struct1(object):
+            class Struct1(bb.Struct):
                 def __init__(self,
                              f1: Optional[bool] = ...) -> None: ...
 
