@@ -102,7 +102,7 @@ class JavascriptClientBackend(CodeBackend):
                     'return this.request("%s", arg);' % url)
         self.emit('};')
 
-    def _docf(self, tag, val):  # pylint: disable=unused-argument
+    def _docf(self, tag, val):
         """
         Callback used as the handler argument to process_docs(). This converts
         Stone doc references to JSDoc-friendly annotations.

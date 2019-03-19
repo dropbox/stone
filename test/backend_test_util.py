@@ -11,18 +11,25 @@ except ImportError:
 
 from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
 
-def _mock_emit(backend):
-    # type: (Backend) -> typing.List[str]
+def _mock_output(backend):
+    # type: (Backend) -> typing.Callable[[], str]
     """
     Mock out Backend's .emit function, and return a list containing all params
     emit was called with.
     """
-    recorded_emits = []  # type: typing.List[str]
+    recorded_output = []  # type: typing.List[str]
 
-    def record_emit(s):
-        recorded_emits.append(s)
+    output_buffer_to_string = backend.output_buffer_to_string
 
-    orig_append = backend._append_output
-    backend._append_output = Mock(wraps=orig_append, side_effect=record_emit)  # type: ignore
+    def record_output():
+        recorded_output.append(output_buffer_to_string())
 
-    return recorded_emits
+    backend.output_buffer_to_string = Mock(  # type: ignore
+        wraps=output_buffer_to_string,
+        side_effect=record_output)
+
+    def get_output():
+        backend.output_buffer_to_string = output_buffer_to_string
+        return recorded_output[0] if recorded_output else ''
+
+    return get_output

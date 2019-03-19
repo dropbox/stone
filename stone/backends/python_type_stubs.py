@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+from six import StringIO
+
 import textwrap
 
 from stone.backend import CodeBackend
@@ -26,6 +28,7 @@ from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
     ApiNamespace,
     DataType,
     is_nullable_type,
+    is_struct_type,
     is_union_type,
     is_user_defined_type,
     is_void_type,
@@ -112,6 +115,7 @@ class PythonTypeStubsBackend(CodeBackend):
         self.import_tracker.clear()
         generate_module_header(self)
 
+        self.emit_placeholder('imports_needed_for_typing')
         self.emit_raw(validators_import_with_type_ignore)
 
         # Generate import statements for all referenced namespaces.
@@ -166,21 +170,21 @@ class PythonTypeStubsBackend(CodeBackend):
 
     def _generate_annotation_type_class_init(self, ns, annotation_type):
         # type: (ApiNamespace, AnnotationType) -> None
-        args = []
+        args = ['self']
         for param in annotation_type.params:
             param_name = fmt_var(param.name, True)
             param_type = self.map_stone_type_to_pep484_type(ns, param.data_type)
+
+            if not is_nullable_type(param.data_type):
+                self.import_tracker._register_typing_import('Optional')
+                param_type = 'Optional[{}]'.format(param_type)
+
             args.append(
                 "{param_name}: {param_type} = ...".format(
                     param_name=param_name,
-                    param_type=param_type,
-                )
-            )
+                    param_type=param_type))
 
-        self.generate_multiline_list(
-            before='def __init__',
-            items=["self"] + args,
-            after=' -> None: ...')
+        self.generate_multiline_list(args, before='def __init__', after=' -> None: ...')
         self.emit()
 
     def _generate_annotation_type_class_properties(self, ns, annotation_type):
@@ -313,8 +317,10 @@ class PythonTypeStubsBackend(CodeBackend):
         if data_type.parent_type:
             extends = class_name_for_data_type(data_type.parent_type, ns)
         else:
-            if is_union_type(data_type):
+            if is_struct_type(data_type):
                 # Use a handwritten base class
+                extends = 'bb.Struct'
+            elif is_union_type(data_type):
                 extends = 'bb.Union'
             else:
                 extends = 'object'
@@ -323,35 +329,28 @@ class PythonTypeStubsBackend(CodeBackend):
 
     def _generate_struct_class_init(self, ns, struct):
         # type: (ApiNamespace, Struct) -> None
-        args = []
+        args = ["self"]
         for field in struct.all_fields:
             field_name_reserved_check = fmt_var(field.name, True)
             field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
 
-            # The constructor takes all possible fields as optional arguments
-            if not is_nullable_type(field.data_type) and not is_void_type(field.data_type):
+            if not is_nullable_type(field.data_type):
                 self.import_tracker._register_typing_import('Optional')
                 field_type = 'Optional[{}]'.format(field_type)
 
-            args.append(
-                "{field_name}: {field_type} = ...".format(
-                    field_name=field_name_reserved_check,
-                    field_type=field_type,
-                )
-            )
+            args.append("{field_name}: {field_type} = ...".format(
+                field_name=field_name_reserved_check,
+                field_type=field_type))
 
-        self.generate_multiline_list(
-            before='def __init__',
-            items=["self"] + args,
-            after=' -> None: ...')
+        self.generate_multiline_list(args, before='def __init__', after=' -> None: ...')
 
     property_template = textwrap.dedent(
         """
         @property
-        def {field_name}(self) -> {getter_field_type}: ...
+        def {field_name}(self) -> {field_type}: ...
 
         @{field_name}.setter
-        def {field_name}(self, val: {setter_field_type}) -> None: ...
+        def {field_name}(self, val: {field_type}) -> None: ...
 
         @{field_name}.deleter
         def {field_name}(self) -> None: ...
@@ -362,14 +361,12 @@ class PythonTypeStubsBackend(CodeBackend):
         to_emit = []  # type: typing.List[typing.Text]
         for field in struct.all_fields:
             field_name_reserved_check = fmt_func(field.name, check_reserved=True)
-            setter_field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
-            getter_field_type = setter_field_type
+            field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
 
             to_emit.extend(
                 self.property_template.format(
                     field_name=field_name_reserved_check,
-                    getter_field_type=getter_field_type,
-                    setter_field_type=setter_field_type
+                    field_type=field_type,
                 ).split("\n")
             )
 
@@ -471,15 +468,19 @@ class PythonTypeStubsBackend(CodeBackend):
 
     def _generate_imports_needed_for_typing(self):
         # type: () -> None
-        if self.import_tracker.cur_namespace_typing_imports:
-            self.emit("")
-            self.emit('from typing import (')
-            with self.indent():
-                for to_import in sorted(self.import_tracker.cur_namespace_typing_imports):
-                    self.emit("{},".format(to_import))
-            self.emit(')')
+        output_buffer = StringIO()
+        with self.capture_emitted_output(output_buffer):
+            if self.import_tracker.cur_namespace_typing_imports:
+                self.emit("")
+                self.emit('from typing import (')
+                with self.indent():
+                    for to_import in sorted(self.import_tracker.cur_namespace_typing_imports):
+                        self.emit("{},".format(to_import))
+                self.emit(')')
 
-        if self.import_tracker.cur_namespace_adhoc_imports:
-            self.emit("")
-            for to_import in self.import_tracker.cur_namespace_adhoc_imports:
-                self.emit(to_import)
+            if self.import_tracker.cur_namespace_adhoc_imports:
+                self.emit("")
+                for to_import in self.import_tracker.cur_namespace_adhoc_imports:
+                    self.emit(to_import)
+
+        self.add_named_placeholder('imports_needed_for_typing', output_buffer.getvalue())
