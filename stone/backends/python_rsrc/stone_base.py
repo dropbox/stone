@@ -31,8 +31,8 @@ if _MYPY:
 
 class Struct(object):
     # This is a base class for all classes representing Stone structs.
-    def _process_custom_annotations(self, annotation_type, processor):
-        # type: (typing.Type[T], typing.Callable[[T, U], U]) -> None
+    def _process_custom_annotations(self, annotation_type, context, processor):
+        # type: (typing.Type[T], typing.Text, typing.Callable[[T, U], U]) -> None
         pass
 
 class Union(object):
@@ -73,8 +73,8 @@ class Union(object):
     def __hash__(self):
         return hash((self._tag, self._value))
 
-    def _process_custom_annotations(self, annotation_type, processor):
-        # type: (typing.Type[T], typing.Callable[[T, U], U]) -> None
+    def _process_custom_annotations(self, annotation_type, context, processor):
+        # type: (typing.Type[T], typing.Text, typing.Callable[[T, U], U]) -> None
         pass
 
     @classmethod
@@ -130,23 +130,23 @@ class Route(object):
 partially_apply = functools.partial
 
 def make_struct_annotation_processor(annotation_type, processor):
-    def g(struct):
+    def g(context, struct):
         if struct is None:
             return struct
-        struct._process_custom_annotations(annotation_type, processor)
+        struct._process_custom_annotations(annotation_type, context, processor)
         return struct
     return g
 
 def make_list_annotation_processor(processor):
-    def g(list_):
+    def g(context, list_):
         if list_ is None:
             return list_
-        return [processor(x) for x in list_]
+        return [processor('{}[{}]'.format(context, idx), x) for idx, x in enumerate(list_)]
     return g
 
 def make_map_value_annotation_processor(processor):
-    def g(map_):
+    def g(context, map_):
         if map_ is None:
             return map_
-        return {k: processor(v) for k, v in map_.items()}
+        return {k: processor('{}[{}]'.format(context, repr(k)), v) for k, v in map_.items()}
     return g

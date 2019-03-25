@@ -268,6 +268,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
+                    context: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -311,6 +312,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
+                    context: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -364,6 +366,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
+                    context: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -374,6 +377,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                     Callable,
                     List,
                     Optional,
+                    Text,
                     Type,
                     TypeVar,
                 )""")))
@@ -397,6 +401,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
+                    context: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -417,6 +422,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
+                    context: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -425,6 +431,7 @@ class TestPythonTypeStubs(unittest.TestCase):
             """).format(headers=_headers.format(textwrap.dedent("""\
                 from typing import (
                     Callable,
+                    Text,
                     Type,
                     TypeVar,
                 )""")))
@@ -441,6 +448,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
+                    context: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -449,6 +457,7 @@ class TestPythonTypeStubs(unittest.TestCase):
             """).format(headers=_headers.format(textwrap.dedent("""\
                 from typing import (
                     Callable,
+                    Text,
                     Type,
                     TypeVar,
                 )""")))
@@ -503,6 +512,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
+                    context: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -515,6 +525,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 from typing import (
                     Callable,
                     Optional,
+                    Text,
                     Type,
                     TypeVar,
                 )""")))

@@ -717,13 +717,12 @@ class PythonTypesBackend(CodeBackend):
         The _process_custom_annotations function allows client code to access
         custom annotations defined in the spec.
         """
-        self.emit('def _process_custom_annotations(self, annotation_type, processor):')
+        self.emit('def _process_custom_annotations(self, annotation_type, context, processor):')
 
         with self.indent(), emit_pass_if_nothing_emitted(self):
             self.emit(
-                'super({}, self)._process_custom_annotations(annotation_type, processor)'.format(
-                    class_name_for_data_type(data_type)
-                )
+                ('super({}, self)._process_custom_annotations(annotation_type, context, processor)'
+                ).format(class_name_for_data_type(data_type))
             )
             self.emit()
 
@@ -736,7 +735,12 @@ class PythonTypesBackend(CodeBackend):
                     with self.indent():
                         self.emit('self.{} = {}'.format(
                             field_name,
-                            generate_func_call(processor, args=['self.{}'.format(field_name)])
+                            generate_func_call(
+                                processor,
+                                args=[
+                                    "'{{}}.{}'.format(context)".format(field_name),
+                                    'self.{}'.format(field_name),
+                                ])
                         ))
                     self.emit()
 
@@ -1027,12 +1031,11 @@ class PythonTypesBackend(CodeBackend):
         The _process_custom_annotations function allows client code to access
         custom annotations defined in the spec.
         """
-        self.emit('def _process_custom_annotations(self, annotation_type, processor):')
+        self.emit('def _process_custom_annotations(self, annotation_type, context, processor):')
         with self.indent(), emit_pass_if_nothing_emitted(self):
             self.emit(
-                'super({}, self)._process_custom_annotations(annotation_type, processor)'.format(
-                    class_name_for_data_type(data_type)
-                )
+                ('super({}, self)._process_custom_annotations(annotation_type, context, processor)'
+                 ).format(class_name_for_data_type(data_type))
             )
             self.emit()
 
@@ -1053,7 +1056,12 @@ class PythonTypesBackend(CodeBackend):
                         self.emit('if annotation_type is {}:'.format(annotation_class))
                         with self.indent():
                             self.emit('self._value = {}'.format(
-                                generate_func_call(processor, args=['self._value'])
+                                generate_func_call(
+                                    processor,
+                                    args=[
+                                        "'{{}}.{}'.format(context)".format(field_name),
+                                        'self._value',
+                                    ])
                             ))
                         self.emit()
 
