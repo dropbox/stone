@@ -721,7 +721,9 @@ class PythonTypesBackend(CodeBackend):
 
         with self.indent(), emit_pass_if_nothing_emitted(self):
             self.emit(
-                ('super({}, self)._process_custom_annotations(annotation_type, context, processor)'
+                (
+                    'super({}, self)._process_custom_annotations(annotation_type, context, '
+                    'processor)'
                 ).format(class_name_for_data_type(data_type))
             )
             self.emit()
@@ -1034,8 +1036,10 @@ class PythonTypesBackend(CodeBackend):
         self.emit('def _process_custom_annotations(self, annotation_type, context, processor):')
         with self.indent(), emit_pass_if_nothing_emitted(self):
             self.emit(
-                ('super({}, self)._process_custom_annotations(annotation_type, context, processor)'
-                 ).format(class_name_for_data_type(data_type))
+                (
+                    'super({}, self)._process_custom_annotations(annotation_type, context, '
+                    'processor)'
+                ).format(class_name_for_data_type(data_type))
             )
             self.emit()
 
