@@ -937,19 +937,20 @@ order fields are listed in the custom annotation definition.
 
 
 In client code, you can access every field of a struct marked with a certain
-custom annotation by calling ``._process_custom_annotations(custom_annotation,
-processor)`` on the struct. ``processor`` will then be called with two
-parameters---an instance of the annotation type with all the parameters
-populated and the value of the field. The value of the field will then be
-replaced with the return value of ``processor``.
+custom annotation by calling ``._process_custom_annotations(custom_annotation, field_path,
+processor)`` on the struct. ``processor`` will then be called with three
+parameters: (1) an instance of the annotation type with all the parameters
+populated, (2) a string denoting the path to the field being evaluated
+(i.e., for debugging purposes), and (3) the value of the field.
+The value of the field will then be replaced with the return value of ``processor``.
 
 Note that this will also affect annotated fields that are located arbitrarily
 deep in the struct. In the example above, if ``secret`` is a struct of type
-``Secrets``, then calling ``secret._process_custom_annotations(Noteworthy, processor)``
+``Secrets``, then calling ``secret._process_custom_annotations(Noteworthy, "Secrets", processor)``
 will result in ``processor`` being called once as
-``processor(Noteworthy("low"), secret.small_secret)`` and once as
-``processor(Noteworthy("high"), x)`` for each element ``x`` of
-``secret.lots_of_big_ones``.
+``processor(Noteworthy("low"), "Secrets.small_secret", secret.small_secret)`` and once as
+``processor(Noteworthy("high"), "Secrets.lots_of_big_ones[i]", x)`` for each element ``x`` at
+index ``i`` of ``secret.lots_of_big_ones``.
 
 .. _doc:
 
