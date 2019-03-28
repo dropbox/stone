@@ -717,12 +717,12 @@ class PythonTypesBackend(CodeBackend):
         The _process_custom_annotations function allows client code to access
         custom annotations defined in the spec.
         """
-        self.emit('def _process_custom_annotations(self, annotation_type, context, processor):')
+        self.emit('def _process_custom_annotations(self, annotation_type, field_path, processor):')
 
         with self.indent(), emit_pass_if_nothing_emitted(self):
             self.emit(
                 (
-                    'super({}, self)._process_custom_annotations(annotation_type, context, '
+                    'super({}, self)._process_custom_annotations(annotation_type, field_path, '
                     'processor)'
                 ).format(class_name_for_data_type(data_type))
             )
@@ -740,7 +740,7 @@ class PythonTypesBackend(CodeBackend):
                             generate_func_call(
                                 processor,
                                 args=[
-                                    "'{{}}.{}'.format(context)".format(field_name),
+                                    "'{{}}.{}'.format(field_path)".format(field_name),
                                     'self.{}'.format(field_name),
                                 ])
                         ))
@@ -1033,11 +1033,11 @@ class PythonTypesBackend(CodeBackend):
         The _process_custom_annotations function allows client code to access
         custom annotations defined in the spec.
         """
-        self.emit('def _process_custom_annotations(self, annotation_type, context, processor):')
+        self.emit('def _process_custom_annotations(self, annotation_type, field_path, processor):')
         with self.indent(), emit_pass_if_nothing_emitted(self):
             self.emit(
                 (
-                    'super({}, self)._process_custom_annotations(annotation_type, context, '
+                    'super({}, self)._process_custom_annotations(annotation_type, field_path, '
                     'processor)'
                 ).format(class_name_for_data_type(data_type))
             )
@@ -1063,7 +1063,7 @@ class PythonTypesBackend(CodeBackend):
                                 generate_func_call(
                                     processor,
                                     args=[
-                                        "'{{}}.{}'.format(context)".format(field_name),
+                                        "'{{}}.{}'.format(field_path)".format(field_name),
                                         'self._value',
                                     ])
                             ))

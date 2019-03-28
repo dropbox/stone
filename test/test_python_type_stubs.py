@@ -268,7 +268,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    context: Text,
+                    field_path: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -312,7 +312,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    context: Text,
+                    field_path: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -366,7 +366,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    context: Text,
+                    field_path: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -401,7 +401,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    context: Text,
+                    field_path: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -422,7 +422,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    context: Text,
+                    field_path: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -448,7 +448,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    context: Text,
+                    field_path: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
@@ -512,7 +512,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def _process_custom_annotations(
                     self,
                     annotation_type: Type[T],
-                    context: Text,
+                    field_path: Text,
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 

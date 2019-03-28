@@ -382,7 +382,7 @@ class PythonTypeStubsBackend(CodeBackend):
         with self.indent():
             self.emit('self,')
             self.emit('annotation_type: Type[T],')
-            self.emit('context: Text,')
+            self.emit('field_path: Text,')
             self.emit('processor: Callable[[T, U], U],')
             self.import_tracker._register_typing_import('Type')
             self.import_tracker._register_typing_import('Text')

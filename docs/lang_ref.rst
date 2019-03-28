@@ -937,11 +937,11 @@ order fields are listed in the custom annotation definition.
 
 
 In client code, you can access every field of a struct marked with a certain
-custom annotation by calling ``._process_custom_annotations(custom_annotation, context,
+custom annotation by calling ``._process_custom_annotations(custom_annotation, field_path,
 processor)`` on the struct. ``processor`` will then be called with three
 parameters: (1) an instance of the annotation type with all the parameters
-populated, (2) a string containing the context in which the field is being
-evaluated (i.e., for debugging purposes), and (3) the value of the field.
+populated, (2) a string denoting the path to the field being evaluated
+(i.e., for debugging purposes), and (3) the value of the field.
 The value of the field will then be replaced with the return value of ``processor``.
 
 Note that this will also affect annotated fields that are located arbitrarily
