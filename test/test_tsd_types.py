@@ -219,6 +219,7 @@ namespace ns2
 struct BaseS
     "This is a test."
     z Int64
+    maptype Map(String, Int64)
 union_closed BaseU
     z
     x String
@@ -231,6 +232,7 @@ alias AliasedBaseU = BaseU
    */
   export interface BaseS {
     z: number;
+    maptype: {[key: string]: number};
   }
 
   export interface BaseUZ {
@@ -260,6 +262,7 @@ struct A1 extends A
     b Boolean
 struct A2 extends A
     c Boolean
+    mapfield Map(String, A)
 union M
     e Boolean
     f String
@@ -303,6 +306,7 @@ union B
 
   export interface A2 extends A {
     c: boolean;
+    mapfield: {[key: string]: A};
   }
 
   /**

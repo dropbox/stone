@@ -18,6 +18,7 @@ from stone.ir import (
     is_alias,
     is_list_type,
     is_struct_type,
+    is_map_type,
     is_user_defined_type,
 )
 from stone.backends.helpers import (
@@ -63,6 +64,10 @@ def fmt_type_name(data_type, inside_namespace=None):
         fmted_type = _base_type_table.get(data_type.__class__, 'Object')
         if is_list_type(data_type):
             fmted_type += '<' + fmt_type(data_type.data_type, inside_namespace) + '>'
+        elif is_map_type(data_type):
+            key_data_type = _base_type_table.get(data_type.key_data_type, 'string')
+            value_data_type = fmt_type_name(data_type.value_data_type, inside_namespace)
+            fmted_type = '{[key: %s]: %s}' % (key_data_type, value_data_type)
         return fmted_type
 
 def fmt_polymorphic_type_reference(data_type, inside_namespace=None):
