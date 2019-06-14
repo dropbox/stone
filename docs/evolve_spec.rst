@@ -49,11 +49,6 @@ Backwards Incompatible Changes
   * An old receiver may have application-layer dependencies on the field
     type. In statically typed languages deserialization will fail.
 
-* Adding a new tag to a union without a `catch-all tag <lang_ref.rst#union-catch-all>`_.
-
-  * We expect receivers to exhaustively handle all tags. If a new tag is
-    returned, the receiver's handler code will be insufficient.
-
 * Changing the type of a tag with a non-Void type.
 
   * Similar to the above, if a tag changes, the old receiver's
@@ -90,18 +85,12 @@ Backwards Compatible Changes
     data type and continue to present a tag with no value to the
     application.
 
-* Adding another tag to a union that has a catch-all specified.
+* Adding another tag to an open union.
 
   * The older receiver will not understand the incoming tag, and will
     simply set the union to its catch-all tag. The application-layer will
     handle this new tag through the same code path that handles the
     catch-all tag.
-
-Planning for Backwards Compatibility
-====================================
-
-* When defining a union that you're likely to add tags to in the
-  future, add a `catch-all tag`_.
 
 Leader-Clients
 ==============
