@@ -49,6 +49,11 @@ Backwards Incompatible Changes
   * An old receiver may have application-layer dependencies on the field
     type. In statically typed languages deserialization will fail.
 
+* Adding a new tag to a closed union.
+
+  * We expect receivers to exhaustively handle all tags. If a new tag is
+    returned, the receiver's handler code will be insufficient.
+
 * Changing the type of a tag with a non-Void type.
 
   * Similar to the above, if a tag changes, the old receiver's
