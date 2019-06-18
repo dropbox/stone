@@ -100,11 +100,11 @@ Backwards Compatible Changes
 Planning for Backwards Compatibility
 ====================================
 * When defining a union that you're likely to add tags to in the future,
-  use an open union. By default, unions are open in Stone.
+  use an open union. By default, unions are open.
   Stone exposes a virtual tag called "other" of void type to generators
   that is known as the "catch-all" tag for this purpose.
   If a recipient receives a tag that it isn't aware of,
-  it will default the union to the other tag.
+  it will default the union to the "other" tag.
 
 
 Leader-Clients
