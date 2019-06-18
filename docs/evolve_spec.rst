@@ -49,7 +49,7 @@ Backwards Incompatible Changes
   * An old receiver may have application-layer dependencies on the field
     type. In statically typed languages deserialization will fail.
 
-* Adding a new tag to a union without a `catch-all tag <lang_ref.rst#union-catch-all>`_.
+* Adding a new tag to a closed union.
 
   * We expect receivers to exhaustively handle all tags. If a new tag is
     returned, the receiver's handler code will be insufficient.
@@ -90,7 +90,7 @@ Backwards Compatible Changes
     data type and continue to present a tag with no value to the
     application.
 
-* Adding another tag to a union that has a catch-all specified.
+* Adding a new tag to an open union.
 
   * The older receiver will not understand the incoming tag, and will
     simply set the union to its catch-all tag. The application-layer will
@@ -99,9 +99,13 @@ Backwards Compatible Changes
 
 Planning for Backwards Compatibility
 ====================================
+* When defining a union that you're likely to add tags to in the future,
+  use an open union. By default, unions are open.
+  Stone exposes a virtual tag called "other" of void type to generators
+  that is known as the "catch-all" tag for this purpose.
+  If a recipient receives a tag that it isn't aware of,
+  it will default the union to the "other" tag.
 
-* When defining a union that you're likely to add tags to in the
-  future, add a `catch-all tag`_.
 
 Leader-Clients
 ==============
