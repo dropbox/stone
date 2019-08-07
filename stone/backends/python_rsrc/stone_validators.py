@@ -392,8 +392,8 @@ class List(Composite):
             assert min_items >= 0, 'min_items must be >= 0'
         if max_items is not None:
             assert isinstance(max_items, numbers.Integral), \
-                'max_items must be an integral number'
-            assert max_items > 0, 'max_items must be > 0'
+               'max_items must be an integral number'
+             assert max_items > 0, 'max_items must be > 0'
         if min_items is not None and max_items is not None:
             assert max_items >= min_items, 'max_items must be >= min_items'
 

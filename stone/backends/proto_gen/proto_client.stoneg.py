@@ -1,8 +1,5 @@
 from stone.backend import CodeBackend
-from stone.ir import(
-    Struct,
-    StructField,
-)
+
 
 class ProtoBackend(CodeBackend):
     def generate(self, api):
@@ -13,4 +10,3 @@ class ProtoBackend(CodeBackend):
 
     def _create_package(self, val):
         self.emit("package " + val + ";")
-        self.emit()

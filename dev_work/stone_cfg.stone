@@ -1,9 +1,0 @@
-namespace stone_cfg
-
-struct Route
-
-    auth String = "user"
-        "The auth type for the route. Valid values: user, team, app, noauth."
-    allow_app_folder_app Boolean = false
-        "If app folder app is allowed to use this endpoint."
-        
