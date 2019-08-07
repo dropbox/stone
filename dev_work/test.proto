@@ -1,0 +1,11 @@
+package foo;
+
+message barErr {
+    String	err
+}
+message barParam {
+    String	name1
+}
+message barRes {
+    String	name2
+}
