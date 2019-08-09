@@ -5,7 +5,7 @@ from stone.ir import (
     # List,
     # Map,
     # Nullable,
-    # Timestamp,
+    Timestamp,
     # UserDefined,
     # is_alias,
     is_boolean_type,
@@ -20,7 +20,7 @@ from stone.ir import (
     # is_map_type,
     # is_nullable_type,
     is_string_type,
-    # is_timestamp_type,
+    is_timestamp_type,
     # is_user_defined_type,
     # is_void_type,
 )
@@ -47,3 +47,6 @@ def map_stone_type_to_proto(data_type):
 
     elif is_bytes_type(data_type):
         return 'bytes'
+
+    elif is_timestamp_type(data_type):
+        return 'timestamp'
