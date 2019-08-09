@@ -4,9 +4,13 @@ from stone.ir import(
     StructField,
 )
 <<<<<<< HEAD
+<<<<<<< HEAD
 from proto_type_mapping import map_stone_type_to_proto, is_primitive_data
 =======
 >>>>>>> Mapping for basic data types
+=======
+from proto_type_mapping import map_stone_type_to_proto
+>>>>>>> Basic Message expression
 
 class ProtoBackend(CodeBackend):
     def generate(self, api):
@@ -70,10 +74,16 @@ class ProtoBackend(CodeBackend):
         self.emit("message " + msg.name + " " +u'{')
 
     def _generate_message_cont(self, msg):
+        int counter = 0
         with self.indent():
             for field in msg.fields:
-                self.emit(field.data_type.name + "\t" + field.name)
+                print(map_stone_type_to_proto(field.data_type))
+                self.emit(map_stone_type_to_proto(field.data_type) + " " + field.name + "=" + counter)
+                counter += 1
 
     def _generate_message_end(self):
         self.emit(u'}')
+<<<<<<< HEAD
 >>>>>>> Mapping for basic data types
+=======
+>>>>>>> Basic Message expression
