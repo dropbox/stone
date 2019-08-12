@@ -56,12 +56,8 @@ def map_stone_type_to_proto(data_type):
 
     elif is_timestamp_type(data_type):
         return 'timestamp'
-<<<<<<< HEAD
-
     else:
         return None
 
 def is_primitive_data(data_type):
     return True if map_stone_type_to_proto(data_type) != None else False
-=======
->>>>>>> Basic Message expression
