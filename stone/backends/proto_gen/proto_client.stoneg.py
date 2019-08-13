@@ -4,11 +4,12 @@ from stone.ir import(
     StructField,
 )
 from proto_type_mapping import map_stone_type_to_proto, is_primitive_data
-
+from proto_helpers import get_order_structs
 class ProtoBackend(CodeBackend):
     def generate(self, api):
         with self.output_to_relative_path('test.proto'):
             for namespace in api.namespaces.values():
+                get_order_structs(namespace)
                 self._create_package(namespace.name)
                 self._generate_messages(namespace)
 
@@ -17,8 +18,11 @@ class ProtoBackend(CodeBackend):
         self.emit()
 
     def _generate_messages(self, namespace):
-        for data in namespace.data_types:
-            print(data)
+        #print(namespace.data_types)
+        #print("\n")
+        #print(namespace.linearize_data_types())
+        #print("\n")
+        for data in namespace.linearize_data_types():
             if isinstance(data, Struct):
                 self.emit(self._obj_start("message " + data.name))
                 self._generate_message_cont(data)
