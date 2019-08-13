@@ -14,6 +14,11 @@ from stone.ir import (
     is_float64_type,
     is_int32_type,
     is_int64_type,
+    is_uint32_type,
+    is_uint64_type,
+    # is_list_type,
+    # is_map_type,
+    # is_nullable_type,
     is_string_type,
     is_timestamp_type,
     # is_user_defined_type,
@@ -33,6 +38,12 @@ def map_stone_type_to_proto(data_type):
 
     elif is_int64_type(data_type):
         return u'int64'
+
+    elif is_uint32_type(data_type):
+        return 'uint32'
+
+    elif is_uint64_type(data_type):
+         return 'uint64'
 
     elif is_float32_type(data_type):
         return u'float'
