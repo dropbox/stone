@@ -11,7 +11,6 @@ from proto_helpers import(
 
 class ProtoBackend(CodeBackend):
     def generate(self, api):
-        print(self.args, self.target_folder_path)
         with self.output_to_relative_path('test.proto'):
             for namespace in api.namespaces.values():
 
@@ -26,7 +25,6 @@ class ProtoBackend(CodeBackend):
         self.typ_map = get_order_types(namespace)
         print(self.typ_map)
         for data in namespace.data_types:
-            print(data)
             if self.typ_map[data.name] == NESTED_VAL:
                 continue
             self._create_proto_data(data)
@@ -45,9 +43,10 @@ class ProtoBackend(CodeBackend):
                 #check if nested userdefined dataytpe
                 if not is_primitive_data(field.data_type) and self.typ_map[field.data_type.name] == NESTED_VAL:
                     self._create_proto_data(field.data_type)
+                    typ = field.data_type.name
 
-                typ = field.data_type.name
-
+                else:
+                    typ = map_stone_type_to_proto(field.data_type)
                 self.emit(self._expr_eq(typ, field.name, str(counter)))
                 counter += 1
 
@@ -71,6 +70,6 @@ class ProtoBackend(CodeBackend):
         return (u'}')
 
     def _expr_eq(self, typ, name, value):
-        return (u'{} {} = {};'.format(typ, name, value))
+        return (u'{}\t{} = {};'.format(typ, name, value))
     def _expr_st(self, typ, name):
         return (u'{} {};'.format(typ, name))
