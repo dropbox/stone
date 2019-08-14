@@ -22,11 +22,8 @@ class ProtoBackend(CodeBackend):
         self.emit()
 
     def _generate_types(self, namespace):
-        #self.typ_map = get_order_types(namespace)
 
         for data in namespace.data_types:
-            # if self.typ_map[data.name] == NESTED_VAL:
-            #     continue
             print(data)
             self._create_proto_data(data)
 
