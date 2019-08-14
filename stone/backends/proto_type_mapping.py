@@ -23,6 +23,7 @@ from stone.ir import (
     is_timestamp_type,
     # is_user_defined_type,
     # is_void_type,
+    Primitive
 )
 
 def map_stone_type_to_proto(data_type):
@@ -61,4 +62,4 @@ def map_stone_type_to_proto(data_type):
         return None
 
 def is_primitive_data(data_type):
-    return True if map_stone_type_to_proto(data_type) != None else False
+    return isinstance(data_type, Primitive)
