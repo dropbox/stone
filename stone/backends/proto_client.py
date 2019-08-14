@@ -24,7 +24,6 @@ class ProtoBackend(CodeBackend):
     def _generate_types(self, namespace):
 
         for data in namespace.data_types:
-            print(data)
             self._create_proto_data(data)
 
     def _create_proto_data(self, data):
