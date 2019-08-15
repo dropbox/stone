@@ -16,7 +16,6 @@ def get_order_types(namespace):
     for data in namespace.data_types:
         struc_map[data.name] += 1
         if isinstance(data, UserDefined):
-            print("yelo", data)
             for field in data.fields:
                 if not is_primitive_data(field.data_type):
                     struc_map[field.data_type.name] += 1

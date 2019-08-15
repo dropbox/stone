@@ -22,11 +22,12 @@ class ProtoBackend(CodeBackend):
         self.emit()
 
     def _generate_types(self, namespace):
-        self.typ_map = get_order_types(namespace)
-        print(self.typ_map)
+        #self.typ_map = get_order_types(namespace)
+
         for data in namespace.data_types:
-            if self.typ_map[data.name] == NESTED_VAL:
-                continue
+            # if self.typ_map[data.name] == NESTED_VAL:
+            #     continue
+            print(data)
             self._create_proto_data(data)
 
     def _create_proto_data(self, data):
@@ -41,8 +42,7 @@ class ProtoBackend(CodeBackend):
         with self.indent():
             for field in data.fields:
                 #check if nested userdefined dataytpe
-                if not is_primitive_data(field.data_type) and self.typ_map[field.data_type.name] == NESTED_VAL:
-                    self._create_proto_data(field.data_type)
+                if not is_primitive_data(field.data_type):
                     typ = field.data_type.name
 
                 else:
