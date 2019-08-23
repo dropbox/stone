@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from stone.backends.proto_client import ProtoBackend
 from stone.ir import (
     ApiNamespace,
@@ -25,15 +26,17 @@ class TestGeneratedProtoClient(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestGeneratedProtoClient, self).__init__(*args, **kwargs)
         self.backend = ProtoBackend(
-            target_folder_path='../dev_work',
-            args=None
+            target_folder_path='output',
+            args=['-m', 'output']
         )
 
     def test_package(self):
         ns = ApiNamespace('TestPkg')
         self.backend._create_package(ns.name)
         res = self.backend.output_buffer_to_string()
-        expected = textwrap.dedent('package TestPkg;\n\n')
+        expected = textwrap.dedent('''\
+            syntax = "proto3";
+            package TestPkg;\n\n''')
 
         self.assertEqual(res, expected)
 
@@ -65,13 +68,13 @@ class TestGeneratedProtoClient(unittest.TestCase):
 
         expected = textwrap.dedent('''\
             message Name {
-                string\tgiven_name = 0;
-                string\tsurname = 1;
+                string given_name\t= 0;
+                string surname\t= 1;
             }
 
             message Person {
-                Name\tname = 0;
-                uint64\tage = 1;
+                Name name\t= 0;
+                uint64 age\t= 1;
             }
 
         ''')
@@ -99,21 +102,21 @@ class TestGeneratedProtoClient(unittest.TestCase):
 
         expected = textwrap.dedent('''\
             message AllDatas {
-                int32\tnum_int32 = 0;
-                int64\tnum_int64 = 1;
-                uint32\tnum_uint32 = 2;
-                uint64\tnum_uint64 = 3;
-                float\tnum_float32 = 4;
-                double\tnum_float64 = 5;
-                bool\tGeorge = 6;
-                string\tcheese = 7;
+                int32 num_int32\t= 0;
+                int64 num_int64\t= 1;
+                uint32 num_uint32\t= 2;
+                uint64 num_uint64\t= 3;
+                float num_float32\t= 4;
+                double num_float64\t= 5;
+                bool George\t= 6;
+                string cheese\t= 7;
             }
 
         ''')
 
         self.assertEqual(res, expected)
 
-    def test_struct_multiple_comp(self):
+    def test_struct_comp(self):
         name_struc = Struct(u'Name', 'TestStruct', None)
         name_struc.set_attributes(None,
         [
@@ -156,24 +159,24 @@ class TestGeneratedProtoClient(unittest.TestCase):
 
         expected = textwrap.dedent('''\
            message DOB {
-               int32\tmonth = 0;
-               int32\tday = 1;
-               int32\tyear = 2;
+               int32 month\t= 0;
+               int32 day\t= 1;
+               int32 year\t= 2;
            }
 
            message Name {
-               string\tgiven_name = 0;
-               string\tsurname = 1;
+               string given_name\t= 0;
+               string surname\t= 1;
            }
 
            message Person1 {
-               Name\tname = 0;
-               uint64\tage = 1;
+               Name name\t= 0;
+               uint64 age\t= 1;
            }
 
            message Person2 {
-               Name\tname = 0;
-               DOB\tdob = 1;
+               Name name\t= 0;
+               DOB dob\t= 1;
            }
 
         ''')
