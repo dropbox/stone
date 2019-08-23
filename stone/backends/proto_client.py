@@ -22,19 +22,14 @@ class ProtoBackend(CodeBackend):
         self.emit()
 
     def _generate_types(self, namespace):
-        #self.typ_map = get_order_types(namespace)
-
         for data in namespace.data_types:
-            # if self.typ_map[data.name] == NESTED_VAL:
-            #     continue
-            print(data)
             self._create_proto_data(data)
 
     def _create_proto_data(self, data):
         if isinstance(data, Struct):
-            self._generate_messages(data)
+            self._generate_message(data)
 
-    def _generate_messages(self, data):
+    def _generate_message(self, data):
 
         self.emit(self._obj_start("message " + data.name))
 

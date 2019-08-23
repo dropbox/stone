@@ -18,16 +18,16 @@ from stone.ir import (
 def map_stone_type_to_proto(data_type):
 
     if is_string_type(data_type):
-        return u'string'
+        return 'string'
 
     elif is_boolean_type(data_type):
-        return u'bool'
+        return 'bool'
 
     elif is_int32_type(data_type):
-        return u'int32'
+        return 'int32'
 
     elif is_int64_type(data_type):
-        return u'int64'
+        return 'int64'
 
     elif is_uint32_type(data_type):
         return 'uint32'
