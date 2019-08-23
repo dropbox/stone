@@ -1,5 +1,6 @@
+from __future__ import unicode_literals
+
 from stone.ir import (
-    Timestamp,
     is_boolean_type,
     is_bytes_type,
     is_float32_type,
@@ -17,16 +18,16 @@ from stone.ir import (
 def map_stone_type_to_proto(data_type):
 
     if is_string_type(data_type):
-        return u'string'
+        return 'string'
 
     elif is_boolean_type(data_type):
-        return u'bool'
+        return 'bool'
 
     elif is_int32_type(data_type):
-        return u'int32'
+        return 'int32'
 
     elif is_int64_type(data_type):
-        return u'int64'
+        return 'int64'
 
     elif is_uint32_type(data_type):
         return 'uint32'
@@ -35,16 +36,13 @@ def map_stone_type_to_proto(data_type):
         return 'uint64'
 
     elif is_float32_type(data_type):
-        return u'float'
+        return 'float'
 
     elif is_float64_type(data_type):
-        return u'double'
+        return 'double'
 
     elif is_bytes_type(data_type):
         return 'bytes'
-
-    elif is_timestamp_type(data_type):
-        return 'Timestamp'
 
     elif is_void_type(data_type):
         return "google.protobuf.Empty"
