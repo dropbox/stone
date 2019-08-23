@@ -13,6 +13,7 @@ _cmdline_parser.add_argument(
     type=str,
     help=('The name(without extension) of the protobuf file to generate.')
 )
+
 class ProtoBackend(CodeBackend):
 
     cmdline_parser = _cmdline_parser
