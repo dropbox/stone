@@ -1,5 +1,6 @@
 
-from collections import defaultdict, deque
+from __future__ import unicode_literals
+from collections import defaultdict
 from stone.ir import(
     Struct,
     StructField,
@@ -7,17 +8,19 @@ from stone.ir import(
     UserDefined,
 )
 
-from proto_type_mapping import map_stone_type_to_proto, is_primitive_data
+from stone.backends.proto_type_mapping import is_primitive_data
 
-NESTED_VAL = 2
+#FORMAT STRINGS
+def _obj_start(s):
+    return ('{} {{'.format(s))
 
-def get_order_types(namespace):
-    struc_map = defaultdict(int)
-    for data in namespace.data_types:
-        struc_map[data.name] += 1
-        if isinstance(data, UserDefined):
-            for field in data.fields:
-                if not is_primitive_data(field.data_type):
-                    struc_map[field.data_type.name] += 1
+def obj_end():
+    return ('}')
 
-    return struc_map
+def expr_eq(typ, name, value):
+    return ('{} {}\t= {};'.format(typ, name, value))
+def expr_st(typ, name):
+    return ('{} {};'.format(typ, name))
+
+def message_fmt(name):
+    return _obj_start('message ' + name)
