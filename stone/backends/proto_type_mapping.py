@@ -15,7 +15,7 @@ from stone.ir import (
     Primitive
 )
 
-def map_stone_type_to_proto(data_type):
+def map_primitive_type(data_type):
 
     if is_string_type(data_type):
         return 'string'
@@ -48,7 +48,9 @@ def map_stone_type_to_proto(data_type):
         return "google.protobuf.Empty"
         
     else:
-        return None
+        raise Exception(
+            "This data type is currently not supported."
+        )
 
 def is_primitive_data(data_type):
     return isinstance(data_type, Primitive)
