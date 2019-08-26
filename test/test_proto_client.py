@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
+
 from stone.backends.proto_client import ProtoBackend
+
 from stone.ir import (
     ApiNamespace,
     Void,

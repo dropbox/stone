@@ -4,12 +4,11 @@ from stone.backend import CodeBackend
 from stone.ir import(
     Struct,
 )
-from stone.backends.proto_type_mapping import map_stone_type_to_proto, is_primitive_data
+from stone.backends.proto_type_mapping import map_primitive_type, is_primitive_data
 from stone.backends.proto_helpers import(
     obj_end,
     message_fmt,
     expr_eq,
-    expr_st,
 )
 
 import importlib
@@ -48,8 +47,10 @@ class ProtoBackend(CodeBackend):
         current namespace
         '''
         for data in namespace.data_types:
-            if isinstance(data, Struct):
+            if type(data) == Struct:
                 self._generate_message(data)
+            else:
+                raise Exception("This stone type is currently not supported.")
       
 
     def _generate_message(self, data):
@@ -66,7 +67,7 @@ class ProtoBackend(CodeBackend):
                     typ = field.data_type.name
 
                 else:
-                    typ = map_stone_type_to_proto(field.data_type)
+                    typ = map_primitive_type(field.data_type)
                 self.emit(expr_eq(typ, field.name, str(counter)))
 
         self.emit(obj_end())
