@@ -49,7 +49,7 @@ def map_primitive_type(data_type):
         
     else:
         raise Exception(
-            "This data type is currently not supported."
+            "This data type is currently not supported"
         )
 
 def is_primitive_data(data_type):
