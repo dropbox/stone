@@ -35,21 +35,28 @@ class ProtoBackend(CodeBackend):
                 self._generate_types(namespace)
 
     def _create_package(self, val):
+        """
+        Generate Starting header for all generated proto files
+        """
         self.emit('syntax = "proto3";')
         self.emit('package ' + val + ';')
         self.emit()
 
     def _generate_types(self, namespace):
-
+        '''
+        Generate types (Messages, OneOfs, Enums etc.) for the 
+        current namespace
+        '''
         for data in namespace.data_types:
-            self._create_proto_data(data)
+            if isinstance(data, Struct):
+                self._generate_message(data)
+      
 
-    def _create_proto_data(self, data):
-        if isinstance(data, Struct):
-            self._generate_messages(data)
-
-    def _generate_messages(self, data):
-
+    def _generate_message(self, data):
+        """
+        Generate a message object from a Stone Struct
+        Inline Struct are generated as seperate messages.
+        """
         self.emit(message_fmt(data.name))
 
         with self.indent():
