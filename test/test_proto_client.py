@@ -15,9 +15,9 @@ from stone.ir import (
     UInt64
 )
 
-# MYPY = False
-# if MYPY:
-#     import typing
+MYPY = False
+if MYPY:
+    import typing
 
 import textwrap
 import unittest
