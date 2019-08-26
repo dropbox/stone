@@ -32,26 +32,27 @@ class TestGeneratedProtoClient(unittest.TestCase):
         res = self.backend.output_buffer_to_string()
         expected = textwrap.dedent('''\
             syntax = "proto3";
-            package TestPkg;\n\n''')
+            package TestPkg;
+            import dropbox/proto/api_proxy/service_extensions.proto;\n\n''')
 
         self.assertEqual(res, expected)
 
     def test_nested_struct(self):
 
-        nest_struc = Struct(u'Name', "TestStruct", None)
+        nest_struc = Struct('Name', "TestStruct", None)
 
         nest_struc.set_attributes(None,
         [
-            StructField(u'given_name', String(), None, None),
-            StructField(u'surname', String(), None, None)
+            StructField('given_name', String(), None, None),
+            StructField('surname', String(), None, None)
         ])
 
-        parent_struc = Struct(u'Person', "TestStruct", None)
+        parent_struc = Struct('Person', "TestStruct", None)
 
         parent_struc.set_attributes(None,
         [
-            StructField(u'name',nest_struc, None, None),
-            StructField(u'age', UInt64(), None, None)
+            StructField('name',nest_struc, None, None),
+            StructField('age', UInt64(), None, None)
 
         ])
 
@@ -78,17 +79,17 @@ class TestGeneratedProtoClient(unittest.TestCase):
         self.assertEqual(res, expected)
 
     def test_struct_with_datatypes(self):
-        temp_struc = Struct(u'AllDatas', 'TestStruct2', None)
+        temp_struc = Struct('AllDatas', 'TestStruct2', None)
         temp_struc.set_attributes(None,
         [
-            StructField(u'num_int32', Int32(), None, None),
-            StructField(u'num_int64', Int64(), None, None),
-            StructField(u'num_uint32', UInt32(), None, None),
-            StructField(u'num_uint64', UInt64(), None, None),
-            StructField(u'num_float32', Float32(), None, None),
-            StructField(u'num_float64', Float64(), None, None),
-            StructField(u'George', Boolean(), None, None),
-            StructField(u'cheese', String(), None, None)
+            StructField('num_int32', Int32(), None, None),
+            StructField('num_int64', Int64(), None, None),
+            StructField('num_uint32', UInt32(), None, None),
+            StructField('num_uint64', UInt64(), None, None),
+            StructField('num_float32', Float32(), None, None),
+            StructField('num_float64', Float64(), None, None),
+            StructField('George', Boolean(), None, None),
+            StructField('cheese', String(), None, None)
         ])
 
         ns = ApiNamespace('TestStruct2')
@@ -113,35 +114,35 @@ class TestGeneratedProtoClient(unittest.TestCase):
         self.assertEqual(res, expected)
 
     def test_struct_comp(self):
-        name_struc = Struct(u'Name', 'TestStruct', None)
+        name_struc = Struct('Name', 'TestStruct', None)
         name_struc.set_attributes(None,
         [
-            StructField(u'given_name', String(), None, None),
-            StructField(u'surname', String(), None, None)
+            StructField('given_name', String(), None, None),
+            StructField('surname', String(), None, None)
         ])
 
-        dob_struc = Struct(u'DOB', 'TestStruct', None)
+        dob_struc = Struct('DOB', 'TestStruct', None)
         dob_struc.set_attributes(None,
         [
-            StructField(u'month', Int32(), None, None),
-            StructField(u'day', Int32(), None, None),
-            StructField(u'year', Int32(), None, None)
+            StructField('month', Int32(), None, None),
+            StructField('day', Int32(), None, None),
+            StructField('year', Int32(), None, None)
         ])
 
-        person1_struc = Struct(u'Person1', "TestStruct", None)
+        person1_struc = Struct('Person1', "TestStruct", None)
 
         person1_struc.set_attributes(None,
         [
-            StructField(u'name',name_struc, None, None),
-            StructField(u'age', UInt64(), None, None)
+            StructField('name',name_struc, None, None),
+            StructField('age', UInt64(), None, None)
         ])
 
-        person2_struc = Struct(u'Person2', "TestStruct", None)
+        person2_struc = Struct('Person2', "TestStruct", None)
 
         person2_struc.set_attributes(None,
         [
-            StructField(u'name',name_struc, None, None),
-            StructField(u'dob', dob_struc, None, None)
+            StructField('name',name_struc, None, None),
+            StructField('dob', dob_struc, None, None)
         ])
 
         ns = ApiNamespace('TestStruct')

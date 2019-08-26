@@ -13,7 +13,6 @@ from stone.backends.proto_type_mapping import is_primitive_data
 #FORMAT STRINGS
 def _obj_start(s):
     return ('{} {{'.format(s))
-
 def obj_end():
     return ('}')
 
