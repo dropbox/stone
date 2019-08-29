@@ -2086,3 +2086,15 @@ def is_user_defined_type(data_type):
     return isinstance(data_type, UserDefined)
 def is_void_type(data_type):
     return isinstance(data_type, Void)
+def is_int32_type(data_type):
+    return isinstance(data_type, Int32)
+def is_int64_type(data_type):
+    return isinstance(data_type, Int64)
+def is_uint32_type(data_type):
+    return isinstance(data_type, UInt32)
+def is_uint64_type(data_type):
+    return isinstance(data_type, UInt64)
+def is_float32_type(data_type):
+    return isinstance(data_type, Float32)
+def is_float64_type(data_type):
+    return isinstance(data_type, Float64)
