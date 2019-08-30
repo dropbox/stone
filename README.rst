@@ -14,13 +14,13 @@ your choice.
 * Introduction
     * Motivation_
     * Installation_
-* `Language Reference <docs/lang_ref.rst>`_
-* `Builtin Backends <docs/builtin_backends.rst>`_
-* `Managing Specs <docs/managing_specs.rst>`_
-* `Evolving a Spec <docs/evolve_spec.rst>`_
-* `Backend Reference <docs/backend_ref.rst>`_
-* `JSON Serializer <docs/json_serializer.rst>`_
-* `Network Protocol <docs/network_protocol.rst>`_
+* `Language Reference <https://github.com/dropbox/stone/blob/master/docs/lang_ref.rst>`_
+* `Builtin Backends <https://github.com/dropbox/stone/blob/master/docs/builtin_backends.rst>`_
+* `Managing Specs <https://github.com/dropbox/stone/blob/master/docs/managing_specs.rst>`_
+* `Evolving a Spec <https://github.com/dropbox/stone/blob/master/docs/evolve_spec.rst>`_
+* `Backend Reference <https://github.com/dropbox/stone/blob/master/docs/backend_ref.rst>`_
+* `JSON Serializer <https://github.com/dropbox/stone/blob/master/docs/json_serializer.rst>`_
+* `Network Protocol <https://github.com/dropbox/stone/blob/master/docs/network_protocol.rst>`_
 
 Overview
 ========
