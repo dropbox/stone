@@ -79,7 +79,7 @@ class Union(object):
 
     @classmethod
     def _is_tag_present(cls, tag, caller_permissions):
-        assert tag, 'tag value should not be None'
+        assert tag is not None, 'tag value should not be None'
 
         if tag in cls._tagmap:
             return True
@@ -93,7 +93,7 @@ class Union(object):
 
     @classmethod
     def _get_val_data_type(cls, tag, caller_permissions):
-        assert tag, 'tag value should not be None'
+        assert tag is not None, 'tag value should not be None'
 
         for extra_permission in caller_permissions.permissions:
             tagmap_name = '_{}_tagmap'.format(extra_permission)
