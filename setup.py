@@ -24,7 +24,7 @@ setup_requires = [
 ]
 
 test_reqs = [
-    'pytest',
+    'pytest < 5',
 ]
 
 # WARNING: This imposes limitations on test/requirements.txt such that the
