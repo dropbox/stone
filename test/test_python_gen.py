@@ -418,6 +418,7 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_decode(bv.Bytes(),
                                      json.dumps(base64.b64encode(b).decode('ascii'))),
                          b)
+        self.assertRaises(bv.ValidationError, json_decode, bv.Bytes(), json.dumps('=non-base64='))
         self.assertRaises(bv.ValidationError,
                           lambda: json_decode(bv.Bytes(), json.dumps(1)))
         self.assertEqual(json_decode(bv.Nullable(bv.String()), json.dumps(None)), None)
