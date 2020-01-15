@@ -254,7 +254,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct1(bb.Struct):
                 def __init__(self,
-                             f1: Optional[bool] = ...) -> None: ...
+                             f1: bool = ...) -> None: ...
 
                 @property
                 def f1(self) -> bool: ...
@@ -276,9 +276,9 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct2(bb.Struct):
                 def __init__(self,
-                             f2: Optional[List[int]] = ...,
-                             f3: Optional[datetime.datetime] = ...,
-                             f4: Optional[Dict[Text, int]] = ...) -> None: ...
+                             f2: List[int] = ...,
+                             f3: datetime.datetime = ...,
+                             f4: Dict[Text, int] = ...) -> None: ...
 
                 @property
                 def f2(self) -> List[int]: ...
@@ -323,7 +323,6 @@ class TestPythonTypeStubs(unittest.TestCase):
                     Callable,
                     Dict,
                     List,
-                    Optional,
                     Text,
                     Type,
                     TypeVar,
@@ -341,7 +340,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class NestedTypes(bb.Struct):
                 def __init__(self,
-                             list_of_nullables: Optional[List[Optional[int]]] = ...,
+                             list_of_nullables: List[Optional[int]] = ...,
                              nullable_list: Optional[List[int]] = ...) -> None: ...
 
                 @property
@@ -498,7 +497,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct1(bb.Struct):
                 def __init__(self,
-                             f1: Optional[bool] = ...) -> None: ...
+                             f1: bool = ...) -> None: ...
 
                 @property
                 def f1(self) -> bool: ...
@@ -524,7 +523,6 @@ class TestPythonTypeStubs(unittest.TestCase):
             """).format(headers=_headers.format(textwrap.dedent("""\
                 from typing import (
                     Callable,
-                    Optional,
                     Text,
                     Type,
                     TypeVar,
