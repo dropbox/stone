@@ -19,6 +19,9 @@ matrix:
           sudo: true
     # Add entries here to ignore failures on certain configurations that are not caused by our code.
     allow_failures:
+        # Python 3.4 is failing tests because of exit code 1 of tox
+        # the error does not seem to be related to any particular build and Python 3.4 has reached the end of lifecycle
+        - python: 3.4
 
 script:
     - tox
