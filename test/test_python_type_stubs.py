@@ -214,7 +214,7 @@ def _make_namespace_with_nullable_fields():
     # type: (...) -> ApiNamespace
     ns = ApiNamespace('ns_w_nullable__fields')
 
-    struct = Struct(name='StructWithNullableFields', namespace=ns, ast_node=None)
+    struct = Struct(name='StructWithNullableField', namespace=ns, ast_node=None)
     struct.set_attributes(
         doc=None,
         fields=[
@@ -557,14 +557,17 @@ class TestPythonTypeStubs(unittest.TestCase):
                 )""")))
         self.assertEqual(result, expected)
 
-    def test__generate_base_namespace_module__with_nullable_and_void_fields(self):
+    def test__generate_base_namespace_module__with_nullable_field(self):
         # type: () -> None
+        """
+        Make sure that only Nullable fields are Optional in mypy
+        """
         ns = _make_namespace_with_nullable_fields()
         result = self._evaluate_namespace(ns)
         expected = textwrap.dedent("""\
             {headers}
 
-            class StructWithNullableFields(bb.Struct):
+            class StructWithNullableField(bb.Struct):
                 def __init__(self,
                              non_nullable_field: int = ...,
                              nullable_field: Optional[int] = ...) -> None: ...
@@ -595,7 +598,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                     processor: Callable[[T, U], U],
                 ) -> None: ...
 
-            StructWithNullableFields_validator: bv.Validator = ...
+            StructWithNullableField_validator: bv.Validator = ...
 
             """).format(headers=_headers.format(textwrap.dedent("""\
                 from typing import (
