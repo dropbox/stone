@@ -210,6 +210,34 @@ def _make_namespace_with_route_name_conflict():
     ns.add_route(route_two)
     return ns
 
+def _make_namespace_with_nullable_fields():
+    # type: (...) -> ApiNamespace
+    ns = ApiNamespace('ns_w_nullable__fields')
+
+    struct = Struct(name='StructWithNullableFields', namespace=ns, ast_node=None)
+    struct.set_attributes(
+        doc=None,
+        fields=[
+            StructField(
+                name='NullableField',
+                data_type=Nullable(
+                    UInt64()
+                ),
+                doc=None,
+                ast_node=None,
+            ),
+            StructField(
+                name='NonNullableField',
+                data_type=UInt64(),
+                doc=None,
+                ast_node=None,
+            )
+        ]
+    )
+    ns.add_data_type(struct)
+
+    return ns
+
 def _api():
     api = Api(version="1.0")
     return api
@@ -523,6 +551,56 @@ class TestPythonTypeStubs(unittest.TestCase):
             """).format(headers=_headers.format(textwrap.dedent("""\
                 from typing import (
                     Callable,
+                    Text,
+                    Type,
+                    TypeVar,
+                )""")))
+        self.assertEqual(result, expected)
+
+    def test__generate_base_namespace_module__with_nullable_and_void_fields(self):
+        # type: () -> None
+        ns = _make_namespace_with_nullable_fields()
+        result = self._evaluate_namespace(ns)
+        expected = textwrap.dedent("""\
+            {headers}
+
+            class StructWithNullableFields(bb.Struct):
+                def __init__(self,
+                             non_nullable_field: int = ...,
+                             nullable_field: Optional[int] = ...) -> None: ...
+
+                @property
+                def non_nullable_field(self) -> int: ...
+
+                @non_nullable_field.setter
+                def non_nullable_field(self, val: int) -> None: ...
+
+                @non_nullable_field.deleter
+                def non_nullable_field(self) -> None: ...
+
+
+                @property
+                def nullable_field(self) -> Optional[int]: ...
+
+                @nullable_field.setter
+                def nullable_field(self, val: Optional[int]) -> None: ...
+
+                @nullable_field.deleter
+                def nullable_field(self) -> None: ...
+
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    field_path: Text,
+                    processor: Callable[[T, U], U],
+                ) -> None: ...
+
+            StructWithNullableFields_validator: bv.Validator = ...
+
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    Callable,
+                    Optional,
                     Text,
                     Type,
                     TypeVar,
