@@ -210,6 +210,42 @@ def _make_namespace_with_route_name_conflict():
     ns.add_route(route_two)
     return ns
 
+def _make_namespace_with_nullable_and_dafault_fields():
+    # type: (...) -> ApiNamespace
+    ns = ApiNamespace('ns_w_nullable__fields')
+
+    struct = Struct(name='Struct1', namespace=ns, ast_node=None)
+    default_field = StructField(
+                        name='DefaultField',
+                        data_type=UInt64(),
+                        doc=None,
+                        ast_node=None,
+                    )
+    default_field.set_default(1)
+    struct.set_attributes(
+        doc=None,
+        fields=[
+            StructField(
+                name='NullableField',
+                data_type=Nullable(
+                    UInt64()
+                ),
+                doc=None,
+                ast_node=None,
+            ),
+            default_field,
+            StructField(
+                name='NonNullableField',
+                data_type=UInt64(),
+                doc=None,
+                ast_node=None,
+            )
+        ]
+    )
+    ns.add_data_type(struct)
+
+    return ns
+
 def _api():
     api = Api(version="1.0")
     return api
@@ -254,7 +290,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct1(bb.Struct):
                 def __init__(self,
-                             f1: Optional[bool] = ...) -> None: ...
+                             f1: bool = ...) -> None: ...
 
                 @property
                 def f1(self) -> bool: ...
@@ -276,9 +312,9 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct2(bb.Struct):
                 def __init__(self,
-                             f2: Optional[List[int]] = ...,
-                             f3: Optional[datetime.datetime] = ...,
-                             f4: Optional[Dict[Text, int]] = ...) -> None: ...
+                             f2: List[int] = ...,
+                             f3: datetime.datetime = ...,
+                             f4: Dict[Text, int] = ...) -> None: ...
 
                 @property
                 def f2(self) -> List[int]: ...
@@ -323,7 +359,6 @@ class TestPythonTypeStubs(unittest.TestCase):
                     Callable,
                     Dict,
                     List,
-                    Optional,
                     Text,
                     Type,
                     TypeVar,
@@ -341,7 +376,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class NestedTypes(bb.Struct):
                 def __init__(self,
-                             list_of_nullables: Optional[List[Optional[int]]] = ...,
+                             list_of_nullables: List[Optional[int]] = ...,
                              nullable_list: Optional[List[int]] = ...) -> None: ...
 
                 @property
@@ -498,7 +533,7 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct1(bb.Struct):
                 def __init__(self,
-                             f1: Optional[bool] = ...) -> None: ...
+                             f1: bool = ...) -> None: ...
 
                 @property
                 def f1(self) -> bool: ...
@@ -524,9 +559,72 @@ class TestPythonTypeStubs(unittest.TestCase):
             """).format(headers=_headers.format(textwrap.dedent("""\
                 from typing import (
                     Callable,
-                    Optional,
                     Text,
                     Type,
                     TypeVar,
                 )""")))
         self.assertEqual(result, expected)
+
+    def test__generate_base_namespace_module__with_nullable_and_default_fields(self):
+        # type: () -> None
+        """
+        Make sure that only Nullable fields and fields with default values are Optional in mypy
+        """
+        ns = _make_namespace_with_nullable_and_dafault_fields()
+        result = self._evaluate_namespace(ns)
+        expected = textwrap.dedent("""\
+            {headers}
+
+            class Struct1(bb.Struct):
+                def __init__(self,
+                             non_nullable_field: int = ...,
+                             nullable_field: Optional[int] = ...,
+                             default_field: Optional[int] = ...) -> None: ...
+
+                @property
+                def non_nullable_field(self) -> int: ...
+
+                @non_nullable_field.setter
+                def non_nullable_field(self, val: int) -> None: ...
+
+                @non_nullable_field.deleter
+                def non_nullable_field(self) -> None: ...
+
+
+                @property
+                def nullable_field(self) -> Optional[int]: ...
+
+                @nullable_field.setter
+                def nullable_field(self, val: Optional[int]) -> None: ...
+
+                @nullable_field.deleter
+                def nullable_field(self) -> None: ...
+
+
+                @property
+                def default_field(self) -> int: ...
+
+                @default_field.setter
+                def default_field(self, val: int) -> None: ...
+
+                @default_field.deleter
+                def default_field(self) -> None: ...
+
+                def _process_custom_annotations(
+                    self,
+                    annotation_type: Type[T],
+                    field_path: Text,
+                    processor: Callable[[T, U], U],
+                ) -> None: ...
+
+            Struct1_validator: bv.Validator = ...
+
+            """).format(headers=_headers.format(textwrap.dedent("""\
+                from typing import (
+                    Callable,
+                    Optional,
+                    Text,
+                    Type,
+                    TypeVar,
+                )""")))
+        self.assertEqual(expected, result)
