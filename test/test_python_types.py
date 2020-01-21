@@ -8,12 +8,10 @@ from stone.ir import (
     ApiRoute,
     CustomAnnotation,
     Int32,
-    Nullable,
     Struct,
     StructField,
     Void,
 )
-from test_python_type_stubs import _make_struct_with_nullable_and_dafault_fields
 
 MYPY = False
 if MYPY:
@@ -147,8 +145,8 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 _has_required_fields = True
 
                 def __init__(self,
-                             annotated_field,
-                             unannotated_field):
+                             annotated_field=None,
+                             unannotated_field=None):
                     self._annotated_field_value = None
                     self._annotated_field_present = False
                     self._unannotated_field_value = None
@@ -280,119 +278,3 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         self.assertEqual(result, expected)
 
     # TODO: add more unit tests for client code generation
-
-    def test_annotation_type_class(self):
-        ns = ApiNamespace('Foo')
-        struct = _make_struct_with_nullable_and_dafault_fields(ns)
-        result = self._evaluate_struct(ns, struct)
-        expected = textwrap.dedent('''\
-                class Struct1(bb.Struct):
-
-                    __slots__ = [
-                        '_nullable_field_value',
-                        '_nullable_field_present',
-                        '_default_field_value',
-                        '_default_field_present',
-                        '_non_nullable_field_value',
-                        '_non_nullable_field_present',
-                    ]
-
-                    _has_required_fields = True
-
-                    def __init__(self,
-                                 non_nullable_field,
-                                 nullable_field=None,
-                                 default_field=3.14159265359):
-                        self._nullable_field_value = None
-                        self._nullable_field_present = False
-                        self._default_field_value = None
-                        self._default_field_present = False
-                        self._non_nullable_field_value = None
-                        self._non_nullable_field_present = False
-                        if nullable_field is not None:
-                            self.nullable_field = nullable_field
-                        if default_field is not None:
-                            self.default_field = default_field
-                        if non_nullable_field is not None:
-                            self.non_nullable_field = non_nullable_field
-
-                    @property
-                    def nullable_field(self):
-                        """
-                        :rtype: int
-                        """
-                        if self._nullable_field_present:
-                            return self._nullable_field_value
-                        else:
-                            return None
-
-                    @nullable_field.setter
-                    def nullable_field(self, val):
-                        if val is None:
-                            del self.nullable_field
-                            return
-                        val = self._nullable_field_validator.validate(val)
-                        self._nullable_field_value = val
-                        self._nullable_field_present = True
-
-                    @nullable_field.deleter
-                    def nullable_field(self):
-                        self._nullable_field_value = None
-                        self._nullable_field_present = False
-
-                    @property
-                    def default_field(self):
-                        """
-                        :rtype: float
-                        """
-                        if self._default_field_present:
-                            return self._default_field_value
-                        else:
-                            return 3.14159265359
-
-                    @default_field.setter
-                    def default_field(self, val):
-                        val = self._default_field_validator.validate(val)
-                        self._default_field_value = val
-                        self._default_field_present = True
-
-                    @default_field.deleter
-                    def default_field(self):
-                        self._default_field_value = None
-                        self._default_field_present = False
-
-                    @property
-                    def non_nullable_field(self):
-                        """
-                        :rtype: int
-                        """
-                        if self._non_nullable_field_present:
-                            return self._non_nullable_field_value
-                        else:
-                            raise AttributeError("missing required field 'non_nullable_field'")
-
-                    @non_nullable_field.setter
-                    def non_nullable_field(self, val):
-                        val = self._non_nullable_field_validator.validate(val)
-                        self._non_nullable_field_value = val
-                        self._non_nullable_field_present = True
-
-                    @non_nullable_field.deleter
-                    def non_nullable_field(self):
-                        self._non_nullable_field_value = None
-                        self._non_nullable_field_present = False
-
-                    def _process_custom_annotations(self, annotation_type, field_path, processor):
-                        super(Struct1, self)._process_custom_annotations(annotation_type, field_path, processor)
-
-                    def __repr__(self):
-                        return 'Struct1(non_nullable_field={!r}, nullable_field={!r}, default_field={!r})'.format(
-                            self._non_nullable_field_value,
-                            self._nullable_field_value,
-                            self._default_field_value,
-                        )
-
-                Struct1_validator = bv.Struct(Struct1)
-
-        ''')
-        self.assertEqual(expected, result)

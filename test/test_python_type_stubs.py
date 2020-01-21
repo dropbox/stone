@@ -210,15 +210,18 @@ def _make_namespace_with_route_name_conflict():
     ns.add_route(route_two)
     return ns
 
-def _make_struct_with_nullable_and_dafault_fields(ns):
+def _make_namespace_with_nullable_and_dafault_fields():
+    # type: (...) -> ApiNamespace
+    ns = ApiNamespace('ns_w_nullable__fields')
+
     struct = Struct(name='Struct1', namespace=ns, ast_node=None)
     default_field = StructField(
                         name='DefaultField',
-                        data_type=Float64(),
+                        data_type=UInt64(),
                         doc=None,
                         ast_node=None,
                     )
-    default_field.set_default(3.14159265359)
+    default_field.set_default(1)
     struct.set_attributes(
         doc=None,
         fields=[
@@ -239,12 +242,8 @@ def _make_struct_with_nullable_and_dafault_fields(ns):
             )
         ]
     )
-    return struct
+    ns.add_data_type(struct)
 
-def _make_namespace_with_nullable_and_dafault_fields():
-    # type: (...) -> ApiNamespace
-    ns = ApiNamespace('ns_w_nullable__fields')
-    ns.add_data_type(_make_struct_with_nullable_and_dafault_fields(ns))
     return ns
 
 def _api():
@@ -580,7 +579,7 @@ class TestPythonTypeStubs(unittest.TestCase):
                 def __init__(self,
                              non_nullable_field: int = ...,
                              nullable_field: Optional[int] = ...,
-                             default_field: Optional[float] = ...) -> None: ...
+                             default_field: Optional[int] = ...) -> None: ...
 
                 @property
                 def non_nullable_field(self) -> int: ...
@@ -603,10 +602,10 @@ class TestPythonTypeStubs(unittest.TestCase):
 
 
                 @property
-                def default_field(self) -> float: ...
+                def default_field(self) -> int: ...
 
                 @default_field.setter
-                def default_field(self, val: float) -> None: ...
+                def default_field(self, val: int) -> None: ...
 
                 @default_field.deleter
                 def default_field(self) -> None: ...

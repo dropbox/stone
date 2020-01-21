@@ -348,7 +348,7 @@ class PythonTypesBackend(CodeBackend):
 
             self._generate_struct_class_slots(data_type)
             self._generate_struct_class_has_required_fields(data_type)
-            self._generate_struct_class_init(ns, data_type)
+            self._generate_struct_class_init(data_type)
             self._generate_struct_class_properties(ns, data_type)
             self._generate_struct_class_custom_annotations(ns, data_type)
             self._generate_struct_class_repr(data_type)
@@ -519,7 +519,7 @@ class PythonTypesBackend(CodeBackend):
 
         self.emit()
 
-    def _generate_struct_class_init(self, ns, data_type):
+    def _generate_struct_class_init(self, data_type):
         """
         Generates constructor. The constructor takes all possible fields as
         optional arguments. Any argument that is set on construction sets the
@@ -529,12 +529,7 @@ class PythonTypesBackend(CodeBackend):
         args = ['self']
         for field in data_type.all_fields:
             field_name_reserved_check = fmt_var(field.name, True)
-            if field.has_default:
-                args.append('%s=%s' % (field_name_reserved_check, self._generate_python_value(ns, field.default)))
-            elif is_nullable_type(field.data_type):
-                args.append('%s=None' % field_name_reserved_check)
-            else:
-                args.append('%s' % field_name_reserved_check)
+            args.append('%s=None' % field_name_reserved_check)
 
         self.generate_multiline_list(args, before='def __init__', after=':')
 
