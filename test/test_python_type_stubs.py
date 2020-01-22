@@ -235,7 +235,7 @@ def _make_namespace_with_nullable_and_dafault_fields():
             ),
             default_field,
             StructField(
-                name='NonNullableField',
+                name='RequiredField',
                 data_type=UInt64(),
                 doc=None,
                 ast_node=None,
@@ -577,18 +577,18 @@ class TestPythonTypeStubs(unittest.TestCase):
 
             class Struct1(bb.Struct):
                 def __init__(self,
-                             non_nullable_field: int = ...,
+                             required_field: int = ...,
                              nullable_field: Optional[int] = ...,
                              default_field: Optional[int] = ...) -> None: ...
 
                 @property
-                def non_nullable_field(self) -> int: ...
+                def required_field(self) -> int: ...
 
-                @non_nullable_field.setter
-                def non_nullable_field(self, val: int) -> None: ...
+                @required_field.setter
+                def required_field(self, val: int) -> None: ...
 
-                @non_nullable_field.deleter
-                def non_nullable_field(self) -> None: ...
+                @required_field.deleter
+                def required_field(self) -> None: ...
 
 
                 @property
