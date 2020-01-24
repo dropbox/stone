@@ -334,7 +334,7 @@ class PythonTypeStubsBackend(CodeBackend):
             field_name_reserved_check = fmt_var(field.name, True)
             field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
 
-            if not is_nullable_type(field.data_type):
+            if field.has_default:
                 self.import_tracker._register_typing_import('Optional')
                 field_type = 'Optional[{}]'.format(field_type)
 
