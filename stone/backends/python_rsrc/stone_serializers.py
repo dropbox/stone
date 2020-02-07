@@ -658,12 +658,11 @@ class PythonPrimitiveToStoneDecoder(object):
             else:
                 raise bv.ValidationError("unknown tag '%s'" % tag)
         elif isinstance(obj, dict):
-            tag, val = self.decode_union_dict(
-                data_type, obj)
+            tag, val = self.decode_union_dict(data_type, obj)
         else:
             raise bv.ValidationError("expected string or object, got %s" %
                                      bv.generic_type_name(obj))
-        return data_type.definition(tag, val)
+        return data_type.definition(six.ensure_str(tag), val)
 
     def decode_union_dict(self, data_type, obj):
         if '.tag' not in obj:
@@ -790,7 +789,7 @@ class PythonPrimitiveToStoneDecoder(object):
         else:
             raise bv.ValidationError("expected string or object, got %s" %
                                      bv.generic_type_name(obj))
-        return data_type.definition(tag, val)
+        return data_type.definition(six.ensure_str(tag), val)
 
     def decode_struct_tree(self, data_type, obj):
         """

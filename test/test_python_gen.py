@@ -48,7 +48,7 @@ class TestDropInModules(unittest.TestCase):
         # Passes
         s.validate('a')
         # Check that the validator is converting all strings to unicode
-        self.assertEqual(type(s.validate('a')), six.text_type)
+        self.assertIsInstance(s.validate('a'), six.text_type)
 
     def test_string_regex_anchoring(self):
         p, f = self.mk_validator_testers(bv.String(pattern=r'abc|xyz'))
@@ -527,10 +527,13 @@ class TestDropInModules(unittest.TestCase):
         # Test void variant
         u = json_decode(bv.Union(U), json.dumps('b'))
         self.assertEqual(u._tag, 'b')
+        self.assertIsInstance(u._tag, str)
+
         self.assertRaises(bv.ValidationError,
                           lambda: json_decode(bv.Union(U), json.dumps({'b': [1, 2]})))
         u = json_decode(bv.Union(U), json.dumps({'b': [1, 2]}), strict=False, old_style=True)
         self.assertEqual(u._tag, 'b')
+        self.assertIsInstance(u._tag, str)
 
         # Test struct variant
         u = json_decode(bv.Union(U), json.dumps({'c': {'f': 'hello'}}), old_style=True)
@@ -559,6 +562,7 @@ class TestDropInModules(unittest.TestCase):
         u = json_decode(bv.Union(U), json.dumps({'z': 'test'}),
                         strict=False, old_style=True)
         self.assertEqual(u._tag, 'g')
+        self.assertIsInstance(u._tag, str)
 
         # Test nullable union
         u = json_decode(bv.Nullable(bv.Union(U)), json.dumps(None),
@@ -568,15 +572,18 @@ class TestDropInModules(unittest.TestCase):
         # Test nullable union member
         u = json_decode(bv.Union(U), json.dumps('e'))
         self.assertEqual(u._tag, 'e')
+        self.assertIsInstance(u._tag, str)
         self.assertEqual(u._value, None)
         u = json_decode(bv.Union(U), json.dumps({'e': 64}),
                         strict=False, old_style=True)
         self.assertEqual(u._tag, 'e')
+        self.assertIsInstance(u._tag, str)
         self.assertEqual(u._value, 64)
 
         # Test nullable composite variant
         u = json_decode(bv.Union(U), json.dumps('f'))
         self.assertEqual(u._tag, 'f')
+        self.assertIsInstance(u._tag, str)
         u = json_decode(bv.Union(U), json.dumps({'f': {'f': 'hello'}}),
                         strict=False, old_style=True)
         self.assertEqual(type(u._value), S)
@@ -711,6 +718,18 @@ union V
 
 struct S
     f String
+
+struct T
+    f String
+
+struct SExtendEmpty extends S
+    "Subclass with no fields added"
+
+struct SExtend extends S
+    g String
+
+struct SExtend2 extends S
+    g String
 
 struct Resource
     union_closed
@@ -1197,6 +1216,44 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertIsInstance(s2.f1, self.ns.OptionalS)
         self.assertEqual(s2.f1.f1, 'hello')
         self.assertEqual(s2.f1.f2, 3)
+
+    def test_struct_equality_with_object(self):
+        """Should not throw an error when comparing with object.
+
+        Object is a superclass of Struct, but it should not be considered for equality.
+        """
+        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        self.assertFalse(s == object())
+
+    def test_struct_equality_with_value(self):
+        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        s_equal = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        s_unequal = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'G'}))
+        self.assertEqual(s, s_equal)
+        self.assertNotEqual(s, s_unequal)
+
+    def test_struct_equality_with_different_types(self):
+        """Structs of different types that do not have an inheritance relationship are not considered
+        equal to each other."""
+        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        t = self.decode(self.sv.Struct(self.ns.T), json.dumps({'f': 'F'}))
+        self.assertNotEqual(s, t)
+
+        # S_extend and S_extend2 are indirectly related because they both extend S, but they do not
+        # have a direct line of inheritance to each other.
+        s_extend = self.decode(self.sv.Struct(self.ns.SExtend), json.dumps({'f': 'F', 'g': 'G'}))
+        s_extend2 = self.decode(self.sv.Struct(self.ns.SExtend2), json.dumps({'f': 'F', 'g': 'G'}))
+        self.assertNotEqual(s_extend, s_extend2)
+
+    def test_extended_struct_equality(self):
+        """Structs which subclass each other are considered equal to each other if they have the
+        exact same fields."""
+        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        s_extend_empty = self.decode(self.sv.Struct(self.ns.SExtendEmpty), json.dumps({'f': 'F'}))
+        s_extend = self.decode(self.sv.Struct(self.ns.SExtend), json.dumps({'f': 'F', 'g': 'G'}))
+
+        self.assertEqual(s, s_extend_empty)
+        self.assertNotEqual(s, s_extend)
 
     def test_union_encoding(self):
         # Test void union member

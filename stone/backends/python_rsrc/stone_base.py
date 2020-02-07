@@ -31,6 +31,30 @@ if _MYPY:
 
 class Struct(object):
     # This is a base class for all classes representing Stone structs.
+
+    _all_field_names_ = set()  # type: typing.Set[str]
+
+    def __eq__(self, other):
+        # type: (object) -> bool
+        if not isinstance(other, Struct):
+            return False
+
+        if self._all_field_names_ != other._all_field_names_:
+            return False
+
+        if not isinstance(other, self.__class__) and not isinstance(self, other.__class__):
+            return False
+
+        for field_name in self._all_field_names_:
+            if getattr(self, field_name) != getattr(other, field_name):
+                return False
+
+        return True
+
+    def __ne__(self, other):
+        # type: (object) -> bool
+        return not self == other
+
     def _process_custom_annotations(self, annotation_type, field_path, processor):
         # type: (typing.Type[T], typing.Text, typing.Callable[[T, U], U]) -> None
         pass
@@ -39,7 +63,7 @@ class Union(object):
     # TODO(kelkabany): Possible optimization is to remove _value if a
     # union is composed of only symbols.
     __slots__ = ['_tag', '_value']
-    _tagmap = {}  # type: typing.Dict[typing.Text, bv.Validator]
+    _tagmap = {}  # type: typing.Dict[str, bv.Validator]
     _permissioned_tagmaps = set()  # type: typing.Set[typing.Text]
 
     def __init__(self, tag, value=None):
