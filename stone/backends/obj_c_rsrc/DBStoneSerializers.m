@@ -148,40 +148,38 @@ static NSString *sDateFormat = nil;
     NSCharacterSet *alphabeticSet =
         [NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"];
     NSMutableString *newFormat = [@"" mutableCopy];
-    BOOL inQuotedText = NO;
+    __block BOOL inQuotedText = NO;
 
-    NSUInteger len = [format length];
-
-    NSUInteger i = 0;
-    while (i < len) {
-        char ch = [format characterAtIndex:i];
-        if (ch == '%') {
-            if (i >= len - 1) {
-                return nil;
+    // Proper way to enumerate characters in a string taken from https://www.objc.io/issues/9-strings/unicode/
+    [format enumerateSubstringsInRange:NSMakeRange(0, [format length])
+                          options:NSStringEnumerationByComposedCharacterSequences
+                       usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+        if ([substring isEqualToString:@"%"]) {
+            if (substringRange.location >= format.length - 1) {
+                *stop = YES;
+                return;
             }
-            i++;
-            ch = [format characterAtIndex:i];
-            NSString *token = [NSString stringWithFormat:@"%%%c", ch];
+
             if (inQuotedText) {
                 [newFormat appendString:@"'"];
                 inQuotedText = NO;
             }
-            [newFormat appendString:[self formatDateToken:token]];
+            [newFormat appendString:[self formatDateToken:substring]];
         }
         else {
-            if ([alphabeticSet characterIsMember:ch]) {
+            if ([alphabeticSet longCharacterIsMember:[substring characterAtIndex:0]]) {
                 if (!inQuotedText) {
                     [newFormat appendString:@"'"];
                     inQuotedText = YES;
                 }
             }
-            else if (ch == '\'') {
+            else if ([substring isEqualToString:@"'"]) {
                 [newFormat appendString:@"'"];
             }
-            [newFormat appendString:[NSString stringWithFormat:@"%c", ch]];
+            [newFormat appendString:substring];
         }
-        i++;
-    }
+    }];
+
     if (inQuotedText) {
         [newFormat appendString:@"'"];
     }
