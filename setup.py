@@ -38,7 +38,7 @@ with open('README.rst') as f:
 
 dist = setup(
     name='stone',
-    version='0.1',
+    version='1.0.0',
     install_requires=install_reqs,
     setup_requires=setup_requires,
     tests_require=test_reqs,
@@ -58,6 +58,7 @@ dist = setup(
     description='Stone is an interface description language (IDL) for APIs.',
     license='MIT License',
     long_description=README,
+    long_description_content_type='text/x-rst',
     maintainer_email='api-platform@dropbox.com',
     maintainer='Dropbox',
     url='https://github.com/dropbox/stone',

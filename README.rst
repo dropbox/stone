@@ -122,9 +122,9 @@ exception to this rule is afforded for error responses.
 Installation
 ============
 
-Download or clone Stone, and run the following in its root directory::
+Install stone using ``pip``::
 
-    $ sudo python setup.py install
+    $ pip install --user stone
 
 This will install a script ``stone`` to your PATH that can be run from the
 command line::
