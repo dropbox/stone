@@ -4019,7 +4019,7 @@ class TestStone(unittest.TestCase):
         api = specs_to_ir([
             ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         ns1 = api.namespaces['test']
-        self.assertEquals(ns1.route_by_name['r1'].attrs['f1'], 'yay')
+        self.assertEqual(ns1.route_by_name['r1'].attrs['f1'], 'yay')
 
         # Test missing attribute for route attribute with optional
         stone_cfg_text = textwrap.dedent("""\
@@ -4035,7 +4035,7 @@ class TestStone(unittest.TestCase):
         api = specs_to_ir([
             ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         test = api.namespaces['test']
-        self.assertEquals(test.route_by_name['r1'].attrs['f1'], None)
+        self.assertEqual(test.route_by_name['r1'].attrs['f1'], None)
 
         # Test unknown route attributes
         stone_cfg_text = textwrap.dedent("""\
@@ -4111,18 +4111,18 @@ class TestStone(unittest.TestCase):
             ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
         test = api.namespaces['test']
         attrs = test.route_by_name['r1'].attrs
-        self.assertEquals(attrs['f1'], True)
-        self.assertEquals(attrs['f2'], b'asdf')
-        self.assertEquals(attrs['f3'], 3.2)
-        self.assertEquals(attrs['f4'], 10)
-        self.assertEquals(attrs['f5'], 'Hello')
-        self.assertEquals(
+        self.assertEqual(attrs['f1'], True)
+        self.assertEqual(attrs['f2'], b'asdf')
+        self.assertEqual(attrs['f3'], 3.2)
+        self.assertEqual(attrs['f4'], 10)
+        self.assertEqual(attrs['f5'], 'Hello')
+        self.assertEqual(
             attrs['f6'], datetime.datetime(2015, 5, 12, 15, 50, 38))
-        self.assertEquals(attrs['f7'], 'World')
-        self.assertEquals(attrs['f8'], 'World')
-        self.assertEquals(attrs['f9'], 'World')
-        self.assertEquals(attrs['f10'], None)
-        self.assertEquals(attrs['f11'], None)
+        self.assertEqual(attrs['f7'], 'World')
+        self.assertEqual(attrs['f8'], 'World')
+        self.assertEqual(attrs['f9'], 'World')
+        self.assertEqual(attrs['f10'], None)
+        self.assertEqual(attrs['f11'], None)
 
         # Try defining an attribute twice.
         stone_cfg_text = textwrap.dedent("""\
