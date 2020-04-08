@@ -153,7 +153,7 @@ static NSString *sDateFormat = nil;
     // Proper way to enumerate characters in a string taken from https://www.objc.io/issues/9-strings/unicode/
     [format enumerateSubstringsInRange:NSMakeRange(0, [format length])
                           options:NSStringEnumerationByComposedCharacterSequences
-                       usingBlock:^(NSString *substring, NSRange substringRange, NSRange enclosingRange, BOOL *stop) {
+                       usingBlock:^(NSString *substring, NSRange substringRange __attribute__((unused)), NSRange enclosingRange, BOOL *stop) {
         if ([substring isEqualToString:@"%"]) {
             if (substringRange.location >= format.length - 1) {
                 *stop = YES;
