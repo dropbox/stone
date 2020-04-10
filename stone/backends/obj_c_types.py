@@ -144,7 +144,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
             self.namespace_to_has_route_auth_list[namespace] = set()
             if namespace.routes:
                 for route in namespace.routes:
-                    if route.attrs.get('auth') != 'noauth':
+                    auth_types = set(map(lambda x: x.strip(), route.attrs.get('auth').split(',')))
+                    if not 'noauth' in auth_types:
                         self.namespace_to_has_route_auth_list[namespace].add(
                             route.attrs.get('auth'))
                     else:

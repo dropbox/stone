@@ -100,14 +100,11 @@ class ObjCBackend(ObjCBaseBackend):
     namespace_to_has_routes = {}  # type: typing.Dict[typing.Any, bool]
 
     def generate(self, api):
-
         for namespace in api.namespaces.values():
             self.namespace_to_has_routes[namespace] = False
             if namespace.routes:
                 for route in namespace.routes:
-                    if route.attrs.get(
-                            'auth') == self.args.auth_type or route.attrs.get(
-                                'auth') == 'noauth' and self.args.auth_type == 'user':
+                    if self._should_generate_route(route):
                         self.namespace_to_has_routes[namespace] = True
                         break
 
@@ -272,6 +269,18 @@ class ObjCBackend(ObjCBaseBackend):
         self.emit()
         self.emit('NS_ASSUME_NONNULL_END')
 
+    def _auth_type_in_route(self, route, desired_auth_type):
+        for auth_type in route.attrs.get('auth').split(','):
+            if auth_type.strip() == desired_auth_type:
+                return True
+        return False
+
+    def _route_is_special_noauth_case(self, route):
+        return self._auth_type_in_route(route, 'noauth') and self.args.auth_type == 'user'
+    
+    def _should_generate_route(self, route):
+        return self._auth_type_in_route(route, self.args.auth_type) or self._route_is_special_noauth_case(route)
+
     def _generate_routes_m(self, namespace):
         """Generates implementation file for namespace object that has as methods
         all routes within the namespace."""
@@ -289,8 +298,7 @@ class ObjCBackend(ObjCBaseBackend):
             style_to_request = json.loads(self.args.z__style_to_request)
 
             for route in namespace.routes:
-                if (route.attrs.get('auth') != self.args.auth_type
-                        and route.attrs.get('auth') != 'noauth'):
+                if not self._should_generate_route(route):
                     continue
 
                 route_type = route.attrs.get('style')
@@ -420,8 +428,7 @@ class ObjCBackend(ObjCBaseBackend):
             style_to_request = json.loads(self.args.z__style_to_request)
 
             for route in namespace.routes:
-                if (route.attrs.get('auth') != self.args.auth_type
-                        and route.attrs.get('auth') != 'noauth'):
+                if not self._should_generate_route(route):
                     continue
 
                 route_type = route.attrs.get('style')
