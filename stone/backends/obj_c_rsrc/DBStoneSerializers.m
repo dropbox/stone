@@ -145,39 +145,45 @@ static NSString *sDateFormat = nil;
 
 + (NSString *)convertFormat:(NSString *)format
 {
-    NSCharacterSet *alphabeticSet =
-        [NSCharacterSet characterSetWithCharactersInString:@"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"];
-    NSMutableString *newFormat = [@"" mutableCopy];
     __block BOOL inQuotedText = NO;
+    __block NSString *lastCharacter = @"";
+
+    NSMutableString *newFormat = [@"" mutableCopy];
+    NSString *alphabet = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    NSCharacterSet *alphabeticSet = [NSCharacterSet characterSetWithCharactersInString:alphabet];
 
     // Proper way to enumerate characters in a string taken from https://www.objc.io/issues/9-strings/unicode/
     [format enumerateSubstringsInRange:NSMakeRange(0, [format length])
                           options:NSStringEnumerationByComposedCharacterSequences
                        usingBlock:^(NSString *substring, NSRange substringRange __attribute__((unused)), NSRange enclosingRange __attribute__((unused)), BOOL *stop) {
         if ([substring isEqualToString:@"%"]) {
+            lastCharacter = substring;
+
             if (substringRange.location >= format.length - 1) {
                 *stop = YES;
-                return;
             }
 
+            return;
+        } else if ([lastCharacter isEqualToString:@"%"]) {
+            NSString *token = [NSString stringWithFormat:@"%%%@", substring];
             if (inQuotedText) {
                 [newFormat appendString:@"'"];
                 inQuotedText = NO;
             }
-            [newFormat appendString:[self formatDateToken:substring]];
-        }
-        else {
+            [newFormat appendString:[self formatDateToken:token]];
+        } else {
             if ([alphabeticSet longCharacterIsMember:[substring characterAtIndex:0]]) {
                 if (!inQuotedText) {
                     [newFormat appendString:@"'"];
                     inQuotedText = YES;
                 }
-            }
-            else if ([substring isEqualToString:@"'"]) {
+            } else if ([substring isEqualToString:@"'"]) {
                 [newFormat appendString:@"'"];
             }
             [newFormat appendString:substring];
         }
+
+        lastCharacter = substring;
     }];
 
     if (inQuotedText) {
