@@ -645,7 +645,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
             description_str.format(tag_type, union_name),
             prefix=comment_prefix)
         with self.block(
-                'typedef NS_ENUM(NSInteger, {})'.format(tag_type), after=';'):
+                'typedef NS_CLOSED_ENUM(NSInteger, {})'.format(tag_type), after=';'):
             for field in union.all_fields:
                 doc = self.process_doc(
                     field.doc, self._docf) if field.doc else undocumented
