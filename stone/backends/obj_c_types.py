@@ -288,9 +288,9 @@ class ObjCTypesBackend(ObjCBaseBackend):
             self.emit('#pragma mark - Serialization methods')
             self.emit()
             self._generate_serializable_funcs(struct_name)
-            self.emit('#pragma mark - Description method')
+            self.emit('#pragma mark - Debug Description method')
             self.emit()
-            self._generate_description_func(struct_name)
+            self._generate_debug_description_func(struct_name)
             self.emit('#pragma mark - Copyable method')
             self.emit()
             self._generate_copyable_func()
@@ -380,9 +380,9 @@ class ObjCTypesBackend(ObjCBaseBackend):
             self.emit('#pragma mark - Serialization methods')
             self.emit()
             self._generate_serializable_funcs(union_name)
-            self.emit('#pragma mark - Description method')
+            self.emit('#pragma mark - Debug Description method')
             self.emit()
-            self._generate_description_func(union_name)
+            self._generate_debug_description_func(union_name)
             self.emit('#pragma mark - Copyable method')
             self.emit()
             self._generate_copyable_func()
@@ -733,9 +733,9 @@ class ObjCTypesBackend(ObjCBaseBackend):
         self.emit('{};'.format(deserial_signature))
         self.emit()
 
-    def _generate_description_func(self, data_type_name):
+    def _generate_debug_description_func(self, data_type_name):
         with self.block_func(
-                func='description', args=[], return_type='NSString *'):
+                func='debugDescription', args=[], return_type='NSString *'):
             serialize_call = fmt_func_call(
                 caller=fmt_serial_class(data_type_name),
                 callee='serialize',
