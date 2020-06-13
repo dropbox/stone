@@ -17,11 +17,11 @@ from stone.backends.python_helpers import (
     generate_module_header,
     validators_import_with_type_ignore,
 )
-from stone.backends.python_type_mapping import (  # noqa: F401 # pylint: disable=unused-import
+from stone.backends.python_type_mapping import (
     map_stone_type_to_python_type,
     OverrideDefaultTypesDict,
 )
-from stone.ir import (  # noqa: F401 # pylint: disable=unused-import
+from stone.ir import (
     Alias,
     AnnotationType,
     Api,

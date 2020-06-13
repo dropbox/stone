@@ -31,7 +31,6 @@ if _MYPY:
 
 class ParameterError(Exception):
     """Raised when a data type is parameterized with a bad type or value."""
-    pass
 
 
 def generic_type_name(v):
@@ -66,7 +65,6 @@ class DataType(object):
     def __init__(self):
         """No-op. Exists so that introspection can be certain that an init
         method exists."""
-        pass
 
     @property
     def name(self):
@@ -86,7 +84,6 @@ class DataType(object):
         Raises:
             ValueError
         """
-        pass
 
     @abstractmethod
     def check_example(self, ex_field):
@@ -100,7 +97,6 @@ class DataType(object):
         Raises:
             InvalidSpec
         """
-        pass
 
     def __repr__(self):
         return self.name
@@ -117,13 +113,11 @@ class Primitive(DataType):
         return attr_field.value
 
 
-class Composite(DataType):
+class Composite(DataType):  # pylint: disable=abstract-method
     """
     Composite types are any data type which can be constructed using primitive
     data types and other composite types.
     """
-    # pylint: disable=abstract-method
-    pass
 
 
 class Nullable(Composite):
@@ -288,9 +282,11 @@ class _BoundedFloat(Primitive):
                 except OverflowError:
                     raise ParameterError('min_value is too small for a float')
             if self.minimum is not None and min_value < self.minimum:
-                raise ParameterError('min_value cannot be less than the '
-                                     'minimum value for this type (%f < %f)' %
-                                     (min_value, self.minimum))
+                raise ParameterError(
+                    'min_value cannot be less than the '  # pylint: disable=E1307
+                    'minimum value for this type (%f < %f)' %
+                    (min_value, self.minimum)
+                )
         if max_value is not None:
             if not isinstance(max_value, numbers.Real):
                 raise ParameterError('max_value must be a real number')
@@ -300,9 +296,11 @@ class _BoundedFloat(Primitive):
                 except OverflowError:
                     raise ParameterError('max_value is too large for a float')
             if self.maximum is not None and max_value > self.maximum:
-                raise ParameterError('max_value cannot be greater than the '
-                                     'maximum value for this type (%f < %f)' %
-                                     (max_value, self.maximum))
+                raise ParameterError(
+                    'max_value cannot be greater than the '  # pylint: disable=E1307
+                    'maximum value for this type (%f < %f)' %
+                    (max_value, self.maximum)
+                )
         self.min_value = min_value
         self.max_value = max_value
 
@@ -319,11 +317,15 @@ class _BoundedFloat(Primitive):
             # Parser doesn't support NaN or Inf yet.
             raise ValueError('%f values are not supported' % val)
         if self.minimum is not None and val < self.minimum:
-            raise ValueError('%f is less than %f' %
-                             (val, self.minimum))
+            raise ValueError(
+                '%f is less than %f' %  # pylint: disable=E1307
+                (val, self.minimum)
+            )
         if self.maximum is not None and val > self.maximum:
-            raise ValueError('%f is greater than %f' %
-                             (val, self.maximum))
+            raise ValueError(
+                '%f is greater than %f' %  # pylint: disable=E1307
+                (val, self.maximum)
+            )
         if self.min_value is not None and val < self.min_value:
             raise ValueError('%f is less than %f' %
                              (val, self.min_value))

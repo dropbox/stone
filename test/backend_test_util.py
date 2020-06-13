@@ -9,7 +9,7 @@ except ImportError:
     # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
     from mock import Mock  # type: ignore
 
-from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
+from stone.backend import Backend
 
 def _mock_output(backend):
     # type: (Backend) -> typing.Callable[[], str]

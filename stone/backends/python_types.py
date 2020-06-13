@@ -21,7 +21,7 @@ if _MYPY:
 import importlib
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
-from stone.ir import AnnotationType, ApiNamespace  # noqa: F401 # pylint: disable=unused-import
+from stone.ir import AnnotationType, ApiNamespace
 from stone.ir import (
     get_custom_annotations_for_alias,
     get_custom_annotations_recursive,
@@ -47,7 +47,7 @@ from stone.ir import (
     unwrap_aliases,
     unwrap_nullable,
 )
-from stone.ir import DataType  # noqa: F401 # pylint: disable=unused-import
+from stone.ir import DataType
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
     class_name_for_annotation_type,

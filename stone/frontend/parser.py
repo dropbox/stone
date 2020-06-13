@@ -866,7 +866,6 @@ class ParserFactory(object):
     # the parser to treat a rule as optional.
     def p_empty(self, p):
         'empty :'
-        pass
 
     # Called by the parser whenever a token doesn't match any rule.
     def p_error(self, token):

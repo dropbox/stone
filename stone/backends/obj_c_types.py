@@ -145,7 +145,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
             if namespace.routes:
                 for route in namespace.routes:
                     auth_types = set(map(lambda x: x.strip(), route.attrs.get('auth').split(',')))
-                    if not 'noauth' in auth_types:
+                    if 'noauth' not in auth_types:
                         self.namespace_to_has_route_auth_list[namespace].add(
                             route.attrs.get('auth'))
                     else:
@@ -489,10 +489,10 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     field_name = fmt_var(field.name)
 
                     if field.has_default:
-                        self.emit('_{} = {} ?: {};'.format(
-                            field_name, field_name, fmt_default_value(field)))
+                        self.emit('_{0} = {0} ?: {1};'.format(
+                            field_name, fmt_default_value(field)))
                     else:
-                        self.emit('_{} = {};'.format(field_name, field_name))
+                        self.emit('_{0} = {0};'.format(field_name))
         self.emit()
 
     def _generate_struct_cstor_default(self, struct):
@@ -840,11 +840,11 @@ class ObjCTypesBackend(ObjCBaseBackend):
             if is_void_type(field.data_type):
                 self.emit('return [[self tagName] isEqual:[{} tagName]];'.format(other_obj_name))
             else:
-                self.emit('return [self.{} isEqual:{}.{}];'.format(
-                    field_name, other_obj_name, field_name))
+                self.emit('return [self.{0} isEqual:{1}.{0}];'.format(
+                    field_name, other_obj_name))
         elif is_struct_type(data_type):
-            with self.block('if (![self.{} isEqual:{}.{}])'.format(
-                    field_name, other_obj_name, field_name)):
+            with self.block('if (![self.{0} isEqual:{1}.{0}])'.format(
+                    field_name, other_obj_name)):
                 self.emit('return NO;')
 
     def _cstor_args_from_fields(self, fields, is_struct=False):

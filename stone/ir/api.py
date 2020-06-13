@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from collections import OrderedDict
 # See <https://github.com/PyCQA/pylint/issues/73>
-from distutils.version import StrictVersion  # pylint: disable=import-error,no-name-in-module
+from distutils.version import StrictVersion
 import six
 
 from .data_types import (

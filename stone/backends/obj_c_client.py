@@ -277,9 +277,10 @@ class ObjCBackend(ObjCBaseBackend):
 
     def _route_is_special_noauth_case(self, route):
         return self._auth_type_in_route(route, 'noauth') and self.args.auth_type == 'user'
-    
+
     def _should_generate_route(self, route):
-        return self._auth_type_in_route(route, self.args.auth_type) or self._route_is_special_noauth_case(route)
+        return (self._auth_type_in_route(route, self.args.auth_type) or
+                self._route_is_special_noauth_case(route))
 
     def _generate_routes_m(self, namespace):
         """Generates implementation file for namespace object that has as methods
