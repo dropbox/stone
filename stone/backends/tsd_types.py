@@ -18,7 +18,7 @@ if _MYPY:
 import importlib
 argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
-from stone.ir import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
+from stone.ir import ApiNamespace
 from stone.ir import (
     is_alias,
     is_struct_type,

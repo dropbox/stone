@@ -1,27 +1,13 @@
 language: python
 
 python:
-    - 2.7
-    - 3.4
     - 3.5
     - 3.6
-    - pypy
+    - 3.7
     - pypy3
 
 install:
     - pip install tox-travis
-
-matrix:
-    include:
-        # Workaround to enable Python 3.7: https://github.com/travis-ci/travis-ci/issues/9815
-        - python: 3.7
-          dist: xenial
-          sudo: true
-    # Add entries here to ignore failures on certain configurations that are not caused by our code.
-    allow_failures:
-        # Python 3.4 is failing tests because of exit code 1 of tox
-        # the error does not seem to be related to any particular build and Python 3.4 has reached the end of lifecycle
-        - python: 3.4
 
 script:
     - tox

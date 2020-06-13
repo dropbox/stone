@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from stone.backend import Backend  # noqa: F401 # pylint: disable=unused-import
-from stone.ir.api import ApiNamespace  # noqa: F401 # pylint: disable=unused-import
+from stone.backend import Backend
+from stone.ir.api import ApiNamespace
 from stone.ir import (
     Boolean,
     Bytes,

@@ -102,7 +102,6 @@ class Validator(six.with_metaclass(ABCMeta, object)):
         Returns: A normalized value if validation succeeds.
         Raises: ValidationError
         """
-        pass
 
     def has_default(self):
         return False
@@ -111,10 +110,8 @@ class Validator(six.with_metaclass(ABCMeta, object)):
         raise AssertionError('No default available.')
 
 
-class Primitive(Validator):
+class Primitive(Validator):  # pylint: disable=abstract-method
     """A basic type that is defined by Stone."""
-    # pylint: disable=abstract-method
-    pass
 
 
 class Boolean(Primitive):
@@ -372,11 +369,9 @@ class Timestamp(Primitive):
         return val
 
 
-class Composite(Validator):
+class Composite(Validator):  # pylint: disable=abstract-method
     """Validator for a type that builds on other primitive and composite
     types."""
-    # pylint: disable=abstract-method
-    pass
 
 
 class List(Composite):
@@ -593,6 +588,7 @@ class Void(Primitive):
 class Nullable(Validator):
 
     def __init__(self, validator):
+        super(Nullable, self).__init__()
         assert isinstance(validator, (Primitive, Composite)), \
             'validator must be for a primitive or composite type'
         assert not isinstance(validator, Nullable), \
@@ -633,7 +629,6 @@ class Redactor(object):
         """Redacts information from annotated field.
         Returns: A redacted version of the string provided.
         """
-        pass
 
     def _get_matches(self, val):
         if not self.regex:

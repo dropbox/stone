@@ -444,7 +444,7 @@ class TestDropInModules(unittest.TestCase):
 
             @f.setter
             def f(self, val):
-                self._f = val  # pylint: disable=attribute-defined-outside-init
+                self._f = val
 
             @property
             def g(self):

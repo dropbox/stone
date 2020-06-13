@@ -205,7 +205,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 validator = self._determine_validator_type(field.data_type, v)
                 if validator:
                     self.emit('{}({})'.format(validator, v))
-                self.emit('self.{} = {}'.format(v, v))
+                self.emit('self.{0} = {0}'.format(v))
             if data_type.parent_type:
                 func_args = [(fmt_var(f.name),
                               fmt_var(f.name))

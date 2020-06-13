@@ -89,7 +89,7 @@ class SwiftBaseBackend(CodeBackend):
             # default values are stored along with the type, e.g.
             # `Bool = True` is a type, hence this check.
             if first and force_first and '=' not in v:
-                k = "{} {}".format(k, k)
+                k = "{0} {0}".format(k)
 
             if first and v is not None and not_init:
                 out.append('{}'.format(v))

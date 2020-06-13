@@ -360,7 +360,7 @@ def fmt_func_args_declaration(arg_str_pairs):
             result.append('({}){}'.format(arg_type, arg_name))
             first_arg = False
         else:
-            result.append('{}:({}){}'.format(arg_name, arg_type, arg_name))
+            result.append('{0}:({1}){0}'.format(arg_name, arg_type))
     return ' '.join(result)
 
 

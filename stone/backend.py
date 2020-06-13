@@ -2,6 +2,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
+import argparse
+import logging
 import os
 import six
 import textwrap
@@ -15,23 +17,13 @@ from stone.ir import (
 
 _MYPY = False
 if _MYPY:
-    from stone.ir import Api  # noqa: F401 # pylint: disable=unused-import
+    from stone.ir import Api
     import typing  # pylint: disable=import-error,useless-suppression
 
     # Generic Dict key-val types
     DelimTuple = typing.Tuple[typing.Text, typing.Text]
     K = typing.TypeVar('K')
     V = typing.TypeVar('V')
-
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-argparse = importlib.import_module(str('argparse'))  # type: typing.Any
-logging = importlib.import_module(str('logging'))  # type: typing.Any
-open = open  # type: typing.Any # pylint: disable=redefined-builtin
 
 
 def remove_aliases_from_api(api):

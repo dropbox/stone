@@ -38,7 +38,7 @@ with open('README.rst') as f:
 
 dist = setup(
     name='stone',
-    version='1.3.0',
+    version='1.3.1',
     install_requires=install_reqs,
     setup_requires=setup_requires,
     tests_require=test_reqs,
@@ -70,11 +70,9 @@ dist = setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Software Development :: Code Generators',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
