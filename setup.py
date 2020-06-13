@@ -52,6 +52,9 @@ dist = setup(
         'stone.frontend',
         'stone.ir',
     ],
+    package_data={
+        'stone': ['py.typed'],
+    },
     zip_safe=False,
     author_email='kelkabany@dropbox.com',
     author='Ken Elkabany',
