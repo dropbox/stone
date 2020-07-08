@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import argparse
+
 from six import StringIO
 
 import textwrap
@@ -81,9 +83,20 @@ class ImportTracker(object):
         self.cur_namespace_adhoc_imports.add(s)
 
 
+_cmdline_parser = argparse.ArgumentParser(prog='python-types-backend')
+_cmdline_parser.add_argument(
+    '-p',
+    '--package',
+    type=str,
+    required=True,
+    help='Package prefix for absolute imports in generated files.',
+)
+
+
 class PythonTypeStubsBackend(CodeBackend):
     """Generates Python modules to represent the input Stone spec."""
 
+    cmdline_parser = _cmdline_parser
     # Instance var of the current namespace being generated
     cur_namespace = None
     preserve_aliases = True
@@ -145,7 +158,8 @@ class PythonTypeStubsBackend(CodeBackend):
         generate_imports_for_referenced_namespaces(
             backend=self,
             namespace=namespace,
-            insert_type_ignore=True
+            package=self.args.package,
+            insert_type_ignore=True,
         )
 
     def _generate_typevars(self):

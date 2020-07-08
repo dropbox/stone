@@ -23,14 +23,9 @@ import time
 
 import six
 
-try:
-    from . import stone_base as bb  # noqa: F401 # pylint: disable=unused-import
-    from . import stone_validators as bv
-except (ImportError, SystemError, ValueError):
-    # Catch errors raised when importing a relative module when not in a package.
-    # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bb  # type: ignore # noqa: F401 # pylint: disable=unused-import
-    import stone_validators as bv  # type: ignore
+
+from stone.backends.python_rsrc import stone_base as bb
+from stone.backends.python_rsrc import stone_validators as bv
 
 _MYPY = False
 if _MYPY:

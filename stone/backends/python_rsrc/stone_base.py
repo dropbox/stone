@@ -1,21 +1,12 @@
 """
 Helpers for representing Stone data types in Python.
-
-This module should be dropped into a project that requires the use of Stone. In
-the future, this could be imported from a pre-installed Python package, rather
-than being added to a project.
 """
 
 from __future__ import absolute_import, unicode_literals
 
 import functools
 
-try:
-    from . import stone_validators as bv
-except (ImportError, SystemError, ValueError):
-    # Catch errors raised when importing a relative module when not in a package.
-    # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bv  # type: ignore
+from stone.backends.python_rsrc import stone_validators as bv
 
 _MYPY = False
 if _MYPY:

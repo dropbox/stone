@@ -4,6 +4,7 @@ Backend for generating Python types that match the spec.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import argparse
 import itertools
 import os
 import re
@@ -12,14 +13,6 @@ import shutil
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.ir import AnnotationType, ApiNamespace
 from stone.ir import (
@@ -78,6 +71,13 @@ _cmdline_parser.add_argument(
           '{route} for the route name. This is used to translate Stone doc '
           'references to routes to references in Python docstrings.'),
 )
+_cmdline_parser.add_argument(
+    '-p',
+    '--package',
+    type=str,
+    required=True,
+    help='Package prefix for absolute imports in generated files.',
+)
 
 
 class PythonTypesBackend(CodeBackend):
@@ -97,16 +97,8 @@ class PythonTypesBackend(CodeBackend):
         Each namespace will have Python classes to represent data types and
         routes in the Stone spec.
         """
-        rsrc_folder = os.path.join(os.path.dirname(__file__), 'python_rsrc')
-        self.logger.info('Copying stone_validators.py to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'stone_validators.py'),
-                    self.target_folder_path)
-        self.logger.info('Copying stone_serializers.py to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'stone_serializers.py'),
-                    self.target_folder_path)
-        self.logger.info('Copying stone_base.py to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'stone_base.py'),
-                    self.target_folder_path)
+        with self.output_to_relative_path('__init__.py'):
+            pass
         for namespace in api.namespaces.values():
             reserved_namespace_name = fmt_namespace(namespace.name)
             with self.output_to_relative_path('{}.py'.format(reserved_namespace_name)):
@@ -191,7 +183,8 @@ class PythonTypesBackend(CodeBackend):
         # type: (ApiNamespace) -> None
         generate_imports_for_referenced_namespaces(
             backend=self,
-            namespace=namespace
+            namespace=namespace,
+            package=self.args.package,
         )
 
     def _docf(self, tag, val):

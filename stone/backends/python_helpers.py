@@ -117,7 +117,7 @@ def check_route_name_conflict(namespace):
 TYPE_IGNORE_COMMENT = "  # type: ignore"
 
 def generate_imports_for_referenced_namespaces(
-        backend, namespace, insert_type_ignore=False):
+        backend, namespace, package, insert_type_ignore=False):
     # type: (Backend, ApiNamespace, bool) -> None
     """
     Both the true Python backend and the Python PEP 484 Type Stub backend have
@@ -126,29 +126,20 @@ def generate_imports_for_referenced_namespaces(
     :param insert_type_ignore: add a MyPy type-ignore comment to the imports in
         the except: clause.
     """
-
     imported_namespaces = namespace.get_imported_namespaces(consider_annotation_types=True)
     if not imported_namespaces:
         return
 
     type_ignore_comment = TYPE_IGNORE_COMMENT if insert_type_ignore else ""
 
-    backend.emit('try:')
-    with backend.indent():
-        backend.emit('from . import (')
-        with backend.indent():
-            for ns in imported_namespaces:
-                backend.emit(fmt_namespace(ns.name) + ',')
-        backend.emit(')')
-    backend.emit('except (ImportError, SystemError, ValueError):')
-    # Fallback if imported from outside a package.
-    with backend.indent():
-        for ns in imported_namespaces:
-            backend.emit('import {namespace_name}{type_ignore_comment}'.format(
-                namespace_name=fmt_namespace(ns.name),
-                type_ignore_comment=type_ignore_comment
-            ))
+    for ns in imported_namespaces:
+        backend.emit('from {package} import {namespace_name}{type_ignore_comment}'.format(
+            package=package,
+            namespace_name=fmt_namespace(ns.name),
+            type_ignore_comment=type_ignore_comment
+        ))
     backend.emit()
+
 
 def generate_module_header(backend):
     backend.emit('# -*- coding: utf-8 -*-')
@@ -161,14 +152,8 @@ def generate_module_header(backend):
 
 # This will be at the top of every generated file.
 _validators_import_template = """\
-try:
-    from . import stone_validators as bv
-    from . import stone_base as bb
-except (ImportError, SystemError, ValueError):
-    # Catch errors raised when importing a relative module when not in a package.
-    # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bv{type_ignore_comment}
-    import stone_base as bb{type_ignore_comment}
+from stone.backends.python_rsrc import stone_base as bb{type_ignore_comment}
+from stone.backends.python_rsrc import stone_validators as bv{type_ignore_comment}
 
 """
 validators_import = _validators_import_template.format(type_ignore_comment="")
