@@ -41,7 +41,7 @@ def _make_backend():
     # type: () -> PythonTypeStubsBackend
     return PythonTypeStubsBackend(
         target_folder_path=Mock(),
-        args=Mock()
+        args=['--package', 'output'],
     )
 
 def _make_namespace_with_alias():
@@ -258,14 +258,8 @@ _headers = """\
 # pylint: skip-file
 
 {}
-try:
-    from . import stone_validators as bv
-    from . import stone_base as bb
-except (ImportError, SystemError, ValueError):
-    # Catch errors raised when importing a relative module when not in a package.
-    # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bv  # type: ignore
-    import stone_base as bb  # type: ignore
+from stone.backends.python_rsrc import stone_base as bb  # type: ignore
+from stone.backends.python_rsrc import stone_validators as bv  # type: ignore
 
 T = TypeVar('T', bound=bb.AnnotationType)
 U = TypeVar('U')"""

@@ -32,7 +32,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         # type: () -> PythonTypesBackend
         return PythonTypesBackend(
             target_folder_path='output',
-            args=['-r', 'dropbox.dropbox.Dropbox.{ns}_{route}'])
+            args=['-r', 'dropbox.dropbox.Dropbox.{ns}_{route}', '--package', 'output'])
 
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text
