@@ -12,12 +12,14 @@ than being added to a project.
 
 from __future__ import absolute_import, unicode_literals
 
-from abc import ABCMeta, abstractmethod
 import datetime
 import hashlib
 import math
 import numbers
 import re
+
+from abc import ABCMeta, abstractmethod
+
 import six
 
 _MYPY = False
