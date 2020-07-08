@@ -118,7 +118,7 @@ TYPE_IGNORE_COMMENT = "  # type: ignore"
 
 def generate_imports_for_referenced_namespaces(
         backend, namespace, package, insert_type_ignore=False):
-    # type: (Backend, ApiNamespace, bool) -> None
+    # type: (Backend, ApiNamespace, typing.Text, bool) -> None
     """
     Both the true Python backend and the Python PEP 484 Type Stub backend have
     to perform the same imports.

@@ -155,6 +155,7 @@ class PythonTypeStubsBackend(CodeBackend):
 
     def _generate_imports_for_referenced_namespaces(self, namespace):
         # type: (ApiNamespace) -> None
+        assert self.args is not None
         generate_imports_for_referenced_namespaces(
             backend=self,
             namespace=namespace,

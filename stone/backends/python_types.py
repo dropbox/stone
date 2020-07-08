@@ -6,9 +6,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import argparse
 import itertools
-import os
 import re
-import shutil
 
 _MYPY = False
 if _MYPY:
@@ -181,6 +179,7 @@ class PythonTypesBackend(CodeBackend):
 
     def _generate_imports_for_referenced_namespaces(self, namespace):
         # type: (ApiNamespace) -> None
+        assert self.args is not None
         generate_imports_for_referenced_namespaces(
             backend=self,
             namespace=namespace,
