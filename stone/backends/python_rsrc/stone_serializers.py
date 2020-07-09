@@ -23,9 +23,7 @@ import time
 
 import six
 
-
-from stone.backends.python_rsrc import stone_base as bb  # pylint: disable=unused-import
-from stone.backends.python_rsrc import stone_validators as bv
+from stone.backends.python_rsrc import stone_base as bb, stone_validators as bv
 
 _MYPY = False
 if _MYPY:
