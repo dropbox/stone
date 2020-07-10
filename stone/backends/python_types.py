@@ -97,6 +97,12 @@ class PythonTypesBackend(CodeBackend):
         """
         with self.output_to_relative_path('__init__.py'):
             pass
+        with self.output_to_relative_path('stone_base.py'):
+            self.emit("from stone.backends.python_rsrc.stone_base import *")
+        with self.output_to_relative_path('stone_serializers.py'):
+            self.emit("from stone.backends.python_rsrc.stone_serializers import *")
+        with self.output_to_relative_path('stone_validators.py'):
+            self.emit("from stone.backends.python_rsrc.stone_validators import *")
         for namespace in api.namespaces.values():
             reserved_namespace_name = fmt_namespace(namespace.name)
             with self.output_to_relative_path('{}.py'.format(reserved_namespace_name)):
