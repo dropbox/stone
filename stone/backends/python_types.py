@@ -377,7 +377,6 @@ class PythonTypesBackend(CodeBackend):
             for field in data_type.fields:
                 field_name = fmt_var(field.name)
                 self.emit("'_%s_value'," % field_name)
-                self.emit("'_%s_present'," % field_name)
         self.emit()
 
     def _generate_struct_class_has_required_fields(self, data_type):
@@ -546,8 +545,7 @@ class PythonTypesBackend(CodeBackend):
             # initialize each field
             for field in data_type.fields:
                 field_var_name = fmt_var(field.name)
-                self.emit('self._{}_value = None'.format(field_var_name))
-                self.emit('self._{}_present = False'.format(field_var_name))
+                self.emit('self._{}_value = bb.NOT_SET'.format(field_var_name))
 
             # handle arguments that were set
             for field in data_type.fields:
@@ -599,7 +597,7 @@ class PythonTypesBackend(CodeBackend):
                 self.emit(':rtype: {}'.format(
                     self._python_type_mapping(ns, field_dt)))
                 self.emit('"""')
-                self.emit('if self._{}_present:'.format(field_name))
+                self.emit('if self._{}_value is not bb.NOT_SET:'.format(field_name))
                 with self.indent():
                     self.emit('return self._{}_value'.format(field_name))
 
@@ -632,15 +630,13 @@ class PythonTypesBackend(CodeBackend):
                 else:
                     self.emit('val = self._{}_validator.validate(val)'.format(field_name))
                 self.emit('self._{}_value = val'.format(field_name))
-                self.emit('self._{}_present = True'.format(field_name))
             self.emit()
 
             # generate deleter for field
             self.emit('@{}.deleter'.format(field_name_reserved_check))
             self.emit('def {}(self):'.format(field_name_reserved_check))
             with self.indent():
-                self.emit('self._{}_value = None'.format(field_name))
-                self.emit('self._{}_present = False'.format(field_name))
+                self.emit('self._{}_value = bb.NOT_SET'.format(field_name))
             self.emit()
 
     def _generate_custom_annotation_instance(self, ns, annotation):

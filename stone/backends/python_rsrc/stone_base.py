@@ -20,8 +20,27 @@ if _MYPY:
     T = typing.TypeVar('T', bound=AnnotationType)
     U = typing.TypeVar('U')
 
+
+class NotSet(object):
+    __slots__ = ()
+
+    def __copy__(self):
+        # type: () -> NotSet
+        # disable copying so we can do identity comparison even after copying stone objects
+        return self
+
+    def __deepcopy__(self, memo):
+        # type: (typing.Dict[typing.Text, typing.Any]) -> NotSet
+        # disable copying so we can do identity comparison even after copying stone objects
+        return self
+
+NOT_SET = NotSet()  # dummy object to denote that a field has not been set
+
 class Struct(object):
     # This is a base class for all classes representing Stone structs.
+
+    # every parent class in the inheritance tree must define __slots__ in order to get full memory savings
+    __slots__ = ()
 
     _all_field_names_ = set()  # type: typing.Set[str]
 

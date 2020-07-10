@@ -336,10 +336,10 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             except AttributeError as exc:
                 raise bv.ValidationError(exc.args[0])
 
-            presence_key = '_%s_present' % field_name
+            value_key = '_%s_value' % field_name
 
             if field_value is not None \
-                    and getattr(value, presence_key):
+                    and getattr(value, value_key) is not bb.NOT_SET:
                 # Only serialize struct fields that have been explicitly
                 # set, even if there is a default
                 try:
