@@ -39,7 +39,8 @@ NOT_SET = NotSet()  # dummy object to denote that a field has not been set
 class Struct(object):
     # This is a base class for all classes representing Stone structs.
 
-    # every parent class in the inheritance tree must define __slots__ in order to get full memory savings
+    # every parent class in the inheritance tree must define __slots__ in order to get full memory
+    # savings
     __slots__ = ()
 
     _all_field_names_ = set()  # type: typing.Set[str]

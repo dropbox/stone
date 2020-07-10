@@ -12,8 +12,9 @@ import subprocess
 import sys
 import unittest
 
-import stone.backends.python_rsrc.stone_validators as bv
+import stone.backends.python_rsrc.stone_base as bb
 import stone.backends.python_rsrc.stone_serializers as ss
+import stone.backends.python_rsrc.stone_validators as bv
 
 from stone.backends.python_rsrc.stone_serializers import (
     CallerPermissionsInterface,
@@ -232,6 +233,7 @@ class TestDropInModules(unittest.TestCase):
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
+            _f_value = bb.NOT_SET
 
         class U(object):
             # pylint: disable=no-member
@@ -285,7 +287,7 @@ class TestDropInModules(unittest.TestCase):
         # Test struct variant
         c = S()
         c.f = 'hello'
-        c._f_present = True
+        c._f_value = c.f
         u = U('c', c)
         self.assertEqual(json_encode(bv.Union(U), u, old_style=True),
                          json.dumps({'c': {'f': 'hello'}}))
@@ -333,14 +335,17 @@ class TestDropInModules(unittest.TestCase):
         class S3(object):
             _all_field_names_ = {'j'}
             _all_fields_ = [('j', bv.UInt64(max_value=10))]
+            _j_value = bb.NOT_SET
 
         class S2(object):
             _all_field_names_ = {'i'}
             _all_fields_ = [('i', bv.Struct(S3))]
+            _i_value = bb.NOT_SET
 
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.Struct(S2))]
+            _f_value = bb.NOT_SET
 
         class U(object):
             # pylint: disable=no-member
@@ -370,10 +375,9 @@ class TestDropInModules(unittest.TestCase):
 
         s = S()
         s.f = S2()
-        s._f_present = True
+        s._f_value = s.f
         s.f.i = S3()
-        s.f._i_present = True
-        s.f.i._j_present = False
+        s.f._i_value = s.f.i
 
         # Test that validation error references outer and inner struct
         with self.assertRaises(bv.ValidationError):
