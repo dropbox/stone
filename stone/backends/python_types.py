@@ -4,22 +4,13 @@ Backend for generating Python types that match the spec.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import argparse
 import itertools
-import os
 import re
-import shutil
 
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-argparse = importlib.import_module(str('argparse'))  # type: typing.Any
 
 from stone.ir import AnnotationType, ApiNamespace
 from stone.ir import (
@@ -78,6 +69,13 @@ _cmdline_parser.add_argument(
           '{route} for the route name. This is used to translate Stone doc '
           'references to routes to references in Python docstrings.'),
 )
+_cmdline_parser.add_argument(
+    '-p',
+    '--package',
+    type=str,
+    required=True,
+    help='Package prefix for absolute imports in generated files.',
+)
 
 
 class PythonTypesBackend(CodeBackend):
@@ -97,16 +95,14 @@ class PythonTypesBackend(CodeBackend):
         Each namespace will have Python classes to represent data types and
         routes in the Stone spec.
         """
-        rsrc_folder = os.path.join(os.path.dirname(__file__), 'python_rsrc')
-        self.logger.info('Copying stone_validators.py to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'stone_validators.py'),
-                    self.target_folder_path)
-        self.logger.info('Copying stone_serializers.py to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'stone_serializers.py'),
-                    self.target_folder_path)
-        self.logger.info('Copying stone_base.py to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'stone_base.py'),
-                    self.target_folder_path)
+        with self.output_to_relative_path('__init__.py'):
+            pass
+        with self.output_to_relative_path('stone_base.py'):
+            self.emit("from stone.backends.python_rsrc.stone_base import *")
+        with self.output_to_relative_path('stone_serializers.py'):
+            self.emit("from stone.backends.python_rsrc.stone_serializers import *")
+        with self.output_to_relative_path('stone_validators.py'):
+            self.emit("from stone.backends.python_rsrc.stone_validators import *")
         for namespace in api.namespaces.values():
             reserved_namespace_name = fmt_namespace(namespace.name)
             with self.output_to_relative_path('{}.py'.format(reserved_namespace_name)):
@@ -189,9 +185,11 @@ class PythonTypesBackend(CodeBackend):
 
     def _generate_imports_for_referenced_namespaces(self, namespace):
         # type: (ApiNamespace) -> None
+        assert self.args is not None
         generate_imports_for_referenced_namespaces(
             backend=self,
-            namespace=namespace
+            namespace=namespace,
+            package=self.args.package,
         )
 
     def _docf(self, tag, val):
@@ -379,7 +377,6 @@ class PythonTypesBackend(CodeBackend):
             for field in data_type.fields:
                 field_name = fmt_var(field.name)
                 self.emit("'_%s_value'," % field_name)
-                self.emit("'_%s_present'," % field_name)
         self.emit()
 
     def _generate_struct_class_has_required_fields(self, data_type):
@@ -548,8 +545,7 @@ class PythonTypesBackend(CodeBackend):
             # initialize each field
             for field in data_type.fields:
                 field_var_name = fmt_var(field.name)
-                self.emit('self._{}_value = None'.format(field_var_name))
-                self.emit('self._{}_present = False'.format(field_var_name))
+                self.emit('self._{}_value = bb.NOT_SET'.format(field_var_name))
 
             # handle arguments that were set
             for field in data_type.fields:
@@ -601,7 +597,7 @@ class PythonTypesBackend(CodeBackend):
                 self.emit(':rtype: {}'.format(
                     self._python_type_mapping(ns, field_dt)))
                 self.emit('"""')
-                self.emit('if self._{}_present:'.format(field_name))
+                self.emit('if self._{}_value is not bb.NOT_SET:'.format(field_name))
                 with self.indent():
                     self.emit('return self._{}_value'.format(field_name))
 
@@ -634,15 +630,13 @@ class PythonTypesBackend(CodeBackend):
                 else:
                     self.emit('val = self._{}_validator.validate(val)'.format(field_name))
                 self.emit('self._{}_value = val'.format(field_name))
-                self.emit('self._{}_present = True'.format(field_name))
             self.emit()
 
             # generate deleter for field
             self.emit('@{}.deleter'.format(field_name_reserved_check))
             self.emit('def {}(self):'.format(field_name_reserved_check))
             with self.indent():
-                self.emit('self._{}_value = None'.format(field_name))
-                self.emit('self._{}_present = False'.format(field_name))
+                self.emit('self._{}_value = bb.NOT_SET'.format(field_name))
             self.emit()
 
     def _generate_custom_annotation_instance(self, ns, annotation):

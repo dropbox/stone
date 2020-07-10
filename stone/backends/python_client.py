@@ -101,7 +101,7 @@ _cmdline_parser.add_argument(
     '-w',
     '--auth-type',
     type=str,
-    help='The auth type of the client to generate.', 
+    help='The auth type of the client to generate.',
 )
 
 
@@ -148,12 +148,9 @@ class PythonClientBackend(CodeBackend):
 
     def _generate_imports(self, namespaces):
         # Only import namespaces that have user-defined types defined.
-        self.emit('from . import (')
-        with self.indent():
-            for namespace in namespaces:
-                if namespace.data_types:
-                    self.emit(fmt_namespace(namespace.name) + ',')
-        self.emit(')')
+        for namespace in namespaces:
+            if namespace.data_types:
+                self.emit('from {} import {}'.format(self.args.types_package, fmt_namespace(namespace.name)))
 
     def _generate_route_methods(self, namespaces):
         """Creates methods for the routes in each namespace. All data types

@@ -4,6 +4,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import base64
 import datetime
+import importlib
 import json
 import shutil
 import six
@@ -11,6 +12,8 @@ import subprocess
 import sys
 import unittest
 
+import stone.backends.python_rsrc.stone_base as bb
+import stone.backends.python_rsrc.stone_serializers as ss
 import stone.backends.python_rsrc.stone_validators as bv
 
 from stone.backends.python_rsrc.stone_serializers import (
@@ -230,6 +233,7 @@ class TestDropInModules(unittest.TestCase):
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
+            _f_value = bb.NOT_SET
 
         class U(object):
             # pylint: disable=no-member
@@ -283,7 +287,7 @@ class TestDropInModules(unittest.TestCase):
         # Test struct variant
         c = S()
         c.f = 'hello'
-        c._f_present = True
+        c._f_value = c.f
         u = U('c', c)
         self.assertEqual(json_encode(bv.Union(U), u, old_style=True),
                          json.dumps({'c': {'f': 'hello'}}))
@@ -331,14 +335,17 @@ class TestDropInModules(unittest.TestCase):
         class S3(object):
             _all_field_names_ = {'j'}
             _all_fields_ = [('j', bv.UInt64(max_value=10))]
+            _j_value = bb.NOT_SET
 
         class S2(object):
             _all_field_names_ = {'i'}
             _all_fields_ = [('i', bv.Struct(S3))]
+            _i_value = bb.NOT_SET
 
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.Struct(S2))]
+            _f_value = bb.NOT_SET
 
         class U(object):
             # pylint: disable=no-member
@@ -368,10 +375,9 @@ class TestDropInModules(unittest.TestCase):
 
         s = S()
         s.f = S2()
-        s._f_present = True
+        s._f_value = s.f
         s.f.i = S3()
-        s.f._i_present = True
-        s.f.i._j_present = False
+        s.f._i_value = s.f.i
 
         # Test that validation error references outer and inner struct
         with self.assertRaises(bv.ValidationError):
@@ -805,7 +811,7 @@ class TestGeneratedPython(unittest.TestCase):
     def setUp(self):
 
         # Sanity check: stone must be importable for the compiler to work
-        __import__('stone')
+        importlib.import_module('stone')
 
         # Compile spec by calling out to stone
         p = subprocess.Popen(
@@ -814,7 +820,10 @@ class TestGeneratedPython(unittest.TestCase):
              'stone.cli',
              'python_types',
              'output',
-             '-'],
+             '-',
+             '--',
+             '--package',
+             'output'],
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
         _, stderr = p.communicate(
@@ -823,15 +832,12 @@ class TestGeneratedPython(unittest.TestCase):
             raise AssertionError('Could not execute stone tool: %s' %
                                  stderr.decode('utf-8'))
 
-        sys.path.append('output')
-        self.ns2 = __import__('ns2')
-        self.ns = __import__('ns')
-        self.sv = __import__('stone_validators')
-        self.ss = __import__('stone_serializers')
-        self.encode = self.ss.json_encode
-        self.compat_obj_encode = self.ss.json_compat_obj_encode
-        self.decode = self.ss.json_decode
-        self.compat_obj_decode = self.ss.json_compat_obj_decode
+        self.ns2 = importlib.import_module('output.ns2')
+        self.ns = importlib.import_module('output.ns')
+        self.encode = ss.json_encode
+        self.compat_obj_encode = ss.json_compat_obj_encode
+        self.decode = ss.json_decode
+        self.compat_obj_decode = ss.json_compat_obj_decode
 
     def test_docstring(self):
         # Check that the docstrings from the spec have in some form made it
@@ -851,7 +857,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(self.ns.AliasedS2, self.ns.S2)
 
     def test_struct_decoding(self):
-        d = self.decode(self.sv.Struct(self.ns.D),
+        d = self.decode(bv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'b': 1, 'c': 'C', 'd': [], 'e': {}}))
         self.assertIsInstance(d, self.ns.D)
         self.assertEqual(d.a, 'A')
@@ -861,7 +867,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.e, {})
 
         # Test with missing value for nullable field
-        d = self.decode(self.sv.Struct(self.ns.D),
+        d = self.decode(bv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'b': 1, 'd': [], 'e': {}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 1)
@@ -870,7 +876,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.e, {})
 
         # Test with missing value for field with default
-        d = self.decode(self.sv.Struct(self.ns.D),
+        d = self.decode(bv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'c': 'C', 'd': [1], 'e': {'one': 'two'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.b, 10)
@@ -879,7 +885,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.e, {'one': 'two'})
 
         # Test with explicitly null value for nullable field
-        d = self.decode(self.sv.Struct(self.ns.D),
+        d = self.decode(bv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'c': None, 'd': [1, 2], 'e': {'one': 'two'}}))
         self.assertEqual(d.a, 'A')
         self.assertEqual(d.c, None)
@@ -887,7 +893,7 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.e, {'one': 'two'})
 
         # Test with None and numbers in list
-        d = self.decode(self.sv.Struct(self.ns.D),
+        d = self.decode(bv.Struct(self.ns.D),
                         json.dumps({'a': 'A',
                                     'c': None,
                                     'd': [None, 1],
@@ -898,117 +904,117 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(d.e, {'one': None, 'two': 'three'})
 
         # Test with explicitly null value for field with default
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.decode(self.sv.Struct(self.ns.D),
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.decode(bv.Struct(self.ns.D),
                         json.dumps({'a': 'A', 'b': None}))
         self.assertEqual("b: expected integer, got null", str(cm.exception))
 
     def test_union_decoding_old(self):
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps('t0'))
+        v = self.decode(bv.Union(self.ns.V), json.dumps('t0'))
         self.assertIsInstance(v, self.ns.V)
 
         # Test verbose representation of a void union member
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'t0': None}), old_style=True)
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'t0': None}), old_style=True)
         self.assertIsInstance(v, self.ns.V)
 
         # Test bad value for void union member
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.decode(self.sv.Union(self.ns.V), json.dumps({'t0': 10}), old_style=True)
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.decode(bv.Union(self.ns.V), json.dumps({'t0': 10}), old_style=True)
         self.assertEqual("expected null, got integer", str(cm.exception))
 
         # Test compact representation of a nullable union member with missing value
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps('t2'))
+        v = self.decode(bv.Union(self.ns.V), json.dumps('t2'))
         self.assertIsInstance(v, self.ns.V)
 
         # Test verbose representation of a nullable union member with missing value
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'t2': None}), old_style=True)
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'t2': None}), old_style=True)
         self.assertIsInstance(v, self.ns.V)
 
         # Test verbose representation of a nullable union member with bad value
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.decode(self.sv.Union(self.ns.V), json.dumps({'t2': 123}), old_style=True)
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.decode(bv.Union(self.ns.V), json.dumps({'t2': 123}), old_style=True)
         self.assertEqual("'123' expected to be a string, got integer", str(cm.exception))
 
     def test_union_decoding(self):
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps('t0'))
+        v = self.decode(bv.Union(self.ns.V), json.dumps('t0'))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
         # Test verbose representation of a void union member
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0'}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't0'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
         # Test extra verbose representation of a void union member
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0', 't0': None}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't0', 't0': None}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t0())
 
         # Test error: extra key
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0', 'unk': 123}))
+        with self.assertRaises(bv.ValidationError) as cm:
+            v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't0', 'unk': 123}))
         self.assertEqual("unexpected key 'unk'", str(cm.exception))
 
         # Test error: bad type
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 123}))
+        with self.assertRaises(bv.ValidationError) as cm:
+            v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 123}))
         self.assertEqual('tag must be string, got integer', str(cm.exception))
 
         # Test primitive union member
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't1', 't1': 'hello'}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't1', 't1': 'hello'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t1())
         self.assertEqual(v.get_t1(), 'hello')
 
         # Test catch-all
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 'z', 'z': 'hello'}),
             strict=False)
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_other())
 
         # Test catch-all is reject if strict
-        with self.assertRaises(self.sv.ValidationError):
-            self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 'z'}))
+        with self.assertRaises(bv.ValidationError):
+            self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 'z'}))
 
         # Test explicitly using catch-all is reject if strict
-        with self.assertRaises(self.sv.ValidationError):
-            self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 'other'}))
+        with self.assertRaises(bv.ValidationError):
+            self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 'other'}))
 
         # Test nullable primitive union member with null value
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't2', 't2': None}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't2', 't2': None}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t2())
         self.assertEqual(v.get_t2(), None)
 
         # Test nullable primitive union member that is missing
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't2'}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't2'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t2())
         self.assertEqual(v.get_t2(), None)
 
         # Test error: extra key
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.decode(self.sv.Union(self.ns.V),
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.decode(bv.Union(self.ns.V),
                         json.dumps({'.tag': 't2', 't2': None, 'unk': 123}))
         self.assertEqual("unexpected key 'unk'", str(cm.exception))
 
         # Test composite union member
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't3', 'f': 'hello'}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't3', 'f': 'hello'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t3())
         self.assertIsInstance(v.get_t3(), self.ns.S)
         self.assertEqual(v.get_t3().f, 'hello')
 
         # Test error: extra key
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.decode(self.sv.Union(self.ns.V),
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.decode(bv.Union(self.ns.V),
                         json.dumps({'.tag': 't3', 'f': 'hello', 'g': 'blah'}))
         self.assertEqual("t3: unknown field 'g'", str(cm.exception))
 
         # Test composite union member with unknown key, but strict is False
-        v = self.decode(self.sv.Union(self.ns.V),
+        v = self.decode(bv.Union(self.ns.V),
                         json.dumps({'.tag': 't3', 'f': 'hello', 'g': 'blah'}),
                         strict=False)
         self.assertIsInstance(v, self.ns.V)
@@ -1017,21 +1023,21 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual(v.get_t3().f, 'hello')
 
         # Test nullable composite union member
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't4', 'f': 'hello'}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't4', 'f': 'hello'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t4())
         self.assertIsInstance(v.get_t4(), self.ns.S)
         self.assertEqual(v.get_t4().f, 'hello')
 
         # Test nullable composite union member that's null
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't4'}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't4'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t4())
         self.assertIsNone(v.get_t4())
 
         # Test stacked unions
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't5', 't5': {'.tag': 't1', 't1': 'hello'}}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t5(), None)
@@ -1041,7 +1047,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test stacked unions with null
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't6'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertTrue(v.is_t6(), None)
@@ -1049,7 +1055,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test member that enumerates subtypes
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't7', 't7': {'.tag': 'file', 'name': 'test', 'size': 1024}}))
         self.assertIsInstance(v, self.ns.V)
         self.assertIsInstance(v.get_t7(), self.ns.File)
@@ -1059,21 +1065,21 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test member that enumerates subtypes with null
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't8'}))
         self.assertIsInstance(v, self.ns.V)
         self.assertEqual(v.get_t8(), None)
 
         # Test member that is a list
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't9', 't9': ['a', 'b']}))
         self.assertIsInstance(v, self.ns.V)
         self.assertEqual(v.get_t9(), ['a', 'b'])
 
         # Test member that is a list of composites
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't10', 't10': [{'.tag': 't1', 't1': 'hello'}]}))
         self.assertIsInstance(v, self.ns.V)
         t10 = v.get_t10()
@@ -1081,7 +1087,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test member that is a list of composites (old style)
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'t10': [{'t1': 'hello'}]}),
             old_style=True)
         self.assertIsInstance(v, self.ns.V)
@@ -1090,7 +1096,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test member that has evolved from void to type in non-strict mode.
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't0', 't0': "hello"}),
             strict=False)
         self.assertIsInstance(v, self.ns.V)
@@ -1098,7 +1104,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # test maps
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't11', 't11': {'a': 100}}))
         self.assertIsInstance(v, self.ns.V)
         self.assertEqual(v.get_t11(), {'a': 100})
@@ -1106,7 +1112,7 @@ class TestGeneratedPython(unittest.TestCase):
         # Test map of composites:
         # Test member that is a list of composites
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'.tag': 't12', 't12': {'key': {'.tag': 't1', 't1': 'hello'}}}))
         self.assertIsInstance(v, self.ns.V)
         t12 = v.get_t12()
@@ -1114,7 +1120,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test member that is a list of composites (old style)
         v = self.decode(
-            self.sv.Union(self.ns.V),
+            bv.Union(self.ns.V),
             json.dumps({'t12': {'another key': {'t1': 'hello again'}}}),
             old_style=True)
         self.assertIsInstance(v, self.ns.V)
@@ -1126,7 +1132,7 @@ class TestGeneratedPython(unittest.TestCase):
         # been evolved to a field with an optional struct (only has optional
         # fields).
         u2 = self.decode(
-            self.sv.Union(self.ns.U2),
+            bv.Union(self.ns.U2),
             json.dumps({'.tag': 'b'}))
         self.assertIsInstance(u2, self.ns.U2)
         b = u2.get_b()
@@ -1139,22 +1145,22 @@ class TestGeneratedPython(unittest.TestCase):
 
         Object is a superclass of Union, but it should not be considered for equality.
         """
-        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
         self.assertFalse(u == object())
 
     def test_union_equality_with_tag(self):
-        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
-        u_equal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
-        u_unequal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't2'}))
+        u = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_equal = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_unequal = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't2'}))
         self.assertEqual(u, u_equal)
         self.assertEqual(hash(u), hash(u_equal))
         self.assertNotEqual(u, u_unequal)
         self.assertNotEqual(hash(u), hash(u_unequal))
 
     def test_union_equality_with_value(self):
-        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'a'}))
-        u_equal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'a'}))
-        u_unequal = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'b'}))
+        u = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'a'}))
+        u_equal = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'a'}))
+        u_unequal = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't1', 't1': 'b'}))
         self.assertEqual(u, u_equal)
         self.assertEqual(hash(u), hash(u_equal))
         self.assertNotEqual(u, u_unequal)
@@ -1163,16 +1169,16 @@ class TestGeneratedPython(unittest.TestCase):
     def test_union_equality_with_closed_and_open(self):
         """A closed union should be considered equal to an open union if they have a direct
         inheritance relationship."""
-        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
-        u_open = self.decode(self.sv.Union(self.ns.UOpen), json.dumps({'.tag': 't0'}))
+        u = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_open = self.decode(bv.Union(self.ns.UOpen), json.dumps({'.tag': 't0'}))
         self.assertEqual(u, u_open)
         self.assertEqual(hash(u), hash(u_open))
 
     def test_union_equality_with_different_types(self):
         """Unions of different types that do not have an inheritance relationship are not considered
         equal to each other."""
-        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
-        v = self.decode(self.sv.Union(self.ns.V), json.dumps({'.tag': 't0'}))
+        u = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        v = self.decode(bv.Union(self.ns.V), json.dumps({'.tag': 't0'}))
         self.assertNotEqual(u, v)
         # They still hash to the same value, since they have the same tag and value, but this is
         # fine since we don't expect to use a large number of unions as dict keys.
@@ -1180,8 +1186,8 @@ class TestGeneratedPython(unittest.TestCase):
 
         # U_extend and U_extend2 are indirectly related because they both extend U, but they do not
         # have a direct line of inheritance to each other.
-        u_extend = self.decode(self.sv.Union(self.ns.UExtend), json.dumps({'.tag': 't0'}))
-        u_extend2 = self.decode(self.sv.Union(self.ns.UExtend2), json.dumps({'.tag': 't0'}))
+        u_extend = self.decode(bv.Union(self.ns.UExtend), json.dumps({'.tag': 't0'}))
+        u_extend2 = self.decode(bv.Union(self.ns.UExtend2), json.dumps({'.tag': 't0'}))
         self.assertNotEqual(u_extend, u_extend2)
         # They still hash to the same value, since they have the same tag and value, but this is
         # fine since we don't expect to use a large number of unions as dict keys.
@@ -1189,9 +1195,9 @@ class TestGeneratedPython(unittest.TestCase):
 
     def test_extended_union_equality(self):
         """Unions which subclass each other are considered equal to each other."""
-        u = self.decode(self.sv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
-        u_extend = self.decode(self.sv.Union(self.ns.UExtend), json.dumps({'.tag': 't0'}))
-        u_extend_extend = self.decode(self.sv.Union(self.ns.UExtendExtend),
+        u = self.decode(bv.Union(self.ns.U), json.dumps({'.tag': 't0'}))
+        u_extend = self.decode(bv.Union(self.ns.UExtend), json.dumps({'.tag': 't0'}))
+        u_extend_extend = self.decode(bv.Union(self.ns.UExtendExtend),
                                       json.dumps({'.tag': 't0'}))
         self.assertEqual(u, u_extend)
         self.assertEqual(hash(u), hash(u_extend))
@@ -1202,7 +1208,7 @@ class TestGeneratedPython(unittest.TestCase):
 
     def test_struct_decoding_with_optional_struct(self):
         opt_s = self.decode(
-            self.sv.Struct(self.ns.OptionalS),
+            bv.Struct(self.ns.OptionalS),
             json.dumps(None))
         self.assertEqual(opt_s.f1, 'hello')
         self.assertEqual(opt_s.f2, 3)
@@ -1210,7 +1216,7 @@ class TestGeneratedPython(unittest.TestCase):
         # Simulate that S2 used to have no fields, but now it has a new field
         # that is an optional struct (only has optional fields).
         s2 = self.decode(
-            self.sv.Struct(self.ns.S2),
+            bv.Struct(self.ns.S2),
             json.dumps({}))
         self.assertIsInstance(s2, self.ns.S2)
         self.assertIsInstance(s2.f1, self.ns.OptionalS)
@@ -1222,35 +1228,35 @@ class TestGeneratedPython(unittest.TestCase):
 
         Object is a superclass of Struct, but it should not be considered for equality.
         """
-        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        s = self.decode(bv.Struct(self.ns.S), json.dumps({'f': 'F'}))
         self.assertFalse(s == object())
 
     def test_struct_equality_with_value(self):
-        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
-        s_equal = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
-        s_unequal = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'G'}))
+        s = self.decode(bv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        s_equal = self.decode(bv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        s_unequal = self.decode(bv.Struct(self.ns.S), json.dumps({'f': 'G'}))
         self.assertEqual(s, s_equal)
         self.assertNotEqual(s, s_unequal)
 
     def test_struct_equality_with_different_types(self):
         """Structs of different types that do not have an inheritance relationship are not considered
         equal to each other."""
-        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
-        t = self.decode(self.sv.Struct(self.ns.T), json.dumps({'f': 'F'}))
+        s = self.decode(bv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        t = self.decode(bv.Struct(self.ns.T), json.dumps({'f': 'F'}))
         self.assertNotEqual(s, t)
 
         # S_extend and S_extend2 are indirectly related because they both extend S, but they do not
         # have a direct line of inheritance to each other.
-        s_extend = self.decode(self.sv.Struct(self.ns.SExtend), json.dumps({'f': 'F', 'g': 'G'}))
-        s_extend2 = self.decode(self.sv.Struct(self.ns.SExtend2), json.dumps({'f': 'F', 'g': 'G'}))
+        s_extend = self.decode(bv.Struct(self.ns.SExtend), json.dumps({'f': 'F', 'g': 'G'}))
+        s_extend2 = self.decode(bv.Struct(self.ns.SExtend2), json.dumps({'f': 'F', 'g': 'G'}))
         self.assertNotEqual(s_extend, s_extend2)
 
     def test_extended_struct_equality(self):
         """Structs which subclass each other are considered equal to each other if they have the
         exact same fields."""
-        s = self.decode(self.sv.Struct(self.ns.S), json.dumps({'f': 'F'}))
-        s_extend_empty = self.decode(self.sv.Struct(self.ns.SExtendEmpty), json.dumps({'f': 'F'}))
-        s_extend = self.decode(self.sv.Struct(self.ns.SExtend), json.dumps({'f': 'F', 'g': 'G'}))
+        s = self.decode(bv.Struct(self.ns.S), json.dumps({'f': 'F'}))
+        s_extend_empty = self.decode(bv.Struct(self.ns.SExtendEmpty), json.dumps({'f': 'F'}))
+        s_extend = self.decode(bv.Struct(self.ns.SExtend), json.dumps({'f': 'F', 'g': 'G'}))
 
         self.assertEqual(s, s_extend_empty)
         self.assertNotEqual(s, s_extend)
@@ -1258,84 +1264,84 @@ class TestGeneratedPython(unittest.TestCase):
     def test_union_encoding(self):
         # Test void union member
         v_t0 = self.ns.V.t0
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t0),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t0),
                          {'.tag': 't0'})
 
         # Test that the .tag key comes first
-        v = self.compat_obj_encode(self.sv.Union(self.ns.V), v_t0)
+        v = self.compat_obj_encode(bv.Union(self.ns.V), v_t0)
         self.assertEqual(list(v.keys())[0], '.tag')
 
         # Test primitive union member
         v_t1 = self.ns.V.t1('hello')
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t1),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t1),
                          {'.tag': 't1', 't1': 'hello'})
 
         # Test nullable primitive union member
         v_t2 = self.ns.V.t2('hello')
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t2),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t2),
                          {'.tag': 't2', 't2': 'hello'})
 
         # Test nullable primitive union member that's null
         v_t2 = self.ns.V.t2(None)
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t2),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t2),
                          {'.tag': 't2'})
 
         # Test composite union member
         s = self.ns.S(f='hello')
         v_t3 = self.ns.V.t3(s)
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t3),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t3),
                          {'.tag': 't3', 'f': 'hello'})
 
         # Test nullable composite union member
         s = self.ns.S(f='hello')
         v_t4 = self.ns.V.t4(s)
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t4),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t4),
                          {'.tag': 't4', 'f': 'hello'})
 
         # Test nullable composite union member that's null
         v_t4 = self.ns.V.t4(None)
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t4),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t4),
                          {'.tag': 't4'})
 
         # Test stacked unions
         v_t5 = self.ns.V.t5(self.ns.U.t1('hello'))
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t5),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t5),
                          {'.tag': 't5', 't5': {'.tag': 't1', 't1': 'hello'}})
 
         # Test stacked unions with null
         v_t6 = self.ns.V.t6(None)
-        self.assertEqual(self.compat_obj_encode(self.sv.Union(self.ns.V), v_t6),
+        self.assertEqual(self.compat_obj_encode(bv.Union(self.ns.V), v_t6),
                          {'.tag': 't6'})
 
         # Test member that enumerates subtypes
         v_t7 = self.ns.V.t7(self.ns.File(name='test', size=1024))
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t7),
+            self.compat_obj_encode(bv.Union(self.ns.V), v_t7),
             {'.tag': 't7', 't7': {'.tag': 'file', 'name': 'test', 'size': 1024}})
 
         # Test member that enumerates subtypes but is null
         v_t8 = self.ns.V.t8(None)
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t8),
+            self.compat_obj_encode(bv.Union(self.ns.V), v_t8),
             {'.tag': 't8'})
 
         # Test member that is a list
         v_t9 = self.ns.V.t9(['a', 'b'])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t9),
+            self.compat_obj_encode(bv.Union(self.ns.V), v_t9),
             {'.tag': 't9', 't9': ['a', 'b']})
 
         # Test member that is a map
         v_t11 = self.ns.V.t11({'a_key': 404})
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns.V), v_t11),
+            self.compat_obj_encode(bv.Union(self.ns.V), v_t11),
             {'.tag': 't11', 't11': {'a_key': 404}}
         )
 
     def test_list_coding(self):
         # Test decoding list of composites
         v = self.decode(
-            self.sv.List(self.sv.Struct(self.ns.S)),
+            bv.List(bv.Struct(self.ns.S)),
             json.dumps([{'f': 'Test'}]))
         self.assertIsInstance(v, list)
         self.assertIsInstance(v[0], self.ns.S)
@@ -1343,7 +1349,7 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test encoding list of composites
         v = self.encode(
-            self.sv.List(self.sv.Struct(self.ns.S)),
+            bv.List(bv.Struct(self.ns.S)),
             [self.ns.S('Test')])
         self.assertEqual(v, json.dumps([{'f': 'Test'}]))
 
@@ -1366,51 +1372,51 @@ class TestGeneratedPython(unittest.TestCase):
         # Test serializing a leaf struct from  the root struct
         fi = self.ns.File(name='test.doc', size=100)
         self.assertEqual(
-            self.compat_obj_encode(self.sv.StructTree(self.ns.Resource), fi),
+            self.compat_obj_encode(bv.StructTree(self.ns.Resource), fi),
             {'.tag': 'file', 'name': 'test.doc', 'size': 100})
 
         # Test that the .tag key comes first
-        v = self.compat_obj_encode(self.sv.StructTree(self.ns.Resource), fi)
+        v = self.compat_obj_encode(bv.StructTree(self.ns.Resource), fi)
         self.assertEqual(list(v.keys())[0], '.tag')
 
         # Test serializing a leaf struct as the base and target
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns.File), fi),
+            self.compat_obj_encode(bv.Struct(self.ns.File), fi),
             {'name': 'test.doc', 'size': 100})
 
     def test_struct_enumerated_subtypes_decoding(self):
         # Test deserializing a leaf struct from  the root struct
         fi = self.compat_obj_decode(
-            self.sv.StructTree(self.ns.Resource),
+            bv.StructTree(self.ns.Resource),
             {'.tag': 'file', 'name': 'test.doc', 'size': 100})
         self.assertIsInstance(fi, self.ns.File)
         self.assertEqual(fi.name, 'test.doc')
         self.assertEqual(fi.size, 100)
 
         # Test deserializing leaf struct with unknown type tag
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_decode(
-                self.sv.StructTree(self.ns.Resource),
+                bv.StructTree(self.ns.Resource),
                 {'.tag': 'unk', 'name': 'test.doc'})
         self.assertEqual("unknown subtype 'unk'", str(cm.exception))
 
         # Test deserializing leaf struct with bad JSON type for type tag
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_decode(
-                self.sv.StructTree(self.ns.Resource),
+                bv.StructTree(self.ns.Resource),
                 {'.tag': 123, 'name': 'test.doc'})
         self.assertEqual(".tag: expected string, got integer", str(cm.exception))
 
         # Test deserializing an unknown leaf in strict mode
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_decode(
-                self.sv.StructTree(self.ns.Resource),
+                bv.StructTree(self.ns.Resource),
                 {'.tag': 'symlink', 'name': 'test'})
         self.assertEqual("unknown subtype 'symlink'", str(cm.exception))
 
         # Test deserializing an unknown leaf in non-strict mode
         r = self.compat_obj_decode(
-            self.sv.StructTree(self.ns.ResourceLax),
+            bv.StructTree(self.ns.ResourceLax),
             {'.tag': 'symlink', 'name': 'test'},
             strict=False)
         self.assertIsInstance(r, self.ns.ResourceLax)
@@ -1418,9 +1424,9 @@ class TestGeneratedPython(unittest.TestCase):
 
         # Test deserializing an unknown leaf in non-strict mode, but with no
         # catch-all
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_decode(
-                self.sv.StructTree(self.ns.Resource),
+                bv.StructTree(self.ns.Resource),
                 {'.tag': 'symlink', 'name': 'test'},
                 strict=False)
         self.assertEqual(
@@ -1429,22 +1435,22 @@ class TestGeneratedPython(unittest.TestCase):
 
     def test_defaults(self):
         # Test void type
-        v = self.sv.Void()
+        v = bv.Void()
         self.assertTrue(v.has_default())
         self.assertEqual(v.get_default(), None)
 
         # Test nullable type
-        n = self.sv.Nullable(self.sv.Struct(self.ns.D))
+        n = bv.Nullable(bv.Struct(self.ns.D))
         self.assertTrue(n.has_default())
         self.assertEqual(n.get_default(), None)
 
         # Test struct where all fields have defaults
-        s = self.sv.Struct(self.ns.E)
+        s = bv.Struct(self.ns.E)
         self.assertTrue(s.has_default())
         s.get_default()
 
         # Test struct where not all fields have defaults
-        s = self.sv.Struct(self.ns.D)
+        s = bv.Struct(self.ns.D)
         self.assertFalse(s.has_default())
         self.assertRaises(AssertionError, s.get_default)
 
@@ -1466,27 +1472,27 @@ class TestGeneratedPython(unittest.TestCase):
             return
 
         b = self.ns.B(a='hi', b=32, c=b'\x00\x01')
-        s = msgpack_encode(self.sv.Struct(self.ns.B), b)
-        b2 = msgpack_decode(self.sv.Struct(self.ns.B), s)
+        s = msgpack_encode(bv.Struct(self.ns.B), b)
+        b2 = msgpack_decode(bv.Struct(self.ns.B), s)
         self.assertEqual(b.a, b2.a)
         self.assertEqual(b.b, b2.b)
         self.assertEqual(b.c, b2.c)
 
         bs = b'\x00\x01'
-        s = msgpack_encode(self.sv.Bytes(), bs)
-        bs2 = msgpack_decode(self.sv.Bytes(), s)
+        s = msgpack_encode(bv.Bytes(), bs)
+        bs2 = msgpack_decode(bv.Bytes(), s)
         self.assertEqual(bs, bs2)
 
         u = u'\u2650'
-        s = msgpack_encode(self.sv.String(), u)
-        u2 = msgpack_decode(self.sv.String(), s)
+        s = msgpack_encode(bv.String(), u)
+        u2 = msgpack_decode(bv.String(), s)
         self.assertEqual(u, u2)
 
     def test_alias_validators(self):
 
         def aliased_string_validator(val):
             if ' ' in val:
-                raise self.sv.ValidationError('No spaces allowed')
+                raise bv.ValidationError('No spaces allowed')
         aliased_validators = {
             self.ns.AliasedString_validator: aliased_string_validator}
 
@@ -1494,16 +1500,16 @@ class TestGeneratedPython(unittest.TestCase):
         # Test decoding
         #
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_decode(
                 self.ns.AliasedString_validator,
                 'hi there',
                 alias_validators=aliased_validators)
         self.assertEqual("No spaces allowed", str(cm.exception))
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_decode(
-                self.sv.Struct(self.ns.ContainsAlias),
+                bv.Struct(self.ns.ContainsAlias),
                 {'s': 'hi there'},
                 alias_validators=aliased_validators)
         self.assertEqual("s: No spaces allowed", str(cm.exception))
@@ -1512,7 +1518,7 @@ class TestGeneratedPython(unittest.TestCase):
         # Test encoding
         #
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_encode(
                 self.ns.AliasedString_validator,
                 'hi there',
@@ -1520,9 +1526,9 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertEqual("No spaces allowed", str(cm.exception))
 
         ca = self.ns.ContainsAlias(s='hi there')
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.compat_obj_encode(
-                self.sv.Struct(self.ns.ContainsAlias),
+                bv.Struct(self.ns.ContainsAlias),
                 ca,
                 alias_validators=aliased_validators)
         self.assertEqual("s: No spaces allowed", str(cm.exception))
@@ -1726,7 +1732,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
     def setUp(self):
 
         # Sanity check: stone must be importable for the compiler to work
-        __import__('stone')
+        importlib.import_module('stone')
 
         # Compile spec by calling out to stone
         p = subprocess.Popen(
@@ -1735,7 +1741,10 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
              'stone.cli',
              'python_types',
              'output',
-             '-'],
+             '-',
+             '--',
+             '--package',
+             'output'],
             stdin=subprocess.PIPE,
             stderr=subprocess.PIPE)
         _, stderr = p.communicate(
@@ -1745,15 +1754,12 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             raise AssertionError('Could not execute stone tool: %s' %
                                  stderr.decode('utf-8'))
 
-        sys.path.append('output')
-        self.ns4 = __import__('ns4')
-        self.ns3 = __import__('ns3')
-        self.sv = __import__('stone_validators')
-        self.ss = __import__('stone_serializers')
-        self.encode = self.ss.json_encode
-        self.compat_obj_encode = self.ss.json_compat_obj_encode
-        self.decode = self.ss.json_decode
-        self.compat_obj_decode = self.ss.json_compat_obj_decode
+        self.ns4 = importlib.import_module('output.ns4')
+        self.ns3 = importlib.import_module('output.ns3')
+        self.encode = ss.json_encode
+        self.compat_obj_encode = ss.json_compat_obj_encode
+        self.decode = ss.json_decode
+        self.compat_obj_decode = ss.json_compat_obj_decode
 
         self.default_cp = CallerPermissionsTest([])
         self.internal_cp = CallerPermissionsTest(['internal'])
@@ -1781,7 +1787,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test full super-type
         a = self.decode(
-            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            bv.Struct(self.ns3.A), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(a, self.ns3.A)
         self.assertEqual(a.a, 'A')
@@ -1813,7 +1819,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test internal-only type
         a = self.decode(
-            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            bv.Struct(self.ns3.A), json.dumps(json_data),
             caller_permissions=self.internal_cp)
         self.assertIsInstance(a, self.ns3.A)
         self.assertEqual(a.a, 'A')
@@ -1835,7 +1841,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test alpha-only type
         a = self.decode(
-            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            bv.Struct(self.ns3.A), json.dumps(json_data),
             caller_permissions=self.alpha_cp)
         self.assertIsInstance(a, self.ns3.A)
         self.assertEqual(a.a, 'A')
@@ -1861,7 +1867,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test external-only type
         a = self.decode(
-            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            bv.Struct(self.ns3.A), json.dumps(json_data),
             caller_permissions=self.default_cp)
         self.assertIsInstance(a, self.ns3.A)
         self.assertEqual(a.a, 'A')
@@ -1902,25 +1908,25 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test internal-only type raises
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.A),
+                bv.Struct(self.ns3.A),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("unknown field 'g'", str(cm.exception))
 
         # test alpha-only type raises
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.A),
+                bv.Struct(self.ns3.A),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertIn("unknown field", str(cm.exception))
 
         # test external-only type raises
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.A),
+                bv.Struct(self.ns3.A),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertIn("unknown field", str(cm.exception))
@@ -1942,9 +1948,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test missing required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.A),
+                bv.Struct(self.ns3.A),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("missing required field 'b'", str(cm.exception))
@@ -1966,9 +1972,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test missing nested required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.A),
+                bv.Struct(self.ns3.A),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("d: missing required field 'b'", str(cm.exception))
@@ -1991,7 +1997,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test missing optional internal field for internal caller
         a = self.decode(
-            self.sv.Struct(self.ns3.A), json.dumps(json_data),
+            bv.Struct(self.ns3.A), json.dumps(json_data),
             caller_permissions=self.internal_cp)
         self.assertIsInstance(a, self.ns3.A)
         self.assertEqual(a.a, 'A')
@@ -2031,7 +2037,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test full super-type
         b = self.decode(
-            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            bv.Struct(self.ns3.B), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(b, self.ns3.B)
         self.assertEqual(b.a, 'A')
@@ -2068,7 +2074,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test internal-only type
         b = self.decode(
-            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            bv.Struct(self.ns3.B), json.dumps(json_data),
             caller_permissions=self.internal_cp)
         self.assertIsInstance(b, self.ns3.B)
         self.assertEqual(b.a, 'A')
@@ -2097,7 +2103,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test alpha-only type
         b = self.decode(
-            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            bv.Struct(self.ns3.B), json.dumps(json_data),
             caller_permissions=self.alpha_cp)
         self.assertIsInstance(b, self.ns3.B)
         self.assertEqual(b.a, 'A')
@@ -2129,7 +2135,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test external-only type
         b = self.decode(
-            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            bv.Struct(self.ns3.B), json.dumps(json_data),
             caller_permissions=self.default_cp)
         self.assertIsInstance(b, self.ns3.B)
         self.assertEqual(b.a, 'A')
@@ -2180,25 +2186,25 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test internal-only type raises
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.B),
+                bv.Struct(self.ns3.B),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertIn("unknown field", str(cm.exception))
 
         # test alpha-only type raises
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.B),
+                bv.Struct(self.ns3.B),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertIn("unknown field", str(cm.exception))
 
         # test external-only type raises
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.B),
+                bv.Struct(self.ns3.B),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertIn("unknown field", str(cm.exception))
@@ -2222,9 +2228,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test missing required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.B),
+                bv.Struct(self.ns3.B),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("missing required field 'b'", str(cm.exception))
@@ -2248,9 +2254,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test missing nested required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Struct(self.ns3.B),
+                bv.Struct(self.ns3.B),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("d: missing required field 'b'", str(cm.exception))
@@ -2275,7 +2281,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test missing optional internal field for internal caller
         b = self.decode(
-            self.sv.Struct(self.ns3.B), json.dumps(json_data),
+            bv.Struct(self.ns3.B), json.dumps(json_data),
             caller_permissions=self.internal_cp)
         self.assertIsInstance(b, self.ns3.B)
         self.assertEqual(b.a, 'A')
@@ -2300,7 +2306,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            bv.Union(self.ns3.U), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.U)
         self.assertTrue(u.is_t0())
@@ -2311,7 +2317,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            bv.Union(self.ns3.U), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.U)
         self.assertTrue(u.is_t1())
@@ -2328,7 +2334,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            bv.Union(self.ns3.U), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.U)
         self.assertTrue(u.is_t2())
@@ -2341,17 +2347,17 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test internal tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.U),
+                bv.Union(self.ns3.U),
                 json.dumps(json_data),
                 caller_permissions=self.default_cp)
         self.assertEqual("unknown tag 't1'", str(cm.exception))
 
         # test internal tag raises for alpha caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.U),
+                bv.Union(self.ns3.U),
                 json.dumps(json_data),
                 caller_permissions=self.alpha_cp)
         self.assertEqual("unknown tag 't1'", str(cm.exception))
@@ -2367,17 +2373,17 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test alpha tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.U),
+                bv.Union(self.ns3.U),
                 json.dumps(json_data),
                 caller_permissions=self.default_cp)
         self.assertEqual("unknown tag 't2'", str(cm.exception))
 
         # test alpha tag raises for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.U),
+                bv.Union(self.ns3.U),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("unknown tag 't2'", str(cm.exception))
@@ -2393,7 +2399,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test missing required internal field for external caller
         u = self.decode(
-            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            bv.Union(self.ns3.U), json.dumps(json_data),
             caller_permissions=self.default_cp)
         self.assertIsInstance(u, self.ns3.U)
         self.assertTrue(u.is_t3())
@@ -2404,7 +2410,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test missing required internal field for alpha caller
         u = self.decode(
-            self.sv.Union(self.ns3.U), json.dumps(json_data),
+            bv.Union(self.ns3.U), json.dumps(json_data),
             caller_permissions=self.alpha_cp)
         self.assertIsInstance(u, self.ns3.U)
         self.assertTrue(u.is_t3())
@@ -2414,9 +2420,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             u.get_t3()[0].b
 
         # test missing required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.U),
+                bv.Union(self.ns3.U),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("t3: missing required field 'b'", str(cm.exception))
@@ -2428,7 +2434,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t0())
@@ -2439,7 +2445,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t1())
@@ -2456,7 +2462,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t2())
@@ -2469,17 +2475,17 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test internal tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.UOpen),
+                bv.Union(self.ns3.UOpen),
                 json.dumps(json_data),
                 caller_permissions=self.default_cp)
         self.assertEqual("unknown tag 't1'", str(cm.exception))
 
         # test internal tag raises for alpha caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.UOpen),
+                bv.Union(self.ns3.UOpen),
                 json.dumps(json_data),
                 caller_permissions=self.alpha_cp)
         self.assertEqual("unknown tag 't1'", str(cm.exception))
@@ -2495,17 +2501,17 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test alpha tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.UOpen),
+                bv.Union(self.ns3.UOpen),
                 json.dumps(json_data),
                 caller_permissions=self.default_cp)
         self.assertEqual("unknown tag 't2'", str(cm.exception))
 
         # test alpha tag raises for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.UOpen),
+                bv.Union(self.ns3.UOpen),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("unknown tag 't2'", str(cm.exception))
@@ -2521,7 +2527,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test missing required internal field for external caller
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.default_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t3())
@@ -2532,7 +2538,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test missing required internal field for alpha caller
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.alpha_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t3())
@@ -2542,9 +2548,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             u.get_t3()[0].b
 
         # test missing required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.UOpen),
+                bv.Union(self.ns3.UOpen),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("t3: missing required field 'b'", str(cm.exception))
@@ -2554,7 +2560,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t4())
@@ -2565,7 +2571,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t5())
@@ -2577,24 +2583,24 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         u = self.decode(
-            self.sv.Union(self.ns3.UOpen), json.dumps(json_data),
+            bv.Union(self.ns3.UOpen), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(u, self.ns3.UOpen)
         self.assertTrue(u.is_t6())
         self.assertEqual(u.get_t6(), 't6_str')
 
         # test alpha tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.UOpen),
+                bv.Union(self.ns3.UOpen),
                 json.dumps(json_data),
                 caller_permissions=self.default_cp)
         self.assertEqual("unknown tag 't6'", str(cm.exception))
 
         # test alpha tag raises for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.Union(self.ns3.UOpen),
+                bv.Union(self.ns3.UOpen),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("unknown tag 't6'", str(cm.exception))
@@ -2613,7 +2619,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test full super-type
         f = self.decode(
-            self.sv.StructTree(self.ns3.File), json.dumps(json_data),
+            bv.StructTree(self.ns3.File), json.dumps(json_data),
             caller_permissions=self.internal_and_alpha_cp)
         self.assertIsInstance(f, self.ns3.File)
         self.assertEqual(f.name, 'File1')
@@ -2623,9 +2629,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         self.assertEqual(f.y, 'Y')
 
         # test raises with interal field for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.StructTree(self.ns3.File),
+                bv.StructTree(self.ns3.File),
                 json.dumps(json_data),
                 caller_permissions=self.default_cp)
         self.assertIn("unknown field", str(cm.exception))
@@ -2638,9 +2644,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test raises with missing required interal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.StructTree(self.ns3.File),
+                bv.StructTree(self.ns3.File),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("missing required field 'x'", str(cm.exception))
@@ -2656,9 +2662,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test raises with missing required interal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.StructTree(self.ns3.File),
+                bv.StructTree(self.ns3.File),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("missing required field 'y'", str(cm.exception))
@@ -2674,9 +2680,9 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         }
 
         # test raises with missing required interal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
+        with self.assertRaises(bv.ValidationError) as cm:
             self.decode(
-                self.sv.StructTree(self.ns3.File),
+                bv.StructTree(self.ns3.File),
                 json.dumps(json_data),
                 caller_permissions=self.internal_cp)
         self.assertEqual("x: missing required field 'b'", str(cm.exception))
@@ -2689,7 +2695,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test external-only type
         f = self.decode(
-            self.sv.StructTree(self.ns3.File), json.dumps(json_data),
+            bv.StructTree(self.ns3.File), json.dumps(json_data),
             caller_permissions=self.default_cp)
         self.assertIsInstance(f, self.ns3.File)
         self.assertEqual(f.name, 'File1')
@@ -2713,7 +2719,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={}, f=self.ns3.X(a='A', b='B'), g=4)
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         # test missing required internal field for internal and alpha caller
@@ -2721,8 +2727,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             a='A', c='C', d=[self.ns3.X(a='A', b='B')],
             e={}, f=self.ns3.X(a='A', b='B'), g=4)
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'b'", str(cm.exception))
 
@@ -2731,8 +2737,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             a='A', b=1, c='C', d=[self.ns3.X(a='A')],
             e={}, f=self.ns3.X(a='A', b='B'), g=4)
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("d: missing required field 'b'", str(cm.exception))
 
@@ -2741,8 +2747,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             a='A', b=1, c='C', d=[self.ns3.X(a='A', b='B')],
             e={}, f=self.ns3.X(a='A', b='B'))
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'g'", str(cm.exception))
 
@@ -2756,7 +2762,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={}, f=self.ns3.X(a='A', b='B'), g=4)
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.default_cp), json_data)
 
         json_data = {
@@ -2765,7 +2771,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test internal stripped out for alpha caller
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.alpha_cp), json_data)
 
         json_data = {
@@ -2775,7 +2781,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test alpha stripped out for internal caller
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.internal_cp), json_data)
 
     def test_struct_parent_encoding(self):
@@ -2792,7 +2798,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             x='X', y='Y')
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         # test missing required internal field for internal and alpha caller
@@ -2801,8 +2807,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
             x='X', y='Y')
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'b'", str(cm.exception))
 
@@ -2813,8 +2819,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
             y='Y')
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'x'", str(cm.exception))
 
@@ -2824,8 +2830,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
             x='X', y='Y')
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("d: missing required field 'b'", str(cm.exception))
 
@@ -2835,8 +2841,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={}, f=self.ns3.X(a='A', b='B'), h='H',
             x='X', y='Y')
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'g'", str(cm.exception))
 
@@ -2847,8 +2853,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={}, f=self.ns3.X(a='A', b='B'), g=4, h='H',
             x='X')
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'y'", str(cm.exception))
 
@@ -2863,7 +2869,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             x='X', y='Y')
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.default_cp), json_data)
 
         json_data = {
@@ -2872,7 +2878,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test internal stripped out for alpha caller
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.alpha_cp), json_data)
 
         json_data = {
@@ -2882,7 +2888,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test alpha stripped out for internal caller
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_cp), json_data)
 
     def test_union_closed_parent_encoding(self):
@@ -2893,7 +2899,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t0
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -2903,7 +2909,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t1('t1_str')
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -2918,7 +2924,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -2933,7 +2939,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t3([self.ns3.X(a='A', b='B')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -2944,24 +2950,24 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         ui = self.ns3.U.t1('t1_str')
 
         # test internal tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.default_cp)
         self.assertEqual("caller does not have access to 't1' tag", str(cm.exception))
 
         ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
 
         # test alpha tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.default_cp)
         self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
 
         ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
 
         # test alpha tag raises for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_cp)
         self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
 
@@ -2977,17 +2983,17 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         # test missing required internal field for external caller
         ui = self.ns3.U.t3([self.ns3.X(a='A')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.default_cp), json_data)
 
         # test missing required internal field for alpha caller
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.alpha_cp), json_data)
 
         # test missing required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_cp)
         self.assertEqual("t3: missing required field 'b'", str(cm.exception))
 
@@ -2999,7 +3005,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.UOpen.t0
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -3009,7 +3015,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.UOpen.t1('t1_str')
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -3024,7 +3030,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.UOpen.t2([self.ns3.X(a='A', b='B')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -3039,7 +3045,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t3([self.ns3.X(a='A', b='B')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -3048,7 +3054,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.UOpen.t4
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -3058,7 +3064,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.UOpen.t5('t5_str')
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -3068,7 +3074,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.UOpen.t6('t6_str')
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         json_data = {
@@ -3079,46 +3085,46 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         ui = self.ns3.UOpen.t1('t1_str')
 
         # test internal tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.default_cp)
         self.assertEqual("caller does not have access to 't1' tag", str(cm.exception))
 
         ui = self.ns3.UOpen.t2([self.ns3.X(a='A', b='B')])
 
         # test alpha tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.default_cp)
         self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
 
         ui = self.ns3.UOpen.t2([self.ns3.X(a='A', b='B')])
 
         # test alpha tag raises for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_cp)
         self.assertEqual("caller does not have access to 't2' tag", str(cm.exception))
 
         ui = self.ns3.UOpen.t5('t5_str')
 
         # test internal child tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.default_cp)
         self.assertEqual("caller does not have access to 't5' tag", str(cm.exception))
 
         ui = self.ns3.UOpen.t6('t6_str')
 
         # test alpha child tag raises for external caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.default_cp)
         self.assertEqual("caller does not have access to 't6' tag", str(cm.exception))
 
         # test alpha child tag raises for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_cp)
         self.assertEqual("caller does not have access to 't6' tag", str(cm.exception))
 
@@ -3134,17 +3140,17 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         # test missing required internal field for external caller
         ui = self.ns3.UOpen.t3([self.ns3.X(a='A')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.default_cp), json_data)
 
         # test missing required internal field for alpha caller
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.alpha_cp), json_data)
 
         # test missing required internal field for internal caller
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.Union(self.ns3.UOpen), ui,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.Union(self.ns3.UOpen), ui,
                 caller_permissions=self.internal_cp)
         self.assertEqual("t3: missing required field 'b'", str(cm.exception))
 
@@ -3165,15 +3171,15 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             name='File1', size=5, x=self.ns3.X(a='A', b='B'), y='Y')
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+            self.compat_obj_encode(bv.StructTree(self.ns3.File), fi,
                 caller_permissions=self.internal_and_alpha_cp), json_data)
 
         # test missing required internal parent field for internal and alpha caller
         fi = self.ns3.File(
             name='File1', size=5, y='Y')
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.StructTree(self.ns3.File), fi,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'x'", str(cm.exception))
 
@@ -3181,8 +3187,8 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
         fi = self.ns3.File(
             name='File1', size=5, x=self.ns3.X(a='A', b='B'))
 
-        with self.assertRaises(self.sv.ValidationError) as cm:
-            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+        with self.assertRaises(bv.ValidationError) as cm:
+            self.compat_obj_encode(bv.StructTree(self.ns3.File), fi,
                 caller_permissions=self.internal_and_alpha_cp)
         self.assertEqual("missing required field 'y'", str(cm.exception))
 
@@ -3197,7 +3203,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         # test internal stripped out for external caller
         self.assertEqual(
-            self.compat_obj_encode(self.sv.StructTree(self.ns3.File), fi,
+            self.compat_obj_encode(bv.StructTree(self.ns3.File), fi,
                 caller_permissions=self.default_cp), json_data)
 
     def test_struct_parent_encoding_with_redaction(self):
@@ -3215,7 +3221,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={'e1': 'e2'}, f=self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST'), g=4)
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
         json_data = {
@@ -3231,7 +3237,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={'e1': 'e2'}, f=self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST'), g=4)
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.internal_cp, should_redact=True), json_data)
 
         json_data = {
@@ -3245,7 +3251,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             e={'e1': 'e2'}, f=self.ns3.X(a='TEST-blot-TEST', b='TEST-hash-TEST'), g=4)
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.A), ai,
+            self.compat_obj_encode(bv.Struct(self.ns3.A), ai,
                 caller_permissions=self.alpha_cp, should_redact=True), json_data)
 
     def test_struct_child_encoding_with_redaction(self):
@@ -3264,7 +3270,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
             x='X', y='Y')
 
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.B), bi,
+            self.compat_obj_encode(bv.Struct(self.ns3.B), bi,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
     def test_union_closed_parent_encoding_with_redaction(self):
@@ -3275,7 +3281,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t0
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
         json_data = {
@@ -3285,7 +3291,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t1('t1_str')
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
         json_data = {
@@ -3300,7 +3306,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t2([self.ns3.X(a='A', b='B')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
         json_data = {
@@ -3315,7 +3321,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t3([self.ns3.X(a='A', b='B')])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
     def test_encoding_collections_with_redaction(self):
@@ -3329,7 +3335,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         s = self.ns3.S2(a=['test_str'], b={'key': 'test_str'})
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Struct(self.ns3.S2), s,
+            self.compat_obj_encode(bv.Struct(self.ns3.S2), s,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
         # test that we correctly redact elements in a list/map in a union
@@ -3340,7 +3346,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U2.t1(['test_str'])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U2), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U2), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
         json_data = {
@@ -3350,7 +3356,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U2.t2({'key': 'test_str'})
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U2), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U2), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
     def test_encoding_unicode_with_redaction(self):
@@ -3368,7 +3374,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
 
         ui = self.ns3.U.t2([self.ns3.X(a=unicode_val, b=unicode_val)])
         self.assertEqual(
-            self.compat_obj_encode(self.sv.Union(self.ns3.U), ui,
+            self.compat_obj_encode(bv.Union(self.ns3.U), ui,
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
 

@@ -32,7 +32,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         # type: () -> PythonTypesBackend
         return PythonTypesBackend(
             target_folder_path='output',
-            args=['-r', 'dropbox.dropbox.Dropbox.{ns}_{route}'])
+            args=['-r', 'dropbox.dropbox.Dropbox.{ns}_{route}', '--package', 'output'])
 
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text
@@ -137,9 +137,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
                 __slots__ = [
                     '_annotated_field_value',
-                    '_annotated_field_present',
                     '_unannotated_field_value',
-                    '_unannotated_field_present',
                 ]
 
                 _has_required_fields = True
@@ -147,10 +145,8 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 def __init__(self,
                              annotated_field=None,
                              unannotated_field=None):
-                    self._annotated_field_value = None
-                    self._annotated_field_present = False
-                    self._unannotated_field_value = None
-                    self._unannotated_field_present = False
+                    self._annotated_field_value = bb.NOT_SET
+                    self._unannotated_field_value = bb.NOT_SET
                     if annotated_field is not None:
                         self.annotated_field = annotated_field
                     if unannotated_field is not None:
@@ -161,7 +157,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                     """
                     :rtype: int
                     """
-                    if self._annotated_field_present:
+                    if self._annotated_field_value is not bb.NOT_SET:
                         return self._annotated_field_value
                     else:
                         raise AttributeError("missing required field 'annotated_field'")
@@ -170,19 +166,17 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 def annotated_field(self, val):
                     val = self._annotated_field_validator.validate(val)
                     self._annotated_field_value = val
-                    self._annotated_field_present = True
 
                 @annotated_field.deleter
                 def annotated_field(self):
-                    self._annotated_field_value = None
-                    self._annotated_field_present = False
+                    self._annotated_field_value = bb.NOT_SET
 
                 @property
                 def unannotated_field(self):
                     """
                     :rtype: int
                     """
-                    if self._unannotated_field_present:
+                    if self._unannotated_field_value is not bb.NOT_SET:
                         return self._unannotated_field_value
                     else:
                         raise AttributeError("missing required field 'unannotated_field'")
@@ -191,12 +185,10 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                 def unannotated_field(self, val):
                     val = self._unannotated_field_validator.validate(val)
                     self._unannotated_field_value = val
-                    self._unannotated_field_present = True
 
                 @unannotated_field.deleter
                 def unannotated_field(self):
-                    self._unannotated_field_value = None
-                    self._unannotated_field_present = False
+                    self._unannotated_field_value = bb.NOT_SET
 
                 def _process_custom_annotations(self, annotation_type, field_path, processor):
                     super(MyStruct, self)._process_custom_annotations(annotation_type, field_path, processor)

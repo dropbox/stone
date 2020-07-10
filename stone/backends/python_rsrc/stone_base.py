@@ -1,21 +1,12 @@
 """
 Helpers for representing Stone data types in Python.
-
-This module should be dropped into a project that requires the use of Stone. In
-the future, this could be imported from a pre-installed Python package, rather
-than being added to a project.
 """
 
 from __future__ import absolute_import, unicode_literals
 
 import functools
 
-try:
-    from . import stone_validators as bv
-except (ImportError, SystemError, ValueError):
-    # Catch errors raised when importing a relative module when not in a package.
-    # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bv  # type: ignore
+from stone.backends.python_rsrc import stone_validators as bv
 
 _MYPY = False
 if _MYPY:
@@ -29,8 +20,28 @@ if _MYPY:
     T = typing.TypeVar('T', bound=AnnotationType)
     U = typing.TypeVar('U')
 
+
+class NotSet(object):
+    __slots__ = ()
+
+    def __copy__(self):
+        # type: () -> NotSet
+        # disable copying so we can do identity comparison even after copying stone objects
+        return self
+
+    def __deepcopy__(self, memo):
+        # type: (typing.Dict[typing.Text, typing.Any]) -> NotSet
+        # disable copying so we can do identity comparison even after copying stone objects
+        return self
+
+NOT_SET = NotSet()  # dummy object to denote that a field has not been set
+
 class Struct(object):
     # This is a base class for all classes representing Stone structs.
+
+    # every parent class in the inheritance tree must define __slots__ in order to get full memory
+    # savings
+    __slots__ = ()
 
     _all_field_names_ = set()  # type: typing.Set[str]
 

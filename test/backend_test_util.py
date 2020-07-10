@@ -4,10 +4,10 @@ if MYPY:
 
 try:
     # Works for Py 3.3+
-    from unittest.mock import Mock
+    from unittest.mock import DEFAULT, Mock
 except ImportError:
     # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
-    from mock import Mock  # type: ignore
+    from mock import DEFAULT, Mock  # type: ignore
 
 from stone.backend import Backend
 
@@ -23,6 +23,7 @@ def _mock_output(backend):
 
     def record_output():
         recorded_output.append(output_buffer_to_string())
+        return DEFAULT
 
     backend.output_buffer_to_string = Mock(  # type: ignore
         wraps=output_buffer_to_string,

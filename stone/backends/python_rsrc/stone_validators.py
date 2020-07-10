@@ -4,10 +4,6 @@ be used to validate Python objects and normalize them for a given type.
 
 The data types defined here should not be specific to an RPC or serialization
 format.
-
-This module should be dropped into a project that requires the use of Stone. In
-the future, this could be imported from a pre-installed Python package, rather
-than being added to a project.
 """
 
 from __future__ import absolute_import, unicode_literals

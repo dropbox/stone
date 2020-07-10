@@ -23,14 +23,10 @@ import time
 
 import six
 
-try:
-    from . import stone_base as bb  # noqa: F401 # pylint: disable=unused-import
-    from . import stone_validators as bv
-except (ImportError, SystemError, ValueError):
-    # Catch errors raised when importing a relative module when not in a package.
-    # This makes testing this file directly (outside of a package) easier.
-    import stone_validators as bb  # type: ignore # noqa: F401 # pylint: disable=unused-import
-    import stone_validators as bv  # type: ignore
+from stone.backends.python_rsrc import (
+    stone_base as bb,
+    stone_validators as bv,
+)
 
 _MYPY = False
 if _MYPY:
@@ -340,10 +336,10 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             except AttributeError as exc:
                 raise bv.ValidationError(exc.args[0])
 
-            presence_key = '_%s_present' % field_name
+            value_key = '_%s_value' % field_name
 
             if field_value is not None \
-                    and getattr(value, presence_key):
+                    and getattr(value, value_key) is not bb.NOT_SET:
                 # Only serialize struct fields that have been explicitly
                 # set, even if there is a default
                 try:
