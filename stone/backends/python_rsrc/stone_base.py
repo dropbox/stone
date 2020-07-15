@@ -50,6 +50,7 @@ class Attribute(object):
         self.nullable = nullable
         self.user_defined = user_defined
         # These should be set later, because of possible cross-references.
+        self.validator = None  # type: typing.Optional[typing.Any]
         self.default = NO_DEFAULT
 
     def __get__(self, instance, owner):
@@ -64,8 +65,7 @@ class Attribute(object):
         if self.default is not NO_DEFAULT:
             return self.default
         # No luck, give a nice error.
-        public_name = "_".join(self.name.split("_")[1:-1])  # _some_attr_value -> some_attr
-        raise AttributeError("missing required field '{}'".format(public_name))
+        raise AttributeError("missing required field '{}'".format(public_name(self.name)))
 
     def __set__(self, instance, value):
         # type: (typing.Any, typing.Any) -> None
@@ -232,3 +232,7 @@ def make_map_value_annotation_processor(processor):
             return map_
         return {k: processor('{}[{}]'.format(field_path, repr(k)), v) for k, v in map_.items()}
     return g
+
+def public_name(name):
+    # _some_attr_value -> some_attr
+    return "_".join(name.split("_")[1:-1])
