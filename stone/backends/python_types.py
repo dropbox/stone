@@ -415,7 +415,7 @@ class PythonTypesBackend(CodeBackend):
         for field in data_type.fields:
             field_name = fmt_var(field.name)
             validator_name = generate_validator_constructor(ns, field.data_type)
-            full_validator_name = '{}._{}_validator'.format(class_name, field_name)
+            full_validator_name = '{}.{}.validator'.format(class_name, field_name)
             self.emit('{} = {}'.format(full_validator_name, validator_name))
             if field.redactor:
                 self._generate_redactor(full_validator_name, field.redactor)
@@ -485,7 +485,7 @@ class PythonTypesBackend(CodeBackend):
                         continue
 
                     var_name = fmt_var(field.name)
-                    validator_name = '{}._{}_validator'.format(class_name,
+                    validator_name = '{}.{}.validator'.format(class_name,
                                                                var_name)
                     items.append("('{}', {})".format(var_name, validator_name))
                 self.generate_multiline_list(
@@ -513,7 +513,7 @@ class PythonTypesBackend(CodeBackend):
                         continue
 
                     var_name = fmt_var(field.name)
-                    validator_name = '{}._{}_validator'.format(
+                    validator_name = '{}.{}.validator'.format(
                         class_name, var_name)
                     items.append("('{}', {})".format(var_name, validator_name))
                 self.generate_multiline_list(

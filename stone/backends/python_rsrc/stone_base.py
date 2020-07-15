@@ -41,7 +41,7 @@ NO_DEFAULT = object()
 
 
 class Attribute(object):
-    __slots__ = ("name", "default", "nullable", "user_defined")
+    __slots__ = ("name", "default", "nullable", "user_defined", "validator")
 
     def __init__(self, name, nullable=False, user_defined=False):
         # type: (typing.Text, bool, bool) -> None
@@ -69,11 +69,10 @@ class Attribute(object):
         if self.nullable and value is None:
             setattr(instance, "_{}_value".format(self.name), NOT_SET)
             return
-        validator = getattr(instance, "_{}_validator".format(self.name))
         if self.user_defined:
-            validator.validate_type_only(value)
+            self.validator.validate_type_only(value)
         else:
-            value = validator.validate(value)
+            value = self.validator.validate(value)
         setattr(instance, "_{}_value".format(self.name), value)
 
     def __delete__(self, instance):
