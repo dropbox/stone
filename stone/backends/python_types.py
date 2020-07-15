@@ -352,7 +352,7 @@ class PythonTypesBackend(CodeBackend):
             self._generate_struct_class_slots(data_type)
             self._generate_struct_class_has_required_fields(data_type)
             self._generate_struct_class_init(data_type)
-            self._generate_struct_class_properties(ns, data_type)
+            self._generate_struct_class_properties(data_type)
             self._generate_struct_class_custom_annotations(ns, data_type)
             self._generate_struct_class_repr(data_type)
         if data_type.has_enumerated_subtypes():
@@ -585,7 +585,7 @@ class PythonTypesBackend(CodeBackend):
         else:
             return fmt_obj(value)
 
-    def _generate_struct_class_properties(self, ns, data_type):
+    def _generate_struct_class_properties(self, data_type):
         """
         Each field of the struct has a corresponding setter and getter.
         The setter validates the value being set.
