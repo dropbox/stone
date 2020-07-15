@@ -485,8 +485,7 @@ class PythonTypesBackend(CodeBackend):
                         continue
 
                     var_name = fmt_var(field.name)
-                    validator_name = '{}.{}.validator'.format(class_name,
-                                                               var_name)
+                    validator_name = '{}.{}.validator'.format(class_name, var_name)
                     items.append("('{}', {})".format(var_name, validator_name))
                 self.generate_multiline_list(
                     items,

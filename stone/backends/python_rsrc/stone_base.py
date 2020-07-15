@@ -50,7 +50,7 @@ class Attribute(object):
         self.nullable = nullable
         self.user_defined = user_defined
         # These should be set later, because of possible cross-references.
-        self.validator = None  # type: typing.Optional[typing.Any]
+        self.validator = None  # type: typing.Any
         self.default = NO_DEFAULT
 
     def __get__(self, instance, owner):
