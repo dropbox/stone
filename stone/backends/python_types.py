@@ -157,6 +157,11 @@ class PythonTypesBackend(CodeBackend):
                     namespace, data_type)
                 self._generate_union_class_symbol_creators(data_type)
 
+        for data_type in namespace.linearize_data_types():
+            if is_struct_type(data_type):
+                self._generate_struct_attributes_defaults(
+                    namespace, data_type)
+
         self._generate_routes(api.route_schema, namespace)
 
     def _generate_dummy_namespace_module(self, reserved_namespace_name):
@@ -516,6 +521,18 @@ class PythonTypesBackend(CodeBackend):
 
         self.emit()
 
+    def _generate_struct_attributes_defaults(self, ns, data_type):
+        # Default values can cross-reference, so we also set them after classes.
+        class_name = class_name_for_data_type(data_type)
+        for field in data_type.fields:
+            if field.has_default:
+                self.emit(
+                    "{}.{}.default = {}".format(
+                        class_name,
+                        fmt_var(field.name),
+                        self._generate_python_value(ns, field.default))
+                )
+
     def _generate_struct_class_init(self, data_type):
         """
         Generates constructor. The constructor takes all possible fields as
@@ -574,8 +591,7 @@ class PythonTypesBackend(CodeBackend):
         The setter validates the value being set.
         """
         for field in data_type.fields:
-            field_name = fmt_func(field.name)
-            field_name_reserved_check = fmt_func(field.name, check_reserved=True)
+            field_name = fmt_func(field.name, check_reserved=True)
             if is_nullable_type(field.data_type):
                 field_dt = field.data_type.data_type
                 dt_nullable = True
@@ -584,59 +600,12 @@ class PythonTypesBackend(CodeBackend):
                 dt_nullable = False
 
             # generate getter for field
-            self.emit('@property')
-            self.emit('def {}(self):'.format(field_name_reserved_check))
-            with self.indent():
-                self.emit('"""')
-                if field.doc:
-                    self.emit_wrapped_text(
-                        self.process_doc(field.doc, self._docf))
-                    # Sphinx wants an extra line between the text and the
-                    # rtype declaration.
-                    self.emit()
-                self.emit(':rtype: {}'.format(
-                    self._python_type_mapping(ns, field_dt)))
-                self.emit('"""')
-                self.emit('if self._{}_value is not bb.NOT_SET:'.format(field_name))
-                with self.indent():
-                    self.emit('return self._{}_value'.format(field_name))
-
-                self.emit('else:')
-                with self.indent():
-                    if dt_nullable:
-                        self.emit('return None')
-                    elif field.has_default:
-                        self.emit('return {}'.format(
-                            self._generate_python_value(ns, field.default)))
-                    else:
-                        self.emit(
-                            "raise AttributeError(\"missing required field '%s'\")"
-                            % field_name
-                        )
-            self.emit()
-
-            # generate setter for field
-            self.emit('@{}.setter'.format(field_name_reserved_check))
-            self.emit('def {}(self, val):'.format(field_name_reserved_check))
-            with self.indent():
-                if dt_nullable:
-                    self.emit('if val is None:')
-                    with self.indent():
-                        self.emit('del self.{}'.format(field_name_reserved_check))
-                        self.emit('return')
-                if is_user_defined_type(field_dt):
-                    self.emit('self._%s_validator.validate_type_only(val)' %
-                              field_name)
-                else:
-                    self.emit('val = self._{}_validator.validate(val)'.format(field_name))
-                self.emit('self._{}_value = val'.format(field_name))
-            self.emit()
-
-            # generate deleter for field
-            self.emit('@{}.deleter'.format(field_name_reserved_check))
-            self.emit('def {}(self):'.format(field_name_reserved_check))
-            with self.indent():
-                self.emit('self._{}_value = bb.NOT_SET'.format(field_name))
+            args = '"{}"'.format(field_name)
+            if dt_nullable:
+                args += ", nullable=True"
+            if is_user_defined_type(field_dt):
+                args += ", user_defined=True"
+            self.emit("{} = bb.Attribute({})".format(field_name, args))
             self.emit()
 
     def _generate_custom_annotation_instance(self, ns, annotation):
