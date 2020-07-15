@@ -4,8 +4,6 @@ import argparse
 
 from six import StringIO
 
-import textwrap
-
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
     check_route_name_conflict,
