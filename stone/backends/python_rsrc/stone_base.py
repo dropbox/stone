@@ -45,7 +45,8 @@ class Attribute(object):
 
     def __init__(self, name, nullable=False, user_defined=False):
         # type: (typing.Text, bool, bool) -> None
-        self.name = name
+        # Internal name to store actual value for attribute.
+        self.name = "_{}_value".format(name)
         self.nullable = nullable
         self.user_defined = user_defined
         # These should be set later, because of possible cross-references.
@@ -55,29 +56,31 @@ class Attribute(object):
         # type: (typing.Any, typing.Any) -> typing.Any
         if instance is None:
             return self
-        value = getattr(instance, "_{}_value".format(self.name))
+        value = getattr(instance, self.name)
         if value is not NOT_SET:
             return value
         if self.nullable:
             return None
         if self.default is not NO_DEFAULT:
             return self.default
-        raise AttributeError("missing required field '{}'".format(self.name))
+        # No luck, give a nice error.
+        public_name = self.name.split("_")[1]
+        raise AttributeError("missing required field '{}'".format(public_name))
 
     def __set__(self, instance, value):
         # type: (typing.Any, typing.Any) -> None
         if self.nullable and value is None:
-            setattr(instance, "_{}_value".format(self.name), NOT_SET)
+            setattr(instance, self.name, NOT_SET)
             return
         if self.user_defined:
             self.validator.validate_type_only(value)
         else:
             value = self.validator.validate(value)
-        setattr(instance, "_{}_value".format(self.name), value)
+        setattr(instance, self.name, value)
 
     def __delete__(self, instance):
         # type: (typing.Any) -> None
-        setattr(instance, "_{}_value".format(self.name), NOT_SET)
+        setattr(instance, self.name, NOT_SET)
 
 
 class Struct(object):
