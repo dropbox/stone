@@ -843,14 +843,14 @@ class TestGeneratedPython(unittest.TestCase):
         # Check that the docstrings from the spec have in some form made it
         # into the Python docstrings for the generated objects.
         self.assertIn('Sample struct doc.', self.ns.A.__doc__)
-        self.assertIn('Sample field doc.', self.ns.A.a.__doc__)
+        self.assertIn('Sample field doc.', self.ns.A.__doc__)
         self.assertIn('Sample union doc.', self.ns.U.__doc__)
         self.assertIn('Sample field doc.', self.ns.U.t0.__doc__)
 
         # Test doc conversion of Python bool.
-        self.assertIn('``True``', self.ns.DocTest.b.__doc__)
+        self.assertIn('``True``', self.ns.DocTest.__doc__)
         # Test doc converts type reference to sphinx-friendly representation.
-        self.assertIn(':class:`D`', self.ns.DocTest.t.__doc__)
+        self.assertIn(':class:`D`', self.ns.DocTest.__doc__)
 
     def test_aliases(self):
         # The left is a validator, the right is the struct devs can use...
