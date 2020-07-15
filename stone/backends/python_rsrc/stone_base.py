@@ -64,7 +64,7 @@ class Attribute(object):
         if self.default is not NO_DEFAULT:
             return self.default
         # No luck, give a nice error.
-        public_name = self.name.split("_")[1]
+        public_name = "_".join(self.name.split("_")[1:-1])  # _some_attr_value -> some_attr
         raise AttributeError("missing required field '{}'".format(public_name))
 
     def __set__(self, instance, value):
