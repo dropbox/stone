@@ -34,7 +34,52 @@ class NotSet(object):
         # disable copying so we can do identity comparison even after copying stone objects
         return self
 
+
 NOT_SET = NotSet()  # dummy object to denote that a field has not been set
+
+NO_DEFAULT = object()
+
+
+class Attribute(object):
+    __slots__ = ("name", "default", "nullable", "user_defined")
+
+    def __init__(self, name, nullable=False, user_defined=False):
+        # type: (typing.Text, bool, bool) -> None
+        self.name = name
+        self.nullable = nullable
+        self.user_defined = user_defined
+        # These should be set later, because of possible cross-references.
+        self.default = NO_DEFAULT
+
+    def __get__(self, instance, owner):
+        # type: (typing.Any, typing.Any) -> typing.Any
+        if instance is None:
+            return self
+        value = getattr(instance, "_{}_value".format(self.name))
+        if value is not NOT_SET:
+            return value
+        if self.nullable:
+            return None
+        if self.default is not NO_DEFAULT:
+            return self.default
+        raise AttributeError("missing required field '{}'".format(self.name))
+
+    def __set__(self, instance, value):
+        # type: (typing.Any, typing.Any) -> None
+        if self.nullable and value is None:
+            setattr(instance, "_{}_value".format(self.name), NOT_SET)
+            return
+        validator = getattr(instance, "_{}_validator".format(self.name))
+        if self.user_defined:
+            validator.validate_type_only(value)
+        else:
+            value = validator.validate(value)
+        setattr(instance, "_{}_value".format(self.name), value)
+
+    def __delete__(self, instance):
+        # type: (typing.Any) -> None
+        setattr(instance, "_{}_value".format(self.name), NOT_SET)
+
 
 class Struct(object):
     # This is a base class for all classes representing Stone structs.
