@@ -1,6 +1,7 @@
 [MESSAGES CONTROL]
 disable=
     C,
+    E1307, # bogus errors
     R,
     fixme,
     locally-disabled,
