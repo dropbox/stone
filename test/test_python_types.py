@@ -162,12 +162,6 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                     if annotation_type is MyAnnotationType:
                         self.annotated_field = bb.partially_apply(processor, MyAnnotationType(test_param=42))('{}.annotated_field'.format(field_path), self.annotated_field)
 
-                def __repr__(self):
-                    return 'MyStruct(annotated_field={!r}, unannotated_field={!r})'.format(
-                        self._annotated_field_value,
-                        self._unannotated_field_value,
-                    )
-
             MyStruct_validator = bv.Struct(MyStruct)
 
         ''') # noqa

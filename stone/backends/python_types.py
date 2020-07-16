@@ -354,7 +354,6 @@ class PythonTypesBackend(CodeBackend):
             self._generate_struct_class_init(data_type)
             self._generate_struct_class_properties(data_type)
             self._generate_struct_class_custom_annotations(ns, data_type)
-            self._generate_struct_class_repr(data_type)
         if data_type.has_enumerated_subtypes():
             validator = 'StructTree'
         else:
@@ -708,36 +707,6 @@ class PythonTypesBackend(CodeBackend):
                         ))
                     self.emit()
 
-    def _generate_struct_class_repr(self, data_type):
-        """
-        Generates something like:
-
-            def __repr__(self):
-                return 'Employee(first_name={!r}, last_name={!r}, age={!r})'.format(
-                    self._first_name_value,
-                    self._last_name_value,
-                    self._age_value,
-                )
-        """
-        self.emit('def __repr__(self):')
-        with self.indent():
-            if data_type.all_fields:
-                constructor_kwargs_fmt = ', '.join(
-                    '{}={{!r}}'.format(fmt_var(f.name, True))
-                    for f in data_type.all_fields)
-                self.emit("return '{}({})'.format(".format(
-                    class_name_for_data_type(data_type),
-                    constructor_kwargs_fmt,
-                ))
-                with self.indent():
-                    for f in data_type.all_fields:
-                        self.emit("self._{}_value,".format(fmt_var(f.name)))
-                self.emit(")")
-            else:
-                self.emit("return '%s()'" %
-                          class_name_for_data_type(data_type))
-        self.emit()
-
     def _generate_enumerated_subtypes_tag_mapping(self, ns, data_type):
         """
         Generates attributes needed for serializing and deserializing structs
@@ -835,7 +804,6 @@ class PythonTypesBackend(CodeBackend):
             self._generate_union_class_is_set(data_type)
             self._generate_union_class_get_helpers(ns, data_type)
             self._generate_union_class_custom_annotations(ns, data_type)
-            self._generate_union_class_repr(data_type)
         self.emit('{0}_validator = bv.Union({0})'.format(
             class_name_for_data_type(data_type)
         ))
@@ -1030,18 +998,6 @@ class PythonTypesBackend(CodeBackend):
                                     ])
                             ))
                         self.emit()
-
-    def _generate_union_class_repr(self, data_type):
-        """
-        The __repr__() function will return a string of the class name, and
-        the selected tag.
-        """
-        self.emit('def __repr__(self):')
-        with self.indent():
-            self.emit("return '{}(%r, %r)' % (self._tag, self._value)".format(
-                class_name_for_data_type(data_type),
-            ))
-        self.emit()
 
     def _generate_union_class_symbol_creators(self, data_type):
         """

@@ -34,6 +34,9 @@ class NotSet(object):
         # disable copying so we can do identity comparison even after copying stone objects
         return self
 
+    def __repr__(self):
+        return "NOT_SET"
+
 
 NOT_SET = NotSet()  # dummy object to denote that a field has not been set
 
@@ -113,6 +116,11 @@ class Struct(object):
         # type: (object) -> bool
         return not self == other
 
+    def __repr__(self):
+        args = ["{}={!r}".format(name, getattr(self, "_{}_value".format(name)))
+                for name in sorted(self._all_field_names_)]
+        return "{}({})".format(type(self).__name__, ", ".join(args))
+
     def _process_custom_annotations(self, annotation_type, field_path, processor):
         # type: (typing.Type[T], typing.Text, typing.Callable[[T, U], U]) -> None
         pass
@@ -154,6 +162,9 @@ class Union(object):
 
     def __hash__(self):
         return hash((self._tag, self._value))
+
+    def __repr__(self):
+        return "{}({!r}, {!r})".format(type(self).__name__, self._tag, self._value)
 
     def _process_custom_annotations(self, annotation_type, field_path, processor):
         # type: (typing.Type[T], typing.Text, typing.Callable[[T, U], U]) -> None
