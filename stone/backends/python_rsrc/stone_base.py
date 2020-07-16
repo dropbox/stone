@@ -34,7 +34,54 @@ class NotSet(object):
         # disable copying so we can do identity comparison even after copying stone objects
         return self
 
+
 NOT_SET = NotSet()  # dummy object to denote that a field has not been set
+
+NO_DEFAULT = object()
+
+
+class Attribute(object):
+    __slots__ = ("name", "default", "nullable", "user_defined", "validator")
+
+    def __init__(self, name, nullable=False, user_defined=False):
+        # type: (typing.Text, bool, bool) -> None
+        # Internal name to store actual value for attribute.
+        self.name = "_{}_value".format(name)
+        self.nullable = nullable
+        self.user_defined = user_defined
+        # These should be set later, because of possible cross-references.
+        self.validator = None  # type: typing.Any
+        self.default = NO_DEFAULT
+
+    def __get__(self, instance, owner):
+        # type: (typing.Any, typing.Any) -> typing.Any
+        if instance is None:
+            return self
+        value = getattr(instance, self.name)
+        if value is not NOT_SET:
+            return value
+        if self.nullable:
+            return None
+        if self.default is not NO_DEFAULT:
+            return self.default
+        # No luck, give a nice error.
+        raise AttributeError("missing required field '{}'".format(public_name(self.name)))
+
+    def __set__(self, instance, value):
+        # type: (typing.Any, typing.Any) -> None
+        if self.nullable and value is None:
+            setattr(instance, self.name, NOT_SET)
+            return
+        if self.user_defined:
+            self.validator.validate_type_only(value)
+        else:
+            value = self.validator.validate(value)
+        setattr(instance, self.name, value)
+
+    def __delete__(self, instance):
+        # type: (typing.Any) -> None
+        setattr(instance, self.name, NOT_SET)
+
 
 class Struct(object):
     # This is a base class for all classes representing Stone structs.
@@ -185,3 +232,7 @@ def make_map_value_annotation_processor(processor):
             return map_
         return {k: processor('{}[{}]'.format(field_path, repr(k)), v) for k, v in map_.items()}
     return g
+
+def public_name(name):
+    # _some_attr_value -> some_attr
+    return "_".join(name.split("_")[1:-1])

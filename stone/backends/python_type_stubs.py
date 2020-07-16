@@ -4,8 +4,6 @@ import argparse
 
 from six import StringIO
 
-import textwrap
-
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
     check_route_name_conflict,
@@ -359,18 +357,6 @@ class PythonTypeStubsBackend(CodeBackend):
 
         self.generate_multiline_list(args, before='def __init__', after=' -> None: ...')
 
-    property_template = textwrap.dedent(
-        """
-        @property
-        def {field_name}(self) -> {field_type}: ...
-
-        @{field_name}.setter
-        def {field_name}(self, val: {field_type}) -> None: ...
-
-        @{field_name}.deleter
-        def {field_name}(self) -> None: ...
-        """)
-
     def _generate_struct_class_properties(self, ns, struct):
         # type: (ApiNamespace, Struct) -> None
         to_emit = []  # type: typing.List[typing.Text]
@@ -378,11 +364,8 @@ class PythonTypeStubsBackend(CodeBackend):
             field_name_reserved_check = fmt_func(field.name, check_reserved=True)
             field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
 
-            to_emit.extend(
-                self.property_template.format(
-                    field_name=field_name_reserved_check,
-                    field_type=field_type,
-                ).split("\n")
+            to_emit.append(
+                "{}: {} = ...".format(field_name_reserved_check, field_type)
             )
 
         for s in to_emit:
