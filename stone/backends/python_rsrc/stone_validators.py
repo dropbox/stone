@@ -125,8 +125,8 @@ class Boolean(Primitive):
 
 class Integer(Primitive):
     """
-    Do not use this class directly. Extend it and specify a 'minimum' and
-    'maximum' value as class variables for a more restrictive integer range.
+    Do not use this class directly. Extend it and specify a 'default_minimum' and
+    'default_maximum' value as class variables for a more restrictive integer range.
     """
     __slots__ = ("minimum", "maximum")
 
@@ -143,7 +143,7 @@ class Integer(Primitive):
                 'min_value must be an integral number'
             assert min_value >= self.default_minimum, \
                 'min_value cannot be less than the minimum value for this ' \
-                'type (%d < %d)' % (min_value, self.minimum)
+                'type (%d < %d)' % (min_value, self.default_minimum)
             self.minimum = min_value
         else:
             self.minimum = self.default_minimum
@@ -152,7 +152,7 @@ class Integer(Primitive):
                 'max_value must be an integral number'
             assert max_value <= self.default_maximum, \
                 'max_value cannot be greater than the maximum value for ' \
-                'this type (%d < %d)' % (max_value, self.maximum)
+                'this type (%d < %d)' % (max_value, self.default_maximum)
             self.maximum = max_value
         else:
             self.maximum = self.default_maximum
@@ -188,7 +188,7 @@ class Int64(Integer):
     __slots__ = ()
 
     default_minimum = -2**63
-    default_maximum =  2**63 - 1
+    default_maximum = 2**63 - 1
 
 
 class UInt64(Integer):
@@ -200,8 +200,8 @@ class UInt64(Integer):
 
 class Real(Primitive):
     """
-    Do not use this class directly. Extend it and optionally set a 'minimum'
-    and 'maximum' value to enforce a range that's a subset of the Python float
+    Do not use this class directly. Extend it and optionally set a 'default_minimum'
+    and 'default_maximum' value to enforce a range that's a subset of the Python float
     implementation. Python floats are doubles.
     """
     __slots__ = ("minimum", "maximum")
@@ -225,7 +225,7 @@ class Real(Primitive):
             if self.default_minimum is not None and min_value < self.default_minimum:
                 raise AssertionError('min_value cannot be less than the '
                                      'minimum value for this type (%f < %f)' %
-                                     (min_value, self.minimum))
+                                     (min_value, self.default_minimum))
             self.minimum = min_value
         else:
             self.minimum = self.default_minimum
@@ -240,7 +240,7 @@ class Real(Primitive):
             if self.default_maximum is not None and max_value > self.default_maximum:
                 raise AssertionError('max_value cannot be greater than the '
                                      'maximum value for this type (%f < %f)' %
-                                     (max_value, self.maximum))
+                                     (max_value, self.default_maximum))
             self.maximum = max_value
         else:
             self.maximum = self.default_maximum
