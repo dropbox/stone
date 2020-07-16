@@ -92,6 +92,7 @@ def generic_type_name(v):
 
 class Validator(six.with_metaclass(ABCMeta, object)):
     """All primitive and composite data types should be a subclass of this."""
+    __slots__ = ("_redact",)
 
     @abstractmethod
     def validate(self, val):
@@ -110,9 +111,11 @@ class Validator(six.with_metaclass(ABCMeta, object)):
 
 class Primitive(Validator):  # pylint: disable=abstract-method
     """A basic type that is defined by Stone."""
+    __slots__ = ()
 
 
 class Boolean(Primitive):
+    __slots__ = ()
 
     def validate(self, val):
         if not isinstance(val, bool):
@@ -125,8 +128,10 @@ class Integer(Primitive):
     Do not use this class directly. Extend it and specify a 'minimum' and
     'maximum' value as class variables for a more restrictive integer range.
     """
-    minimum = None  # type: typing.Optional[int]
-    maximum = None  # type: typing.Optional[int]
+    __slots__ = ("minimum", "maximum")
+
+    default_minimum = None  # type: typing.Optional[int]
+    default_maximum = None  # type: typing.Optional[int]
 
     def __init__(self, min_value=None, max_value=None):
         """
@@ -136,17 +141,21 @@ class Integer(Primitive):
         if min_value is not None:
             assert isinstance(min_value, numbers.Integral), \
                 'min_value must be an integral number'
-            assert min_value >= self.minimum, \
+            assert min_value >= self.default_minimum, \
                 'min_value cannot be less than the minimum value for this ' \
                 'type (%d < %d)' % (min_value, self.minimum)
             self.minimum = min_value
+        else:
+            self.minimum = self.default_minimum
         if max_value is not None:
             assert isinstance(max_value, numbers.Integral), \
                 'max_value must be an integral number'
-            assert max_value <= self.maximum, \
+            assert max_value <= self.default_maximum, \
                 'max_value cannot be greater than the maximum value for ' \
                 'this type (%d < %d)' % (max_value, self.maximum)
             self.maximum = max_value
+        else:
+            self.maximum = self.default_maximum
 
     def validate(self, val):
         if not isinstance(val, numbers.Integral):
@@ -162,23 +171,31 @@ class Integer(Primitive):
 
 
 class Int32(Integer):
-    minimum = -2**31
-    maximum = 2**31 - 1
+    __slots__ = ()
+
+    default_minimum = -2**31
+    default_maximum = 2**31 - 1
 
 
 class UInt32(Integer):
-    minimum = 0
-    maximum = 2**32 - 1
+    __slots__ = ()
+
+    default_minimum = 0
+    default_maximum = 2**32 - 1
 
 
 class Int64(Integer):
-    minimum = -2**63
-    maximum = 2**63 - 1
+    __slots__ = ()
+
+    default_minimum = -2**63
+    default_maximum =  2**63 - 1
 
 
 class UInt64(Integer):
-    minimum = 0
-    maximum = 2**64 - 1
+    __slots__ = ()
+
+    default_minimum = 0
+    default_maximum = 2**64 - 1
 
 
 class Real(Primitive):
@@ -187,8 +204,10 @@ class Real(Primitive):
     and 'maximum' value to enforce a range that's a subset of the Python float
     implementation. Python floats are doubles.
     """
-    minimum = None  # type: typing.Optional[float]
-    maximum = None  # type: typing.Optional[float]
+    __slots__ = ("minimum", "maximum")
+
+    default_minimum = None  # type: typing.Optional[float]
+    default_maximum = None  # type: typing.Optional[float]
 
     def __init__(self, min_value=None, max_value=None):
         """
@@ -203,11 +222,13 @@ class Real(Primitive):
                     min_value = float(min_value)
                 except OverflowError:
                     raise AssertionError('min_value is too small for a float')
-            if self.minimum is not None and min_value < self.minimum:
+            if self.default_minimum is not None and min_value < self.default_minimum:
                 raise AssertionError('min_value cannot be less than the '
                                      'minimum value for this type (%f < %f)' %
                                      (min_value, self.minimum))
             self.minimum = min_value
+        else:
+            self.minimum = self.default_minimum
         if max_value is not None:
             assert isinstance(max_value, numbers.Real), \
                 'max_value must be a real number'
@@ -216,11 +237,13 @@ class Real(Primitive):
                     max_value = float(max_value)
                 except OverflowError:
                     raise AssertionError('max_value is too large for a float')
-            if self.maximum is not None and max_value > self.maximum:
+            if self.default_maximum is not None and max_value > self.default_maximum:
                 raise AssertionError('max_value cannot be greater than the '
                                      'maximum value for this type (%f < %f)' %
                                      (max_value, self.maximum))
             self.maximum = max_value
+        else:
+            self.maximum = self.default_maximum
 
     def validate(self, val):
         if not isinstance(val, numbers.Real):
@@ -248,17 +271,20 @@ class Real(Primitive):
 
 
 class Float32(Real):
+    __slots__ = ()
+
     # Maximum and minimums from the IEEE 754-1985 standard
-    minimum = -3.40282 * 10**38
-    maximum = 3.40282 * 10**38
+    default_minimum = -3.40282 * 10**38
+    default_maximum = 3.40282 * 10**38
 
 
 class Float64(Real):
-    pass
+    __slots__ = ()
 
 
 class String(Primitive):
     """Represents a unicode string."""
+    __slots__ = ("min_length", "max_length", "pattern", "pattern_re")
 
     def __init__(self, min_length=None, max_length=None, pattern=None):
         if min_length is not None:
@@ -316,6 +342,7 @@ class String(Primitive):
 
 
 class Bytes(Primitive):
+    __slots__ = ("min_length", "max_length")
 
     def __init__(self, min_length=None, max_length=None):
         if min_length is not None:
@@ -349,6 +376,7 @@ class Timestamp(Primitive):
     """Note that while a format is specified, it isn't used in validation
     since a native Python datetime object is preferred. The format, however,
     can and should be used by serializers."""
+    __slots__ = ("format",)
 
     def __init__(self, fmt):
         """fmt must be composed of format codes that the C standard (1989)
@@ -370,10 +398,12 @@ class Timestamp(Primitive):
 class Composite(Validator):  # pylint: disable=abstract-method
     """Validator for a type that builds on other primitive and composite
     types."""
+    __slots__ = ()
 
 
 class List(Composite):
     """Assumes list contents are homogeneous with respect to types."""
+    __slots__ = ("item_validator", "min_items", "max_items")
 
     def __init__(self, item_validator, min_items=None, max_items=None):
         """Every list item will be validated with item_validator."""
@@ -406,6 +436,7 @@ class List(Composite):
 
 class Map(Composite):
     """Assumes map keys and values are homogeneous with respect to types."""
+    __slots__ = ("key_validator", "value_validator")
 
     def __init__(self, key_validator, value_validator):
         """
@@ -425,6 +456,7 @@ class Map(Composite):
 
 
 class Struct(Composite):
+    __slots__ = ("definition",)
 
     def __init__(self, definition):
         """
@@ -519,6 +551,7 @@ class StructTree(Struct):
     NOTE: validate_fields_only() validates the fields known to this base
     struct, but does not do any validation specific to the subtype.
     """
+    __slots__ = ()
 
     # See PyCQA/pylint#1043 for why this is disabled; this should show up
     # as a usless-suppression (and can be removed) once a fix is released
@@ -527,6 +560,7 @@ class StructTree(Struct):
 
 
 class Union(Composite):
+    __slots__ = ("definition",)
 
     def __init__(self, definition):
         """
@@ -570,6 +604,7 @@ class Union(Composite):
 
 
 class Void(Primitive):
+    __slots__ = ()
 
     def validate(self, val):
         if val is not None:
@@ -584,6 +619,7 @@ class Void(Primitive):
 
 
 class Nullable(Validator):
+    __slots__ = ("validator",)
 
     def __init__(self, validator):
         super(Nullable, self).__init__()
@@ -614,7 +650,10 @@ class Nullable(Validator):
     def get_default(self):
         return None
 
+
 class Redactor(object):
+    __slots__ = ("regex",)
+
     def __init__(self, regex):
         """
         Args:
@@ -638,6 +677,8 @@ class Redactor(object):
 
 
 class HashRedactor(Redactor):
+    __slots__ = ()
+
     def apply(self, val):
         matches = self._get_matches(val)
 
@@ -658,6 +699,8 @@ class HashRedactor(Redactor):
 
 
 class BlotRedactor(Redactor):
+    __slots__ = ()
+
     def apply(self, val):
         matches = self._get_matches(val)
         if matches:
