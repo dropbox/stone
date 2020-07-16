@@ -152,43 +152,9 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                     if unannotated_field is not None:
                         self.unannotated_field = unannotated_field
 
-                @property
-                def annotated_field(self):
-                    """
-                    :rtype: int
-                    """
-                    if self._annotated_field_value is not bb.NOT_SET:
-                        return self._annotated_field_value
-                    else:
-                        raise AttributeError("missing required field 'annotated_field'")
+                annotated_field = bb.Attribute("annotated_field")
 
-                @annotated_field.setter
-                def annotated_field(self, val):
-                    val = self._annotated_field_validator.validate(val)
-                    self._annotated_field_value = val
-
-                @annotated_field.deleter
-                def annotated_field(self):
-                    self._annotated_field_value = bb.NOT_SET
-
-                @property
-                def unannotated_field(self):
-                    """
-                    :rtype: int
-                    """
-                    if self._unannotated_field_value is not bb.NOT_SET:
-                        return self._unannotated_field_value
-                    else:
-                        raise AttributeError("missing required field 'unannotated_field'")
-
-                @unannotated_field.setter
-                def unannotated_field(self, val):
-                    val = self._unannotated_field_validator.validate(val)
-                    self._unannotated_field_value = val
-
-                @unannotated_field.deleter
-                def unannotated_field(self):
-                    self._unannotated_field_value = bb.NOT_SET
+                unannotated_field = bb.Attribute("unannotated_field")
 
                 def _process_custom_annotations(self, annotation_type, field_path, processor):
                     super(MyStruct, self)._process_custom_annotations(annotation_type, field_path, processor)
