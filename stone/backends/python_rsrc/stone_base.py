@@ -196,6 +196,7 @@ class Union(object):
         return cls._tagmap[tag]
 
 class Route(object):
+    __slots__ = ("name", "version", "deprecated", "arg_type", "result_type", "error_type", "attrs")
 
     def __init__(self, name, version, deprecated, arg_type, result_type, error_type, attrs):
         self.name = name
