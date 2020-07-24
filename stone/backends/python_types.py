@@ -352,7 +352,7 @@ class PythonTypesBackend(CodeBackend):
             self._generate_struct_class_slots(data_type)
             self._generate_struct_class_has_required_fields(data_type)
             self._generate_struct_class_init(data_type)
-            self._generate_struct_class_properties(data_type)
+            self._generate_struct_class_properties(ns, data_type)
             self._generate_struct_class_custom_annotations(ns, data_type)
         if data_type.has_enumerated_subtypes():
             validator = 'StructTree'
@@ -583,7 +583,7 @@ class PythonTypesBackend(CodeBackend):
         else:
             return fmt_obj(value)
 
-    def _generate_struct_class_properties(self, data_type):
+    def _generate_struct_class_properties(self, ns, data_type):
         """
         Each field of the struct has a corresponding setter and getter.
         The setter validates the value being set.
@@ -603,6 +603,11 @@ class PythonTypesBackend(CodeBackend):
                 args += ", nullable=True"
             if is_user_defined_type(field_dt):
                 args += ", user_defined=True"
+            self.emit(
+                '# Instance attribute type: {} (validator is set below)'.format(
+                    self._python_type_mapping(ns, field_dt)
+                )
+            )
             self.emit("{} = bb.Attribute({})".format(field_name, args))
             self.emit()
 
