@@ -152,8 +152,10 @@ class TestGeneratedPythonTypes(unittest.TestCase):
                     if unannotated_field is not None:
                         self.unannotated_field = unannotated_field
 
+                # Instance attribute type: int (validator is set below)
                 annotated_field = bb.Attribute("annotated_field")
 
+                # Instance attribute type: int (validator is set below)
                 unannotated_field = bb.Attribute("unannotated_field")
 
                 def _process_custom_annotations(self, annotation_type, field_path, processor):

@@ -255,7 +255,7 @@ class PythonTypeStubsBackend(CodeBackend):
             if is_void_type(field.data_type):
                 field_name = fmt_var(field.name)
                 field_type = class_name_for_data_type(data_type, ns)
-                self.emit('{field_name} = ...  # type: {field_type}'.format(
+                self.emit('{field_name}: {field_type} = ...'.format(
                     field_name=field_name,
                     field_type=field_type,
                 ))
@@ -365,7 +365,7 @@ class PythonTypeStubsBackend(CodeBackend):
             field_type = self.map_stone_type_to_pep484_type(ns, field.data_type)
 
             to_emit.append(
-                "{}: {} = ...".format(field_name_reserved_check, field_type)
+                "{}: bb.Attribute[{}] = ...".format(field_name_reserved_check, field_type)
             )
 
         for s in to_emit:
