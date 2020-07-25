@@ -1,7 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from contextlib import contextmanager
 
+from stone.backend import CodeBackend
+from stone.backends.swift_helpers import fmt_class, fmt_func, fmt_obj, fmt_type, fmt_var
 from stone.ir import (
     Boolean,
     Bytes,
@@ -22,29 +22,20 @@ from stone.ir import (
     is_user_defined_type,
     unwrap_nullable,
 )
-from stone.backend import CodeBackend
-from stone.backends.swift_helpers import (
-    fmt_class,
-    fmt_func,
-    fmt_obj,
-    fmt_type,
-    fmt_var,
-)
-
 
 _serial_type_table = {
-    Boolean: 'BoolSerializer',
-    Bytes: 'NSDataSerializer',
-    Float32: 'FloatSerializer',
-    Float64: 'DoubleSerializer',
-    Int32: 'Int32Serializer',
-    Int64: 'Int64Serializer',
-    List: 'ArraySerializer',
-    String: 'StringSerializer',
-    Timestamp: 'NSDateSerializer',
-    UInt32: 'UInt32Serializer',
-    UInt64: 'UInt64Serializer',
-    Void: 'VoidSerializer',
+    Boolean: "BoolSerializer",
+    Bytes: "NSDataSerializer",
+    Float32: "FloatSerializer",
+    Float64: "DoubleSerializer",
+    Int32: "Int32Serializer",
+    Int64: "Int64Serializer",
+    List: "ArraySerializer",
+    String: "StringSerializer",
+    Timestamp: "NSDateSerializer",
+    UInt32: "UInt32Serializer",
+    UInt64: "UInt64Serializer",
+    Void: "VoidSerializer",
 }
 
 
@@ -62,21 +53,24 @@ base = """\
 {}\
 import Foundation
 
-""".format(stone_warning)
+""".format(
+    stone_warning
+)
 
 
-undocumented = '(no description)'
+undocumented = "(no description)"
 
 
 class SwiftBaseBackend(CodeBackend):
     """Wrapper class over Stone generator for Swift logic."""
+
     # pylint: disable=abstract-method
 
     @contextmanager
     def function_block(self, func, args, return_type=None):
-        signature = '{}({})'.format(func, args)
+        signature = f"{func}({args})"
         if return_type:
-            signature += ' -> {}'.format(return_type)
+            signature += f" -> {return_type}"
         with self.block(signature):
             yield
 
@@ -88,17 +82,17 @@ class SwiftBaseBackend(CodeBackend):
             # do not have a separate field for default value. Right now,
             # default values are stored along with the type, e.g.
             # `Bool = True` is a type, hence this check.
-            if first and force_first and '=' not in v:
+            if first and force_first and "=" not in v:
                 k = "{0} {0}".format(k)
 
             if first and v is not None and not_init:
-                out.append('{}'.format(v))
+                out.append(f"{v}")
             elif v is not None:
-                out.append('{}: {}'.format(k, v))
+                out.append(f"{k}: {v}")
             first = False
-        sep = ', '
+        sep = ", "
         if newlines:
-            sep += '\n' + self.make_indent()
+            sep += "\n" + self.make_indent()
         return sep.join(out)
 
     @contextmanager
@@ -114,12 +108,14 @@ class SwiftBaseBackend(CodeBackend):
             name = thing
         extensions.extend(protocols)
 
-        extend_suffix = ': {}'.format(', '.join(extensions)) if extensions else ''
+        extend_suffix = ": {}".format(", ".join(extensions)) if extensions else ""
 
-        with self.block('open class {}{}'.format(name, extend_suffix)):
+        with self.block(f"open class {name}{extend_suffix}"):
             yield
 
-    def _struct_init_args(self, data_type, namespace=None):  # pylint: disable=unused-argument
+    def _struct_init_args(
+        self, data_type, namespace=None
+    ):  # pylint: disable=unused-argument
         args = []
         for field in data_type.all_fields:
             name = fmt_var(field.name)
@@ -128,69 +124,72 @@ class SwiftBaseBackend(CodeBackend):
 
             if field.has_default:
                 if is_union_type(data_type):
-                    default = '.{}'.format(fmt_var(field.default.tag_name))
+                    default = ".{}".format(fmt_var(field.default.tag_name))
                 else:
                     default = fmt_obj(field.default)
-                value += ' = {}'.format(default)
+                value += f" = {default}"
             elif nullable:
-                value += ' = nil'
+                value += " = nil"
             arg = (name, value)
             args.append(arg)
         return args
 
     def _docf(self, tag, val):
-        if tag == 'route':
-            if ':' in val:
-                val, version = val.split(':', 1)
+        if tag == "route":
+            if ":" in val:
+                val, version = val.split(":", 1)
                 version = int(version)
             else:
                 version = 1
             return fmt_func(val, version)
-        elif tag == 'field':
-            if '.' in val:
-                cls, field = val.split('.')
-                return ('{} in {}'.format(fmt_var(field),
-                        fmt_class(cls)))
+        elif tag == "field":
+            if "." in val:
+                cls, field = val.split(".")
+                return "{} in {}".format(fmt_var(field), fmt_class(cls))
             else:
                 return fmt_var(val)
-        elif tag in ('type', 'val', 'link'):
+        elif tag in ("type", "val", "link"):
             return val
         else:
             import pdb
+
             pdb.set_trace()
             return val
+
 
 def fmt_serial_type(data_type):
     data_type, nullable = unwrap_nullable(data_type)
 
     if is_user_defined_type(data_type):
-        result = '{}.{}Serializer'
-        result = result.format(fmt_class(data_type.namespace.name),
-            fmt_class(data_type.name))
+        result = "{}.{}Serializer"
+        result = result.format(
+            fmt_class(data_type.namespace.name), fmt_class(data_type.name)
+        )
     else:
         result = _serial_type_table.get(data_type.__class__, fmt_class(data_type.name))
 
         if is_list_type(data_type):
-            result = result + '<{}>'.format(fmt_serial_type(data_type.data_type))
+            result = result + "<{}>".format(fmt_serial_type(data_type.data_type))
 
-    return result if not nullable else 'NullableSerializer'
+    return result if not nullable else "NullableSerializer"
 
 
 def fmt_serial_obj(data_type):
     data_type, nullable = unwrap_nullable(data_type)
 
     if is_user_defined_type(data_type):
-        result = '{}.{}Serializer()'
-        result = result.format(fmt_class(data_type.namespace.name),
-            fmt_class(data_type.name))
+        result = "{}.{}Serializer()"
+        result = result.format(
+            fmt_class(data_type.namespace.name), fmt_class(data_type.name)
+        )
     else:
         result = _serial_type_table.get(data_type.__class__, fmt_class(data_type.name))
 
         if is_list_type(data_type):
-            result = result + '({})'.format(fmt_serial_obj(data_type.data_type))
+            result = result + "({})".format(fmt_serial_obj(data_type.data_type))
         elif is_timestamp_type(data_type):
-            result = result + '("{}")'.format(data_type.format)
+            result = result + f'("{data_type.format}")'
         else:
-            result = 'Serialization._{}'.format(result)
+            result = f"Serialization._{result}"
 
-    return result if not nullable else 'NullableSerializer({})'.format(result)
+    return result if not nullable else f"NullableSerializer({result})"

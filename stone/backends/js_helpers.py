@@ -1,8 +1,6 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
-import six
 
+from stone.backends.helpers import fmt_camel, fmt_pascal
 from stone.ir import (
     Boolean,
     Bytes,
@@ -20,31 +18,27 @@ from stone.ir import (
     is_struct_type,
     is_user_defined_type,
 )
-from stone.backends.helpers import (
-    fmt_camel,
-    fmt_pascal,
-)
 
 _base_type_table = {
-    Boolean: 'boolean',
-    Bytes: 'string',
-    Float32: 'number',
-    Float64: 'number',
-    Int32: 'number',
-    Int64: 'number',
-    List: 'Array',
-    String: 'string',
-    UInt32: 'number',
-    UInt64: 'number',
-    Timestamp: 'Timestamp',
-    Void: 'void',
+    Boolean: "boolean",
+    Bytes: "string",
+    Float32: "number",
+    Float64: "number",
+    Int32: "number",
+    Int64: "number",
+    List: "Array",
+    String: "string",
+    UInt32: "number",
+    UInt64: "number",
+    Timestamp: "Timestamp",
+    Void: "void",
 }
 
 
 def fmt_obj(o):
-    if isinstance(o, six.text_type):
+    if isinstance(o, str):
         # Prioritize single-quoted strings per JS style guides.
-        return repr(o).lstrip('u')
+        return repr(o).lstrip("u")
     else:
         return json.dumps(o, indent=2)
 
@@ -53,7 +47,7 @@ def fmt_error_type(data_type):
     """
     Converts the error type into a JSDoc type.
     """
-    return 'Error.<%s>' % fmt_type(data_type)
+    return "Error.<%s>" % fmt_type(data_type)
 
 
 def fmt_type_name(data_type):
@@ -62,11 +56,11 @@ def fmt_type_name(data_type):
     (Does not attempt to enumerate subtypes.)
     """
     if is_user_defined_type(data_type):
-        return fmt_pascal('%s%s' % (data_type.namespace.name, data_type.name))
+        return fmt_pascal(f"{data_type.namespace.name}{data_type.name}")
     else:
-        fmted_type = _base_type_table.get(data_type.__class__, 'Object')
+        fmted_type = _base_type_table.get(data_type.__class__, "Object")
         if is_list_type(data_type):
-            fmted_type += '.<' + fmt_type(data_type.data_type) + '>'
+            fmted_type += ".<" + fmt_type(data_type.data_type) + ">"
         return fmted_type
 
 
@@ -91,20 +85,22 @@ def fmt_jsdoc_union(type_strings):
     """
     Returns a JSDoc union of the given type strings.
     """
-    return '(' + '|'.join(type_strings) + ')' if len(type_strings) > 1 else type_strings[0]
+    return (
+        "(" + "|".join(type_strings) + ")" if len(type_strings) > 1 else type_strings[0]
+    )
 
 
 def fmt_func(name, version):
     if version == 1:
         return fmt_camel(name)
-    return fmt_camel(name) + 'V{}'.format(version)
+    return fmt_camel(name) + f"V{version}"
 
 
 def fmt_url(namespace_name, route_name, route_version):
     if route_version != 1:
-        return '{}/{}_v{}'.format(namespace_name, route_name, route_version)
+        return f"{namespace_name}/{route_name}_v{route_version}"
     else:
-        return '{}/{}'.format(namespace_name, route_name)
+        return f"{namespace_name}/{route_name}"
 
 
 def fmt_var(name):
@@ -123,5 +119,6 @@ def check_route_name_conflict(namespace):
         if route_name in route_by_name:
             other_route = route_by_name[route_name]
             raise RuntimeError(
-                'There is a name conflict between {!r} and {!r}'.format(other_route, route))
+                f"There is a name conflict between {other_route!r} and {route!r}"
+            )
         route_by_name[route_name] = route

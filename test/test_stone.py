@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # pylint: disable=deprecated-method,useless-suppression
 
@@ -8,25 +7,20 @@ import datetime
 import textwrap
 import unittest
 
-from stone.frontend.ast import (
-    AstNamespace,
-    AstAlias,
-    AstVoidField,
-    AstTagRef,
-)
+from stone.frontend.ast import AstAlias, AstNamespace, AstTagRef, AstVoidField
 from stone.frontend.exception import InvalidSpec
 from stone.frontend.frontend import specs_to_ir
 from stone.frontend.parser import ParserFactory
 from stone.ir import (
     Alias,
-    is_boolean_type,
-    is_integer_type,
-    is_void_type,
+    Map,
     Nullable,
     RedactedBlot,
     RedactedHash,
     String,
-    Map
+    is_boolean_type,
+    is_integer_type,
+    is_void_type,
 )
 
 
@@ -39,25 +33,30 @@ class TestStone(unittest.TestCase):
         self.parser_factory = ParserFactory(debug=False)
 
     def test_namespace_decl(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
         self.assertIsInstance(out[0], AstNamespace)
-        self.assertEqual(out[0].name, 'files')
+        self.assertEqual(out[0].name, "files")
 
         # test starting with newlines
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
 
 
             namespace files
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
         self.assertIsInstance(out[0], AstNamespace)
-        self.assertEqual(out[0].name, 'files')
+        self.assertEqual(out[0].name, "files")
 
     def test_comments(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             # comment at top
             namespace files
 
@@ -76,18 +75,20 @@ class TestStone(unittest.TestCase):
                 f1 String # end with partial-line comment
 
             # footer comment
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
         self.assertIsInstance(out[0], AstNamespace)
         self.assertIsInstance(out[1], AstAlias)
-        self.assertEqual(out[2].name, 'S')
-        self.assertEqual(out[3].name, 'S2')
+        self.assertEqual(out[2].name, "S")
+        self.assertEqual(out[3].name, "S2")
 
     def test_line_continuations(self):
-        line_continuation_err = 'Line continuation must increment indent by 1.'
+        line_continuation_err = "Line continuation must increment indent by 1."
 
         # Test continuation in various contexts
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias U64 = UInt64(
@@ -113,25 +114,29 @@ class TestStone(unittest.TestCase):
                 S
                 )
                 "Test route."
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Try over indenting
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
                     namespace test
 
                     struct S
                         val UInt64(
                         # comment to throw it off
                                 min_value=0)
-                    """)
+                    """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(line_continuation_err, cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Try under indenting
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
                             namespace test
 
                             struct S
@@ -139,98 +144,114 @@ class TestStone(unittest.TestCase):
                                 # comment to throw it off
                                 # x2
                                 min_value=0)
-                            """)
+                            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(line_continuation_err, cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 7)
 
     def test_type_args(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias T = String(min_length=3)
             alias F = Float64(max_value=3.2e1)
             alias Numbers = List(UInt64)
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
         self.assertIsInstance(out[1], AstAlias)
-        self.assertEqual(out[1].name, 'T')
-        self.assertEqual(out[1].type_ref.name, 'String')
-        self.assertEqual(out[1].type_ref.args[1]['min_length'], 3)
+        self.assertEqual(out[1].name, "T")
+        self.assertEqual(out[1].type_ref.name, "String")
+        self.assertEqual(out[1].type_ref.args[1]["min_length"], 3)
 
         self.assertIsInstance(out[2], AstAlias)
-        self.assertEqual(out[2].name, 'F')
-        self.assertEqual(out[2].type_ref.name, 'Float64')
-        self.assertEqual(out[2].type_ref.args[1]['max_value'], 3.2e1)
+        self.assertEqual(out[2].name, "F")
+        self.assertEqual(out[2].type_ref.name, "Float64")
+        self.assertEqual(out[2].type_ref.args[1]["max_value"], 3.2e1)
 
         self.assertIsInstance(out[3], AstAlias)
-        self.assertEqual(out[3].name, 'Numbers')
-        self.assertEqual(out[3].type_ref.name, 'List')
-        self.assertEqual(out[3].type_ref.args[0][0].name, 'UInt64')
+        self.assertEqual(out[3].name, "Numbers")
+        self.assertEqual(out[3].type_ref.name, "List")
+        self.assertEqual(out[3].type_ref.args[0][0].name, "UInt64")
 
     def test_struct_decl(self):
 
         # test struct decl with no docs
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             struct QuotaInfo
                 quota UInt64
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertEqual(out[1].fields[0].name, "quota")
+        self.assertEqual(out[1].fields[0].type_ref.name, "UInt64")
 
         # test struct with only a top-level doc
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             struct QuotaInfo
                 "The space quota info for a user."
                 quota UInt64
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertEqual(out[1].doc, 'The space quota info for a user.')
-        self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertEqual(out[1].doc, "The space quota info for a user.")
+        self.assertEqual(out[1].fields[0].name, "quota")
+        self.assertEqual(out[1].fields[0].type_ref.name, "UInt64")
 
         # test struct with field doc
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             struct QuotaInfo
                 "The space quota info for a user."
                 quota UInt64
                     "The user's total quota allocation (bytes)."
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertEqual(out[1].doc, 'The space quota info for a user.')
-        self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
-        self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertEqual(out[1].doc, "The space quota info for a user.")
+        self.assertEqual(out[1].fields[0].name, "quota")
+        self.assertEqual(out[1].fields[0].type_ref.name, "UInt64")
+        self.assertEqual(
+            out[1].fields[0].doc, "The user's total quota allocation (bytes)."
+        )
 
         # test without newline after field doc
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             struct QuotaInfo
                 "The space quota info for a user."
                 quota UInt64
                     "The user's total quota allocation (bytes)."
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertEqual(out[1].doc, 'The space quota info for a user.')
-        self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
-        self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertEqual(out[1].doc, "The space quota info for a user.")
+        self.assertEqual(out[1].fields[0].name, "quota")
+        self.assertEqual(out[1].fields[0].type_ref.name, "UInt64")
+        self.assertEqual(
+            out[1].fields[0].doc, "The user's total quota allocation (bytes)."
+        )
 
         # test with example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             struct QuotaInfo
@@ -239,13 +260,15 @@ class TestStone(unittest.TestCase):
                     "The user's total quota allocation (bytes)."
                 example default
                     quota=64000
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertIn('default', out[1].examples)
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertIn("default", out[1].examples)
 
         # test with multiple examples
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             struct QuotaInfo
@@ -256,14 +279,16 @@ class TestStone(unittest.TestCase):
                     quota=2000000000
                 example pro
                     quota=100000000000
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertIn('default', out[1].examples)
-        self.assertIn('pro', out[1].examples)
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertIn("default", out[1].examples)
+        self.assertIn("pro", out[1].examples)
 
         # test with inheritance
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S1
@@ -271,14 +296,16 @@ class TestStone(unittest.TestCase):
 
             struct S2 extends S1
                 f2 String
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'S1')
-        self.assertEqual(out[2].name, 'S2')
-        self.assertEqual(out[2].extends.name, 'S1')
+        self.assertEqual(out[1].name, "S1")
+        self.assertEqual(out[2].name, "S2")
+        self.assertEqual(out[2].extends.name, "S1")
 
         # test with defaults
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace ns
             struct S
                 n1 Int32 = -5
@@ -288,10 +315,11 @@ class TestStone(unittest.TestCase):
                 f3 Float64 = -5e-3
                 f4 Float64 = -5.1e-3
                 f5 Float64 = 1
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'S')
-        self.assertEqual(out[1].fields[0].name, 'n1')
+        self.assertEqual(out[1].name, "S")
+        self.assertEqual(out[1].fields[0].name, "n1")
         self.assertTrue(out[1].fields[0].has_default)
         self.assertEqual(out[1].fields[0].default, -5)
         self.assertEqual(out[1].fields[1].default, 5)
@@ -301,11 +329,14 @@ class TestStone(unittest.TestCase):
         self.assertEqual(out[1].fields[5].default, -5.1e-3)
 
         # float type should always have default value in float
-        api = specs_to_ir([('test.stone', text)])
-        self.assertIsInstance(api.namespaces['ns'].data_type_by_name['S'].fields[6].default, float)
+        api = specs_to_ir([("test.stone", text)])
+        self.assertIsInstance(
+            api.namespaces["ns"].data_type_by_name["S"].fields[6].default, float
+        )
 
         # Try extending nullable type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -313,67 +344,80 @@ class TestStone(unittest.TestCase):
 
             struct S2 extends S?
                 f2 String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("Reference cannot be nullable.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
     def test_struct_patch_decl(self):
 
         # test struct patch decl with no docs
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch struct QuotaInfo
                 quota UInt64
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertEqual(out[1].fields[0].name, "quota")
+        self.assertEqual(out[1].fields[0].type_ref.name, "UInt64")
 
         # test struct patch with a top-level doc
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch struct QuotaInfo
                 "The space quota info for a user."
                 quota UInt64
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
         msg, lineno, _ = self.parser_factory.get_parser().errors[0]
         # Can't parse patch with doc-string.
-        self.assertEqual(msg, "Unexpected STRING with value 'The " +
-            "space quota info for a user.'.")
+        self.assertEqual(
+            msg, "Unexpected STRING with value 'The " + "space quota info for a user.'."
+        )
         self.assertEqual(lineno, 3)
 
         # test struct patch with field doc
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch struct QuotaInfo
                 quota UInt64
                     "The user's total quota allocation (bytes)."
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertEqual(out[1].fields[0].name, 'quota')
-        self.assertEqual(out[1].fields[0].type_ref.name, 'UInt64')
-        self.assertEqual(out[1].fields[0].doc, "The user's total quota allocation (bytes).")
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertEqual(out[1].fields[0].name, "quota")
+        self.assertEqual(out[1].fields[0].type_ref.name, "UInt64")
+        self.assertEqual(
+            out[1].fields[0].doc, "The user's total quota allocation (bytes)."
+        )
 
         # test with example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch struct QuotaInfo
                 quota UInt64
                     "The user's total quota allocation (bytes)."
                 example default
                     quota=64000
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertIn('default', out[1].examples)
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertIn("default", out[1].examples)
 
         # test with multiple examples
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch struct QuotaInfo
                 quota UInt64
@@ -382,14 +426,16 @@ class TestStone(unittest.TestCase):
                     quota=2000000000
                 example pro
                     quota=100000000000
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'QuotaInfo')
-        self.assertIn('default', out[1].examples)
-        self.assertIn('pro', out[1].examples)
+        self.assertEqual(out[1].name, "QuotaInfo")
+        self.assertIn("default", out[1].examples)
+        self.assertIn("pro", out[1].examples)
 
         # test with defaults
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace ns
             patch struct S
                 n1 Int32 = -5
@@ -398,10 +444,11 @@ class TestStone(unittest.TestCase):
                 f2 Float64 = -4.2
                 f3 Float64 = -5e-3
                 f4 Float64 = -5.1e-3
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'S')
-        self.assertEqual(out[1].fields[0].name, 'n1')
+        self.assertEqual(out[1].name, "S")
+        self.assertEqual(out[1].fields[0].name, "n1")
         self.assertTrue(out[1].fields[0].has_default)
         self.assertEqual(out[1].fields[0].default, -5)
         self.assertEqual(out[1].fields[1].default, 5)
@@ -411,7 +458,8 @@ class TestStone(unittest.TestCase):
         self.assertEqual(out[1].fields[5].default, -5.1e-3)
 
         # test no patching enumerated subtype
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
@@ -431,15 +479,17 @@ class TestStone(unittest.TestCase):
             patch struct Resource
                 union
                     deleted Deleted
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("Unexpected UNION with value 'union'.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 18)
 
     def test_union_decl(self):
         # test union with only symbols
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             union Role
@@ -451,20 +501,22 @@ class TestStone(unittest.TestCase):
                     "Read only permission."
                 editor
                     "Read and write permission."
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'Role')
-        self.assertEqual(out[1].doc, 'The role a user may have in a shared folder.')
+        self.assertEqual(out[1].name, "Role")
+        self.assertEqual(out[1].doc, "The role a user may have in a shared folder.")
         self.assertIsInstance(out[1].fields[0], AstVoidField)
-        self.assertEqual(out[1].fields[0].name, 'owner')
+        self.assertEqual(out[1].fields[0].name, "owner")
         self.assertIsInstance(out[1].fields[1], AstVoidField)
-        self.assertEqual(out[1].fields[1].name, 'viewer')
+        self.assertEqual(out[1].fields[1].name, "viewer")
         self.assertIsInstance(out[1].fields[2], AstVoidField)
-        self.assertEqual(out[1].fields[2].name, 'editor')
+        self.assertEqual(out[1].fields[2].name, "editor")
 
         # TODO: Test a union that includes a struct.
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             union Error
@@ -472,11 +524,13 @@ class TestStone(unittest.TestCase):
                     "Variant A"
                 B
                     "Variant B"
-            """)
+            """
+        )
         self.parser_factory.get_parser().parse(text)
 
         # test with inheritance
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U1
@@ -484,50 +538,61 @@ class TestStone(unittest.TestCase):
 
             union U2 extends U1
                 t2 String
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'U1')
-        self.assertEqual(out[2].name, 'U2')
-        self.assertEqual(out[2].extends.name, 'U1')
+        self.assertEqual(out[1].name, "U1")
+        self.assertEqual(out[2].name, "U2")
+        self.assertEqual(out[2].extends.name, "U1")
 
     def test_union_patch_decl(self):
         # test union with only symbols
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch union Role
                 owner
                     "Owner of a file."
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'Role')
+        self.assertEqual(out[1].name, "Role")
         self.assertIsInstance(out[1].fields[0], AstVoidField)
-        self.assertEqual(out[1].fields[0].name, 'owner')
+        self.assertEqual(out[1].fields[0].name, "owner")
 
         # test struct patch with a top-level doc
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch union Role
                 "The role a user may have in a shared folder."
                 owner
                     "Owner of a file."
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
         msg, lineno, _ = self.parser_factory.get_parser().errors[0]
         # Can't parse patch with doc-string.
-        self.assertEqual(msg, "Unexpected STRING with value 'The " +
-            "role a user may have in a shared folder.'.")
+        self.assertEqual(
+            msg,
+            "Unexpected STRING with value 'The "
+            + "role a user may have in a shared folder.'.",
+        )
         self.assertEqual(lineno, 3)
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             patch union Error
                 A
                     "Variant A"
-            """)
+            """
+        )
         self.parser_factory.get_parser().parse(text)
 
     def test_composition(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
 
             union UploadMode
@@ -537,23 +602,27 @@ class TestStone(unittest.TestCase):
             struct Upload
                 path String
                 mode UploadMode = add
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[2].name, 'Upload')
+        self.assertEqual(out[2].name, "Upload")
         self.assertIsInstance(out[2].fields[1].default, AstTagRef)
-        self.assertEqual(out[2].fields[1].default.tag, 'add')
+        self.assertEqual(out[2].fields[1].default.tag, "add")
 
     def test_route_decl(self):
 
         # Test route definition with no docstring
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace users
 
             route GetAccountInfo(Void, Void, Void)
-            """)
+            """
+        )
         self.parser_factory.get_parser().parse(text)
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace users
 
             struct AccountInfo
@@ -561,16 +630,18 @@ class TestStone(unittest.TestCase):
 
             route GetAccountInfo(AccountInfo, Void, Void)
                 "Gets the account info for a user"
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].name, 'AccountInfo')
-        self.assertEqual(out[2].name, 'GetAccountInfo')
-        self.assertEqual(out[2].arg_type_ref.name, 'AccountInfo')
-        self.assertEqual(out[2].result_type_ref.name, 'Void')
-        self.assertEqual(out[2].error_type_ref.name, 'Void')
+        self.assertEqual(out[1].name, "AccountInfo")
+        self.assertEqual(out[2].name, "GetAccountInfo")
+        self.assertEqual(out[2].arg_type_ref.name, "AccountInfo")
+        self.assertEqual(out[2].result_type_ref.name, "Void")
+        self.assertEqual(out[2].error_type_ref.name, "Void")
 
         # Test raw documentation
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace users
 
             route GetAccountInfo(Void, Void, Void)
@@ -582,179 +653,215 @@ class TestStone(unittest.TestCase):
 
                 3
                 "
-            """)
+            """
+        )
         out = self.parser_factory.get_parser().parse(text)
-        self.assertEqual(out[1].doc, '0\n\n1\n\n2\n\n3\n')
+        self.assertEqual(out[1].doc, "0\n\n1\n\n2\n\n3\n")
 
         # Test deprecation
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route old_route (Void, Void, Void) deprecated
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        r = api.namespaces['test'].route_by_name['old_route']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        r = api.namespaces["test"].route_by_name["old_route"]
         self.assertIsNotNone(r.deprecated)
         self.assertIsNone(r.deprecated.by)
 
         # Test deprecation with target route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route old_route (Void, Void, Void) deprecated by new_route
             route new_route (Void, Void, Void)
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        r_old = api.namespaces['test'].route_by_name['old_route']
-        r_new = api.namespaces['test'].route_by_name['new_route']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        r_old = api.namespaces["test"].route_by_name["old_route"]
+        r_new = api.namespaces["test"].route_by_name["new_route"]
         self.assertIsNotNone(r_old.deprecated)
         self.assertEqual(r_old.deprecated.by, r_new)
 
         # Test deprecation with target route (more complex route names)
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test/old_route (Void, Void, Void) deprecated by test/new_route
             route test/new_route (Void, Void, Void)
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        r_old = api.namespaces['test'].route_by_name['test/old_route']
-        r_new = api.namespaces['test'].route_by_name['test/new_route']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        r_old = api.namespaces["test"].route_by_name["test/old_route"]
+        r_new = api.namespaces["test"].route_by_name["test/new_route"]
         self.assertIsNotNone(r_old.deprecated)
         self.assertEqual(r_old.deprecated.by, r_new)
 
         # Try deprecation by undefined route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route old_route (Void, Void, Void) deprecated by unk_route
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("Undefined route 'unk_route' at version 1.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Try deprecation by struct
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route old_route (Void, Void, Void) deprecated by S
 
             struct S
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("'S' must be a route.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test route with version number and deprecation
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route get_metadata(Void, Void, Void) deprecated by get_metadata:2
 
             route get_metadata:2(Void, Void, Void)
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        routes = api.namespaces['test'].routes_by_name['get_metadata']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        routes = api.namespaces["test"].routes_by_name["get_metadata"]
         route_v1 = routes.at_version[1]
         route_v2 = routes.at_version[2]
-        self.assertEqual(route_v1.name, 'get_metadata')
+        self.assertEqual(route_v1.name, "get_metadata")
         self.assertEqual(route_v1.version, 1)
-        self.assertEqual(route_v2.name, 'get_metadata')
+        self.assertEqual(route_v2.name, "get_metadata")
         self.assertEqual(route_v2.version, 2)
         self.assertIsNotNone(route_v1.deprecated)
         self.assertEqual(route_v1.deprecated.by, route_v2)
 
         # Test using string as version number
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route get_metadata:beta(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("Unexpected ID with value 'beta'.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test using fraction as version number
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route get_metadata:1.2(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("Unexpected FLOAT with value 1.2.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test using zero as version number
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route get_metadata:0(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer.", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual(
+            "Version number should be a positive integer.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test using negative integer as version number
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route get_metadata:-1(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Version number should be a positive integer.", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual(
+            "Version number should be a positive integer.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test deprecating by a route at an undefined version
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route get_metadata(Void, Void, Void) deprecated by get_metadata:3
 
             route get_metadata:2(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Undefined route 'get_metadata' at version 3.", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual(
+            "Undefined route 'get_metadata' at version 3.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test duplicate routes of same version
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route get_metadata:2(Void, Void, Void)
 
             route get_metadata:2(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Route 'get_metadata' at version 2 already defined (test.stone:3).", cm.exception.msg)
+            "Route 'get_metadata' at version 2 already defined (test.stone:3).",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 5)
 
         # Test user-friendly representation
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route alpha/get_metadata(Void, Void, Void)
 
             route alpha/get_metadata:2(Void, Void, Void)
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        routes = api.namespaces['test'].routes_by_name['alpha/get_metadata']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        routes = api.namespaces["test"].routes_by_name["alpha/get_metadata"]
         route_v1 = routes.at_version[1]
         route_v2 = routes.at_version[2]
-        self.assertEqual(route_v1.name_with_version(), 'alpha/get_metadata')
-        self.assertEqual(route_v2.name_with_version(), 'alpha/get_metadata:2')
+        self.assertEqual(route_v1.name_with_version(), "alpha/get_metadata")
+        self.assertEqual(route_v2.name_with_version(), "alpha/get_metadata:2")
 
     def test_alphabetizing(self):
-        text1 = textwrap.dedent("""\
+        text1 = textwrap.dedent(
+            """\
             namespace ns_b
 
             struct z
@@ -772,20 +879,24 @@ class TestStone(unittest.TestCase):
             route a(Void, Void, Void)
 
             route c(Void, Void, Void)
-            """)
-        text2 = textwrap.dedent("""\
+            """
+        )
+        text2 = textwrap.dedent(
+            """\
             namespace ns_a
 
             route d (Void, Void, Void)
-            """)
-        api = specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
-        assert ['ns_a', 'ns_b'] == list(api.namespaces.keys())
-        ns_b = api.namespaces['ns_b']
-        assert [dt.name for dt in ns_b.data_types] == ['x', 'y', 'z']
-        assert [dt.name for dt in ns_b.routes] == ['a', 'b', 'c']
+            """
+        )
+        api = specs_to_ir([("test1.stone", text1), ("test2.stone", text2)])
+        assert ["ns_a", "ns_b"] == list(api.namespaces.keys())
+        ns_b = api.namespaces["ns_b"]
+        assert [dt.name for dt in ns_b.data_types] == ["x", "y", "z"]
+        assert [dt.name for dt in ns_b.routes] == ["a", "b", "c"]
 
     def test_lexing_errors(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
 
             namespace users
 
@@ -797,7 +908,8 @@ class TestStone(unittest.TestCase):
 
             struct AccountInfo
                 email String
-            """)
+            """
+        )
         parser = self.parser_factory.get_parser()
         out = parser.parse(text)
         msg, lineno = parser.lexer.errors[0]
@@ -807,106 +919,138 @@ class TestStone(unittest.TestCase):
         self.assertEqual(msg, "Illegal character '%'.")
         self.assertEqual(lineno, 8)
         # Check that despite lexing errors, parser marched on successfully.
-        self.assertEqual(out[1].name, 'AccountInfo')
+        self.assertEqual(out[1].name, "AccountInfo")
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 # Indent below is only 3 spaces
                f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("Indent is not divisible by 4.", cm.exception.msg)
 
     def test_parsing_errors(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
 
             namespace users
 
             strct AccountInfo
                 email String
-            """)
+            """
+        )
         parser = self.parser_factory.get_parser()
         parser.parse(text)
         msg, lineno, _ = parser.errors[0]
         self.assertEqual(msg, "Unexpected ID with value 'strct'.")
         self.assertEqual(lineno, 4)
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace users
 
             route test_route(Blah, Blah, Blah)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("Symbol 'Blah' is undefined", cm.exception.msg)
 
     def test_name_clash(self):
         # namespace / type clash
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test_namespace_test
 
             struct TestNamespaceTest
                 str String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn("Name of user-defined type 'TestNamespaceTest' conflicts "
-            "with name of namespace 'test_namespace_test'", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn(
+            "Name of user-defined type 'TestNamespaceTest' conflicts "
+            "with name of namespace 'test_namespace_test'",
+            cm.exception.msg,
+        )
 
         # namespace / route clash
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test_namespace_test
 
             route test_namespace_test(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn("Name of route 'test_namespace_test' conflicts "
-            "with name of namespace 'test_namespace_test'", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn(
+            "Name of route 'test_namespace_test' conflicts "
+            "with name of namespace 'test_namespace_test'",
+            cm.exception.msg,
+        )
 
         # namespace / alias clash
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test_namespace_test
 
             alias TestNamespaceTest = String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn("Name of alias 'TestNamespaceTest' conflicts "
-            "with name of namespace 'test_namespace_test'", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn(
+            "Name of alias 'TestNamespaceTest' conflicts "
+            "with name of namespace 'test_namespace_test'",
+            cm.exception.msg,
+        )
 
         # route / type clash
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test_namespace
 
             struct TestStructTest
                 str String
 
             route test_struct_test(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn("Name of route 'test_struct_test' conflicts "
-            "with name of user-defined type 'TestStructTest'", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn(
+            "Name of route 'test_struct_test' conflicts "
+            "with name of user-defined type 'TestStructTest'",
+            cm.exception.msg,
+        )
 
         # alias / route clash
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test_namespace
 
             alias TestAliasTest = String
 
             route test_alias_test(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn("Name of route 'test_alias_test' conflicts "
-            "with name of alias 'TestAliasTest'", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn(
+            "Name of route 'test_alias_test' conflicts "
+            "with name of alias 'TestAliasTest'",
+            cm.exception.msg,
+        )
 
     def test_docstrings(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             # No docstrings at all
@@ -932,30 +1076,31 @@ class TestStone(unittest.TestCase):
             # Check for inherited doc
             struct W extends T
                 g String
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        E_dt = api.namespaces['test'].data_type_by_name['E']
+        E_dt = api.namespaces["test"].data_type_by_name["E"]
         self.assertFalse(E_dt.has_documented_type_or_fields())
         self.assertFalse(E_dt.has_documented_fields())
 
-        S_dt = api.namespaces['test'].data_type_by_name['S']
+        S_dt = api.namespaces["test"].data_type_by_name["S"]
         self.assertTrue(S_dt.has_documented_type_or_fields())
         self.assertFalse(S_dt.has_documented_fields())
 
-        T_dt = api.namespaces['test'].data_type_by_name['T']
+        T_dt = api.namespaces["test"].data_type_by_name["T"]
         self.assertTrue(T_dt.has_documented_type_or_fields())
         self.assertTrue(T_dt.has_documented_fields())
 
-        U_dt = api.namespaces['test'].data_type_by_name['U']
+        U_dt = api.namespaces["test"].data_type_by_name["U"]
         self.assertTrue(U_dt.has_documented_type_or_fields())
         self.assertFalse(U_dt.has_documented_fields())
 
-        V_dt = api.namespaces['test'].data_type_by_name['V']
+        V_dt = api.namespaces["test"].data_type_by_name["V"]
         self.assertTrue(V_dt.has_documented_type_or_fields())
         self.assertTrue(V_dt.has_documented_fields())
 
-        W_dt = api.namespaces['test'].data_type_by_name['W']
+        W_dt = api.namespaces["test"].data_type_by_name["W"]
         self.assertFalse(W_dt.has_documented_type_or_fields())
         self.assertFalse(W_dt.has_documented_fields())
         self.assertFalse(W_dt.has_documented_type_or_fields(), True)
@@ -963,158 +1108,182 @@ class TestStone(unittest.TestCase):
 
     def test_alias(self):
         # Test aliasing to primitive
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias R = String
                 "This is a test
                 of docstrings"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        test_ns = api.namespaces['test']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        test_ns = api.namespaces["test"]
         self.assertIsInstance(test_ns.aliases[0], Alias)
-        self.assertEqual(test_ns.aliases[0].name, 'R')
+        self.assertEqual(test_ns.aliases[0].name, "R")
         self.assertIsInstance(test_ns.aliases[0].data_type, String)
-        self.assertEqual(
-            test_ns.aliases[0].doc, 'This is a test of docstrings')
+        self.assertEqual(test_ns.aliases[0].doc, "This is a test of docstrings")
 
         # Test aliasing to primitive with additional attributes and nullable
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias R = String(min_length=1)?
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        test_ns = api.namespaces['test']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        test_ns = api.namespaces["test"]
         self.assertIsInstance(test_ns.aliases[0], Alias)
-        self.assertEqual(test_ns.aliases[0].name, 'R')
+        self.assertEqual(test_ns.aliases[0].name, "R")
         self.assertIsInstance(test_ns.aliases[0].data_type, Nullable)
         self.assertIsInstance(test_ns.aliases[0].data_type.data_type, String)
 
         # Test aliasing to alias
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias T = String
             alias R = T
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        test_ns = api.namespaces['test']
-        self.assertIsInstance(test_ns.alias_by_name['T'], Alias)
-        self.assertIsInstance(test_ns.alias_by_name['R'], Alias)
-        self.assertIsInstance(test_ns.alias_by_name['R'].data_type, Alias)
-        self.assertEqual(test_ns.alias_by_name['R'].data_type.name, 'T')
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        test_ns = api.namespaces["test"]
+        self.assertIsInstance(test_ns.alias_by_name["T"], Alias)
+        self.assertIsInstance(test_ns.alias_by_name["R"], Alias)
+        self.assertIsInstance(test_ns.alias_by_name["R"].data_type, Alias)
+        self.assertEqual(test_ns.alias_by_name["R"].data_type.name, "T")
 
         # Test order invariance
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias R = T
             alias T = String
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
         # Try re-definition
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias A = String
             alias A = UInt64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn("Symbol 'A' already defined (test.stone:3).",
-                      cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("Symbol 'A' already defined (test.stone:3).", cm.exception.msg)
 
         # Try cyclical reference
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias A = B
             alias B = C
             alias C = A
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn("Alias 'C' is part of a cycle.",
-                      cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("Alias 'C' is part of a cycle.", cm.exception.msg)
 
         # Try aliasing to alias with attributes already set.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias T = String(min_length=1)
             alias R = T(min_length=1)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('Attributes cannot be specified for instantiated type',
-                      cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn(
+            "Attributes cannot be specified for instantiated type", cm.exception.msg
+        )
 
         # Test aliasing to composite and making it nullable
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String
             alias R = S?
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        test_ns = api.namespaces['test']
-        S_dt = test_ns.data_type_by_name['S']
-        self.assertIsInstance(test_ns.alias_by_name['R'].data_type, Nullable)
-        self.assertEqual(test_ns.alias_by_name['R'].data_type.data_type, S_dt)
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        test_ns = api.namespaces["test"]
+        S_dt = test_ns.data_type_by_name["S"]
+        self.assertIsInstance(test_ns.alias_by_name["R"].data_type, Nullable)
+        self.assertEqual(test_ns.alias_by_name["R"].data_type.data_type, S_dt)
 
         # Test aliasing to composite with attributes
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String
 
             alias R = S(min_length=1)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('Attributes cannot be specified for instantiated type',
-                      cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn(
+            "Attributes cannot be specified for instantiated type", cm.exception.msg
+        )
 
         # Test aliasing to route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test_route(Void, Void, Void)
 
             alias S = test_route
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("A route cannot be referenced here.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 5)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test aliasing from another namespace
-        text1 = textwrap.dedent("""\
+        text1 = textwrap.dedent(
+            """\
             namespace test1
 
             struct S
                 f String
-            """)
-        text2 = textwrap.dedent("""\
+            """
+        )
+        text2 = textwrap.dedent(
+            """\
             namespace test2
 
             import test1
 
             alias S = test1.S
-            """)
-        api = specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
-        test1_ns = api.namespaces['test1']
-        S_dt = test1_ns.data_type_by_name['S']
-        test2_ns = api.namespaces['test2']
-        self.assertEqual(test2_ns.alias_by_name['S'].data_type, S_dt)
+            """
+        )
+        api = specs_to_ir([("test1.stone", text1), ("test2.stone", text2)])
+        test1_ns = api.namespaces["test1"]
+        S_dt = test1_ns.data_type_by_name["S"]
+        test2_ns = api.namespaces["test2"]
+        self.assertEqual(test2_ns.alias_by_name["S"].data_type, S_dt)
 
         # Try extending an alias-ed struct
-        text1 = textwrap.dedent("""\
+        text1 = textwrap.dedent(
+            """\
             namespace test1
 
             alias Z = S
@@ -1124,15 +1293,19 @@ class TestStone(unittest.TestCase):
 
             struct T extends Z
                 f2 String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
-        self.assertIn('A struct cannot extend an alias. Use the canonical name instead.',
-                      cm.exception.msg)
+            specs_to_ir([("test1.stone", text1), ("test2.stone", text2)])
+        self.assertIn(
+            "A struct cannot extend an alias. Use the canonical name instead.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 8)
 
         # Try extending an alias-ed union
-        text1 = textwrap.dedent("""\
+        text1 = textwrap.dedent(
+            """\
             namespace test1
 
             alias Z = S
@@ -1142,41 +1315,49 @@ class TestStone(unittest.TestCase):
 
             union T extends Z
                 f2 String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
+            specs_to_ir([("test1.stone", text1), ("test2.stone", text2)])
         self.assertIn(
-            'A union cannot extend an alias. Use the canonical name instead.',
-            cm.exception.msg)
+            "A union cannot extend an alias. Use the canonical name instead.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 8)
 
     def test_struct_semantics(self):
         # Test field with implicit void type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 option_a
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Struct field 'option_a' cannot have a Void type.",
-                         cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual(
+            "Struct field 'option_a' cannot have a Void type.", cm.exception.msg
+        )
 
         # Test duplicate fields
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
                 a UInt64
                 a String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('already defined', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("already defined", cm.exception.msg)
 
         # Test duplicate field name -- earlier being in a parent type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -1187,13 +1368,15 @@ class TestStone(unittest.TestCase):
 
             struct C extends B
                 a String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('already defined in parent', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test extending from wrong type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union A
@@ -1201,26 +1384,30 @@ class TestStone(unittest.TestCase):
 
             struct B extends A
                 b UInt64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('struct can only extend another struct', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("struct can only extend another struct", cm.exception.msg)
 
     def test_union_semantics(self):
         # Test duplicate fields
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union_closed A
                 a UInt64
                 a String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('already defined', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("already defined", cm.exception.msg)
 
         # Test duplicate field name -- earlier being in a parent type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union_closed A
@@ -1231,27 +1418,31 @@ class TestStone(unittest.TestCase):
 
             union_closed C extends B
                 a String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('already defined in parent', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test catch-all
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union A
                 a
                 b
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        A_dt = api.namespaces['test'].data_type_by_name['A']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        A_dt = api.namespaces["test"].data_type_by_name["A"]
         # Test both ways catch-all is exposed
-        self.assertEqual(A_dt.catch_all_field, A_dt._fields_by_name['other'])
-        self.assertTrue(A_dt._fields_by_name['other'].catch_all)
+        self.assertEqual(A_dt.catch_all_field, A_dt._fields_by_name["other"])
+        self.assertTrue(A_dt._fields_by_name["other"].catch_all)
 
         # Try defining a child type as closed if its parent is open
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union A
@@ -1259,31 +1450,36 @@ class TestStone(unittest.TestCase):
 
             union_closed B extends A
                 b
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Union cannot be closed since parent type 'A' is open.",
-            cm.exception.msg)
+            "Union cannot be closed since parent type 'A' is open.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 6)
 
         # Try explicitly naming field "other"
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union A
                 other
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Union cannot define an 'other' field because it is reserved as "
             "the catch-all field for open unions.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 4)
 
         # Test extending from wrong type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -1291,74 +1487,88 @@ class TestStone(unittest.TestCase):
 
             union B extends A
                 b UInt64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('union can only extend another union', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("union can only extend another union", cm.exception.msg)
 
     def test_map_semantics(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias M = Map(String, Int32)
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        m_alias = api.namespaces['test'].alias_by_name['M']
+        api = specs_to_ir([("test.stone", text)])
+        m_alias = api.namespaces["test"].alias_by_name["M"]
         self.assertIsInstance(m_alias, Alias)
         self.assertIsInstance(m_alias.data_type, Map)
 
         # maps of maps
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias M = Map(String, Map(String, Int32))
-        """)
-        api = specs_to_ir([('test.stone', text)])
-        m_alias = api.namespaces['test'].alias_by_name['M']
+        """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        m_alias = api.namespaces["test"].alias_by_name["M"]
         self.assertIsInstance(m_alias.data_type.value_data_type, Map)
 
         # Map type errors with 0 args
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias M = Map()
-        """)
+        """
+        )
 
         # map type errors with only 1 args
         with self.assertRaises(InvalidSpec):
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias M = Map(String)
-        """)
+        """
+        )
         # map type errors with more than two args
         with self.assertRaises(InvalidSpec):
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias M = Map(String, String, String)
-        """)
+        """
+        )
         with self.assertRaises(InvalidSpec):
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
 
         # map type errors when key data type is not a String
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias M = Map(Int32, String)
-        """)
+        """
+        )
         with self.assertRaises(InvalidSpec):
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
 
     def test_enumerated_subtypes(self):
 
         # Test correct definition
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
@@ -1371,35 +1581,41 @@ class TestStone(unittest.TestCase):
 
             struct Folder extends Resource
                 icon String
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test reference to non-struct
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
                 union
                     file String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('must be a struct', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("must be a struct", cm.exception.msg)
 
         # Test reference to undefined type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
                 union
                     file File
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('Undefined', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("Undefined", cm.exception.msg)
 
         # Test reference to non-subtype
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
@@ -1408,13 +1624,15 @@ class TestStone(unittest.TestCase):
 
             struct File
                 size UInt64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('not a subtype of', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("not a subtype of", cm.exception.msg)
 
         # Test subtype listed more than once
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
@@ -1424,13 +1642,15 @@ class TestStone(unittest.TestCase):
 
             struct File extends Resource
                 size UInt64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn('only be specified once', cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("only be specified once", cm.exception.msg)
 
         # Test missing subtype
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
@@ -1442,13 +1662,15 @@ class TestStone(unittest.TestCase):
 
             struct Folder extends Resource
                 icon String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("missing 'Folder'", cm.exception.msg)
 
         # Test name conflict with field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Resource
@@ -1458,14 +1680,16 @@ class TestStone(unittest.TestCase):
 
             struct File extends Resource
                 size UInt64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("already defined on", cm.exception.msg)
 
         # Test if a leaf and its parent do not enumerate subtypes, but its
         # grandparent does.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -1478,9 +1702,10 @@ class TestStone(unittest.TestCase):
 
             struct C extends B
                 "No enumerated subtypes."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("cannot be extended", cm.exception.msg)
 
     def unused_enumerated_subtypes_tests(self):
@@ -1489,7 +1714,8 @@ class TestStone(unittest.TestCase):
         # this restriction is removed.
 
         # Test name conflict with field in parent
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -1503,13 +1729,15 @@ class TestStone(unittest.TestCase):
 
             struct C extends B
                 d String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test name conflict with union field in parent
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -1523,13 +1751,15 @@ class TestStone(unittest.TestCase):
 
             struct C extends B
                 d String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("already defined in parent", cm.exception.msg)
 
         # Test non-leaf with no enumerated subtypes
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -1546,42 +1776,48 @@ class TestStone(unittest.TestCase):
 
             struct D extends C
                 e String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn("cannot enumerate subtypes if parent", cm.exception.msg)
 
     def test_nullable(self):
         # Test stacking nullable
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias A = String?
             alias B = A?
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            'Cannot mark reference to nullable type as nullable.',
-            cm.exception.msg)
+            "Cannot mark reference to nullable type as nullable.", cm.exception.msg
+        )
 
         # Test stacking nullable
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias A = String?
 
             struct S
                 f A?
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            'Cannot mark reference to nullable type as nullable.',
-            cm.exception.msg)
+            "Cannot mark reference to nullable type as nullable.", cm.exception.msg
+        )
 
         # Test extending nullable
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -1589,27 +1825,29 @@ class TestStone(unittest.TestCase):
 
             struct T extends S?
                 g String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            'Reference cannot be nullable.',
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Reference cannot be nullable.", cm.exception.msg)
 
     def test_forward_reference(self):
         # Test route def before struct def
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test_route(Void, S, Void)
 
             struct S
                 f String
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test extending after...
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct T extends S
@@ -1617,11 +1855,13 @@ class TestStone(unittest.TestCase):
 
             struct S
                 f String
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test field ref to later-defined struct
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test_route(Void, T, Void)
@@ -1631,20 +1871,24 @@ class TestStone(unittest.TestCase):
 
             struct S
                 f String
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test self-reference
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 s S?
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test forward union ref
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -1652,18 +1896,22 @@ class TestStone(unittest.TestCase):
 
             union U
                 a
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        self.assertTrue(api.namespaces['test'].data_types[0].fields[0].has_default)
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        self.assertTrue(api.namespaces["test"].data_types[0].fields[0].has_default)
         self.assertEqual(
-            api.namespaces['test'].data_types[0].fields[0].default.union_data_type,
-            api.namespaces['test'].data_types[1])
+            api.namespaces["test"].data_types[0].fields[0].default.union_data_type,
+            api.namespaces["test"].data_types[1],
+        )
         self.assertEqual(
-            api.namespaces['test'].data_types[0].fields[0].default.tag_name, 'a')
+            api.namespaces["test"].data_types[0].fields[0].default.tag_name, "a"
+        )
 
     def test_struct_patch_semantics(self):
         # Test patching normal struct
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             struct QuotaInfo
                 "The space quota info for a user."
@@ -1680,18 +1928,26 @@ class TestStone(unittest.TestCase):
                     quota=2000000000
                 example pro
                     quota=100000000000
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        quota_info_dt = api.namespaces['files'].data_type_by_name['QuotaInfo']
-        self.assertEqual(quota_info_dt.fields[1].name, 'quota')
+        quota_info_dt = api.namespaces["files"].data_type_by_name["QuotaInfo"]
+        self.assertEqual(quota_info_dt.fields[1].name, "quota")
         self.assertTrue(is_integer_type(quota_info_dt.fields[1].data_type))
-        self.assertEqual(quota_info_dt.fields[1].doc, "The user's total quota allocation (bytes).")
-        self.assertEqual(quota_info_dt.get_examples()['default'].value['quota'], 2000000000)
-        self.assertEqual(quota_info_dt.get_examples()['pro'].value['quota'], 100000000000)
+        self.assertEqual(
+            quota_info_dt.fields[1].doc, "The user's total quota allocation (bytes)."
+        )
+        self.assertEqual(
+            quota_info_dt.get_examples()["default"].value["quota"], 2000000000
+        )
+        self.assertEqual(
+            quota_info_dt.get_examples()["pro"].value["quota"], 100000000000
+        )
 
         # Test patching inherited struct
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             struct QuotaInfo
                 "The space quota info for a user."
@@ -1712,17 +1968,21 @@ class TestStone(unittest.TestCase):
                     quota=2000000000
                 example pro
                     quota=100000000000
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        quota_info_dt = api.namespaces['files'].data_type_by_name['QuotaInfoPersonal']
-        self.assertEqual(quota_info_dt.all_fields[1].name, 'quota')
+        quota_info_dt = api.namespaces["files"].data_type_by_name["QuotaInfoPersonal"]
+        self.assertEqual(quota_info_dt.all_fields[1].name, "quota")
         self.assertTrue(is_integer_type(quota_info_dt.all_fields[1].data_type))
         self.assertEqual(
-            quota_info_dt.all_fields[1].doc, "The user's total quota allocation (bytes).")
+            quota_info_dt.all_fields[1].doc,
+            "The user's total quota allocation (bytes).",
+        )
 
         # Testing patching the parent type of an enumerated subtype.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
             struct Resource
                 union
@@ -1747,29 +2007,33 @@ class TestStone(unittest.TestCase):
             patch struct Folder
                 example default
                     is_public=false
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        resource_dt = api.namespaces['test'].data_type_by_name['Resource']
-        self.assertEqual(resource_dt.all_fields[0].name, 'is_public')
+        resource_dt = api.namespaces["test"].data_type_by_name["Resource"]
+        self.assertEqual(resource_dt.all_fields[0].name, "is_public")
         self.assertTrue(is_boolean_type(resource_dt.all_fields[0].data_type))
-        self.assertEqual(resource_dt.all_fields[0].doc, "Whether the resource is public.")
+        self.assertEqual(
+            resource_dt.all_fields[0].doc, "Whether the resource is public."
+        )
 
-        file_dt = api.namespaces['test'].data_type_by_name['File']
-        self.assertEqual(file_dt.all_fields[0].name, 'is_public')
+        file_dt = api.namespaces["test"].data_type_by_name["File"]
+        self.assertEqual(file_dt.all_fields[0].name, "is_public")
         self.assertTrue(is_boolean_type(file_dt.all_fields[0].data_type))
         self.assertEqual(file_dt.all_fields[0].doc, "Whether the resource is public.")
-        self.assertEqual(file_dt.get_examples()['default'].value['is_public'], True)
+        self.assertEqual(file_dt.get_examples()["default"].value["is_public"], True)
 
-        folder_dt = api.namespaces['test'].data_type_by_name['Folder']
-        self.assertEqual(folder_dt.all_fields[0].name, 'is_public')
+        folder_dt = api.namespaces["test"].data_type_by_name["Folder"]
+        self.assertEqual(folder_dt.all_fields[0].name, "is_public")
         self.assertTrue(is_boolean_type(file_dt.all_fields[0].data_type))
         self.assertEqual(folder_dt.all_fields[0].doc, "Whether the resource is public.")
-        self.assertEqual(folder_dt.get_examples()['default'].value['is_public'], False)
+        self.assertEqual(folder_dt.get_examples()["default"].value["is_public"], False)
 
         # Try patching enumerated supertype struct with
         # nonnull field with missing example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
             struct Resource
                 union
@@ -1791,15 +2055,17 @@ class TestStone(unittest.TestCase):
             patch struct File
                 example default
                     is_public=true
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
         self.assertEqual("Missing field 'is_public' in example.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 14)
 
         # Try patching type without pre-existing type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             struct QuotaInfo
                 "The space quota info for a user."
@@ -1812,16 +2078,21 @@ class TestStone(unittest.TestCase):
             patch struct QuotaInfoDoesNotExist
                 quota UInt64
                     "The user's total quota allocation (bytes)."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Patch 'QuotaInfoDoesNotExist' must correspond " +
-            "to a pre-existing data_type.", cm.exception.msg)
+        self.assertEqual(
+            "Patch 'QuotaInfoDoesNotExist' must correspond "
+            + "to a pre-existing data_type.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 10)
 
         # Try patching type with pre-existing name of different type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             struct QuotaInfo
                 "The space quota info for a user."
@@ -1834,17 +2105,22 @@ class TestStone(unittest.TestCase):
             patch union QuotaInfo
                 quota UInt64
                     "The user's total quota allocation (bytes)."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Type mismatch. Patch 'QuotaInfo' corresponds to " +
-            "pre-existing data_type 'QuotaInfo' (test.stone:2) that has " +
-            "type other than 'union'.", cm.exception.msg)
+        self.assertEqual(
+            "Type mismatch. Patch 'QuotaInfo' corresponds to "
+            + "pre-existing data_type 'QuotaInfo' (test.stone:2) that has "
+            + "type other than 'union'.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 10)
 
         # Try patching union_closed type with pre-existing name of union type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             union_closed QuotaInfo
                 "The space quota info for a user."
@@ -1857,17 +2133,22 @@ class TestStone(unittest.TestCase):
             patch union QuotaInfo
                 quota UInt64
                     "The user's total quota allocation (bytes)."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Type mismatch. Patch 'QuotaInfo' corresponds to " +
-            "pre-existing data_type 'QuotaInfo' (test.stone:2) that has " +
-            "type other than 'union_closed'.", cm.exception.msg)
+        self.assertEqual(
+            "Type mismatch. Patch 'QuotaInfo' corresponds to "
+            + "pre-existing data_type 'QuotaInfo' (test.stone:2) that has "
+            + "type other than 'union_closed'.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 10)
 
         # Try patching union type with pre-existing name of union_closed type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             union QuotaInfo
                 "The space quota info for a user."
@@ -1880,17 +2161,22 @@ class TestStone(unittest.TestCase):
             patch union_closed QuotaInfo
                 quota UInt64
                     "The user's total quota allocation (bytes)."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Type mismatch. Patch 'QuotaInfo' corresponds to " +
-            "pre-existing data_type 'QuotaInfo' (test.stone:2) that has " +
-            "type other than 'union'.", cm.exception.msg)
+        self.assertEqual(
+            "Type mismatch. Patch 'QuotaInfo' corresponds to "
+            + "pre-existing data_type 'QuotaInfo' (test.stone:2) that has "
+            + "type other than 'union'.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 10)
 
         # Try patching field with pre-existing name
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             struct QuotaInfo
                 "The space quota info for a user."
@@ -1903,16 +2189,21 @@ class TestStone(unittest.TestCase):
             patch struct QuotaInfo
                 user_id Int32
                     "The user associated with the quota."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Patched field 'user_id' overrides " +
-            "pre-existing field in 'QuotaInfo' (test.stone:4).", cm.exception.msg)
+        self.assertEqual(
+            "Patched field 'user_id' overrides "
+            + "pre-existing field in 'QuotaInfo' (test.stone:4).",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 11)
 
         # Try patching field with example tag that doesn't exist
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             struct QuotaInfo
                 "The space quota info for a user."
@@ -1927,17 +2218,22 @@ class TestStone(unittest.TestCase):
                     "The user associated with the quota."
                 example doesNotExist
                     user_id="1234"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Example defined in patch 'QuotaInfo' must " +
-            "correspond to a pre-existing example.", cm.exception.msg)
+        self.assertEqual(
+            "Example defined in patch 'QuotaInfo' must "
+            + "correspond to a pre-existing example.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 13)
 
     def test_union_patch_semantics(self):
         # Test patching normal struct
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             union Role
                 "The role a user may have in a shared folder."
@@ -1948,16 +2244,18 @@ class TestStone(unittest.TestCase):
             patch union Role
                 owner
                     "Owner of a file."
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        role_info_dt = api.namespaces['files'].data_type_by_name['Role']
-        self.assertEqual(role_info_dt.fields[2].name, 'owner')
+        role_info_dt = api.namespaces["files"].data_type_by_name["Role"]
+        self.assertEqual(role_info_dt.fields[2].name, "owner")
         self.assertTrue(is_void_type(role_info_dt.fields[2].data_type))
         self.assertEqual(role_info_dt.fields[2].doc, "Owner of a file.")
 
         # Test patching inherited union
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             union Role
                 "The role a user may have in a shared folder."
@@ -1972,16 +2270,18 @@ class TestStone(unittest.TestCase):
             patch union Role
                 owner
                     "Owner of a file."
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        role_info_dt = api.namespaces['files'].data_type_by_name['TeamRole']
-        self.assertEqual(role_info_dt.all_fields[2].name, 'owner')
+        role_info_dt = api.namespaces["files"].data_type_by_name["TeamRole"]
+        self.assertEqual(role_info_dt.all_fields[2].name, "owner")
         self.assertTrue(is_void_type(role_info_dt.all_fields[2].data_type))
         self.assertEqual(role_info_dt.all_fields[2].doc, "Owner of a file.")
 
         # Try patching type without pre-existing type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             union Role
                 "The role a user may have in a shared folder."
@@ -1992,16 +2292,21 @@ class TestStone(unittest.TestCase):
             patch union RoleDoesNotExist
                 owner
                     "Owner of a file."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Patch 'RoleDoesNotExist' must correspond " +
-            "to a pre-existing data_type.", cm.exception.msg)
+        self.assertEqual(
+            "Patch 'RoleDoesNotExist' must correspond "
+            + "to a pre-existing data_type.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 8)
 
         # Try patching type with pre-existing name of different type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             union Role
                 "The role a user may have in a shared folder."
@@ -2012,17 +2317,22 @@ class TestStone(unittest.TestCase):
             patch struct Role
                 owner String
                     "Owner of a file."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Type mismatch. Patch 'Role' corresponds to " +
-            "pre-existing data_type 'Role' (test.stone:2) that has " +
-            "type other than 'struct'.", cm.exception.msg)
+        self.assertEqual(
+            "Type mismatch. Patch 'Role' corresponds to "
+            + "pre-existing data_type 'Role' (test.stone:2) that has "
+            + "type other than 'struct'.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 8)
 
         # Try patching field with pre-existing name
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace files
             union Role
                 "The role a user may have in a shared folder."
@@ -2033,175 +2343,211 @@ class TestStone(unittest.TestCase):
             patch union Role
                 viewer
                     "Owner of a file."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            api = specs_to_ir([('test.stone', text)])
+            api = specs_to_ir([("test.stone", text)])
 
-        self.assertEqual("Patched field 'viewer' overrides " +
-            "pre-existing field in 'Role' (test.stone:4).", cm.exception.msg)
+        self.assertEqual(
+            "Patched field 'viewer' overrides "
+            + "pre-existing field in 'Role' (test.stone:4).",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 9)
 
     def test_import(self):
         # Test field reference to another namespace
-        ns1_text = textwrap.dedent("""\
+        ns1_text = textwrap.dedent(
+            """\
             namespace ns1
 
             import ns2
 
             struct S
                 f ns2.S
-            """)
-        ns2_text = textwrap.dedent("""\
+            """
+        )
+        ns2_text = textwrap.dedent(
+            """\
             namespace ns2
 
             struct S
                 f String
-            """)
-        specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
+            """
+        )
+        specs_to_ir([("ns1.stone", ns1_text), ("ns2.stone", ns2_text)])
 
         # Test incorrectly importing the current namespace
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
             import test
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            'Cannot import current namespace.',
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Cannot import current namespace.", cm.exception.msg)
 
         # Test importing a non-existent namespace
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
             import missingns
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Namespace 'missingns' is not defined in any spec.",
-            cm.exception.msg)
+            "Namespace 'missingns' is not defined in any spec.", cm.exception.msg
+        )
 
         # Test extending struct from another namespace
-        ns1_text = textwrap.dedent("""\
+        ns1_text = textwrap.dedent(
+            """\
             namespace ns1
 
             import ns2
 
             struct S extends ns2.T
                 f String
-            """)
-        ns2_text = textwrap.dedent("""\
+            """
+        )
+        ns2_text = textwrap.dedent(
+            """\
             namespace ns2
 
             struct T
                 g String
-            """)
-        specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
+            """
+        )
+        specs_to_ir([("ns1.stone", ns1_text), ("ns2.stone", ns2_text)])
 
         # Test extending aliased struct from another namespace
-        ns1_text = textwrap.dedent("""\
+        ns1_text = textwrap.dedent(
+            """\
             namespace ns1
 
             import ns2
 
             struct S extends ns2.X
                 f String
-            """)
-        ns2_text = textwrap.dedent("""\
+            """
+        )
+        ns2_text = textwrap.dedent(
+            """\
             namespace ns2
 
             alias X = T
 
             struct T
                 g String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
+            specs_to_ir([("ns1.stone", ns1_text), ("ns2.stone", ns2_text)])
         self.assertEqual(
-            'A struct cannot extend an alias. Use the canonical name instead.',
-            cm.exception.msg)
+            "A struct cannot extend an alias. Use the canonical name instead.",
+            cm.exception.msg,
+        )
 
         # Test extending union from another namespace
-        ns1_text = textwrap.dedent("""\
+        ns1_text = textwrap.dedent(
+            """\
             namespace ns1
 
             import ns2
 
             union V extends ns2.U
                 b String
-            """)
-        ns2_text = textwrap.dedent("""\
+            """
+        )
+        ns2_text = textwrap.dedent(
+            """\
             namespace ns2
 
             union U
                 a
-            """)
-        specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
+            """
+        )
+        specs_to_ir([("ns1.stone", ns1_text), ("ns2.stone", ns2_text)])
 
         # Try circular import
-        ns1_text = textwrap.dedent("""\
+        ns1_text = textwrap.dedent(
+            """\
             namespace ns1
 
             import ns2
 
             struct S
                 t ns2.T
-            """)
-        ns2_text = textwrap.dedent("""\
+            """
+        )
+        ns2_text = textwrap.dedent(
+            """\
             namespace ns2
 
             import ns1
 
             struct T
                 s ns1.S
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
+            specs_to_ir([("ns1.stone", ns1_text), ("ns2.stone", ns2_text)])
         self.assertIn(
-            "Circular import of namespaces 'ns2' and 'ns1' detected.",
-            cm.exception.msg)
+            "Circular import of namespaces 'ns2' and 'ns1' detected.", cm.exception.msg
+        )
 
     def test_doc_refs(self):
         # Test union doc referencing a field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
                 ":field:`a`"
                 a
                 b
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test union field doc referencing another field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
                 a
                     ":field:`b`"
                 b
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test union field doc referencing a field from an imported namespace
-        text1 = textwrap.dedent("""\
+        text1 = textwrap.dedent(
+            """\
             namespace test1
 
             union U
                 a
-        """)
-        text2 = textwrap.dedent("""\
+        """
+        )
+        text2 = textwrap.dedent(
+            """\
             namespace test2
             import test1
             union U
                 ":field:`test1.U.a`"
                 b
-        """)
-        specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
+        """
+        )
+        specs_to_ir([("test1.stone", text1), ("test2.stone", text2)])
 
         # Test docs referencing a route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test_route(Void, Void, Void)
@@ -2215,11 +2561,13 @@ class TestStone(unittest.TestCase):
                 "type doc ref :route:`test_route`"
                 f String
                     "field doc ref :route:`test_route`"
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test docs referencing a route with version number
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test_route:2(Void, Void, Void)
@@ -2233,25 +2581,31 @@ class TestStone(unittest.TestCase):
                 "type doc ref :route:`test_route:2`"
                 f String
                     "field doc ref :route:`test_route:2`"
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
         # Test referencing an undefined route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct T
                 "type doc ref :route:`test_route`"
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Unknown doc reference to route 'test_route'.", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual(
+            "Unknown doc reference to route 'test_route'.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 4)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test referencing a field as a route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2260,15 +2614,17 @@ class TestStone(unittest.TestCase):
             struct T
                 "type doc ref :route:`U`"
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual("Doc reference to type 'U' is not a route.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 7)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test referencing a route at an undefined version
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test_route:2(Void, Void, Void)
@@ -2276,16 +2632,20 @@ class TestStone(unittest.TestCase):
             struct T
                 "type doc ref :route:`test_route:3`"
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Doc reference to route 'test_route' has undefined version 3.",
-                         cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual(
+            "Doc reference to route 'test_route' has undefined version 3.",
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 6)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test referencing a field of a route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             route test_route(Void, Void, Void)
@@ -2293,15 +2653,19 @@ class TestStone(unittest.TestCase):
             struct T
                 "type doc ref :field:`test_route.g`"
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual("Bad doc reference to field 'g' of route 'test_route'.", cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual(
+            "Bad doc reference to field 'g' of route 'test_route'.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 6)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test referencing a field of alias
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
                     namespace test
 
                     struct T
@@ -2311,13 +2675,15 @@ class TestStone(unittest.TestCase):
 
                     struct B
                         "ref to alias field :field:`A.f`."
-                    """)
+                    """
+        )
 
-        specs_to_ir([('test.stone', text)])
+        specs_to_ir([("test.stone", text)])
 
     def test_namespace(self):
         # Test that namespace docstrings are combined
-        ns1_text = textwrap.dedent("""\
+        ns1_text = textwrap.dedent(
+            """\
         namespace ns1
             "
             This is a docstring for ns1.
@@ -2325,8 +2691,10 @@ class TestStone(unittest.TestCase):
 
         struct S
             f String
-        """)
-        ns2_text = textwrap.dedent("""\
+        """
+        )
+        ns2_text = textwrap.dedent(
+            """\
             namespace ns1
                 "
                 This is another docstring for ns1.
@@ -2334,16 +2702,19 @@ class TestStone(unittest.TestCase):
 
             struct S2
                 f String
-            """)
-        api = specs_to_ir([('ns1.stone', ns1_text), ('ns2.stone', ns2_text)])
+            """
+        )
+        api = specs_to_ir([("ns1.stone", ns1_text), ("ns2.stone", ns2_text)])
         self.assertEqual(
-            api.namespaces['ns1'].doc,
-            'This is a docstring for ns1.\nThis is another docstring for ns1.\n')
+            api.namespaces["ns1"].doc,
+            "This is a docstring for ns1.\nThis is another docstring for ns1.\n",
+        )
 
     def test_examples(self):
 
         # Test simple struct example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2351,13 +2722,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_types[0]
-        self.assertTrue(s_dt.get_examples()['default'], {'f': 'A'})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_types[0]
+        self.assertTrue(s_dt.get_examples()["default"], {"f": "A"})
 
         # Test example with bad type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2365,16 +2738,18 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = 5
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'f': integer is not a valid string",
-            cm.exception.msg)
+            "Bad example for field 'f': integer is not a valid string", cm.exception.msg
+        )
 
         # Test example with label "true". "false" and "null" are also
         # disallowed because they conflict with the identifiers for primitives.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2382,13 +2757,15 @@ class TestStone(unittest.TestCase):
 
                 example true
                     f = "A"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
             # This raises an unexpected token error.
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
 
         # Test error case where two examples share the same label
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2398,15 +2775,17 @@ class TestStone(unittest.TestCase):
                     f = "ZZZZZZ3"
                 example default
                     f = "ZZZZZZ4"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Example with label 'default' already defined on line 6.",
-            cm.exception.msg)
+            "Example with label 'default' already defined on line 6.", cm.exception.msg
+        )
 
         # Test error case where an example has the same field defined twice.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2415,45 +2794,50 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "ZZZZZZ3"
                     f = "ZZZZZZ4"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Example with label 'default' defines field 'f' more than once.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
         # Test empty examples
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
 
                 example default
                 example other
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_types[0]
-        self.assertIn('default', s_dt.get_examples())
-        self.assertIn('other', s_dt.get_examples())
-        self.assertNotIn('missing', s_dt.get_examples())
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_types[0]
+        self.assertIn("default", s_dt.get_examples())
+        self.assertIn("other", s_dt.get_examples())
+        self.assertNotIn("missing", s_dt.get_examples())
 
         # Test missing field in example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String
 
                 example default
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Missing field 'f' in example.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Missing field 'f' in example.", cm.exception.msg)
 
         # Test missing default example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2463,44 +2847,48 @@ class TestStone(unittest.TestCase):
 
             struct T
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Missing field 't' in example.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Missing field 't' in example.", cm.exception.msg)
 
         # Test primitive field with default will use the default in the
         # example if it's missing.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String = "S"
 
                 example default
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_types[0]
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_types[0]
         # Example should have no keys
-        self.assertEqual(s_dt.get_examples()['default'].value['f'], 'S')
+        self.assertEqual(s_dt.get_examples()["default"].value["f"], "S")
 
         # Test nullable primitive field missing from example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String?
 
                 example default
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_types[0]
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_types[0]
         # Example should have no keys
-        self.assertEqual(len(s_dt.get_examples()['default'].value), 0)
+        self.assertEqual(len(s_dt.get_examples()["default"].value), 0)
 
         # Test nullable primitive field explicitly set to null in example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2508,14 +2896,16 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = null
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_types[0]
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_types[0]
         # Example should have no keys
-        self.assertEqual(len(s_dt.get_examples()['default'].value), 0)
+        self.assertEqual(len(s_dt.get_examples()["default"].value), 0)
 
         # Test non-nullable primitive field explicitly set to null in example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2523,15 +2913,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = null
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'f': null is not a valid string",
-            cm.exception.msg)
+            "Bad example for field 'f': null is not a valid string", cm.exception.msg
+        )
 
         # Test example of composite type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2545,14 +2937,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'t': {'f': 'A'}})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"t": {"f": "A"}})
 
         # Test nullable composite missing from example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2566,14 +2959,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'t': {'f': 'A'}})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"t": {"f": "A"}})
 
         # Test nullable composite explicitly set to null
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2587,14 +2981,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {})
 
         # Test custom label
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2623,14 +3018,17 @@ class TestStone(unittest.TestCase):
 
                 example other
                     g = "C"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'t': {'f': 'B', 'r': {'g': 'C'}}})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(
+            s_dt.get_examples()["default"].value, {"t": {"f": "B", "r": {"g": "C"}}}
+        )
 
         # Test missing label for composite example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2641,16 +3039,19 @@ class TestStone(unittest.TestCase):
 
             struct T
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Reference to example for 'T' with label 'missing' does not exist.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 7)
 
         # Test missing label for composite example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2660,16 +3061,16 @@ class TestStone(unittest.TestCase):
 
             struct T
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Missing field 't' in example.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Missing field 't' in example.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test bad label for composite example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2680,17 +3081,20 @@ class TestStone(unittest.TestCase):
 
             struct T
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Bad example for field 't': example must reference label of 'T'",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 7)
 
         # Test solution for recursive struct
         # TODO: Omitting `s=null` will result in infinite recursion.
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2700,13 +3104,15 @@ class TestStone(unittest.TestCase):
                 example default
                     f = "A"
                     s = null
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value, {'f': 'A'})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"f": "A"})
 
         # Test examples with inheritance trees
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -2722,10 +3128,12 @@ class TestStone(unittest.TestCase):
                     a = "A"
                     b = "B"
                     c = "C"
-            """)
-        specs_to_ir([('test.stone', text)])
+            """
+        )
+        specs_to_ir([("test.stone", text)])
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct A
@@ -2740,31 +3148,33 @@ class TestStone(unittest.TestCase):
                 example default
                     b = "B"
                     c = "C"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Missing field 'a' in example.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Missing field 'a' in example.", cm.exception.msg)
 
     def test_examples_union(self):
         # Test bad example with no fields specified
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
                 a
 
                 example default
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            'Example for union must specify exactly one tag.',
-            cm.exception.msg)
+            "Example for union must specify exactly one tag.", cm.exception.msg
+        )
 
         # Test bad example with more than one field specified
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2774,15 +3184,17 @@ class TestStone(unittest.TestCase):
                 example default
                     a = "A"
                     b = "B"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            'Example for union must specify exactly one tag.',
-            cm.exception.msg)
+            "Example for union must specify exactly one tag.", cm.exception.msg
+        )
 
         # Test bad example with unknown tag
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2790,15 +3202,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     z = "Z"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Unknown tag 'z' in example.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Unknown tag 'z' in example.", cm.exception.msg)
 
         # Test bad example with reference
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2806,15 +3218,18 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = default
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Bad example for field 'a': reference is not a valid string",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
         # Test bad example with null value for non-nullable
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2822,15 +3237,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = null
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'a': null is not a valid string",
-            cm.exception.msg)
+            "Bad example for field 'a': null is not a valid string", cm.exception.msg
+        )
 
         # Test example with null value for void type member
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2838,14 +3255,16 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = null
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(u_dt.get_examples()['default'].value, {'.tag': 'a'})
-        self.assertEqual(u_dt.get_examples(compact=True)['default'].value, 'a')
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(u_dt.get_examples()["default"].value, {".tag": "a"})
+        self.assertEqual(u_dt.get_examples(compact=True)["default"].value, "a")
 
         # Test simple union
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2855,17 +3274,18 @@ class TestStone(unittest.TestCase):
 
                 example default
                     b = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'.tag': 'b', 'b': 'A'})
-        self.assertEqual(u_dt.get_examples()['a'].value, {'.tag': 'a'})
-        self.assertEqual(u_dt.get_examples(compact=True)['a'].value, 'a')
-        self.assertNotIn('b', u_dt.get_examples())
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(u_dt.get_examples()["default"].value, {".tag": "b", "b": "A"})
+        self.assertEqual(u_dt.get_examples()["a"].value, {".tag": "a"})
+        self.assertEqual(u_dt.get_examples(compact=True)["a"].value, "a")
+        self.assertNotIn("b", u_dt.get_examples())
 
         # Test union with inheritance
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2876,14 +3296,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        v_dt = api.namespaces['test'].data_type_by_name['V']
-        self.assertEqual(v_dt.get_examples()['default'].value,
-                         {'.tag': 'a', 'a': 'A'})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        v_dt = api.namespaces["test"].data_type_by_name["V"]
+        self.assertEqual(v_dt.get_examples()["default"].value, {".tag": "a", "a": "A"})
 
         # Test union and struct
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2904,18 +3325,17 @@ class TestStone(unittest.TestCase):
 
                 example opt
                     f = "O"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'.tag': 's', 'f': 'F'})
-        self.assertEqual(u_dt.get_examples()['opt'].value,
-                         {'.tag': 's', 'f': 'O'})
-        self.assertEqual(list(u_dt.get_examples()['default'].value.keys())[0],
-                         '.tag')
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(u_dt.get_examples()["default"].value, {".tag": "s", "f": "F"})
+        self.assertEqual(u_dt.get_examples()["opt"].value, {".tag": "s", "f": "O"})
+        self.assertEqual(list(u_dt.get_examples()["default"].value.keys())[0], ".tag")
 
         # Test union referencing non-existent struct example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2927,15 +3347,18 @@ class TestStone(unittest.TestCase):
 
             struct S
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Reference to example for 'S' with label 'missing' does not exist.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
         # Test fallback to union void member
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2947,16 +3370,16 @@ class TestStone(unittest.TestCase):
             union U
                 a
                 b
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'u': {'.tag': 'a'}})
-        self.assertEqual(s_dt.get_examples(compact=True)['default'].value,
-                         {'u': 'a'})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"u": {".tag": "a"}})
+        self.assertEqual(s_dt.get_examples(compact=True)["default"].value, {"u": "a"})
 
         # Test fallback to union member of composite type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -2977,14 +3400,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "F"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'u': {'.tag': 'b', 'f': 'F'}})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(
+            s_dt.get_examples()["default"].value, {"u": {".tag": "b", "f": "F"}}
+        )
 
         # Test TagRef
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -2995,16 +3421,16 @@ class TestStone(unittest.TestCase):
                 u U = a
 
                 example default
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'u': {'.tag': 'a'}})
-        self.assertEqual(s_dt.get_examples(compact=True)['default'].value,
-                         {'u': 'a'})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"u": {".tag": "a"}})
+        self.assertEqual(s_dt.get_examples(compact=True)["default"].value, {"u": "a"})
 
         # Try TagRef to non-void option
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3015,15 +3441,18 @@ class TestStone(unittest.TestCase):
                 u U = a
 
                 example default
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Field 'u' has an invalid default: invalid reference to non-void option 'a'",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
         # Try TagRef to non-existent option
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3034,15 +3463,18 @@ class TestStone(unittest.TestCase):
                 u U = c
 
                 example default
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Field 'u' has an invalid default: invalid reference to unknown tag 'c'",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
         # Test bad void union member example value
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3050,16 +3482,19 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = false
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Bad example for field 'a': example of void type must be null",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
     def test_examples_text(self):
         # Test multi-line example text (verify it gets unwrapp-ed)
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3069,16 +3504,19 @@ class TestStone(unittest.TestCase):
                     "This is the text for the example.
                     And I guess it's kind of long."
                     a = "Hello, World."
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        example = s_dt.get_examples()['default']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        example = s_dt.get_examples()["default"]
         self.assertEqual(
             example.text,
-            "This is the text for the example. And I guess it's kind of long.")
+            "This is the text for the example. And I guess it's kind of long.",
+        )
 
         # Test union example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3089,17 +3527,20 @@ class TestStone(unittest.TestCase):
                     "This is the text for the example.
                     And I guess it's kind of long."
                     b = "Hi, World."
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
-        example = u_dt.get_examples()['default']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
+        example = u_dt.get_examples()["default"]
         self.assertEqual(
             example.text,
-            "This is the text for the example. And I guess it's kind of long.")
+            "This is the text for the example. And I guess it's kind of long.",
+        )
 
     def test_examples_enumerated_subtypes(self):
         # Test missing custom example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3109,15 +3550,15 @@ class TestStone(unittest.TestCase):
 
             struct T
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Missing field 't' in example.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Missing field 't' in example.", cm.exception.msg)
 
         # Test with two subtypes referenced
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct R
@@ -3135,16 +3576,19 @@ class TestStone(unittest.TestCase):
 
             struct T extends R
                 c String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Example for struct with enumerated subtypes must only specify one subtype tag.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 9)
 
         # Test bad subtype reference
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct R
@@ -3161,17 +3605,20 @@ class TestStone(unittest.TestCase):
 
             struct T extends R
                 c String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Example of struct with enumerated subtypes must be a reference "
             "to a subtype's example.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 10)
 
         # Test unknown subtype
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct R
@@ -3188,16 +3635,16 @@ class TestStone(unittest.TestCase):
 
             struct T extends R
                 c String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Unknown subtype tag 'z' in example.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Unknown subtype tag 'z' in example.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 10)
 
         # Test correct example of enumerated subtypes
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct R
@@ -3218,16 +3665,18 @@ class TestStone(unittest.TestCase):
 
             struct T extends R
                 c String
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        r_dt = api.namespaces['test'].data_type_by_name['R']
-        self.assertEqual(r_dt.get_examples()['default'].value,
-                         {'.tag': 's', 'a': 'A', 'b': 'B'})
-        self.assertEqual(list(r_dt.get_examples()['default'].value.keys())[0],
-                         '.tag')
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        r_dt = api.namespaces["test"].data_type_by_name["R"]
+        self.assertEqual(
+            r_dt.get_examples()["default"].value, {".tag": "s", "a": "A", "b": "B"}
+        )
+        self.assertEqual(list(r_dt.get_examples()["default"].value.keys())[0], ".tag")
 
         # Test missing custom example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct R
@@ -3244,17 +3693,20 @@ class TestStone(unittest.TestCase):
 
             struct T extends R
                 c String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Reference to example for 'S' with label 'default' does not exist.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
     def test_examples_list(self):
 
         # Test field of list of primitives with bad example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3262,15 +3714,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     l = "a"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'l': string is not a valid list",
-            cm.exception.msg)
+            "Bad example for field 'l': string is not a valid list", cm.exception.msg
+        )
 
         # Test field of list of primitives
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3278,14 +3732,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     l = ["a", "b", "c"]
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'l': ['a', 'b', 'c']})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"l": ["a", "b", "c"]})
 
         # Test nullable field of list of primitives
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3295,14 +3750,15 @@ class TestStone(unittest.TestCase):
                 example default
                     l = ["a", "b", "c"]
                     l2 = null
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'l': ['a', 'b', 'c']})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"l": ["a", "b", "c"]})
 
         # Test field of list of nullable primitives
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3310,14 +3766,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     l = ["a", null, "c"]
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'l': ['a', None, 'c']})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s_dt.get_examples()["default"].value, {"l": ["a", None, "c"]})
 
         # Test example of list of composite types with bad example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3331,15 +3788,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'l': reference is not a valid list",
-            cm.exception.msg)
+            "Bad example for field 'l': reference is not a valid list", cm.exception.msg
+        )
 
         # Test example of list of composite types
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3357,15 +3816,18 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'l': [{'f': 'A'}, {'f': 'A'}],
-                          'l2': [{'f': 'A'}]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(
+            s_dt.get_examples()["default"].value,
+            {"l": [{"f": "A"}, {"f": "A"}], "l2": [{"f": "A"}]},
+        )
 
         # Test example of list of nullable composite types
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3379,14 +3841,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'l': [{'f': 'A'}, None]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(
+            s_dt.get_examples()["default"].value, {"l": [{"f": "A"}, None]}
+        )
 
         # Test example of list of list of primitives
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3394,14 +3859,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     l = [["a", "b"], [], ["z"]]
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'l': [['a', 'b'], [], ["z"]]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(
+            s_dt.get_examples()["default"].value, {"l": [["a", "b"], [], ["z"]]}
+        )
 
         # Test example of list of list of primitives with parameterization
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3409,15 +3877,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     l = [["a", "b"], [], ["z"]]
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'l': list has more than 1 item(s)",
-            cm.exception.msg)
+            "Bad example for field 'l': list has more than 1 item(s)", cm.exception.msg
+        )
 
         # Test union with list (bad example)
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3425,15 +3895,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = "hi"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'a': string is not a valid list",
-            cm.exception.msg)
+            "Bad example for field 'a': string is not a valid list", cm.exception.msg
+        )
 
         # Test union with list of primitives
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3441,14 +3913,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = ["hello", "world"]
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {".tag": "a", 'a': ["hello", "world"]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(
+            s_dt.get_examples()["default"].value, {".tag": "a", "a": ["hello", "world"]}
+        )
 
         # Test union with list of composites
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3466,16 +3941,21 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        s_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(s_dt.get_examples()['default'].value,
-                         {'.tag': 'a', 'a': [{'f': 'A'}, {'f': 'A'}]})
-        self.assertEqual(s_dt.get_examples()['default_b'].value,
-                         {'.tag': 'b', 'b': [{'f': 'A'}]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        s_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(
+            s_dt.get_examples()["default"].value,
+            {".tag": "a", "a": [{"f": "A"}, {"f": "A"}]},
+        )
+        self.assertEqual(
+            s_dt.get_examples()["default_b"].value, {".tag": "b", "b": [{"f": "A"}]}
+        )
 
         # Test union with list of lists of composites
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3489,14 +3969,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     f = "A"
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'.tag': 'a', 'a': [[{'f': 'A'}]]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(
+            u_dt.get_examples()["default"].value, {".tag": "a", "a": [[{"f": "A"}]]}
+        )
 
         # Test union with list of list of primitives
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3504,14 +3987,18 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = [["hello", "world"]]
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'.tag': 'a', 'a': [['hello', 'world']]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(
+            u_dt.get_examples()["default"].value,
+            {".tag": "a", "a": [["hello", "world"]]},
+        )
 
         # Test union with list of primitives
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3519,15 +4006,17 @@ class TestStone(unittest.TestCase):
 
                 example default
                     a = 42
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Bad example for field 'a': integer is not a valid list",
-            cm.exception.msg)
+            "Bad example for field 'a': integer is not a valid list", cm.exception.msg
+        )
 
         # Test union with list of list of structs
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3544,14 +4033,18 @@ class TestStone(unittest.TestCase):
 
                 example special
                     a = 100
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
-        self.assertEqual(u_dt.get_examples()['default'].value,
-                         {'.tag': 'a', 'a': [[{'a': 42}, {'a': 100}]]})
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
+        self.assertEqual(
+            u_dt.get_examples()["default"].value,
+            {".tag": "a", "a": [[{"a": 42}, {"a": 100}]]},
+        )
 
         # Test union with list of list of unions
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -3569,16 +4062,22 @@ class TestStone(unittest.TestCase):
 
                 example special
                     y = 100
-            """)
-        api = specs_to_ir([('test.stone', text)])
-        u_dt = api.namespaces['test'].data_type_by_name['U']
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
+        u_dt = api.namespaces["test"].data_type_by_name["U"]
         self.assertEqual(
-            u_dt.get_examples()['default'].value,
-            {'.tag': 'a', 'a': [[{'.tag': 'x'}, {'.tag': 'y', 'y': 100}, {'.tag': 'x'}]]})
+            u_dt.get_examples()["default"].value,
+            {
+                ".tag": "a",
+                "a": [[{".tag": "x"}, {".tag": "y", "y": 100}, {".tag": "x"}]],
+            },
+        )
 
     def test_examples_map(self):
         # valid simple example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
         namespace test
 
         struct S
@@ -3586,14 +4085,16 @@ class TestStone(unittest.TestCase):
 
             example default
                 m = {"one": 1, "two": 2}
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
+        api = specs_to_ir([("test.stone", text)])
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertIsInstance(s.get_examples()["default"].value, dict)
 
         # complex stone example
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             alias m = Map(String, Int32)
@@ -3605,14 +4106,16 @@ class TestStone(unittest.TestCase):
 
                 example default
                     arg = {"key": {"one": 1}, "another_key" : {"two" : 2, "three": 3}}
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
+        api = specs_to_ir([("test.stone", text)])
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertIsInstance(s.get_examples()["default"].value, dict)
 
         # map of structs
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Substruct
@@ -3626,14 +4129,16 @@ class TestStone(unittest.TestCase):
 
                 example default
                     m = {"key": example_ref, "another_key": example_ref}
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
+        api = specs_to_ir([("test.stone", text)])
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertIsInstance(s.get_examples()["default"].value, dict)
 
         # error when example doesn't match definition
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3641,13 +4146,15 @@ class TestStone(unittest.TestCase):
 
                 example default
                     m = {"one": 1}
-        """)
+        """
+        )
 
         with self.assertRaises(InvalidSpec):
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
 
         # test multiline docstrings
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3657,13 +4164,15 @@ class TestStone(unittest.TestCase):
                     m = {
                         "one": 1, "two": 2
                     }
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
+        api = specs_to_ir([("test.stone", text)])
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertIsInstance(s.get_examples()["default"].value, dict)
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3674,13 +4183,15 @@ class TestStone(unittest.TestCase):
                         {
                             "one": 1, "two": 2
                         }
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
+        api = specs_to_ir([("test.stone", text)])
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertIsInstance(s.get_examples()["default"].value, dict)
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3692,13 +4203,15 @@ class TestStone(unittest.TestCase):
                             "one": 1,
                             "two": 2
                         }
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
+        api = specs_to_ir([("test.stone", text)])
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertIsInstance(s.get_examples()["default"].value, dict)
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3715,15 +4228,17 @@ class TestStone(unittest.TestCase):
                             "two": 22
                         }
                     }
-        """)
+        """
+        )
 
-        api = specs_to_ir([('test.stone', text)])
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertIsInstance(s.get_examples()['default'].value, dict)
+        api = specs_to_ir([("test.stone", text)])
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertIsInstance(s.get_examples()["default"].value, dict)
 
     def test_name_conflicts(self):
         # Test name conflict in same file
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3731,32 +4246,32 @@ class TestStone(unittest.TestCase):
 
             struct S
                 g String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Symbol 'S' already defined (test.stone:3).",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Symbol 'S' already defined (test.stone:3).", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name conflict by route
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String
 
             route S (Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Symbol 'S' already defined (test.stone:3).",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Symbol 'S' already defined (test.stone:3).", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name conflict by union
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3764,61 +4279,67 @@ class TestStone(unittest.TestCase):
 
             union S
                 g String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Symbol 'S' already defined (test.stone:3).",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Symbol 'S' already defined (test.stone:3).", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name conflict by alias
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String
 
             alias S = UInt64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Symbol 'S' already defined (test.stone:3).",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Symbol 'S' already defined (test.stone:3).", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test name from two specs that are part of the same namespace
-        text1 = textwrap.dedent("""\
+        text1 = textwrap.dedent(
+            """\
             namespace test
 
             struct S
                 f String
-            """)
-        text2 = textwrap.dedent("""\
+            """
+        )
+        text2 = textwrap.dedent(
+            """\
             namespace test
 
 
             struct S
                 f String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test1.stone', text1), ('test2.stone', text2)])
+            specs_to_ir([("test1.stone", text1), ("test2.stone", text2)])
         self.assertEqual(
-            "Symbol 'S' already defined (test1.stone:3).",
-            cm.exception.msg)
+            "Symbol 'S' already defined (test1.stone:3).", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 4)
 
     def test_imported_namespaces(self):
-        text1 = textwrap.dedent("""\
+        text1 = textwrap.dedent(
+            """\
             namespace ns1
             struct S1
                 f1 String
             struct S2
                 f2 String
             alias Iso8601 = Timestamp("%Y-%m-%dT%H:%M:%SZ")
-            """)
-        text2 = textwrap.dedent("""\
+            """
+        )
+        text2 = textwrap.dedent(
+            """\
             namespace ns2
             import ns1
             struct S3
@@ -3829,26 +4350,29 @@ class TestStone(unittest.TestCase):
                     f3 = "hello"
                     f4 = "2015-05-12T15:50:38Z"
             route r1(ns1.S1, ns1.S2, S3)
-            """)
-        api = specs_to_ir([('ns1.stone', text1), ('ns2.stone', text2)])
-        self.assertEqual(api.namespaces['ns2'].get_imported_namespaces(),
-                         [api.namespaces['ns1']])
-        xs = api.namespaces['ns2'].get_route_io_data_types()
+            """
+        )
+        api = specs_to_ir([("ns1.stone", text1), ("ns2.stone", text2)])
+        self.assertEqual(
+            api.namespaces["ns2"].get_imported_namespaces(), [api.namespaces["ns1"]]
+        )
+        xs = api.namespaces["ns2"].get_route_io_data_types()
         xs = sorted(xs, key=lambda x: x.name.lower())
         self.assertEqual(len(xs), 3)
 
-        ns1 = api.namespaces['ns1']
-        ns2 = api.namespaces['ns2']
+        ns1 = api.namespaces["ns1"]
+        ns2 = api.namespaces["ns2"]
 
         self.assertEqual(xs[0].namespace, ns1)
         self.assertEqual(xs[1].namespace, ns1)
 
-        s3_dt = ns2.data_type_by_name['S3']
+        s3_dt = ns2.data_type_by_name["S3"]
         self.assertEqual(s3_dt.fields[2].data_type.data_type.namespace, ns1)
-        self.assertEqual(xs[2].name, 'S3')
+        self.assertEqual(xs[2].name, "S3")
 
     def test_namespace_obj(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace ns1
             struct S1
                 f1 String
@@ -3861,25 +4385,26 @@ class TestStone(unittest.TestCase):
                 f4 String
             alias A = S2
             route r(S1, List(S4?)?, A)
-            """)
-        api = specs_to_ir([('ns1.stone', text)])
-        ns1 = api.namespaces['ns1']
+            """
+        )
+        api = specs_to_ir([("ns1.stone", text)])
+        ns1 = api.namespaces["ns1"]
 
         # Check that all data types are defined
-        self.assertIn('S1', ns1.data_type_by_name)
-        self.assertIn('S2', ns1.data_type_by_name)
-        self.assertIn('S3', ns1.data_type_by_name)
-        self.assertIn('S4', ns1.data_type_by_name)
+        self.assertIn("S1", ns1.data_type_by_name)
+        self.assertIn("S2", ns1.data_type_by_name)
+        self.assertIn("S3", ns1.data_type_by_name)
+        self.assertIn("S4", ns1.data_type_by_name)
         self.assertEqual(len(ns1.data_types), 4)
 
         # Check that route is defined
-        self.assertIn('r', ns1.route_by_name)
+        self.assertIn("r", ns1.route_by_name)
         self.assertEqual(len(ns1.routes), 1)
 
-        s1 = ns1.data_type_by_name['S1']
-        a = ns1.alias_by_name['A']
-        s3 = ns1.data_type_by_name['S3']
-        s4 = ns1.data_type_by_name['S4']
+        s1 = ns1.data_type_by_name["S1"]
+        a = ns1.alias_by_name["A"]
+        s3 = ns1.data_type_by_name["S3"]
+        s4 = ns1.data_type_by_name["S4"]
         route_data_types = ns1.get_route_io_data_types()
 
         self.assertIn(s1, route_data_types)
@@ -3891,7 +4416,8 @@ class TestStone(unittest.TestCase):
         self.assertIn(s4, route_data_types)
 
     def test_whitespace(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3905,10 +4431,12 @@ class TestStone(unittest.TestCase):
                     g = 3
 
             route r(Void, S, Void)
-            """).replace('+', ' ')
-        specs_to_ir([('ns1.stone', text)])
+            """
+        ).replace("+", " ")
+        specs_to_ir([("ns1.stone", text)])
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -3923,10 +4451,12 @@ class TestStone(unittest.TestCase):
                     g = 3
 
             route r(Void, S, Void)
-            """).replace('+', ' ')
-        specs_to_ir([('ns1.stone', text)])
+            """
+        ).replace("+", " ")
+        specs_to_ir([("ns1.stone", text)])
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
                 # weirdly indented comment
@@ -3941,140 +4471,169 @@ class TestStone(unittest.TestCase):
                     g = 3
 
             route r(Void, S, Void)
-            """)
-        specs_to_ir([('ns1.stone', text)])
+            """
+        )
+        specs_to_ir([("ns1.stone", text)])
 
     def test_route_attrs_schema(self):
 
         # Try to define route in stone_cfg
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             struct Route
                 f1 String
 
             route r(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('stone_cfg.stone', stone_cfg_text)])
+            specs_to_ir([("stone_cfg.stone", stone_cfg_text)])
         self.assertEqual(
-            'No routes can be defined in the stone_cfg namespace.',
-            cm.exception.msg)
+            "No routes can be defined in the stone_cfg namespace.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 6)
-        self.assertEqual(cm.exception.path, 'stone_cfg.stone')
+        self.assertEqual(cm.exception.path, "stone_cfg.stone")
 
         # Try to set bad type for schema
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             struct Route
                 f1 String
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
             route r1(Void, Void, Void)
                 attrs
                     f1 = 3
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([
-                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        self.assertEqual(
-            'integer is not a valid string',
-            cm.exception.msg)
+            specs_to_ir(
+                [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+            )
+        self.assertEqual("integer is not a valid string", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 4)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Try missing attribute for route
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             struct Route
                 f1 String
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
             route r1(Void, Void, Void)
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([
-                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        self.assertEqual(
-            "Route does not define attr key 'f1'.",
-            cm.exception.msg)
+            specs_to_ir(
+                [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+            )
+        self.assertEqual("Route does not define attr key 'f1'.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 2)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test missing attribute for route attribute with default
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             struct Route
                 f1 String = "yay"
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
             route r1(Void, Void, Void)
-            """)
-        api = specs_to_ir([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        ns1 = api.namespaces['test']
-        self.assertEqual(ns1.route_by_name['r1'].attrs['f1'], 'yay')
+            """
+        )
+        api = specs_to_ir(
+            [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+        )
+        ns1 = api.namespaces["test"]
+        self.assertEqual(ns1.route_by_name["r1"].attrs["f1"], "yay")
 
         # Test missing attribute for route attribute with optional
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             struct Route
                 f1 String?
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
             route r1(Void, Void, Void)
-            """)
-        api = specs_to_ir([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        test = api.namespaces['test']
-        self.assertEqual(test.route_by_name['r1'].attrs['f1'], None)
+            """
+        )
+        api = specs_to_ir(
+            [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+        )
+        test = api.namespaces["test"]
+        self.assertEqual(test.route_by_name["r1"].attrs["f1"], None)
 
         # Test unknown route attributes
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             struct Route
                 f1 String?
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
             route r1(Void, Void, Void)
                 attrs
                     f2 = 3
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([
-                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+            specs_to_ir(
+                [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+            )
         self.assertEqual(
             "Route attribute 'f2' is not defined in 'stone_cfg.Route'.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 4)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test no route attributes defined at all
-        test_text = textwrap.dedent("""\
+        test_text = textwrap.dedent(
+            """\
             namespace test
             route r1(Void, Void, Void)
                 attrs
                     f1 = 3
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', test_text)])
+            specs_to_ir([("test.stone", test_text)])
         self.assertEqual(
             "Route attribute 'f1' is not defined in 'stone_cfg.Route'.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 4)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             struct Route
@@ -4092,8 +4651,10 @@ class TestStone(unittest.TestCase):
 
             alias S = String
             alias T = String?
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
             route r1(Void, Void, Void)
                 attrs
@@ -4106,60 +4667,67 @@ class TestStone(unittest.TestCase):
                     f7 = "World"
                     f8 = "World"
                     f9 = "World"
-            """)
-        api = specs_to_ir([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        test = api.namespaces['test']
-        attrs = test.route_by_name['r1'].attrs
-        self.assertEqual(attrs['f1'], True)
-        self.assertEqual(attrs['f2'], b'asdf')
-        self.assertEqual(attrs['f3'], 3.2)
-        self.assertEqual(attrs['f4'], 10)
-        self.assertEqual(attrs['f5'], 'Hello')
-        self.assertEqual(
-            attrs['f6'], datetime.datetime(2015, 5, 12, 15, 50, 38))
-        self.assertEqual(attrs['f7'], 'World')
-        self.assertEqual(attrs['f8'], 'World')
-        self.assertEqual(attrs['f9'], 'World')
-        self.assertEqual(attrs['f10'], None)
-        self.assertEqual(attrs['f11'], None)
+            """
+        )
+        api = specs_to_ir(
+            [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+        )
+        test = api.namespaces["test"]
+        attrs = test.route_by_name["r1"].attrs
+        self.assertEqual(attrs["f1"], True)
+        self.assertEqual(attrs["f2"], b"asdf")
+        self.assertEqual(attrs["f3"], 3.2)
+        self.assertEqual(attrs["f4"], 10)
+        self.assertEqual(attrs["f5"], "Hello")
+        self.assertEqual(attrs["f6"], datetime.datetime(2015, 5, 12, 15, 50, 38))
+        self.assertEqual(attrs["f7"], "World")
+        self.assertEqual(attrs["f8"], "World")
+        self.assertEqual(attrs["f9"], "World")
+        self.assertEqual(attrs["f10"], None)
+        self.assertEqual(attrs["f11"], None)
 
         # Try defining an attribute twice.
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             import test
 
             struct Route
                 f1 String
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
 
             route r1(Void, Void, Void)
                 attrs
                     f1 = "1"
                     f1 = "2"
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([
-                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        self.assertEqual(
-            "Attribute 'f1' defined more than once.",
-            cm.exception.msg)
+            specs_to_ir(
+                [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+            )
+        self.assertEqual("Attribute 'f1' defined more than once.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Test union type
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             import test
 
             struct Route
                 f1 test.U
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -4169,20 +4737,23 @@ class TestStone(unittest.TestCase):
             route r1(Void, Void, Void)
                 attrs
                     f1 = a
-            """)
-        specs_to_ir([
-            ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
+            """
+        )
+        specs_to_ir([("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)])
 
         # Try union type with bad attribute
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             import test
 
             struct Route
                 f1 test.U
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -4192,26 +4763,29 @@ class TestStone(unittest.TestCase):
             route r1(Void, Void, Void)
                 attrs
                     f1 = 3
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([
-                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        self.assertEqual(
-            "Expected union tag as value.",
-            cm.exception.msg)
+            specs_to_ir(
+                [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+            )
+        self.assertEqual("Expected union tag as value.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
         # Try union type attribute with non-void tag set
-        stone_cfg_text = textwrap.dedent("""\
+        stone_cfg_text = textwrap.dedent(
+            """\
             namespace stone_cfg
 
             import test
 
             struct Route
                 f1 test.U
-            """)
-        test_text = textwrap.dedent("""\
+            """
+        )
+        test_text = textwrap.dedent(
+            """\
             namespace test
 
             union U
@@ -4221,18 +4795,19 @@ class TestStone(unittest.TestCase):
             route r1(Void, Void, Void)
                 attrs
                     f1 = b
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([
-                ('stone_cfg.stone', stone_cfg_text), ('test.stone', test_text)])
-        self.assertEqual(
-            "invalid reference to non-void option 'b'",
-            cm.exception.msg)
+            specs_to_ir(
+                [("stone_cfg.stone", stone_cfg_text), ("test.stone", test_text)]
+            )
+        self.assertEqual("invalid reference to non-void option 'b'", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
-        self.assertEqual(cm.exception.path, 'test.stone')
+        self.assertEqual(cm.exception.path, "test.stone")
 
     def test_inline_type_def(self):
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct Photo
@@ -4277,10 +4852,12 @@ class TestStone(unittest.TestCase):
                         b
 
             route r(Void, Photo, E)
-            """)
-        specs_to_ir([('ns1.stone', text)])
+            """
+        )
+        specs_to_ir([("ns1.stone", text)])
 
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct T
@@ -4292,47 +4869,49 @@ class TestStone(unittest.TestCase):
                     struct
                         a String
                         b Int64
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('ns1.stone', text)])
-        self.assertEqual(
-            "Symbol 'T' already defined (ns1.stone:3).",
-            cm.exception.msg)
+            specs_to_ir([("ns1.stone", text)])
+        self.assertEqual("Symbol 'T' already defined (ns1.stone:3).", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 9)
-        self.assertEqual(cm.exception.path, 'ns1.stone')
+        self.assertEqual(cm.exception.path, "ns1.stone")
 
     def test_annotations(self):
         # Test non-existant annotation type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Broken = NonExistantType()
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Annotation type 'NonExistantType' does not exist",
-            cm.exception.msg)
+            "Annotation type 'NonExistantType' does not exist", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test annotation that refers to something of the wrong type
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct ItsAStruct
                 f String
 
             annotation NonExistant = ItsAStruct()
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "'ItsAStruct' is not an annotation type",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("'ItsAStruct' is not an annotation type", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test non-existant annotation
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -4340,16 +4919,16 @@ class TestStone(unittest.TestCase):
                 f String
                     @NonExistant
                     "Test field with a non-existant tag."
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Annotation 'NonExistant' does not exist.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Annotation 'NonExistant' does not exist.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test omission tag
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation InternalOnly = Omitted("internal")
@@ -4360,15 +4939,17 @@ class TestStone(unittest.TestCase):
                     @InternalOnly
                     "Test field with one omitted tag."
 
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s.all_fields[0].name, 'f')
-        self.assertEqual(s.all_fields[0].omitted_caller, 'internal')
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s.all_fields[0].name, "f")
+        self.assertEqual(s.all_fields[0].omitted_caller, "internal")
 
         # Test applying two omission tags to one field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation InternalOnly = Omitted("internal")
@@ -4381,16 +4962,18 @@ class TestStone(unittest.TestCase):
                     @InternalOnly
                     "Test field with two omitted tags."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Omitted caller already set as 'alpha_only'.",
-            cm.exception.msg)
+            "Omitted caller already set as 'alpha_only'.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 8)
 
         # Test deprecated tag
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Deprecated = Deprecated()
@@ -4401,16 +4984,18 @@ class TestStone(unittest.TestCase):
                     @Deprecated
                     "Test field with one deprecated tag."
 
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s.all_fields[0].name, 'f')
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s.all_fields[0].name, "f")
         self.assertEqual(s.all_fields[0].deprecated, True)
-        self.assertIn('Field is deprecated.', s.all_fields[0].doc)
+        self.assertIn("Field is deprecated.", s.all_fields[0].doc)
 
         # Test applying two deprecated tags to one field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Deprecated = Deprecated()
@@ -4422,16 +5007,16 @@ class TestStone(unittest.TestCase):
                     @Deprecated
                     "Test field with two deprecated tags."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Deprecated value already set as 'True'.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Deprecated value already set as 'True'.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 7)
 
         # Test preview tag
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Preview = Preview()
@@ -4442,17 +5027,21 @@ class TestStone(unittest.TestCase):
                     @Preview
                     "Test field with one preview tag."
 
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s.all_fields[0].name, 'f')
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s.all_fields[0].name, "f")
         self.assertEqual(s.all_fields[0].preview, True)
-        self.assertIn('Field is in preview mode - do not rely on in production.',
-                      s.all_fields[0].doc)
+        self.assertIn(
+            "Field is in preview mode - do not rely on in production.",
+            s.all_fields[0].doc,
+        )
 
         # Test applying two preview tags to one field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Preview = Preview()
@@ -4464,16 +5053,16 @@ class TestStone(unittest.TestCase):
                     @Preview
                     "Test field with two preview tags."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertEqual(
-            "Preview value already set as 'True'.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertEqual("Preview value already set as 'True'.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 7)
 
         # Test applying both preview and deprecated (preview then deprecated)
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Preview = Preview()
@@ -4486,16 +5075,16 @@ class TestStone(unittest.TestCase):
                     @Deprecated
                     "Test field with deprecated and preview tags."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn(
-            "'Deprecated' and 'Preview' can't both be set.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("'Deprecated' and 'Preview' can't both be set.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 8)
 
         # Test applying both preview and deprecated (deprecated then preview)
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Preview = Preview()
@@ -4508,16 +5097,16 @@ class TestStone(unittest.TestCase):
                     @Preview
                     "Test field with deprecated and preview tags."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn(
-            "'Deprecated' and 'Preview' can't both be set.",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn("'Deprecated' and 'Preview' can't both be set.", cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 8)
 
         # Test redacted blot tag
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedBlot("test_regex")
@@ -4528,16 +5117,18 @@ class TestStone(unittest.TestCase):
                     @FieldRedactor
                     "Test field with one redacted blot tag."
 
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s.all_fields[0].name, 'f')
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s.all_fields[0].name, "f")
         self.assertTrue(isinstance(s.all_fields[0].redactor, RedactedBlot))
         self.assertEqual(s.all_fields[0].redactor.regex, "test_regex")
 
         # Test applying two redacted blot tags to one field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedBlot("test_regex")
@@ -4550,16 +5141,16 @@ class TestStone(unittest.TestCase):
                     @AnotherFieldRedactor
                     "Test field with two redacted blot tags."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn(
-            "Redactor already set as \"RedactedBlot",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn('Redactor already set as "RedactedBlot', cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 8)
 
         # Test redacted hash tag
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4570,16 +5161,18 @@ class TestStone(unittest.TestCase):
                     @FieldRedactor
                     "Test field with one redacted hash tag."
 
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        s = api.namespaces['test'].data_type_by_name['S']
-        self.assertEqual(s.all_fields[0].name, 'f')
+        s = api.namespaces["test"].data_type_by_name["S"]
+        self.assertEqual(s.all_fields[0].name, "f")
         self.assertTrue(isinstance(s.all_fields[0].redactor, RedactedHash))
         self.assertEqual(s.all_fields[0].redactor.regex, "test_regex")
 
         # Test applying two redacted blot tags to one field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4592,62 +5185,69 @@ class TestStone(unittest.TestCase):
                     @AnotherFieldRedactor
                     "Test field with two redacted hash tags."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
-        self.assertIn(
-            "Redactor already set as \"RedactedHash",
-            cm.exception.msg)
+            specs_to_ir([("test.stone", text)])
+        self.assertIn('Redactor already set as "RedactedHash', cm.exception.msg)
         self.assertEqual(cm.exception.lineno, 8)
 
         # Test redacted blot tag on alias
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedBlot("test_regex")
 
             alias TestAlias = UInt32
                 @FieldRedactor
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        alias = api.namespaces['test'].alias_by_name['TestAlias']
+        alias = api.namespaces["test"].alias_by_name["TestAlias"]
         self.assertTrue(isinstance(alias.redactor, RedactedBlot))
         self.assertEqual(alias.redactor.regex, "test_regex")
 
         # Test redacted hash tag on alias
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
 
             alias TestAlias = String
                 @FieldRedactor
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        alias = api.namespaces['test'].alias_by_name['TestAlias']
+        alias = api.namespaces["test"].alias_by_name["TestAlias"]
         self.assertTrue(isinstance(alias.redactor, RedactedHash))
         self.assertEqual(alias.redactor.regex, "test_regex")
 
         # Test deprecated tag (non-redact) tag on alias
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Deprecated = Deprecated()
 
             alias TestAlias = String
                 @Deprecated
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertIn(
             "Aliases only support 'Redacted' and custom annotations, not",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 5)
 
         # Test applying redactor tag to non-String/numeric field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4661,16 +5261,19 @@ class TestStone(unittest.TestCase):
                     @FieldRedactor
                     "Test field with non-String type."
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Redactors can't be applied to user-defined or void types.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 10)
 
         # Test applying redactor tag to non-String/numeric alias
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4682,16 +5285,19 @@ class TestStone(unittest.TestCase):
             alias A = B
                 @FieldRedactor
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Redactors can't be applied to user-defined or void types.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 9)
 
         # Test applying redactor tag to alias to alias which already has redactor tag
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4702,16 +5308,18 @@ class TestStone(unittest.TestCase):
             alias A = B
                 @FieldRedactor
 
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "A redactor has already been defined for 'A' by 'B'.",
-            cm.exception.msg)
+            "A redactor has already been defined for 'A' by 'B'.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 8)
 
         # Test applying redactor tag to alias field
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4721,16 +5329,19 @@ class TestStone(unittest.TestCase):
             struct T
                 f A
                     @FieldRedactor
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Redactors can only be applied to alias definitions, not to alias references.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 8)
 
         # Test applying redactor tag list with user-defined object
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4741,16 +5352,19 @@ class TestStone(unittest.TestCase):
             struct T
                 f List(S)
                     @FieldRedactor
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Redactors can't be applied to user-defined or void types.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 9)
 
         # Test applying redactor tag to map with user-defined object
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation FieldRedactor = RedactedHash("test_regex")
@@ -4761,17 +5375,20 @@ class TestStone(unittest.TestCase):
             struct T
                 f Map(String, S)
                     @FieldRedactor
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Redactors can't be applied to user-defined or void types.",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 9)
 
     def test_custom_annotations(self):
         # Test annotation type with non-primitive parameter
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             struct S
@@ -4779,16 +5396,19 @@ class TestStone(unittest.TestCase):
 
             annotation_type AT
                 s S
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Parameter 's' must have a primitive type (possibly nullable).",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 7)
 
         # Test annotation type with an annotation applied to a parameter
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation Deprecated = Deprecated()
@@ -4796,39 +5416,45 @@ class TestStone(unittest.TestCase):
             annotation_type AT
                 s String
                     @Deprecated
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Annotations cannot be applied to parameters of annotation types",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test redefining built-in annotation types
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation_type Deprecated
                 s String
-            """)
+            """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
-            "Cannot redefine built-in annotation type 'Deprecated'.",
-            cm.exception.msg)
+            "Cannot redefine built-in annotation type 'Deprecated'.", cm.exception.msg
+        )
         self.assertEqual(cm.exception.lineno, 3)
 
         # Test not mixing keyword and positional arguments
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
             annotation_type Important
                 owner String
                 importance String = "very"
 
             annotation VeryImportant = Important("test-team", importance="very")
-        """)
+        """
+        )
         with self.assertRaises(InvalidSpec) as cm:
-            specs_to_ir([('test.stone', text)])
+            specs_to_ir([("test.stone", text)])
         self.assertEqual(
             "Annotations accept either positional or keyword arguments, not both",
             cm.exception.msg,
@@ -4836,7 +5462,8 @@ class TestStone(unittest.TestCase):
         self.assertEqual(cm.exception.lineno, 6)
 
         # Test custom annotation type, instance, and application
-        text = textwrap.dedent("""\
+        text = textwrap.dedent(
+            """\
             namespace test
 
             annotation_type Important
@@ -4853,40 +5480,41 @@ class TestStone(unittest.TestCase):
                 f String
                     @SortaImportant
                 g List(TestAlias)
-            """)
-        api = specs_to_ir([('test.stone', text)])
+            """
+        )
+        api = specs_to_ir([("test.stone", text)])
 
-        annotation_type = api.namespaces['test'].annotation_type_by_name['Important']
+        annotation_type = api.namespaces["test"].annotation_type_by_name["Important"]
         self.assertEqual(len(annotation_type.params), 2)
-        self.assertEqual(annotation_type.params[0].name, 'owner')
+        self.assertEqual(annotation_type.params[0].name, "owner")
         self.assertFalse(annotation_type.params[0].has_default)
         self.assertTrue(isinstance(annotation_type.params[0].data_type, String))
-        self.assertEqual(annotation_type.params[1].name, 'importance')
+        self.assertEqual(annotation_type.params[1].name, "importance")
         self.assertTrue(annotation_type.params[1].has_default)
-        self.assertEqual(annotation_type.params[1].default, 'very')
+        self.assertEqual(annotation_type.params[1].default, "very")
         self.assertTrue(isinstance(annotation_type.params[1].data_type, String))
 
         # test both args and kwargs are set consistently in IR
-        annotation = api.namespaces['test'].annotation_by_name['VeryImportant']
+        annotation = api.namespaces["test"].annotation_by_name["VeryImportant"]
         self.assertTrue(annotation.annotation_type is annotation_type)
-        self.assertEqual(annotation.kwargs['owner'], 'test-team')
-        self.assertEqual(annotation.kwargs['importance'], 'very')
-        self.assertEqual(annotation.args[0], 'test-team')
-        self.assertEqual(annotation.args[1], 'very')
+        self.assertEqual(annotation.kwargs["owner"], "test-team")
+        self.assertEqual(annotation.kwargs["importance"], "very")
+        self.assertEqual(annotation.args[0], "test-team")
+        self.assertEqual(annotation.args[1], "very")
 
-        annotation = api.namespaces['test'].annotation_by_name['SortaImportant']
+        annotation = api.namespaces["test"].annotation_by_name["SortaImportant"]
         self.assertTrue(annotation.annotation_type is annotation_type)
-        self.assertEqual(annotation.kwargs['owner'], 'test-team')
-        self.assertEqual(annotation.kwargs['importance'], 'sorta')
-        self.assertEqual(annotation.args[0], 'test-team')
-        self.assertEqual(annotation.args[1], 'sorta')
+        self.assertEqual(annotation.kwargs["owner"], "test-team")
+        self.assertEqual(annotation.kwargs["importance"], "sorta")
+        self.assertEqual(annotation.args[0], "test-team")
+        self.assertEqual(annotation.args[1], "sorta")
 
-        alias = api.namespaces['test'].alias_by_name['TestAlias']
+        alias = api.namespaces["test"].alias_by_name["TestAlias"]
         self.assertTrue(alias.custom_annotations[0].annotation_type is annotation_type)
 
-        struct = api.namespaces['test'].data_type_by_name['TestStruct']
+        struct = api.namespaces["test"].data_type_by_name["TestStruct"]
         self.assertEqual(struct.fields[0].custom_annotations[0], annotation)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

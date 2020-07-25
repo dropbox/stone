@@ -1,53 +1,38 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+import argparse
 import json
-import six
 import sys
 
+from stone.backend import CodeBackend
+from stone.backends.js_helpers import fmt_jsdoc_union, fmt_type, fmt_type_name
 from stone.ir import (
-    is_user_defined_type,
-    is_union_type,
     is_struct_type,
+    is_union_type,
+    is_user_defined_type,
     is_void_type,
     unwrap,
 )
-from stone.backend import CodeBackend
-from stone.backends.js_helpers import (
-    fmt_jsdoc_union,
-    fmt_type,
-    fmt_type_name,
-)
 
-_MYPY = False
-if _MYPY:
-    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-argparse = importlib.import_module(str('argparse'))  # type: typing.Any
-
-
-_cmdline_parser = argparse.ArgumentParser(prog='js-types-backend')
+_cmdline_parser = argparse.ArgumentParser(prog="js-types-backend")
 _cmdline_parser.add_argument(
-    'filename',
-    help=('The name to give the single Javascript file that is created and '
-          'contains all of the JSDoc types.'),
+    "filename",
+    help=(
+        "The name to give the single Javascript file that is created and "
+        "contains all of the JSDoc types."
+    ),
 )
 _cmdline_parser.add_argument(
-    '-e',
-    '--extra-arg',
-    action='append',
+    "-e",
+    "--extra-arg",
+    action="append",
     type=str,
     default=[],
-    help=("Additional properties to add to a route's argument type based "
-          "on if the route has a certain attribute set. Format (JSON): "
-          '{"match": ["ROUTE_ATTR", ROUTE_VALUE_TO_MATCH], '
-          '"arg_name": "ARG_NAME", "arg_type": "ARG_TYPE", '
-          '"arg_docstring": "ARG_DOCSTRING"}'),
+    help=(
+        "Additional properties to add to a route's argument type based "
+        "on if the route has a certain attribute set. Format (JSON): "
+        '{"match": ["ROUTE_ATTR", ROUTE_VALUE_TO_MATCH], '
+        '"arg_name": "ARG_NAME", "arg_type": "ARG_TYPE", '
+        '"arg_docstring": "ARG_DOCSTRING"}'
+    ),
 )
 
 _header = """\
@@ -101,8 +86,7 @@ class JavascriptTypesBackend(CodeBackend):
         extra_args = {}
 
         def die(m, extra_arg_raw):
-            print('Invalid --extra-arg:%s: %s' % (m, extra_arg_raw),
-                  file=sys.stderr)
+            print(f"Invalid --extra-arg:{m}: {extra_arg_raw}", file=sys.stderr)
             sys.exit(1)
 
         for extra_arg_raw in extra_args_raw:
@@ -112,32 +96,37 @@ class JavascriptTypesBackend(CodeBackend):
                 die(str(e), extra_arg_raw)
 
             # Validate extra_arg JSON blob
-            if 'match' not in extra_arg:
-                die('No match key', extra_arg_raw)
-            elif (not isinstance(extra_arg['match'], list) or
-                    len(extra_arg['match']) != 2):
-                die('match key is not a list of two strings', extra_arg_raw)
-            elif (not isinstance(extra_arg['match'][0], six.text_type) or
-                    not isinstance(extra_arg['match'][1], six.text_type)):
-                print(type(extra_arg['match'][0]))
-                die('match values are not strings', extra_arg_raw)
-            elif 'arg_name' not in extra_arg:
-                die('No arg_name key', extra_arg_raw)
-            elif not isinstance(extra_arg['arg_name'], six.text_type):
-                die('arg_name is not a string', extra_arg_raw)
-            elif 'arg_type' not in extra_arg:
-                die('No arg_type key', extra_arg_raw)
-            elif not isinstance(extra_arg['arg_type'], six.text_type):
-                die('arg_type is not a string', extra_arg_raw)
-            elif ('arg_docstring' in extra_arg and
-                    not isinstance(extra_arg['arg_docstring'], six.text_type)):
-                die('arg_docstring is not a string', extra_arg_raw)
+            if "match" not in extra_arg:
+                die("No match key", extra_arg_raw)
+            elif (
+                not isinstance(extra_arg["match"], list) or len(extra_arg["match"]) != 2
+            ):
+                die("match key is not a list of two strings", extra_arg_raw)
+            elif not isinstance(extra_arg["match"][0], str) or not isinstance(
+                extra_arg["match"][1], str
+            ):
+                print(type(extra_arg["match"][0]))
+                die("match values are not strings", extra_arg_raw)
+            elif "arg_name" not in extra_arg:
+                die("No arg_name key", extra_arg_raw)
+            elif not isinstance(extra_arg["arg_name"], str):
+                die("arg_name is not a string", extra_arg_raw)
+            elif "arg_type" not in extra_arg:
+                die("No arg_type key", extra_arg_raw)
+            elif not isinstance(extra_arg["arg_type"], str):
+                die("arg_type is not a string", extra_arg_raw)
+            elif "arg_docstring" in extra_arg and not isinstance(
+                extra_arg["arg_docstring"], str
+            ):
+                die("arg_docstring is not a string", extra_arg_raw)
 
-            attr_key, attr_val = extra_arg['match'][0], extra_arg['match'][1]
+            attr_key, attr_val = extra_arg["match"][0], extra_arg["match"][1]
 
-            extra_args.setdefault(attr_key, {})[attr_val] = \
-                (extra_arg['arg_name'], extra_arg['arg_type'],
-                 extra_arg.get('arg_docstring'))
+            extra_args.setdefault(attr_key, {})[attr_val] = (
+                extra_arg["arg_name"],
+                extra_arg["arg_type"],
+                extra_arg.get("arg_docstring"),
+            )
 
         # Extra arguments, keyed on data type objects.
         extra_args_for_types = {}
@@ -165,9 +154,9 @@ class JavascriptTypesBackend(CodeBackend):
 
     def _emit_jsdoc_header(self, doc=None):
         self.emit()
-        self.emit('/**')
+        self.emit("/**")
         if doc:
-            self.emit_wrapped_text(self.process_doc(doc, self._docf), prefix=' * ')
+            self.emit_wrapped_text(self.process_doc(doc, self._docf), prefix=" * ")
 
     def _generate_struct(self, struct_type, extra_parameters=None, nameOverride=None):
         """
@@ -176,9 +165,8 @@ class JavascriptTypesBackend(CodeBackend):
         extra_parameters = extra_parameters if extra_parameters is not None else []
         self._emit_jsdoc_header(struct_type.doc)
         self.emit(
-            ' * @typedef {Object} %s' % (
-                nameOverride if nameOverride else fmt_type_name(struct_type)
-            )
+            " * @typedef {Object} %s"
+            % (nameOverride if nameOverride else fmt_type_name(struct_type))
         )
 
         # Some structs can explicitly list their subtypes. These structs
@@ -194,8 +182,10 @@ class JavascriptTypesBackend(CodeBackend):
                         tag_values.append('"%s"' % tag)
 
                 jsdoc_tag_union = fmt_jsdoc_union(tag_values)
-                txt = '@property {%s} .tag - Tag identifying the subtype variant.' % \
-                    jsdoc_tag_union
+                txt = (
+                    "@property {%s} .tag - Tag identifying the subtype variant."
+                    % jsdoc_tag_union
+                )
                 self.emit_wrapped_text(txt)
             else:
                 # This struct is a particular subtype. Find the applicable
@@ -209,44 +199,41 @@ class JavascriptTypesBackend(CodeBackend):
                 # Determine which subtype this is.
                 for subtype in parent.get_enumerated_subtypes():
                     if subtype.data_type == struct_type:
-                        txt = '@property {\'%s\'} [.tag] - Tag identifying ' \
-                            'this subtype variant. This field is only ' \
-                            'present when needed to discriminate ' \
-                            'between multiple possible subtypes.' % \
-                            subtype.name
+                        txt = (
+                            "@property {'%s'} [.tag] - Tag identifying "
+                            "this subtype variant. This field is only "
+                            "present when needed to discriminate "
+                            "between multiple possible subtypes." % subtype.name
+                        )
                         self.emit_wrapped_text(txt)
                         break
 
         for param_name, param_type, param_docstring in extra_parameters:
-            param_docstring = ' - %s' % param_docstring if param_docstring else ''
+            param_docstring = " - %s" % param_docstring if param_docstring else ""
             self.emit_wrapped_text(
-                '@property {%s} %s%s' % (
-                    param_type,
-                    param_name,
-                    param_docstring,
+                "@property {{{}}} {}{}".format(
+                    param_type, param_name, param_docstring,
                 ),
-                prefix=' * ',
+                prefix=" * ",
             )
 
         # NOTE: JSDoc @typedef does not support inheritance. Using @class would be inappropriate,
         # since these are not nominal types backed by a constructor. Thus, we emit all_fields,
         # which includes fields on parent types.
         for field in struct_type.all_fields:
-            field_doc = ' - ' + field.doc if field.doc else ''
+            field_doc = " - " + field.doc if field.doc else ""
             field_type, nullable, _ = unwrap(field.data_type)
             field_js_type = fmt_type(field_type)
             # Translate nullable types into optional properties.
-            field_name = '[' + field.name + ']' if nullable else field.name
+            field_name = "[" + field.name + "]" if nullable else field.name
             self.emit_wrapped_text(
-                '@property {%s} %s%s' % (
-                    field_js_type,
-                    field_name,
-                    self.process_doc(field_doc, self._docf),
+                "@property {{{}}} {}{}".format(
+                    field_js_type, field_name, self.process_doc(field_doc, self._docf),
                 ),
-                prefix=' * ',
+                prefix=" * ",
             )
 
-        self.emit(' */')
+        self.emit(" */")
 
     def _generate_union(self, union_type):
         """
@@ -254,27 +241,28 @@ class JavascriptTypesBackend(CodeBackend):
         """
         union_name = fmt_type_name(union_type)
         self._emit_jsdoc_header(union_type.doc)
-        self.emit(' * @typedef {Object} %s' % union_name)
+        self.emit(" * @typedef {Object} %s" % union_name)
         variant_types = []
         for variant in union_type.all_fields:
             variant_types.append("'%s'" % variant.name)
             variant_data_type, _, _ = unwrap(variant.data_type)
             # Don't emit fields for void types.
             if not is_void_type(variant_data_type):
-                variant_doc = ' - Available if .tag is %s.' % variant.name
+                variant_doc = " - Available if .tag is %s." % variant.name
                 if variant.doc:
-                    variant_doc += ' ' + variant.doc
+                    variant_doc += " " + variant.doc
                 self.emit_wrapped_text(
-                    '@property {%s} [%s]%s' % (
-                        fmt_type(variant_data_type),
-                        variant.name,
-                        variant_doc,
+                    "@property {{{}}} [{}]{}".format(
+                        fmt_type(variant_data_type), variant.name, variant_doc,
                     ),
-                    prefix=' * ',
+                    prefix=" * ",
                 )
         jsdoc_tag_union = fmt_jsdoc_union(variant_types)
-        self.emit(' * @property {%s} .tag - Tag identifying the union variant.' % jsdoc_tag_union)
-        self.emit(' */')
+        self.emit(
+            " * @property {%s} .tag - Tag identifying the union variant."
+            % jsdoc_tag_union
+        )
+        self.emit(" */")
 
     def _docf(self, tag, val):  # pylint: disable=unused-argument
         """

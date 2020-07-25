@@ -6,27 +6,18 @@ The goal of this module is to define all data types that are common to the
 languages and serialization formats we want to support.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
-from abc import ABCMeta, abstractmethod
-from collections import OrderedDict, deque
 import copy
 import datetime
 import math
 import numbers
 import re
-import six
+import typing
+from abc import ABCMeta, abstractmethod
+from collections import OrderedDict, deque
 
+from ..frontend.ast import AstExampleField, AstExampleRef, AstTagRef
 from ..frontend.exception import InvalidSpec
-from ..frontend.ast import (
-    AstExampleField,
-    AstExampleRef,
-    AstTagRef,
-)
-
-_MYPY = False
-if _MYPY:
-    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
 class ParameterError(Exception):
@@ -42,20 +33,20 @@ def generic_type_name(v):
         return "reference"
     elif isinstance(v, numbers.Integral):
         # Must come before real numbers check since integrals are reals too
-        return 'integer'
+        return "integer"
     elif isinstance(v, numbers.Real):
-        return 'float'
+        return "float"
     elif isinstance(v, (tuple, list)):
-        return 'list'
-    elif isinstance(v, six.string_types):
-        return 'string'
+        return "list"
+    elif isinstance(v, str):
+        return "string"
     elif v is None:
-        return 'null'
+        return "null"
     else:
         return type(v).__name__
 
 
-class DataType(object):
+class DataType:
     """
     Abstract class representing a data type.
     """
@@ -121,9 +112,8 @@ class Composite(DataType):  # pylint: disable=abstract-method
 
 
 class Nullable(Composite):
-
     def __init__(self, data_type):
-        super(Nullable, self).__init__()
+        super().__init__()
         self.data_type = data_type
 
     def check(self, val):
@@ -142,29 +132,32 @@ class Nullable(Composite):
 
 
 class Void(Primitive):
-
     def check(self, val):
         if val is not None:
-            raise ValueError('void type can only be null')
+            raise ValueError("void type can only be null")
 
     def check_example(self, ex_field):
         if ex_field.value is not None:
-            raise InvalidSpec('example of void type must be null',
-                              ex_field.lineno, ex_field.path)
+            raise InvalidSpec(
+                "example of void type must be null", ex_field.lineno, ex_field.path
+            )
 
     def check_attr_repr(self, attr_field):
         raise NotImplementedError
 
-class Bytes(Primitive):
 
+class Bytes(Primitive):
     def check(self, val):
-        if not isinstance(val, (bytes, six.text_type)):
-            raise ValueError('%r is not valid bytes' % val)
+        if not isinstance(val, (bytes, str)):
+            raise ValueError("%r is not valid bytes" % val)
 
     def check_example(self, ex_field):
-        if not isinstance(ex_field.value, (bytes, six.text_type)):
-            raise InvalidSpec("'%s' is not valid bytes" % ex_field.value,
-                              ex_field.lineno, ex_field.path)
+        if not isinstance(ex_field.value, (bytes, str)):
+            raise InvalidSpec(
+                "'%s' is not valid bytes" % ex_field.value,
+                ex_field.lineno,
+                ex_field.path,
+            )
 
     def check_attr_repr(self, attr_field):
         try:
@@ -172,10 +165,11 @@ class Bytes(Primitive):
         except ValueError as e:
             raise InvalidSpec(e.args[0], attr_field.lineno, attr_field.path)
         v = attr_field.value
-        if isinstance(v, six.text_type):
-            return v.encode('utf-8')
+        if isinstance(v, str):
+            return v.encode("utf-8")
         else:
             return v
+
 
 class _BoundedInteger(Primitive):
     """
@@ -184,45 +178,45 @@ class _BoundedInteger(Primitive):
     """
 
     # See <https://github.com/python/mypy/issues/1833>
-    minimum = None  # type: typing.Optional[int]
-    maximum = None  # type: typing.Optional[int]
+    minimum: typing.Optional[int] = None
+    maximum: typing.Optional[int] = None
 
     def __init__(self, min_value=None, max_value=None):
         """
         A more restrictive minimum or maximum value can be specified than the
         range inherent to the defined type.
         """
-        super(_BoundedInteger, self).__init__()
+        super().__init__()
         if min_value is not None:
             if not isinstance(min_value, numbers.Integral):
-                raise ParameterError('min_value must be an integral number')
+                raise ParameterError("min_value must be an integral number")
             if min_value < self.minimum:
-                raise ParameterError('min_value cannot be less than the '
-                    'minimum value for this type (%s < %s)' %
-                    (min_value, self.minimum))
+                raise ParameterError(
+                    "min_value cannot be less than the "
+                    "minimum value for this type (%s < %s)" % (min_value, self.minimum)
+                )
         if max_value is not None:
             if not isinstance(max_value, numbers.Integral):
-                raise ParameterError('max_value must be an integral number')
+                raise ParameterError("max_value must be an integral number")
             if max_value > self.maximum:
-                raise ParameterError('max_value cannot be greater than the '
-                    'maximum value for this type (%s < %s)' %
-                    (max_value, self.maximum))
+                raise ParameterError(
+                    "max_value cannot be greater than the "
+                    "maximum value for this type (%s < %s)" % (max_value, self.maximum)
+                )
         self.min_value = min_value
         self.max_value = max_value
 
     def check(self, val):
         if not isinstance(val, numbers.Integral):
-            raise ValueError('%s is not a valid integer' %
-                             generic_type_name(val))
+            raise ValueError("%s is not a valid integer" % generic_type_name(val))
         if not (self.minimum <= val <= self.maximum):
-            raise ValueError('%d is not within range [%r, %r]'
-                             % (val, self.minimum, self.maximum))
+            raise ValueError(
+                "%d is not within range [%r, %r]" % (val, self.minimum, self.maximum)
+            )
         if self.min_value is not None and val < self.min_value:
-            raise ValueError('%d is less than %d' %
-                             (val, self.min_value))
+            raise ValueError("%d is less than %d" % (val, self.min_value))
         if self.max_value is not None and val > self.max_value:
-            raise ValueError('%d is greater than %d' %
-                             (val, self.max_value))
+            raise ValueError("%d is greater than %d" % (val, self.max_value))
 
     def check_example(self, ex_field):
         try:
@@ -231,27 +225,27 @@ class _BoundedInteger(Primitive):
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
     def __repr__(self):
-        return '%s()' % self.name
+        return "%s()" % self.name
 
 
 class Int32(_BoundedInteger):
-    minimum = -2**31
-    maximum = 2**31 - 1
+    minimum = -(2 ** 31)
+    maximum = 2 ** 31 - 1
 
 
 class UInt32(_BoundedInteger):
     minimum = 0
-    maximum = 2**32 - 1
+    maximum = 2 ** 32 - 1
 
 
 class Int64(_BoundedInteger):
-    minimum = -2**63
-    maximum = 2**63 - 1
+    minimum = -(2 ** 63)
+    maximum = 2 ** 63 - 1
 
 
 class UInt64(_BoundedInteger):
     minimum = 0
-    maximum = 2**64 - 1
+    maximum = 2 ** 64 - 1
 
 
 class _BoundedFloat(Primitive):
@@ -264,74 +258,63 @@ class _BoundedFloat(Primitive):
     """
 
     # See <https://github.com/python/mypy/issues/1833>
-    minimum = None  # type: typing.Optional[float]
-    maximum = None  # type: typing.Optional[float]
+    minimum: typing.Optional[float] = None
+    maximum: typing.Optional[float] = None
 
     def __init__(self, min_value=None, max_value=None):
         """
         A more restrictive minimum or maximum value can be specified than the
         range inherent to the defined type.
         """
-        super(_BoundedFloat, self).__init__()
+        super().__init__()
         if min_value is not None:
             if not isinstance(min_value, numbers.Real):
-                raise ParameterError('min_value must be a real number')
+                raise ParameterError("min_value must be a real number")
             if not isinstance(min_value, float):
                 try:
                     min_value = float(min_value)
                 except OverflowError:
-                    raise ParameterError('min_value is too small for a float')
+                    raise ParameterError("min_value is too small for a float")
             if self.minimum is not None and min_value < self.minimum:
                 raise ParameterError(
-                    'min_value cannot be less than the '  # pylint: disable=E1307
-                    'minimum value for this type (%f < %f)' %
-                    (min_value, self.minimum)
+                    "min_value cannot be less than the "  # pylint: disable=E1307
+                    "minimum value for this type (%f < %f)" % (min_value, self.minimum)
                 )
         if max_value is not None:
             if not isinstance(max_value, numbers.Real):
-                raise ParameterError('max_value must be a real number')
+                raise ParameterError("max_value must be a real number")
             if not isinstance(max_value, float):
                 try:
                     max_value = float(max_value)
                 except OverflowError:
-                    raise ParameterError('max_value is too large for a float')
+                    raise ParameterError("max_value is too large for a float")
             if self.maximum is not None and max_value > self.maximum:
                 raise ParameterError(
-                    'max_value cannot be greater than the '  # pylint: disable=E1307
-                    'maximum value for this type (%f < %f)' %
-                    (max_value, self.maximum)
+                    "max_value cannot be greater than the "  # pylint: disable=E1307
+                    "maximum value for this type (%f < %f)" % (max_value, self.maximum)
                 )
         self.min_value = min_value
         self.max_value = max_value
 
     def check(self, val):
         if not isinstance(val, numbers.Real):
-            raise ValueError('%s is not a valid real number' %
-                             generic_type_name(val))
+            raise ValueError("%s is not a valid real number" % generic_type_name(val))
         if not isinstance(val, float):
             try:
                 val = float(val)
             except OverflowError:
-                raise ValueError('%r is too large for float' % val)
+                raise ValueError("%r is too large for float" % val)
         if math.isnan(val) or math.isinf(val):
             # Parser doesn't support NaN or Inf yet.
-            raise ValueError('%f values are not supported' % val)
+            raise ValueError("%f values are not supported" % val)
         if self.minimum is not None and val < self.minimum:
-            raise ValueError(
-                '%f is less than %f' %  # pylint: disable=E1307
-                (val, self.minimum)
-            )
+            raise ValueError(f"{val:f} is less than {self.minimum:f}")
         if self.maximum is not None and val > self.maximum:
-            raise ValueError(
-                '%f is greater than %f' %  # pylint: disable=E1307
-                (val, self.maximum)
-            )
+            raise ValueError(f"{val:f} is greater than {self.maximum:f}")
         if self.min_value is not None and val < self.min_value:
-            raise ValueError('%f is less than %f' %
-                             (val, self.min_value))
+            raise ValueError(f"{val:f} is less than {self.min_value:f}")
         if self.max_value is not None and val > self.max_value:
-            raise ValueError('%f is greater than %f' %
-                             (val, self.min_value))
+            raise ValueError(f"{val:f} is greater than {self.min_value:f}")
 
     def check_example(self, ex_field):
         try:
@@ -340,13 +323,13 @@ class _BoundedFloat(Primitive):
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
     def __repr__(self):
-        return '%s()' % self.name
+        return "%s()" % self.name
 
 
 class Float32(_BoundedFloat):
     # Maximum and minimums from the IEEE 754-1985 standard
-    minimum = -3.40282 * 10**38
-    maximum = 3.40282 * 10**38
+    minimum = -3.40282 * 10 ** 38
+    maximum = 3.40282 * 10 ** 38
 
 
 class Float64(_BoundedFloat):
@@ -354,10 +337,9 @@ class Float64(_BoundedFloat):
 
 
 class Boolean(Primitive):
-
     def check(self, val):
         if not isinstance(val, bool):
-            raise ValueError('%r is not a valid boolean' % val)
+            raise ValueError("%r is not a valid boolean" % val)
 
     def check_example(self, ex_field):
         try:
@@ -365,23 +347,23 @@ class Boolean(Primitive):
         except ValueError as e:
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
-class String(Primitive):
 
+class String(Primitive):
     def __init__(self, min_length=None, max_length=None, pattern=None):
-        super(String, self).__init__()
+        super().__init__()
         if min_length is not None:
             if not isinstance(min_length, numbers.Integral):
-                raise ParameterError('min_length must be an integral number')
+                raise ParameterError("min_length must be an integral number")
             if min_length < 0:
-                raise ParameterError('min_length must be >= 0')
+                raise ParameterError("min_length must be >= 0")
         if max_length is not None:
             if not isinstance(max_length, numbers.Integral):
-                raise ParameterError('max_length must be an integral number')
+                raise ParameterError("max_length must be an integral number")
             if max_length < 1:
-                raise ParameterError('max_length must be > 0')
+                raise ParameterError("max_length must be > 0")
         if min_length and max_length:
             if max_length < min_length:
-                raise ParameterError('max_length must be >= min_length')
+                raise ParameterError("max_length must be >= min_length")
 
         self.min_length = min_length
         self.max_length = max_length
@@ -389,28 +371,30 @@ class String(Primitive):
         self.pattern_re = None
 
         if pattern:
-            if not isinstance(pattern, six.string_types):
-                raise ParameterError('pattern must be a string')
+            if not isinstance(pattern, str):
+                raise ParameterError("pattern must be a string")
             try:
                 self.pattern_re = re.compile(pattern)
             except re.error as e:
                 raise ParameterError(
-                    'could not compile regex pattern {!r}: {}'.format(
-                        pattern, e.args[0]))
+                    "could not compile regex pattern {!r}: {}".format(
+                        pattern, e.args[0]
+                    )
+                )
 
     def check(self, val):
-        if not isinstance(val, six.string_types):
-            raise ValueError('%s is not a valid string' %
-                             generic_type_name(val))
+        if not isinstance(val, str):
+            raise ValueError("%s is not a valid string" % generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
-            raise ValueError("'%s' has more than %d character(s)"
-                             % (val, self.max_length))
+            raise ValueError(
+                "'%s' has more than %d character(s)" % (val, self.max_length)
+            )
         elif self.min_length is not None and len(val) < self.min_length:
-            raise ValueError("'%s' has fewer than %d character(s)"
-                             % (val, self.min_length))
+            raise ValueError(
+                "'%s' has fewer than %d character(s)" % (val, self.min_length)
+            )
         elif self.pattern and not self.pattern_re.match(val):
-            raise ValueError("'%s' did not match pattern '%s'"
-                             % (val, self.pattern))
+            raise ValueError(f"'{val}' did not match pattern '{self.pattern}'")
 
     def check_example(self, ex_field):
         try:
@@ -418,17 +402,17 @@ class String(Primitive):
         except ValueError as e:
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
-class Timestamp(Primitive):
 
+class Timestamp(Primitive):
     def __init__(self, fmt):
-        super(Timestamp, self).__init__()
-        if not isinstance(fmt, six.string_types):
-            raise ParameterError('format must be a string')
+        super().__init__()
+        if not isinstance(fmt, str):
+            raise ParameterError("format must be a string")
         self.format = fmt
 
     def check(self, val):
-        if not isinstance(val, six.string_types):
-            raise ValueError('timestamp must be specified as a string')
+        if not isinstance(val, str):
+            raise ValueError("timestamp must be specified as a string")
 
         # Raises a ValueError if val is the incorrect format
         datetime.datetime.strptime(val, self.format)
@@ -444,24 +428,24 @@ class Timestamp(Primitive):
             self.check(attr_field.value)
         except ValueError as e:
             msg = e.args[0]
-            if isinstance(msg, six.binary_type):
+            if isinstance(msg, bytes):
                 # For Python 2 compatibility.
-                msg = msg.decode('utf-8')
+                msg = msg.decode("utf-8")
             raise InvalidSpec(msg, attr_field.lineno, attr_field.path)
         return datetime.datetime.strptime(attr_field.value, self.format)
 
-class List(Composite):
 
+class List(Composite):
     def __init__(self, data_type, min_items=None, max_items=None):
-        super(List, self).__init__()
+        super().__init__()
         self.data_type = data_type
 
         if min_items is not None and min_items < 0:
-            raise ParameterError('min_items must be >= 0')
+            raise ParameterError("min_items must be >= 0")
         if max_items is not None and max_items < 1:
-            raise ParameterError('max_items must be > 0')
+            raise ParameterError("max_items must be > 0")
         if min_items and max_items and max_items < min_items:
-            raise ParameterError('max_length must be >= min_length')
+            raise ParameterError("max_length must be >= min_length")
 
         self.min_items = min_items
         self.max_items = max_items
@@ -474,27 +458,24 @@ class List(Composite):
             self._check_list_container(ex_field.value)
             for item in ex_field.value:
                 new_ex_field = AstExampleField(
-                    ex_field.path,
-                    ex_field.lineno,
-                    ex_field.lexpos,
-                    ex_field.name,
-                    item)
+                    ex_field.path, ex_field.lineno, ex_field.lexpos, ex_field.name, item
+                )
                 self.data_type.check_example(new_ex_field)
         except ValueError as e:
             raise InvalidSpec(e.args[0], ex_field.lineno, ex_field.path)
 
     def _check_list_container(self, val):
         if not isinstance(val, list):
-            raise ValueError('%s is not a valid list' % generic_type_name(val))
+            raise ValueError("%s is not a valid list" % generic_type_name(val))
         elif self.max_items is not None and len(val) > self.max_items:
-            raise ValueError('list has more than %s item(s)' % self.max_items)
+            raise ValueError("list has more than %s item(s)" % self.max_items)
         elif self.min_items is not None and len(val) < self.min_items:
-            raise ValueError('list has fewer than %s item(s)' % self.min_items)
+            raise ValueError("list has fewer than %s item(s)" % self.min_items)
 
 
 class Map(Composite):
     def __init__(self, key_data_type, value_data_type):
-        super(Map, self).__init__()
+        super().__init__()
 
         if not isinstance(key_data_type, String):
             raise ParameterError("Only String primitives are supported as key types.")
@@ -507,7 +488,9 @@ class Map(Composite):
 
     def check_example(self, ex_field):
         if not isinstance(ex_field.value, dict):
-            raise ValueError("%s is not a valid map" % generic_type_name(ex_field.value))
+            raise ValueError(
+                "%s is not a valid map" % generic_type_name(ex_field.value)
+            )
         for k, v in ex_field.value.items():
             ex_key_field = self._make_ex_field(ex_field, k)
             ex_value_field = self._make_ex_field(ex_field, v)
@@ -516,11 +499,8 @@ class Map(Composite):
 
     def _make_ex_field(self, ex_field, value):
         return AstExampleField(
-            ex_field.path,
-            ex_field.lineno,
-            ex_field.lexpos,
-            ex_field.name,
-            value)
+            ex_field.path, ex_field.lineno, ex_field.lexpos, ex_field.name, value
+        )
 
 
 def doc_unwrap(raw_doc):
@@ -533,32 +513,28 @@ def doc_unwrap(raw_doc):
     """
     if raw_doc is None:
         return None
-    docstring = ''
+    docstring = ""
     consecutive_newlines = 0
     # Remove all leading and trailing whitespace in the documentation block
     for c in raw_doc.strip():
-        if c == '\n':
+        if c == "\n":
             consecutive_newlines += 1
             if consecutive_newlines > 1:
                 docstring += c
         else:
             if consecutive_newlines == 1:
-                docstring += ' '
+                docstring += " "
             consecutive_newlines = 0
             docstring += c
     return docstring
 
 
-class Field(object):
+class Field:
     """
     Represents a field in a composite type.
     """
 
-    def __init__(self,
-                 name,
-                 data_type,
-                 doc,
-                 ast_node):
+    def __init__(self, name, data_type, doc, ast_node):
         """
         Creates a new Field.
 
@@ -586,47 +562,61 @@ class Field(object):
         for annotation in annotations:
             if isinstance(annotation, Deprecated):
                 if self.deprecated:
-                    raise InvalidSpec("Deprecated value already set as %r." %
-                                      str(self.deprecated), self._ast_node.lineno)
+                    raise InvalidSpec(
+                        "Deprecated value already set as %r." % str(self.deprecated),
+                        self._ast_node.lineno,
+                    )
                 if self.preview:
-                    raise InvalidSpec("'Deprecated' and 'Preview' can\'t both be set.",
-                                      self._ast_node.lineno)
+                    raise InvalidSpec(
+                        "'Deprecated' and 'Preview' can't both be set.",
+                        self._ast_node.lineno,
+                    )
                 self.deprecated = True
-                self.doc = 'Field is deprecated. {}'.format(self.doc)
+                self.doc = f"Field is deprecated. {self.doc}"
             elif isinstance(annotation, Omitted):
                 if self.omitted_caller:
-                    raise InvalidSpec("Omitted caller already set as %r." %
-                                      str(self.omitted_caller), self._ast_node.lineno)
+                    raise InvalidSpec(
+                        "Omitted caller already set as %r." % str(self.omitted_caller),
+                        self._ast_node.lineno,
+                    )
                 self.omitted_caller = annotation.omitted_caller
                 self.doc = 'Field is only returned for "{}" callers. {}'.format(
-                    str(self.omitted_caller), self.doc)
+                    str(self.omitted_caller), self.doc
+                )
             elif isinstance(annotation, Preview):
                 if self.preview:
-                    raise InvalidSpec("Preview value already set as %r." %
-                                      str(self.preview), self._ast_node.lineno)
+                    raise InvalidSpec(
+                        "Preview value already set as %r." % str(self.preview),
+                        self._ast_node.lineno,
+                    )
 
                 if self.deprecated:
-                    raise InvalidSpec("'Deprecated' and 'Preview' can\'t both be set.",
-                                      self._ast_node.lineno)
+                    raise InvalidSpec(
+                        "'Deprecated' and 'Preview' can't both be set.",
+                        self._ast_node.lineno,
+                    )
                 self.preview = True
-                self.doc = 'Field is in preview mode - do not rely on in production. {}'.format(
+                self.doc = "Field is in preview mode - do not rely on in production. {}".format(
                     self.doc
                 )
             elif isinstance(annotation, Redacted):
                 # Make sure we don't set multiple conflicting annotations on one field
                 if self.redactor:
-                    raise InvalidSpec("Redactor already set as %r." %
-                                      str(self.redactor), self._ast_node.lineno)
+                    raise InvalidSpec(
+                        "Redactor already set as %r." % str(self.redactor),
+                        self._ast_node.lineno,
+                    )
                 self.redactor = annotation
             elif isinstance(annotation, CustomAnnotation):
                 self.custom_annotations.append(annotation)
             else:
                 raise InvalidSpec(
-                    'Annotation %r not recognized for field.' % annotation, self._ast_node.lineno)
+                    "Annotation %r not recognized for field." % annotation,
+                    self._ast_node.lineno,
+                )
 
     def __repr__(self):
-        return 'Field(%r, %r)' % (self.name,
-                                  self.data_type)
+        return f"Field({self.name!r}, {self.data_type!r})"
 
 
 class StructField(Field):
@@ -634,11 +624,7 @@ class StructField(Field):
     Represents a field of a struct.
     """
 
-    def __init__(self,
-                 name,
-                 data_type,
-                 doc,
-                 ast_node):
+    def __init__(self, name, data_type, doc, ast_node):
         """
         Creates a new Field.
 
@@ -648,7 +634,7 @@ class StructField(Field):
         :param ast_node: Raw field definition from the parser.
         :type ast_node: stone.frontend.ast.AstField
         """
-        super(StructField, self).__init__(name, data_type, doc, ast_node)
+        super().__init__(name, data_type, doc, ast_node)
         self.has_default = False
         self._default = None
 
@@ -659,7 +645,7 @@ class StructField(Field):
     @property
     def default(self):
         if not self.has_default:
-            raise Exception('Type has no default')
+            raise Exception("Type has no default")
         else:
             return self._default
 
@@ -677,9 +663,9 @@ class StructField(Field):
         return attr
 
     def __repr__(self):
-        return 'StructField(%r, %r, %r)' % (self.name,
-                                            self.data_type,
-                                            self.omitted_caller)
+        return "StructField({!r}, {!r}, {!r})".format(
+            self.name, self.data_type, self.omitted_caller
+        )
 
 
 class UnionField(Field):
@@ -687,20 +673,14 @@ class UnionField(Field):
     Represents a field of a union.
     """
 
-    def __init__(self,
-                 name,
-                 data_type,
-                 doc,
-                 ast_node,
-                 catch_all=False):
-        super(UnionField, self).__init__(name, data_type, doc, ast_node)
+    def __init__(self, name, data_type, doc, ast_node, catch_all=False):
+        super().__init__(name, data_type, doc, ast_node)
         self.catch_all = catch_all
 
     def __repr__(self):
-        return 'UnionField(%r, %r, %r, %r)' % (self.name,
-                                               self.data_type,
-                                               self.catch_all,
-                                               self.omitted_caller)
+        return "UnionField({!r}, {!r}, {!r}, {!r})".format(
+            self.name, self.data_type, self.catch_all, self.omitted_caller
+        )
 
 
 class UserDefined(Composite):
@@ -708,7 +688,7 @@ class UserDefined(Composite):
     These are types that are defined directly in specs.
     """
 
-    DEFAULT_EXAMPLE_LABEL = 'default'
+    DEFAULT_EXAMPLE_LABEL = "default"
 
     def __init__(self, name, namespace, ast_node):
         """
@@ -722,7 +702,7 @@ class UserDefined(Composite):
         :param ast_node: Raw type definition from the parser.
         :type ast_node: stone.frontend.ast.AstTypeDef
         """
-        super(UserDefined, self).__init__()
+        super().__init__()
         self._name = name
         self.namespace = namespace
         self._ast_node = ast_node
@@ -758,9 +738,11 @@ class UserDefined(Composite):
         for field in self.fields:
             if field.name in self._fields_by_name:
                 orig_lineno = self._fields_by_name[field.name]._ast_node.lineno
-                raise InvalidSpec("Field '%s' already defined on line %s." %
-                                  (field.name, orig_lineno),
-                                  field._ast_node.lineno)
+                raise InvalidSpec(
+                    "Field '%s' already defined on line %s."
+                    % (field.name, orig_lineno),
+                    field._ast_node.lineno,
+                )
             self._fields_by_name[field.name] = field
 
         # Check that the fields for this type do not match any of the fields of
@@ -773,7 +755,8 @@ class UserDefined(Composite):
                     raise InvalidSpec(
                         "Field '%s' already defined in parent '%s' on line %d."
                         % (field.name, cur_type.name, lineno),
-                        field._ast_node.lineno)
+                        field._ast_node.lineno,
+                    )
             cur_type = cur_type.parent_type
 
         # Import namespaces containing any custom annotations
@@ -785,7 +768,8 @@ class UserDefined(Composite):
                 if annotation.annotation_type.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
                         annotation.annotation_type.namespace,
-                        imported_annotation_type=True)
+                        imported_annotation_type=True,
+                    )
 
                 # second, check if we need to import the annotation itself
 
@@ -795,8 +779,8 @@ class UserDefined(Composite):
                 # the IR level it makes sense to include the dependency
                 if annotation.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
-                        annotation.namespace,
-                        imported_annotation=True)
+                        annotation.namespace, imported_annotation=True
+                    )
 
         # Indicate that the attributes of the type have been populated.
         self._is_forward_ref = False
@@ -860,8 +844,8 @@ class UserDefined(Composite):
             for key in d:
                 if isinstance(d[key], dict):
                     inner_d = d[key]
-                    if len(inner_d) == 1 and '.tag' in inner_d:
-                        d[key] = inner_d['.tag']
+                    if len(inner_d) == 1 and ".tag" in inner_d:
+                        d[key] = inner_d[".tag"]
                     else:
                         make_compact(inner_d)
                 if isinstance(d[key], list):
@@ -869,41 +853,44 @@ class UserDefined(Composite):
                         make_compact(item)
 
         for example in examples.values():
-            if (isinstance(example.value, dict) and
-                    len(example.value) == 1 and '.tag' in example.value):
+            if (
+                isinstance(example.value, dict)
+                and len(example.value) == 1
+                and ".tag" in example.value
+            ):
                 # Handle the case where the top-level of the example can be
                 # made compact.
-                example.value = example.value['.tag']
+                example.value = example.value[".tag"]
             else:
                 make_compact(example.value)
 
         return examples
 
 
-class Example(object):
+class Example:
     """An example of a struct or union type."""
 
     def __init__(self, label, text, value, ast_node=None):
-        assert isinstance(label, six.text_type), type(label)
+        assert isinstance(label, str), type(label)
         self.label = label
-        assert isinstance(text, (six.text_type, type(None))), type(text)
+        assert isinstance(text, (str, type(None))), type(text)
         self.text = doc_unwrap(text) if text else text
-        assert isinstance(value, (six.text_type, OrderedDict)), type(value)
+        assert isinstance(value, (str, OrderedDict)), type(value)
         self.value = value
         self._ast_node = ast_node
 
     def __repr__(self):
-        return 'Example({!r}, {!r}, {!r})'.format(
-            self.label, self.text, self.value)
+        return f"Example({self.label!r}, {self.text!r}, {self.value!r})"
 
 
 class Struct(UserDefined):
     """
     Defines a product type: Composed of other primitive and/or struct types.
     """
+
     # pylint: disable=attribute-defined-outside-init
 
-    composite_type = 'struct'
+    composite_type = "struct"
 
     def set_attributes(self, doc, fields, parent_type=None):
         """
@@ -919,7 +906,7 @@ class Struct(UserDefined):
         self._enumerated_subtypes = None  # Optional[List[Tuple[str, DataType]]]
         self._is_catch_all = None  # Optional[Bool]
 
-        super(Struct, self).set_attributes(doc, fields, parent_type)
+        super().set_attributes(doc, fields, parent_type)
 
         if self.parent_type:
             self.parent_type.subtypes.append(self)
@@ -931,7 +918,9 @@ class Struct(UserDefined):
         if not isinstance(ex_field.value, AstExampleRef):
             raise InvalidSpec(
                 "example must reference label of '%s'" % self.name,
-                ex_field.lineno, ex_field.path)
+                ex_field.lineno,
+                ex_field.path,
+            )
 
     def check_attr_repr(self, attrs):
         # Since we mutate it, let's make a copy to avoid mutating the argument.
@@ -943,8 +932,10 @@ class Struct(UserDefined):
         if attrs:
             attr_name, attr_field = attrs.popitem()
             raise InvalidSpec(
-                "Route attribute '%s' is not defined in 'stone_cfg.Route'."
-                % attr_name, attr_field.lineno, attr_field.path)
+                "Route attribute '%s' is not defined in 'stone_cfg.Route'." % attr_name,
+                attr_field.lineno,
+                attr_field.path,
+            )
         return validated_attrs
 
     @property
@@ -975,8 +966,10 @@ class Struct(UserDefined):
         Returns an iterator that traverses required fields in all super types
         first, and then for this type.
         """
+
         def required_check(f):
             return not is_nullable_type(f.data_type) and not f.has_default
+
         return self._filter_fields(required_check)
 
     @property
@@ -985,8 +978,10 @@ class Struct(UserDefined):
         Returns an iterator that traverses optional fields in all super types
         first, and then for this type.
         """
+
         def optional_check(f):
             return is_nullable_type(f.data_type) or f.has_default
+
         return self._filter_fields(optional_check)
 
     def has_enumerated_subtypes(self):
@@ -1010,9 +1005,9 @@ class Struct(UserDefined):
         enumerated by its parent type. Because such structs are serialized
         and deserialized differently, use this method to detect these.
         """
-        return (self.has_enumerated_subtypes() or
-                (self.parent_type and
-                 self.parent_type.has_enumerated_subtypes()))
+        return self.has_enumerated_subtypes() or (
+            self.parent_type and self.parent_type.has_enumerated_subtypes()
+        )
 
     def is_catch_all(self):
         """
@@ -1041,8 +1036,7 @@ class Struct(UserDefined):
 
         :type subtype_fields: List[UnionField]
         """
-        assert self._enumerated_subtypes is None, \
-            'Enumerated subtypes already set.'
+        assert self._enumerated_subtypes is None, "Enumerated subtypes already set."
         assert isinstance(is_catch_all, bool), type(is_catch_all)
 
         self._is_catch_all = is_catch_all
@@ -1051,15 +1045,20 @@ class Struct(UserDefined):
         if self.parent_type:
             raise InvalidSpec(
                 "'%s' enumerates subtypes so it cannot extend another struct."
-                % self.name, self._ast_node.lineno, self._ast_node.path)
+                % self.name,
+                self._ast_node.lineno,
+                self._ast_node.path,
+            )
 
         # Require that if this struct enumerates subtypes, its parent (and thus
         # the entire hierarchy above this struct) does as well.
         if self.parent_type and not self.parent_type.has_enumerated_subtypes():
             raise InvalidSpec(
-                "'%s' cannot enumerate subtypes if parent '%s' does not." %
-                (self.name, self.parent_type.name),
-                self._ast_node.lineno, self._ast_node.path)
+                "'%s' cannot enumerate subtypes if parent '%s' does not."
+                % (self.name, self.parent_type.name),
+                self._ast_node.lineno,
+                self._ast_node.path,
+            )
 
         enumerated_subtype_names = set()  # Set[str]
         for subtype_field in subtype_fields:
@@ -1069,14 +1068,20 @@ class Struct(UserDefined):
             # Require that a subtype only has a single type tag.
             if subtype_field.data_type.name in enumerated_subtype_names:
                 raise InvalidSpec(
-                    "Subtype '%s' can only be specified once." %
-                    subtype_field.data_type.name, lineno, path)
+                    "Subtype '%s' can only be specified once."
+                    % subtype_field.data_type.name,
+                    lineno,
+                    path,
+                )
 
             # Require that a subtype has this struct as its parent.
             if subtype_field.data_type.parent_type != self:
                 raise InvalidSpec(
-                    "'%s' is not a subtype of '%s'." %
-                    (subtype_field.data_type.name, self.name), lineno, path)
+                    "'%s' is not a subtype of '%s'."
+                    % (subtype_field.data_type.name, self.name),
+                    lineno,
+                    path,
+                )
 
             # Check for subtype tags that conflict with this struct's
             # non-inherited fields.
@@ -1085,10 +1090,11 @@ class Struct(UserDefined):
                 # as the source of the field's original declaration.
                 orig_field = self._fields_by_name[subtype_field.name]
                 raise InvalidSpec(
-                    "Field '%s' already defined on line %d." %
-                    (subtype_field.name, lineno),
+                    "Field '%s' already defined on line %d."
+                    % (subtype_field.name, lineno),
                     orig_field._ast_node.lineno,
-                    orig_field._ast_node.path)
+                    orig_field._ast_node.path,
+                )
 
             # Walk up parent tree hierarchy to ensure no field conflicts.
             # Checks for conflicts with subtype tags and regular fields.
@@ -1098,9 +1104,15 @@ class Struct(UserDefined):
                     orig_field = cur_type._fields_by_name[subtype_field.name]
                     raise InvalidSpec(
                         "Field '%s' already defined in parent '%s' (%s:%d)."
-                        % (subtype_field.name, cur_type.name,
-                           orig_field._ast_node.path, orig_field._ast_node.lineno),
-                        lineno, path)
+                        % (
+                            subtype_field.name,
+                            cur_type.name,
+                            orig_field._ast_node.path,
+                            orig_field._ast_node.lineno,
+                        ),
+                        lineno,
+                        path,
+                    )
                 cur_type = cur_type.parent_type
 
             # Note the discrepancy between `fields` which contains only the
@@ -1116,9 +1128,10 @@ class Struct(UserDefined):
         for subtype in self.subtypes:
             if subtype.name not in enumerated_subtype_names:
                 raise InvalidSpec(
-                    "'%s' does not enumerate all subtypes, missing '%s'" %
-                    (self.name, subtype.name),
-                    self._ast_node.lineno)
+                    "'%s' does not enumerate all subtypes, missing '%s'"
+                    % (self.name, subtype.name),
+                    self._ast_node.lineno,
+                )
 
     def get_all_subtypes_with_tags(self):
         """
@@ -1135,10 +1148,14 @@ class Struct(UserDefined):
         Returns:
             List[Tuple[List[String], Struct]]
         """
-        assert self.has_enumerated_subtypes(), 'Enumerated subtypes not set.'
+        assert self.has_enumerated_subtypes(), "Enumerated subtypes not set."
         subtypes_with_tags = []  # List[Tuple[List[String], Struct]]
-        fifo = deque([subtype_field.data_type
-                      for subtype_field in self.get_enumerated_subtypes()])
+        fifo = deque(
+            [
+                subtype_field.data_type
+                for subtype_field in self.get_enumerated_subtypes()
+            ]
+        )
         # Traverse down the hierarchy registering subtypes as they're found.
         while fifo:
             data_type = fifo.popleft()
@@ -1153,8 +1170,9 @@ class Struct(UserDefined):
         Returns a list of type tags that refer to this type starting from the
         base of the struct hierarchy.
         """
-        assert self.is_member_of_enumerated_subtypes_tree(), \
-            'Not a part of a subtypes tree.'
+        assert (
+            self.is_member_of_enumerated_subtypes_tree()
+        ), "Not a part of a subtypes tree."
         cur = self.parent_type
         cur_dt = self
         tags = []
@@ -1165,7 +1183,7 @@ class Struct(UserDefined):
                     tags.append(subtype_field.name)
                     break
             else:
-                assert False, 'Could not find?!'
+                assert False, "Could not find?!"
             cur_dt = cur
             cur = cur.parent_type
         tags.reverse()
@@ -1193,8 +1211,11 @@ class Struct(UserDefined):
 
         if len(example.fields) != 1:
             raise InvalidSpec(
-                'Example for struct with enumerated subtypes must only '
-                'specify one subtype tag.', example.lineno, example.path)
+                "Example for struct with enumerated subtypes must only "
+                "specify one subtype tag.",
+                example.lineno,
+                example.path,
+            )
 
         # Extract the only tag in the example.
         example_field = list(example.fields.values())[0]
@@ -1204,7 +1225,9 @@ class Struct(UserDefined):
             raise InvalidSpec(
                 "Example of struct with enumerated subtypes must be a "
                 "reference to a subtype's example.",
-                example_field.lineno, example_field.path)
+                example_field.lineno,
+                example_field.path,
+            )
 
         for subtype_field in self.get_enumerated_subtypes():
             if subtype_field.name == tag:
@@ -1213,7 +1236,9 @@ class Struct(UserDefined):
         else:
             raise InvalidSpec(
                 "Unknown subtype tag '%s' in example." % tag,
-                example_field.lineno, example_field.path)
+                example_field.lineno,
+                example_field.path,
+            )
 
     def _add_example_helper(self, example):
         """Validates examples for structs without enumerated subtypes."""
@@ -1222,9 +1247,9 @@ class Struct(UserDefined):
         for label, example_field in example.fields.items():
             if not any(label == f.name for f in self.all_fields):
                 raise InvalidSpec(
-                    "Example for '%s' has unknown field '%s'." %
-                    (self.name, label),
-                    example_field.lineno, example_field.path,
+                    f"Example for '{self.name}' has unknown field '{label}'.",
+                    example_field.lineno,
+                    example_field.path,
                 )
 
         for field in self.all_fields:
@@ -1233,8 +1258,7 @@ class Struct(UserDefined):
                 try:
                     field.data_type.check_example(example_field)
                 except InvalidSpec as e:
-                    e.msg = "Bad example for field '{}': {}".format(
-                        field.name, e.msg)
+                    e.msg = f"Bad example for field '{field.name}': {e.msg}"
                     raise
             elif field.has_default or isinstance(field.data_type, Nullable):
                 # These don't need examples.
@@ -1242,7 +1266,9 @@ class Struct(UserDefined):
             else:
                 raise InvalidSpec(
                     "Missing field '%s' in example." % field.name,
-                    example.lineno, example.path)
+                    example.lineno,
+                    example.path,
+                )
 
         self._raw_examples[example.label] = example
 
@@ -1286,7 +1312,9 @@ class Struct(UserDefined):
                 raise InvalidSpec(
                     "Reference to example for '%s' with label '%s' "
                     "does not exist." % (dt.name, val.label),
-                    val.lineno, val.path)
+                    val.lineno,
+                    val.path,
+                )
             return dt._compute_example(val.label).value
 
         # Do a deep copy of the example because we're going to mutate it.
@@ -1305,7 +1333,9 @@ class Struct(UserDefined):
                 dt, _ = unwrap_nullable(dt)
                 if is_alias(dt):
                     return val
-                return {k: get_json_val(dt.value_data_type, v) for (k, v) in val.items()}
+                return {
+                    k: get_json_val(dt.value_data_type, v) for (k, v) in val.items()
+                }
             else:
                 return val
 
@@ -1317,10 +1347,10 @@ class Struct(UserDefined):
                     pass
                 else:
                     ex_val[field.name] = get_json_val(
-                        field.data_type, example_field.value)
+                        field.data_type, example_field.value
+                    )
             elif field.has_default:
-                ex_val[field.name] = get_json_val(
-                    field.data_type, field.default)
+                ex_val[field.name] = get_json_val(field.data_type, field.default)
 
         return Example(example.label, example.text, ex_val, ast_node=example)
 
@@ -1345,32 +1375,36 @@ class Struct(UserDefined):
             raise InvalidSpec(
                 "Reference to example for '%s' with label '%s' does not "
                 "exist." % (data_type.name, ref.label),
-                ref.lineno, ref.path)
+                ref.lineno,
+                ref.path,
+            )
 
-        ordered_value = OrderedDict([('.tag', example_field.name)])
+        ordered_value = OrderedDict([(".tag", example_field.name)])
         flat_example = data_type._compute_example_flat_helper(ref.label)
         ordered_value.update(flat_example.value)
         flat_example.value = ordered_value
         return flat_example
 
     def __repr__(self):
-        return 'Struct(%r, %r)' % (self.name, self.fields)
+        return f"Struct({self.name!r}, {self.fields!r})"
 
 
 class Union(UserDefined):
     """Defines a tagged union. Fields are variants."""
+
     # pylint: disable=attribute-defined-outside-init
 
-    composite_type = 'union'
+    composite_type = "union"
 
     def __init__(self, name, namespace, ast_node, closed):
-        super(Union, self).__init__(name, namespace, ast_node)
+        super().__init__(name, namespace, ast_node)
         self.closed = closed
 
     # TODO: Why is this a different signature than the parent? Is this
     # intentional?
-    def set_attributes(self, doc, fields,  # pylint: disable=arguments-differ
-            parent_type=None, catch_all_field=None):
+    def set_attributes(  # pylint: disable=arguments-differ
+        self, doc, fields, parent_type=None, catch_all_field=None,
+    ):
         """
         :param UnionField catch_all_field: The field designated as the
             catch-all. This field should be a member of the list of fields.
@@ -1380,7 +1414,7 @@ class Union(UserDefined):
         if parent_type:
             assert isinstance(parent_type, Union)
 
-        super(Union, self).set_attributes(doc, fields, parent_type)
+        super().set_attributes(doc, fields, parent_type)
 
         self.catch_all_field = catch_all_field
         self.parent_type = parent_type
@@ -1391,24 +1425,25 @@ class Union(UserDefined):
             if val.tag_name == field.name:
                 if not is_void_type(field.data_type):
                     raise ValueError(
-                        "invalid reference to non-void option '%s'" %
-                        val.tag_name)
+                        "invalid reference to non-void option '%s'" % val.tag_name
+                    )
                 break
         else:
-            raise ValueError(
-                "invalid reference to unknown tag '%s'" % val.tag_name)
+            raise ValueError("invalid reference to unknown tag '%s'" % val.tag_name)
 
     def check_example(self, ex_field):
         if not isinstance(ex_field.value, AstExampleRef):
             raise InvalidSpec(
                 "example must reference label of '%s'" % self.name,
-                ex_field.lineno, ex_field.path)
+                ex_field.lineno,
+                ex_field.path,
+            )
 
     def check_attr_repr(self, attr_field):
         if not isinstance(attr_field.value, AstTagRef):
             raise InvalidSpec(
-                'Expected union tag as value.',
-                attr_field.lineno, attr_field.path)
+                "Expected union tag as value.", attr_field.lineno, attr_field.path
+            )
         tag_ref = TagRef(self, attr_field.value.tag)
         try:
             self.check(tag_ref)
@@ -1443,8 +1478,10 @@ class Union(UserDefined):
         """
         if len(example.fields) != 1:
             raise InvalidSpec(
-                'Example for union must specify exactly one tag.',
-                example.lineno, example.path)
+                "Example for union must specify exactly one tag.",
+                example.lineno,
+                example.path,
+            )
 
         # Extract the only tag in the example.
         example_field = list(example.fields.values())[0]
@@ -1457,8 +1494,7 @@ class Union(UserDefined):
         else:
             # Error: Tag doesn't match any union member.
             raise InvalidSpec(
-                "Unknown tag '%s' in example." % tag,
-                example.lineno, example.path
+                "Unknown tag '%s' in example." % tag, example.lineno, example.path
             )
 
         # TODO: are we always guaranteed at least one field?
@@ -1466,8 +1502,7 @@ class Union(UserDefined):
         try:
             field.data_type.check_example(example_field)
         except InvalidSpec as e:
-            e.msg = "Bad example for field '{}': {}".format(
-                field.name, e.msg)
+            e.msg = f"Bad example for field '{field.name}': {e.msg}"
             raise
 
         self._raw_examples[example.label] = example
@@ -1502,9 +1537,9 @@ class Union(UserDefined):
         for field in self.all_fields:
             dt, _ = unwrap_nullable(field.data_type)
             if is_void_type(dt):
-                self._examples[field.name] = \
-                    Example(
-                        field.name, None, OrderedDict([('.tag', field.name)]))
+                self._examples[field.name] = Example(
+                    field.name, None, OrderedDict([(".tag", field.name)])
+                )
 
     def _compute_example(self, label):
         """
@@ -1524,7 +1559,9 @@ class Union(UserDefined):
                     raise InvalidSpec(
                         "Reference to example for '%s' with label '%s' "
                         "does not exist." % (dt.name, val.label),
-                        val.lineno, val.path)
+                        val.lineno,
+                        val.path,
+                    )
                 return dt._compute_example(val.label).value
 
             def get_json_val(dt, val):
@@ -1539,7 +1576,7 @@ class Union(UserDefined):
             example_field = list(example.fields.values())[0]
 
             # Do a deep copy of the example because we're going to mutate it.
-            ex_val = OrderedDict([('.tag', example_field.name)])
+            ex_val = OrderedDict([(".tag", example_field.name)])
 
             for field in self.all_fields:
                 if field.name == example_field.name:
@@ -1549,8 +1586,10 @@ class Union(UserDefined):
             # pylint: disable=undefined-loop-variable
             data_type, _ = unwrap_nullable(field.data_type)
             inner_ex_val = get_json_val(data_type, example_field.value)
-            if (isinstance(data_type, Struct) and
-                    not data_type.has_enumerated_subtypes()):
+            if (
+                isinstance(data_type, Struct)
+                and not data_type.has_enumerated_subtypes()
+            ):
                 ex_val.update(inner_ex_val)
             else:
                 if inner_ex_val is not None:
@@ -1565,13 +1604,12 @@ class Union(UserDefined):
                 if label == field.name:
                     break
             else:
-                raise AssertionError('No example for label %r' % label)
+                raise AssertionError("No example for label %r" % label)
 
             # TODO: are we always guaranteed at least one field?
             # pylint: disable=undefined-loop-variable
             assert is_void_type(field.data_type)
-            return Example(
-                field.name, field.doc, OrderedDict([('.tag', field.name)]))
+            return Example(field.name, field.doc, OrderedDict([(".tag", field.name)]))
 
     def unique_field_data_types(self):
         """
@@ -1592,10 +1630,10 @@ class Union(UserDefined):
             return True
 
     def __repr__(self):
-        return 'Union(%r, %r)' % (self.name, self.fields)
+        return f"Union({self.name!r}, {self.fields!r})"
 
 
-class TagRef(object):
+class TagRef:
     """
     Used when an ID in Stone refers to a tag of a union.
     TODO(kelkabany): Support tag values.
@@ -1606,13 +1644,14 @@ class TagRef(object):
         self.tag_name = tag_name
 
     def __repr__(self):
-        return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
+        return f"TagRef({self.union_data_type!r}, {self.tag_name!r})"
 
 
-class AnnotationTypeParam(object):
+class AnnotationTypeParam:
     """
     A parameter that can be supplied to a custom annotation type.
     """
+
     def __init__(self, name, data_type, doc, has_default, default, ast_node):
         self.name = name
         self.data_type = data_type
@@ -1626,14 +1665,20 @@ class AnnotationTypeParam(object):
             try:
                 self.data_type.check(self.default)
             except ValueError as e:
-                raise InvalidSpec('Default value for parameter %s is invalid: %s' % (
-                    self.name, e), self._ast_node.lineno, self._ast_node.path)
+                raise InvalidSpec(
+                    "Default value for parameter {} is invalid: {}".format(
+                        self.name, e
+                    ),
+                    self._ast_node.lineno,
+                    self._ast_node.path,
+                )
 
 
-class AnnotationType(object):
+class AnnotationType:
     """
     Used when a spec defines a custom annotation type.
     """
+
     def __init__(self, name, namespace, doc, params):
         self.name = name
         self.namespace = namespace
@@ -1641,13 +1686,16 @@ class AnnotationType(object):
         self.doc = doc_unwrap(doc)
         self.params = params
 
-        self._params_by_name = {}  # type: typing.Dict[str, AnnotationTypeParam]
+        self._params_by_name: typing.Dict[str, AnnotationTypeParam] = {}
         for param in self.params:
             if param.name in self._params_by_name:
                 orig_lineno = self._params_by_name[param.name]._ast_node.lineno
-                raise InvalidSpec("Parameter '%s' already defined on line %s." %
-                                  (param.name, orig_lineno),
-                                  param._ast_node.lineno, param._ast_node.path)
+                raise InvalidSpec(
+                    "Parameter '%s' already defined on line %s."
+                    % (param.name, orig_lineno),
+                    param._ast_node.lineno,
+                    param._ast_node.path,
+                )
             self._params_by_name[param.name] = param
 
     def has_documented_type_or_params(self):
@@ -1663,11 +1711,12 @@ class AnnotationType(object):
         return any(param.doc for param in self.params)
 
 
-class Annotation(object):
+class Annotation:
     """
     Used when a field is annotated with a pre-defined Stone action or a custom
     annotation.
     """
+
     def __init__(self, name, namespace, ast_node):
         self.name = name
         self.namespace = namespace
@@ -1678,36 +1727,40 @@ class Deprecated(Annotation):
     """
     Used when a field is annotated for deprecation.
     """
+
     def __repr__(self):
-        return 'Deprecated(%r, %r)' % (self.name, self.namespace)
+        return f"Deprecated({self.name!r}, {self.namespace!r})"
 
 
 class Omitted(Annotation):
     """
     Used when a field is annotated for omission.
     """
+
     def __init__(self, name, namespace, ast_node, omitted_caller):
-        super(Omitted, self).__init__(name, namespace, ast_node)
+        super().__init__(name, namespace, ast_node)
         self.omitted_caller = omitted_caller
 
     def __repr__(self):
-        return 'Omitted(%r, %r, %r)' % (self.name, self.namespace, self.omitted_caller)
+        return f"Omitted({self.name!r}, {self.namespace!r}, {self.omitted_caller!r})"
 
 
 class Preview(Annotation):
     """
     Used when a field is annotated for previewing.
     """
+
     def __repr__(self):
-        return 'Preview(%r, %r)' % (self.name, self.namespace)
+        return f"Preview({self.name!r}, {self.namespace!r})"
 
 
 class Redacted(Annotation):
     """
     Used when a field is annotated for redaction.
     """
+
     def __init__(self, name, namespace, ast_node, regex=None):
-        super(Redacted, self).__init__(name, namespace, ast_node)
+        super().__init__(name, namespace, ast_node)
         self.regex = regex
 
 
@@ -1715,25 +1768,36 @@ class RedactedBlot(Redacted):
     """
     Used when a field is annotated to be blotted.
     """
+
     def __repr__(self):
-        return 'RedactedBlot(%r, %r, %r)' % (self.name, self.namespace, self.regex)
+        return f"RedactedBlot({self.name!r}, {self.namespace!r}, {self.regex!r})"
 
 
 class RedactedHash(Redacted):
     """
     Used when a field is annotated to be hashed.
     """
+
     def __repr__(self):
-        return 'RedactedHash(%r, %r, %r)' % (self.name, self.namespace, self.regex)
+        return f"RedactedHash({self.name!r}, {self.namespace!r}, {self.regex!r})"
 
 
 class CustomAnnotation(Annotation):
     """
     Used when a field is annotated with a custom annotation type.
     """
-    def __init__(self, name, namespace, ast_node, annotation_type_name,
-                 annotation_type_ns, args, kwargs):
-        super(CustomAnnotation, self).__init__(name, namespace, ast_node)
+
+    def __init__(
+        self,
+        name,
+        namespace,
+        ast_node,
+        annotation_type_name,
+        annotation_type_ns,
+        args,
+        kwargs,
+    ):
+        super().__init__(name, namespace, ast_node)
         self.annotation_type_name = annotation_type_name
         self.annotation_type_ns = annotation_type_ns
         self.args = args
@@ -1746,17 +1810,23 @@ class CustomAnnotation(Annotation):
 
         # check for too many parameters for args
         if len(self.args) > len(self.annotation_type.params):
-            raise InvalidSpec('Too many parameters passed to annotation type %s' %
-                              (self.annotation_type.name), self._ast_node.lineno,
-                              self._ast_node.path)
+            raise InvalidSpec(
+                "Too many parameters passed to annotation type %s"
+                % (self.annotation_type.name),
+                self._ast_node.lineno,
+                self._ast_node.path,
+            )
 
         # check for unknown keyword arguments
-        acceptable_param_names = set((param.name for param in self.annotation_type.params))
+        acceptable_param_names = {param.name for param in self.annotation_type.params}
         for param_name in self.kwargs:
             if param_name not in acceptable_param_names:
-                raise InvalidSpec('Unknown parameter %s passed to annotation type %s' %
-                    (param_name, self.annotation_type.name), self._ast_node.lineno,
-                    self._ast_node.path)
+                raise InvalidSpec(
+                    "Unknown parameter %s passed to annotation type %s"
+                    % (param_name, self.annotation_type.name),
+                    self._ast_node.lineno,
+                    self._ast_node.path,
+                )
 
         for i, param in enumerate(self.annotation_type.params):
             # first figure out and validate value for this param
@@ -1768,17 +1838,23 @@ class CustomAnnotation(Annotation):
                 try:
                     param.data_type.check(param_value)
                 except ValueError as e:
-                    raise InvalidSpec('Invalid value for parameter %s of annotation type %s: %s' %
-                        (param.name, self.annotation_type.name, e), self._ast_node.lineno,
-                        self._ast_node.path)
+                    raise InvalidSpec(
+                        "Invalid value for parameter %s of annotation type %s: %s"
+                        % (param.name, self.annotation_type.name, e),
+                        self._ast_node.lineno,
+                        self._ast_node.path,
+                    )
             elif isinstance(param.data_type, Nullable):
                 param_value = None
             elif param.has_default:
                 param_value = param.default
             else:
-                raise InvalidSpec('No value specified for parameter %s of annotation type %s' %
-                    (param.name, self.annotation_type.name), self._ast_node.lineno,
-                    self._ast_node.path)
+                raise InvalidSpec(
+                    "No value specified for parameter %s of annotation type %s"
+                    % (param.name, self.annotation_type.name),
+                    self._ast_node.lineno,
+                    self._ast_node.path,
+                )
 
             # now set both kwargs and args to correct value so backend code generators can use
             # whichever is more convenient (like if kwargs are not supported in a language)
@@ -1807,7 +1883,7 @@ class Alias(Composite):
         :param ast_node: Raw type definition from the parser.
         :type ast_node: stone.frontend.ast.AstTypeDef
         """
-        super(Alias, self).__init__()
+        super().__init__()
         self._name = name
         self.namespace = namespace
         self._ast_node = ast_node
@@ -1824,8 +1900,10 @@ class Alias(Composite):
             if isinstance(annotation, Redacted):
                 # Make sure we don't set multiple conflicting annotations on one alias
                 if self.redactor:
-                    raise InvalidSpec("Redactor already set as %r" %
-                                      str(self.redactor), self._ast_node.lineno)
+                    raise InvalidSpec(
+                        "Redactor already set as %r" % str(self.redactor),
+                        self._ast_node.lineno,
+                    )
                 self.redactor = annotation
             elif isinstance(annotation, CustomAnnotation):
                 # Note: we don't need to do this for builtin annotations because
@@ -1835,7 +1913,8 @@ class Alias(Composite):
                 if annotation.annotation_type.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
                         annotation.annotation_type.namespace,
-                        imported_annotation_type=True)
+                        imported_annotation_type=True,
+                    )
 
                 # second, check if we need to import the annotation itself
 
@@ -1846,13 +1925,16 @@ class Alias(Composite):
 
                 if annotation.namespace.name != self.namespace.name:
                     self.namespace.add_imported_namespace(
-                        annotation.namespace,
-                        imported_annotation=True)
+                        annotation.namespace, imported_annotation=True
+                    )
 
                 self.custom_annotations.append(annotation)
             else:
-                raise InvalidSpec("Aliases only support 'Redacted' and custom annotations, not %r" %
-                                  str(annotation), self._ast_node.lineno)
+                raise InvalidSpec(
+                    "Aliases only support 'Redacted' and custom annotations, not %r"
+                    % str(annotation),
+                    self._ast_node.lineno,
+                )
 
     def set_attributes(self, doc, data_type):
         """
@@ -1874,7 +1956,9 @@ class Alias(Composite):
             if cur_data_type == self:
                 raise InvalidSpec(
                     "Alias '%s' is part of a cycle." % self.name,
-                    self._ast_node.lineno, self._ast_node.path)
+                    self._ast_node.lineno,
+                    self._ast_node.path,
+                )
 
     @property
     def name(self):
@@ -1898,7 +1982,7 @@ class Alias(Composite):
         return self.data_type.check_attr_repr(attr_field)
 
     def __repr__(self):
-        return 'Alias(%r, %r)' % (self.name, self.data_type)
+        return f"Alias({self.name!r}, {self.data_type!r})"
 
 
 def unwrap_nullable(data_type):
@@ -1935,6 +2019,7 @@ def unwrap_aliases(data_type):
         data_type = data_type.data_type
     return data_type, unwrapped_alias
 
+
 def resolve_aliases(data_type):
     """
     Resolve all chained / nested aliases. This will recursively point
@@ -1956,6 +2041,7 @@ def resolve_aliases(data_type):
 
     return resolved
 
+
 def strip_alias(data_type):
     """
     Strip alias from a data_type chain - this function should be
@@ -1972,11 +2058,12 @@ def strip_alias(data_type):
     Return:
         None
     """
-    while hasattr(data_type, 'data_type'):
+    while hasattr(data_type, "data_type"):
         if is_alias(data_type.data_type):
             data_type.data_type = data_type.data_type.data_type
             break
         data_type = data_type.data_type
+
 
 def unwrap(data_type):
     """
@@ -2002,6 +2089,7 @@ def unwrap(data_type):
         data_type = data_type.data_type
     return data_type, unwrapped_nullable, unwrapped_alias
 
+
 def get_custom_annotations_for_alias(data_type):
     """
     Given a Stone data type, returns all custom annotations applied to it.
@@ -2015,6 +2103,7 @@ def get_custom_annotations_for_alias(data_type):
         result.extend(data_type.custom_annotations)
         data_type, _ = unwrap_nullable(data_type.data_type)
     return result
+
 
 def get_custom_annotations_recursive(data_type):
     """
@@ -2033,70 +2122,113 @@ def get_custom_annotations_recursive(data_type):
         dt, _, _ = unwrap(data_type)
         if is_struct_type(dt) or is_union_type(dt):
             for field in dt.fields:
-                for annotation in recurse(field.data_type):
-                    yield annotation
-                for annotation in field.custom_annotations:
-                    yield annotation
+                yield from recurse(field.data_type)
+                yield from field.custom_annotations
         elif is_list_type(dt):
-            for annotation in recurse(dt.data_type):
-                yield annotation
+            yield from recurse(dt.data_type)
         elif is_map_type(dt):
-            for annotation in recurse(dt.value_data_type):
-                yield annotation
+            yield from recurse(dt.value_data_type)
 
-        for annotation in get_custom_annotations_for_alias(data_type):
-            yield annotation
+        yield from get_custom_annotations_for_alias(data_type)
 
     return recurse(data_type)
 
 
 def is_alias(data_type):
     return isinstance(data_type, Alias)
+
+
 def is_bytes_type(data_type):
     return isinstance(data_type, Bytes)
+
+
 def is_boolean_type(data_type):
     return isinstance(data_type, Boolean)
+
+
 def is_composite_type(data_type):
     return isinstance(data_type, Composite)
+
+
 def is_field_type(data_type):
     return isinstance(data_type, Field)
+
+
 def is_float_type(data_type):
     return isinstance(data_type, (Float32, Float64))
+
+
 def is_integer_type(data_type):
     return isinstance(data_type, (UInt32, UInt64, Int32, Int64))
+
+
 def is_list_type(data_type):
     return isinstance(data_type, List)
+
+
 def is_map_type(data_type):
     return isinstance(data_type, Map)
+
+
 def is_nullable_type(data_type):
     return isinstance(data_type, Nullable)
+
+
 def is_numeric_type(data_type):
     return is_integer_type(data_type) or is_float_type(data_type)
+
+
 def is_primitive_type(data_type):
     return isinstance(data_type, Primitive)
+
+
 def is_string_type(data_type):
     return isinstance(data_type, String)
+
+
 def is_struct_type(data_type):
     return isinstance(data_type, Struct)
+
+
 def is_tag_ref(val):
     return isinstance(val, TagRef)
+
+
 def is_timestamp_type(data_type):
     return isinstance(data_type, Timestamp)
+
+
 def is_union_type(data_type):
     return isinstance(data_type, Union)
+
+
 def is_user_defined_type(data_type):
     return isinstance(data_type, UserDefined)
+
+
 def is_void_type(data_type):
     return isinstance(data_type, Void)
+
+
 def is_int32_type(data_type):
     return isinstance(data_type, Int32)
+
+
 def is_int64_type(data_type):
     return isinstance(data_type, Int64)
+
+
 def is_uint32_type(data_type):
     return isinstance(data_type, UInt32)
+
+
 def is_uint64_type(data_type):
     return isinstance(data_type, UInt64)
+
+
 def is_float32_type(data_type):
     return isinstance(data_type, Float32)
+
+
 def is_float64_type(data_type):
     return isinstance(data_type, Float64)

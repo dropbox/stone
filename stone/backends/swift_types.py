@@ -1,11 +1,18 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+import argparse
 import json
 import os
 import shutil
-
 from contextlib import contextmanager
 
+from stone.backends.swift import SwiftBaseBackend, base, fmt_serial_obj, undocumented
+from stone.backends.swift_helpers import (
+    check_route_name_conflict,
+    fmt_class,
+    fmt_default_value,
+    fmt_func,
+    fmt_type,
+    fmt_var,
+)
 from stone.ir import (
     is_list_type,
     is_numeric_type,
@@ -15,41 +22,16 @@ from stone.ir import (
     is_void_type,
     unwrap_nullable,
 )
-from stone.backends.swift_helpers import (
-    check_route_name_conflict,
-    fmt_class,
-    fmt_default_value,
-    fmt_func,
-    fmt_var,
-    fmt_type,
-)
-from stone.backends.swift import (
-    base,
-    fmt_serial_obj,
-    SwiftBaseBackend,
-    undocumented,
-)
 
-_MYPY = False
-if _MYPY:
-    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-argparse = importlib.import_module(str('argparse'))  # type: typing.Any
-
-
-_cmdline_parser = argparse.ArgumentParser(prog='swift-types-backend')
+_cmdline_parser = argparse.ArgumentParser(prog="swift-types-backend")
 _cmdline_parser.add_argument(
-    '-r',
-    '--route-method',
-    help=('A string used to construct the location of a Swift method for a '
-          'given route; use {ns} as a placeholder for namespace name and '
-          '{route} for the route name.'),
+    "-r",
+    "--route-method",
+    help=(
+        "A string used to construct the location of a Swift method for a "
+        "given route; use {ns} as a placeholder for namespace name and "
+        "{route} for the route name."
+    ),
 )
 
 
@@ -119,41 +101,47 @@ class SwiftTypesBackend(SwiftBaseBackend):
     """
 
     cmdline_parser = _cmdline_parser
-    def generate(self, api):
-        rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
-        self.logger.info('Copying StoneValidators.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
-                    self.target_folder_path)
-        self.logger.info('Copying StoneSerializers.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
-                    self.target_folder_path)
-        self.logger.info('Copying StoneBase.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
-                    self.target_folder_path)
 
-        jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
+    def generate(self, api):
+        rsrc_folder = os.path.join(os.path.dirname(__file__), "swift_rsrc")
+        self.logger.info("Copying StoneValidators.swift to output folder")
+        shutil.copy(
+            os.path.join(rsrc_folder, "StoneValidators.swift"), self.target_folder_path
+        )
+        self.logger.info("Copying StoneSerializers.swift to output folder")
+        shutil.copy(
+            os.path.join(rsrc_folder, "StoneSerializers.swift"), self.target_folder_path
+        )
+        self.logger.info("Copying StoneBase.swift to output folder")
+        shutil.copy(
+            os.path.join(rsrc_folder, "StoneBase.swift"), self.target_folder_path
+        )
+
+        jazzy_cfg_path = os.path.join("../Format", "jazzy.json")
         with open(jazzy_cfg_path) as jazzy_file:
             jazzy_cfg = json.load(jazzy_file)
 
         for namespace in api.namespaces.values():
             ns_class = fmt_class(namespace.name)
-            with self.output_to_relative_path('{}.swift'.format(ns_class)):
+            with self.output_to_relative_path(f"{ns_class}.swift"):
                 self._generate_base_namespace_module(api, namespace)
-            jazzy_cfg['custom_categories'][1]['children'].append(ns_class)
+            jazzy_cfg["custom_categories"][1]["children"].append(ns_class)
 
             if namespace.routes:
-                jazzy_cfg['custom_categories'][0]['children'].append(ns_class + 'Routes')
+                jazzy_cfg["custom_categories"][0]["children"].append(
+                    ns_class + "Routes"
+                )
 
-        with self.output_to_relative_path('../../../../.jazzy.json'):
-            self.emit_raw(json.dumps(jazzy_cfg, indent=2) + '\n')
+        with self.output_to_relative_path("../../../../.jazzy.json"):
+            self.emit_raw(json.dumps(jazzy_cfg, indent=2) + "\n")
 
     def _generate_base_namespace_module(self, api, namespace):
         self.emit_raw(base)
 
-        routes_base = 'Datatypes and serializers for the {} namespace'.format(namespace.name)
-        self.emit_wrapped_text(routes_base, prefix='/// ', width=120)
+        routes_base = f"Datatypes and serializers for the {namespace.name} namespace"
+        self.emit_wrapped_text(routes_base, prefix="/// ", width=120)
 
-        with self.block('open class {}'.format(fmt_class(namespace.name))):
+        with self.block("open class {}".format(fmt_class(namespace.name))):
             for data_type in namespace.linearize_data_types():
                 if is_struct_type(data_type):
                     self._generate_struct_class(namespace, data_type)
@@ -168,49 +156,58 @@ class SwiftTypesBackend(SwiftBaseBackend):
         if data_type.doc:
             doc = self.process_doc(data_type.doc, self._docf)
         else:
-            doc = 'The {} struct'.format(fmt_class(data_type.name))
-        self.emit_wrapped_text(doc, prefix='/// ', width=120)
+            doc = "The {} struct".format(fmt_class(data_type.name))
+        self.emit_wrapped_text(doc, prefix="/// ", width=120)
         protocols = []
         if not data_type.parent_type:
-            protocols.append('CustomStringConvertible')
+            protocols.append("CustomStringConvertible")
 
         with self.class_block(data_type, protocols=protocols):
             for field in data_type.fields:
-                fdoc = self.process_doc(field.doc,
-                    self._docf) if field.doc else undocumented
-                self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('public let {}: {}'.format(
-                    fmt_var(field.name),
-                    fmt_type(field.data_type),
-                ))
+                fdoc = (
+                    self.process_doc(field.doc, self._docf)
+                    if field.doc
+                    else undocumented
+                )
+                self.emit_wrapped_text(fdoc, prefix="/// ", width=120)
+                self.emit(
+                    "public let {}: {}".format(
+                        fmt_var(field.name), fmt_type(field.data_type),
+                    )
+                )
             self._generate_struct_init(namespace, data_type)
 
-            decl = 'open var' if not data_type.parent_type else 'open override var'
+            decl = "open var" if not data_type.parent_type else "open override var"
 
-            with self.block('{} description: String'.format(decl)):
-                cls = fmt_class(data_type.name) + 'Serializer'
-                self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
-                          '({}().serialize(self)))"'.format(cls))
+            with self.block(f"{decl} description: String"):
+                cls = fmt_class(data_type.name) + "Serializer"
+                self.emit(
+                    'return "\\(SerializeUtil.prepareJSONForSerialization'
+                    + f'({cls}().serialize(self)))"'
+                )
 
         self._generate_struct_class_serializer(namespace, data_type)
 
-    def _generate_struct_init(self, namespace, data_type):  # pylint: disable=unused-argument
+    def _generate_struct_init(
+        self, namespace, data_type
+    ):  # pylint: disable=unused-argument
         # init method
         args = self._struct_init_args(data_type)
         if data_type.parent_type and not data_type.fields:
             return
-        with self.function_block('public init', self._func_args(args)):
+        with self.function_block("public init", self._func_args(args)):
             for field in data_type.fields:
                 v = fmt_var(field.name)
                 validator = self._determine_validator_type(field.data_type, v)
                 if validator:
-                    self.emit('{}({})'.format(validator, v))
-                self.emit('self.{0} = {0}'.format(v))
+                    self.emit(f"{validator}({v})")
+                self.emit("self.{0} = {0}".format(v))
             if data_type.parent_type:
-                func_args = [(fmt_var(f.name),
-                              fmt_var(f.name))
-                             for f in data_type.parent_type.all_fields]
-                self.emit('super.init({})'.format(self._func_args(func_args)))
+                func_args = [
+                    (fmt_var(f.name), fmt_var(f.name))
+                    for f in data_type.parent_type.all_fields
+                ]
+                self.emit("super.init({})".format(self._func_args(func_args)))
 
     def _determine_validator_type(self, data_type, value):
         data_type, nullable = unwrap_nullable(data_type)
@@ -218,88 +215,96 @@ class SwiftTypesBackend(SwiftBaseBackend):
             item_validator = self._determine_validator_type(data_type.data_type, value)
             if item_validator:
                 v = "arrayValidator({})".format(
-                    self._func_args([
-                        ("minItems", data_type.min_items),
-                        ("maxItems", data_type.max_items),
-                        ("itemValidator", item_validator),
-                    ])
+                    self._func_args(
+                        [
+                            ("minItems", data_type.min_items),
+                            ("maxItems", data_type.max_items),
+                            ("itemValidator", item_validator),
+                        ]
+                    )
                 )
             else:
                 return None
         elif is_numeric_type(data_type):
             v = "comparableValidator({})".format(
-                self._func_args([
-                    ("minValue", data_type.min_value),
-                    ("maxValue", data_type.max_value),
-                ])
+                self._func_args(
+                    [
+                        ("minValue", data_type.min_value),
+                        ("maxValue", data_type.max_value),
+                    ]
+                )
             )
         elif is_string_type(data_type):
             pat = data_type.pattern if data_type.pattern else None
-            pat = pat.encode('unicode_escape').replace("\"", "\\\"") if pat else pat
+            pat = pat.encode("unicode_escape").replace('"', '\\"') if pat else pat
             v = "stringValidator({})".format(
-                self._func_args([
-                    ("minLength", data_type.min_length),
-                    ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(pat) if pat else None),
-                ])
+                self._func_args(
+                    [
+                        ("minLength", data_type.min_length),
+                        ("maxLength", data_type.max_length),
+                        ("pattern", f'"{pat}"' if pat else None),
+                    ]
+                )
             )
         else:
             return None
 
         if nullable:
-            v = "nullableValidator({})".format(v)
+            v = f"nullableValidator({v})"
         return v
 
-    def _generate_enumerated_subtype_serializer(self, namespace,  # pylint: disable=unused-argument
-            data_type):
-        with self.block('switch value'):
+    def _generate_enumerated_subtype_serializer(
+        self, namespace, data_type  # pylint: disable=unused-argument
+    ):
+        with self.block("switch value"):
             for tags, subtype in data_type.get_all_subtypes_with_tags():
                 assert len(tags) == 1, tags
                 tag = tags[0]
                 tagvar = fmt_var(tag)
-                self.emit('case let {} as {}:'.format(
-                    tagvar,
-                    fmt_type(subtype)
-                ))
+                self.emit("case let {} as {}:".format(tagvar, fmt_type(subtype)))
 
                 with self.indent():
-                    block_txt = 'for (k, v) in Serialization.getFields({}.serialize({}))'.format(
-                        fmt_serial_obj(subtype),
-                        tagvar,
+                    block_txt = "for (k, v) in Serialization.getFields({}.serialize({}))".format(
+                        fmt_serial_obj(subtype), tagvar,
                     )
                     with self.block(block_txt):
-                        self.emit('output[k] = v')
-                    self.emit('output[".tag"] = .str("{}")'.format(tag))
+                        self.emit("output[k] = v")
+                    self.emit(f'output[".tag"] = .str("{tag}")')
             self.emit('default: fatalError("Tried to serialize unexpected subtype")')
 
     def _generate_struct_base_class_deserializer(self, namespace, data_type):
         args = []
         for field in data_type.all_fields:
             var = fmt_var(field.name)
-            value = 'dict["{}"]'.format(field.name)
-            self.emit('let {} = {}.deserialize({} ?? {})'.format(
-                var,
-                fmt_serial_obj(field.data_type),
-                value,
-                fmt_default_value(namespace, field) if field.has_default else '.null'
-            ))
+            value = f'dict["{field.name}"]'
+            self.emit(
+                "let {} = {}.deserialize({} ?? {})".format(
+                    var,
+                    fmt_serial_obj(field.data_type),
+                    value,
+                    fmt_default_value(namespace, field)
+                    if field.has_default
+                    else ".null",
+                )
+            )
 
             args.append((var, var))
-        self.emit('return {}({})'.format(
-            fmt_class(data_type.name),
-            self._func_args(args)
-        ))
+        self.emit(
+            "return {}({})".format(fmt_class(data_type.name), self._func_args(args))
+        )
 
     def _generate_enumerated_subtype_deserializer(self, namespace, data_type):
-        self.emit('let tag = Serialization.getTag(dict)')
-        with self.block('switch tag'):
+        self.emit("let tag = Serialization.getTag(dict)")
+        with self.block("switch tag"):
             for tags, subtype in data_type.get_all_subtypes_with_tags():
                 assert len(tags) == 1, tags
                 tag = tags[0]
-                self.emit('case "{}":'.format(tag))
+                self.emit(f'case "{tag}":')
                 with self.indent():
-                    self.emit('return {}.deserialize(json)'.format(fmt_serial_obj(subtype)))
-            self.emit('default:')
+                    self.emit(
+                        "return {}.deserialize(json)".format(fmt_serial_obj(subtype))
+                    )
+            self.emit("default:")
             with self.indent():
                 if data_type.is_catch_all():
                     self._generate_struct_base_class_deserializer(namespace, data_type)
@@ -310,123 +315,150 @@ class SwiftTypesBackend(SwiftBaseBackend):
         with self.serializer_block(data_type):
             with self.serializer_func(data_type):
                 if not data_type.all_fields:
-                    self.emit('let output = [String: JSON]()')
+                    self.emit("let output = [String: JSON]()")
                 else:
-                    intro = 'var' if data_type.has_enumerated_subtypes() else 'let'
-                    self.emit("{} output = [ ".format(intro))
+                    intro = "var" if data_type.has_enumerated_subtypes() else "let"
+                    self.emit(f"{intro} output = [ ")
                     for field in data_type.all_fields:
-                        self.emit('"{}": {}.serialize(value.{}),'.format(
-                            field.name,
-                            fmt_serial_obj(field.data_type),
-                            fmt_var(field.name)
-                        ))
-                    self.emit(']')
+                        self.emit(
+                            '"{}": {}.serialize(value.{}),'.format(
+                                field.name,
+                                fmt_serial_obj(field.data_type),
+                                fmt_var(field.name),
+                            )
+                        )
+                    self.emit("]")
 
                     if data_type.has_enumerated_subtypes():
-                        self._generate_enumerated_subtype_serializer(namespace, data_type)
-                self.emit('return .dictionary(output)')
+                        self._generate_enumerated_subtype_serializer(
+                            namespace, data_type
+                        )
+                self.emit("return .dictionary(output)")
             with self.deserializer_func(data_type):
                 with self.block("switch json"):
                     dict_name = "let dict" if data_type.all_fields else "_"
-                    self.emit("case .dictionary({}):".format(dict_name))
+                    self.emit(f"case .dictionary({dict_name}):")
                     with self.indent():
                         if data_type.has_enumerated_subtypes():
-                            self._generate_enumerated_subtype_deserializer(namespace, data_type)
+                            self._generate_enumerated_subtype_deserializer(
+                                namespace, data_type
+                            )
                         else:
-                            self._generate_struct_base_class_deserializer(namespace, data_type)
+                            self._generate_struct_base_class_deserializer(
+                                namespace, data_type
+                            )
                     self.emit("default:")
                     with self.indent():
                         self.emit('fatalError("Type error deserializing")')
 
     def _format_tag_type(self, namespace, data_type):  # pylint: disable=unused-argument
         if is_void_type(data_type):
-            return ''
+            return ""
         else:
-            return '({})'.format(fmt_type(data_type))
+            return "({})".format(fmt_type(data_type))
 
     def _generate_union_type(self, namespace, data_type):
         if data_type.doc:
             doc = self.process_doc(data_type.doc, self._docf)
         else:
-            doc = 'The {} union'.format(fmt_class(data_type.name))
-        self.emit_wrapped_text(doc, prefix='/// ', width=120)
+            doc = "The {} union".format(fmt_class(data_type.name))
+        self.emit_wrapped_text(doc, prefix="/// ", width=120)
 
         class_type = fmt_class(data_type.name)
-        with self.block('public enum {}: CustomStringConvertible'.format(class_type)):
+        with self.block(f"public enum {class_type}: CustomStringConvertible"):
             for field in data_type.all_fields:
                 typ = self._format_tag_type(namespace, field.data_type)
 
-                fdoc = self.process_doc(field.doc,
-                    self._docf) if field.doc else 'An unspecified error.'
-                self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('case {}{}'.format(fmt_var(field.name), typ))
+                fdoc = (
+                    self.process_doc(field.doc, self._docf)
+                    if field.doc
+                    else "An unspecified error."
+                )
+                self.emit_wrapped_text(fdoc, prefix="/// ", width=120)
+                self.emit("case {}{}".format(fmt_var(field.name), typ))
             self.emit()
-            with self.block('public var description: String'):
-                cls = class_type + 'Serializer'
-                self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
-                          '({}().serialize(self)))"'.format(cls))
+            with self.block("public var description: String"):
+                cls = class_type + "Serializer"
+                self.emit(
+                    'return "\\(SerializeUtil.prepareJSONForSerialization'
+                    + f'({cls}().serialize(self)))"'
+                )
 
         self._generate_union_serializer(data_type)
 
     def _tag_type(self, data_type, field):
-        return "{}.{}".format(
-            fmt_class(data_type.name),
-            fmt_var(field.name)
-        )
+        return "{}.{}".format(fmt_class(data_type.name), fmt_var(field.name))
 
     def _generate_union_serializer(self, data_type):
         with self.serializer_block(data_type):
-            with self.serializer_func(data_type), self.block('switch value'):
+            with self.serializer_func(data_type), self.block("switch value"):
                 for field in data_type.all_fields:
                     field_type = field.data_type
-                    case = '.{}{}'.format(fmt_var(field.name),
-                                         '' if is_void_type(field_type) else '(let arg)')
-                    self.emit('case {}:'.format(case))
+                    case = ".{}{}".format(
+                        fmt_var(field.name),
+                        "" if is_void_type(field_type) else "(let arg)",
+                    )
+                    self.emit(f"case {case}:")
 
                     with self.indent():
                         if is_void_type(field_type):
-                            self.emit('var d = [String: JSON]()')
-                        elif (is_struct_type(field_type) and
-                                not field_type.has_enumerated_subtypes()):
-                            self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
-                                fmt_serial_obj(field_type)))
+                            self.emit("var d = [String: JSON]()")
+                        elif (
+                            is_struct_type(field_type)
+                            and not field_type.has_enumerated_subtypes()
+                        ):
+                            self.emit(
+                                "var d = Serialization.getFields({}.serialize(arg))".format(
+                                    fmt_serial_obj(field_type)
+                                )
+                            )
                         else:
-                            self.emit('var d = ["{}": {}.serialize(arg)]'.format(
-                                field.name,
-                                fmt_serial_obj(field_type)))
-                        self.emit('d[".tag"] = .str("{}")'.format(field.name))
-                        self.emit('return .dictionary(d)')
+                            self.emit(
+                                'var d = ["{}": {}.serialize(arg)]'.format(
+                                    field.name, fmt_serial_obj(field_type)
+                                )
+                            )
+                        self.emit(f'd[".tag"] = .str("{field.name}")')
+                        self.emit("return .dictionary(d)")
             with self.deserializer_func(data_type):
                 with self.block("switch json"):
                     self.emit("case .dictionary(let d):")
                     with self.indent():
-                        self.emit('let tag = Serialization.getTag(d)')
-                        with self.block('switch tag'):
+                        self.emit("let tag = Serialization.getTag(d)")
+                        with self.block("switch tag"):
                             for field in data_type.all_fields:
                                 field_type = field.data_type
-                                self.emit('case "{}":'.format(field.name))
+                                self.emit(f'case "{field.name}":')
 
                                 tag_type = self._tag_type(data_type, field)
                                 with self.indent():
                                     if is_void_type(field_type):
-                                        self.emit('return {}'.format(tag_type))
+                                        self.emit(f"return {tag_type}")
                                     else:
-                                        if (is_struct_type(field_type) and
-                                                not field_type.has_enumerated_subtypes()):
-                                            subdict = 'json'
+                                        if (
+                                            is_struct_type(field_type)
+                                            and not field_type.has_enumerated_subtypes()
+                                        ):
+                                            subdict = "json"
                                         else:
-                                            subdict = 'd["{}"] ?? .null'.format(field.name)
+                                            subdict = f'd["{field.name}"] ?? .null'
 
-                                        self.emit('let v = {}.deserialize({})'.format(
-                                            fmt_serial_obj(field_type), subdict
-                                        ))
-                                        self.emit('return {}(v)'.format(tag_type))
-                            self.emit('default:')
+                                        self.emit(
+                                            "let v = {}.deserialize({})".format(
+                                                fmt_serial_obj(field_type), subdict
+                                            )
+                                        )
+                                        self.emit(f"return {tag_type}(v)")
+                            self.emit("default:")
                             with self.indent():
                                 if data_type.catch_all_field:
-                                    self.emit('return {}'.format(
-                                        self._tag_type(data_type, data_type.catch_all_field)
-                                    ))
+                                    self.emit(
+                                        "return {}".format(
+                                            self._tag_type(
+                                                data_type, data_type.catch_all_field
+                                            )
+                                        )
+                                    )
                                 else:
                                     self.emit('fatalError("Unknown tag \\(tag)")')
                     self.emit("default:")
@@ -436,49 +468,70 @@ class SwiftTypesBackend(SwiftBaseBackend):
 
     @contextmanager
     def serializer_block(self, data_type):
-        with self.class_block(fmt_class(data_type.name) + 'Serializer',
-                              protocols=['JSONSerializer']):
+        with self.class_block(
+            fmt_class(data_type.name) + "Serializer", protocols=["JSONSerializer"]
+        ):
             self.emit("public init() { }")
             yield
 
     @contextmanager
     def serializer_func(self, data_type):
-        with self.function_block('open func serialize',
-                                 args=self._func_args([('_ value', fmt_class(data_type.name))]),
-                                 return_type='JSON'):
+        with self.function_block(
+            "open func serialize",
+            args=self._func_args([("_ value", fmt_class(data_type.name))]),
+            return_type="JSON",
+        ):
             yield
 
     @contextmanager
     def deserializer_func(self, data_type):
-        with self.function_block('open func deserialize',
-                                 args=self._func_args([('_ json', 'JSON')]),
-                                 return_type=fmt_class(data_type.name)):
+        with self.function_block(
+            "open func deserialize",
+            args=self._func_args([("_ json", "JSON")]),
+            return_type=fmt_class(data_type.name),
+        ):
             yield
 
     def _generate_route_objects(self, route_schema, namespace):
         check_route_name_conflict(namespace)
 
         self.emit()
-        self.emit('/// Stone Route Objects')
+        self.emit("/// Stone Route Objects")
         self.emit()
         for route in namespace.routes:
             var_name = fmt_func(route.name, route.version)
-            with self.block('static let {} = Route('.format(var_name),
-                            delim=(None, None), after=')'):
-                self.emit('name: \"{}\",'.format(route.name))
-                self.emit('version: {},'.format(route.version))
-                self.emit('namespace: \"{}\",'.format(namespace.name))
-                self.emit('deprecated: {},'.format('true' if route.deprecated
-                                                   is not None else 'false'))
-                self.emit('argSerializer: {},'.format(fmt_serial_obj(route.arg_data_type)))
-                self.emit('responseSerializer: {},'.format(fmt_serial_obj(route.result_data_type)))
-                self.emit('errorSerializer: {},'.format(fmt_serial_obj(route.error_data_type)))
+            with self.block(
+                f"static let {var_name} = Route(", delim=(None, None), after=")"
+            ):
+                self.emit(f'name: "{route.name}",')
+                self.emit(f"version: {route.version},")
+                self.emit(f'namespace: "{namespace.name}",')
+                self.emit(
+                    "deprecated: {},".format(
+                        "true" if route.deprecated is not None else "false"
+                    )
+                )
+                self.emit(
+                    "argSerializer: {},".format(fmt_serial_obj(route.arg_data_type))
+                )
+                self.emit(
+                    "responseSerializer: {},".format(
+                        fmt_serial_obj(route.result_data_type)
+                    )
+                )
+                self.emit(
+                    "errorSerializer: {},".format(fmt_serial_obj(route.error_data_type))
+                )
                 attrs = []
                 for field in route_schema.fields:
                     attr_key = field.name
-                    attr_val = ("\"{}\"".format(route.attrs.get(attr_key))
-                            if route.attrs.get(attr_key) else 'nil')
-                    attrs.append('\"{}\": {}'.format(attr_key, attr_val))
+                    attr_val = (
+                        '"{}"'.format(route.attrs.get(attr_key))
+                        if route.attrs.get(attr_key)
+                        else "nil"
+                    )
+                    attrs.append(f'"{attr_key}": {attr_val}')
 
                 self.generate_multiline_list(
-                    attrs, delim=('attrs: [', ']'), compact=True)
+                    attrs, delim=("attrs: [", "]"), compact=True
+                )

@@ -1,52 +1,48 @@
 import abc
-import six
+import typing
 
 from ply import lex, yacc
 
-_MYPY = False
-if _MYPY:
-    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
+class FilterExprLexer:
 
-class FilterExprLexer(object):
-
-    tokens = (
-        'ID',
-        'LPAR',
-        'RPAR',
-    )  # type: typing.Tuple[str, ...]
+    tokens: typing.Tuple[str, ...] = (
+        "ID",
+        "LPAR",
+        "RPAR",
+    )
 
     # Conjunctions
     tokens += (
-        'AND',
-        'OR',
+        "AND",
+        "OR",
     )
 
     # Comparison operators
     tokens += (
-        'NEQ',
-        'EQ',
+        "NEQ",
+        "EQ",
     )
 
     # Primitive types
     tokens += (
-        'BOOLEAN',
-        'FLOAT',
-        'INTEGER',
-        'NULL',
-        'STRING',
+        "BOOLEAN",
+        "FLOAT",
+        "INTEGER",
+        "NULL",
+        "STRING",
     )
 
-    t_LPAR = r'\('
-    t_RPAR = r'\)'
-    t_NEQ = r'!='
-    t_EQ = r'='
+    t_LPAR = r"\("
+    t_RPAR = r"\)"
+    t_NEQ = r"!="
+    t_EQ = r"="
 
-    t_ignore = ' '
+    t_ignore = " "
 
     KEYWORDS = {
-        'and': 'AND',
-        'or': 'OR',
+        "and": "AND",
+        "or": "OR",
     }
 
     def __init__(self, debug=False):
@@ -57,22 +53,22 @@ class FilterExprLexer(object):
         return self.lexer
 
     def t_BOOLEAN(self, token):
-        r'\btrue\b|\bfalse\b'
-        token.value = (token.value == 'true')
+        r"\btrue\b|\bfalse\b"
+        token.value = token.value == "true"
         return token
 
     def t_NULL(self, token):
-        r'\bnull\b'
+        r"\bnull\b"
         token.value = None
         return token
 
     def t_FLOAT(self, token):
-        r'-?\d+(\.\d*(e-?\d+)?|e-?\d+)'
+        r"-?\d+(\.\d*(e-?\d+)?|e-?\d+)"
         token.value = float(token.value)
         return token
 
     def t_INTEGER(self, token):
-        r'-?\d+'
+        r"-?\d+"
         token.value = int(token.value)
         return token
 
@@ -82,7 +78,7 @@ class FilterExprLexer(object):
         return token
 
     def t_ID(self, token):
-        r'[a-zA-Z_][a-zA-Z0-9_-]*'
+        r"[a-zA-Z_][a-zA-Z0-9_-]*"
         if token.value in self.KEYWORDS:
             token.type = self.KEYWORDS[token.value]
             return token
@@ -91,8 +87,7 @@ class FilterExprLexer(object):
 
     # Error handling rule
     def t_error(self, token):
-        self.errors.append(
-            ('Illegal character %s.' % repr(token.value[0]).lstrip('u')))
+        self.errors.append("Illegal character %s." % repr(token.value[0]).lstrip("u"))
         token.lexer.skip(1)
 
     # Test output
@@ -105,19 +100,19 @@ class FilterExprLexer(object):
             print(tok)
 
 
-class FilterExprParser(object):
+class FilterExprParser:
 
     # Ply parser requiment: Tokens must be re-specified in parser
     tokens = FilterExprLexer.tokens
 
     # Ply wants a 'str' instance; this makes it work in Python 2 and 3
-    start = str('expr')
+    start = "expr"
 
     # To match most languages, give logical conjunctions a higher precedence
     # than logical disjunctions.
     precedence = (
-        ('left', 'OR'),
-        ('left', 'AND'),
+        ("left", "OR"),
+        ("left", "AND"),
     )
 
     def __init__(self, debug=False):
@@ -132,16 +127,17 @@ class FilterExprParser(object):
             data (str): Raw filter expression.
         """
         parsed_data = self.yacc.parse(
-            data, lexer=self.lexer.get_yacc_compat_lexer(), debug=self.debug)
+            data, lexer=self.lexer.get_yacc_compat_lexer(), debug=self.debug
+        )
         self.errors = self.lexer.errors + self.errors
         return parsed_data, self.errors
 
     def p_expr(self, p):
-        'expr : pred'
+        "expr : pred"
         p[0] = p[1]
 
     def p_expr_parens(self, p):
-        'expr : LPAR expr RPAR'
+        "expr : LPAR expr RPAR"
         p[0] = p[2]
 
     def p_expr_group(self, p):
@@ -150,7 +146,7 @@ class FilterExprParser(object):
         p[0] = FilterExprConjunction(p[2], p[1], p[3])
 
     def p_pred(self, p):
-        'pred : ID op primitive'
+        "pred : ID op primitive"
         p[0] = FilterExprPredicate(p[2], p[1], p[3])
 
     def p_op(self, p):
@@ -169,13 +165,14 @@ class FilterExprParser(object):
     def p_error(self, token):
         if token:
             self.errors.append(
-                ("Unexpected %s with value %s." %
-                 (token.type, repr(token.value).lstrip('u'))))
+                "Unexpected %s with value %s."
+                % (token.type, repr(token.value).lstrip("u"))
+            )
         else:
-            self.errors.append('Unexpected end of expression.')
+            self.errors.append("Unexpected end of expression.")
 
 
-class FilterExpr(object):
+class FilterExpr:
 
     __metaclass__ = abc.ABCMeta
 
@@ -184,27 +181,25 @@ class FilterExpr(object):
         pass
 
 
-class FilterExprConjunction(object):
-
+class FilterExprConjunction:
     def __init__(self, conj, lhs, rhs):
         self.conj = conj
         self.lhs = lhs
         self.rhs = rhs
 
     def eval(self, route):
-        if self.conj == 'and':
+        if self.conj == "and":
             return self.lhs.eval(route) and self.rhs.eval(route)
-        elif self.conj == 'or':
+        elif self.conj == "or":
             return self.lhs.eval(route) or self.rhs.eval(route)
         else:
             assert False
 
     def __repr__(self):
-        return 'EvalConj(%r, %r, %r)' % (self.conj, self.lhs, self.rhs)
+        return f"EvalConj({self.conj!r}, {self.lhs!r}, {self.rhs!r})"
 
 
-class FilterExprPredicate(object):
-
+class FilterExprPredicate:
     def __init__(self, op, lhs, rhs):
         self.op = op
         self.lhs = lhs
@@ -212,15 +207,15 @@ class FilterExprPredicate(object):
 
     def eval(self, route):
         val = route.attrs.get(self.lhs, None)
-        if self.op == '=':
+        if self.op == "=":
             return val == self.rhs
-        elif self.op == '!=':
+        elif self.op == "!=":
             return val != self.rhs
         else:
             assert False
 
     def __repr__(self):
-        return 'EvalPred(%r, %r, %r)' % (self.op, self.lhs, self.rhs)
+        return f"EvalPred({self.op!r}, {self.lhs!r}, {self.rhs!r})"
 
 
 def parse_route_attr_filter(route_attr_filter, debug=False):
@@ -232,6 +227,6 @@ def parse_route_attr_filter(route_attr_filter, debug=False):
     Returns:
         Tuple[FilterExpr, List[str]]: The second element is a list of errors.
     """
-    assert isinstance(route_attr_filter, six.text_type), type(route_attr_filter)
+    assert isinstance(route_attr_filter, str), type(route_attr_filter)
     parser = FilterExprParser(debug)
     return parser.parse(route_attr_filter)

@@ -1,29 +1,19 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from abc import ABCMeta, abstractmethod
-from contextlib import contextmanager
 import argparse
+import io
 import logging
 import os
-import six
 import textwrap
+import typing
+from abc import ABCMeta, abstractmethod
+from contextlib import contextmanager
 
 from stone.frontend.ir_generator import doc_ref_re
-from stone.ir import (
-    is_alias,
-    resolve_aliases,
-    strip_alias
-)
+from stone.ir import Api, is_alias, resolve_aliases, strip_alias
 
-_MYPY = False
-if _MYPY:
-    from stone.ir import Api
-    import typing  # pylint: disable=import-error,useless-suppression
-
-    # Generic Dict key-val types
-    DelimTuple = typing.Tuple[typing.Text, typing.Text]
-    K = typing.TypeVar('K')
-    V = typing.TypeVar('V')
+# Generic Dict key-val types
+DelimTuple = typing.Tuple[typing.Text, typing.Text]
+K = typing.TypeVar("K")
+V = typing.TypeVar("V")
 
 
 def remove_aliases_from_api(api):
@@ -38,7 +28,7 @@ def remove_aliases_from_api(api):
             # with a data_type attribute - this ensures it resolves aliases
             # that are subtypes of composites e.g. Lists
             curr_type = alias
-            while hasattr(curr_type, 'data_type'):
+            while hasattr(curr_type, "data_type"):
                 curr_type.data_type = resolve_aliases(curr_type.data_type)
                 curr_type = curr_type.data_type
     # Remove alias layers from each data type
@@ -67,8 +57,7 @@ def remove_aliases_from_api(api):
     return api
 
 
-@six.add_metaclass(ABCMeta)
-class Backend(object):
+class Backend(metaclass=ABCMeta):
     """
     The parent class for all backends. All backends should extend this
     class to be recognized as such.
@@ -92,7 +81,7 @@ class Backend(object):
     tabs_for_indents = False
 
     # Can be overridden with an argparse.ArgumentParser object.
-    cmdline_parser = None  # type: argparse.ArgumentParser
+    cmdline_parser: typing.Optional[argparse.ArgumentParser] = None
 
     # Can be overridden by a subclass. If true, stone.data_type.Alias
     # objects will be present in the API object. If false, aliases are masked
@@ -100,40 +89,42 @@ class Backend(object):
     # For backwards compatibility with existing backends defaults to false.
     preserve_aliases = False
 
-    def __init__(self, target_folder_path, args):
-        # type: (str, typing.Optional[typing.Sequence[str]]) -> None
+    def __init__(
+        self, target_folder_path: str, args: typing.Optional[typing.Sequence[str]]
+    ) -> None:
         """
         Args:
             target_folder_path (str): Path to the folder where all generated
                 files should be created.
         """
-        self.logger = logging.getLogger('Backend<%s>' %
-                                        self.__class__.__name__)
+        self.logger = logging.getLogger("Backend<%s>" % self.__class__.__name__)
         self.target_folder_path = target_folder_path
         # Output is a list of strings that should be concatenated together for
         # the final output.
-        self.output = []  # type: typing.List[typing.Text]
+        self.output: typing.List[typing.Text] = []
         self.lineno = 1
         self.cur_indent = 0
-        self.positional_placeholders = []  # type: typing.List[typing.Text]
-        self.named_placeholders = {}  # type: typing.Dict[typing.Text, typing.Text]
+        self.positional_placeholders: typing.List[typing.Text] = []
+        self.named_placeholders: typing.Dict[typing.Text, typing.Text] = {}
 
-        self.args = None  # type: typing.Optional[argparse.Namespace]
+        self.args: typing.Optional[argparse.Namespace] = None
 
         if self.cmdline_parser:
             assert isinstance(self.cmdline_parser, argparse.ArgumentParser), (
-                'expected cmdline_parser to be ArgumentParser, got %r' %
-                self.cmdline_parser)
+                "expected cmdline_parser to be ArgumentParser, got %r"
+                % self.cmdline_parser
+            )
             try:
                 self.args = self.cmdline_parser.parse_args(args)
             except SystemExit:
-                print('Note: This is for backend-specific arguments which '
-                      'follow arguments to Stone after a "--" delimiter.')
+                print(
+                    "Note: This is for backend-specific arguments which "
+                    'follow arguments to Stone after a "--" delimiter.'
+                )
                 raise
 
     @abstractmethod
-    def generate(self, api):
-        # type: (Api) -> None
+    def generate(self, api: Api) -> None:
         """
         Subclasses should override this method. It's the entry point that is
         invoked by the rest of the toolchain.
@@ -144,8 +135,9 @@ class Backend(object):
         raise NotImplementedError
 
     @contextmanager
-    def output_to_relative_path(self, relative_path):
-        # type: (typing.Text) -> typing.Iterator[None]
+    def output_to_relative_path(
+        self, relative_path: typing.Text
+    ) -> typing.Iterator[None]:
         """
         Sets up backend so that all emits are directed towards the new file
         created at :param:`relative_path`.
@@ -155,115 +147,106 @@ class Backend(object):
         full_path = os.path.join(self.target_folder_path, relative_path)
         directory = os.path.dirname(full_path)
         if not os.path.exists(directory):
-            self.logger.info('Creating %s', directory)
+            self.logger.info("Creating %s", directory)
             os.makedirs(directory)
 
-        self.logger.info('Generating %s', full_path)
+        self.logger.info("Generating %s", full_path)
         self.clear_output_buffer()
         yield
-        with open(full_path, 'wb') as f:
-            f.write(self.output_buffer_to_string().encode('utf-8'))
+        with open(full_path, "wb") as f:
+            f.write(self.output_buffer_to_string().encode("utf-8"))
         self.clear_output_buffer()
 
-    def output_buffer_to_string(self):
-        # type: () -> typing.Text
+    def output_buffer_to_string(self) -> typing.Text:
         """Returns the contents of the output buffer as a string."""
-        return ''.join(self.output).format(
-            *self.positional_placeholders,
-            **self.named_placeholders)
+        return "".join(self.output).format(
+            *self.positional_placeholders, **self.named_placeholders
+        )
 
     def clear_output_buffer(self):
         self.output = []
         self.positional_placeholders = []
         self.named_placeholders = {}
 
-    def indent_step(self):
-        # type: () -> int
+    def indent_step(self) -> int:
         """
         Returns the size of a single indentation step.
         """
         return 1 if self.tabs_for_indents else 4
 
     @contextmanager
-    def indent(self, dent=None):
-        # type: (typing.Optional[int]) -> typing.Iterator[None]
+    def indent(self, dent: typing.Optional[int] = None) -> typing.Iterator[None]:
         """
         For the duration of the context manager, indentation will be increased
         by dent. Dent is in units of spaces or tabs depending on the value of
         the class variable tabs_for_indents. If dent is None, indentation will
         increase by either four spaces or one tab.
         """
-        assert dent is None or dent >= 0, 'dent must be >= 0.'
+        assert dent is None or dent >= 0, "dent must be >= 0."
         if dent is None:
             dent = self.indent_step()
         self.cur_indent += dent
         yield
         self.cur_indent -= dent
 
-    def make_indent(self):
-        # type: () -> typing.Text
+    def make_indent(self) -> typing.Text:
         """
         Returns a string representing the current indentation. Indents can be
         either spaces or tabs, depending on the value of the class variable
         tabs_for_indents.
         """
         if self.tabs_for_indents:
-            return '\t' * self.cur_indent
+            return "\t" * self.cur_indent
         else:
-            return ' ' * self.cur_indent
+            return " " * self.cur_indent
 
     @contextmanager
-    def capture_emitted_output(self, output_buffer):
-        # type: (six.StringIO) -> typing.Iterator[None]
+    def capture_emitted_output(
+        self, output_buffer: io.StringIO
+    ) -> typing.Iterator[None]:
         original_output = self.output
         self.output = []
         yield
-        output_buffer.write(''.join(self.output))
+        output_buffer.write("".join(self.output))
         self.output = original_output
 
-    def emit_raw(self, s):
-        # type: (typing.Text) -> None
+    def emit_raw(self, s: typing.Text) -> None:
         """
         Adds the input string to the output buffer. The string must end in a
         newline. It may contain any number of newline characters. No
         indentation is generated.
         """
-        self.lineno += s.count('\n')
-        self._append_output(s.replace('{', '{{').replace('}', '}}'))
-        if len(s) > 0 and s[-1] != '\n':
-            raise AssertionError(
-                'Input string to emit_raw must end with a newline.')
+        self.lineno += s.count("\n")
+        self._append_output(s.replace("{", "{{").replace("}", "}}"))
+        if len(s) > 0 and s[-1] != "\n":
+            raise AssertionError("Input string to emit_raw must end with a newline.")
 
-    def _append_output(self, s):
-        # type: (typing.Text) -> None
+    def _append_output(self, s: typing.Text) -> None:
         self.output.append(s)
 
-    def emit(self, s=''):
-        # type: (typing.Text) -> None
+    def emit(self, s: typing.Text = "") -> None:
         """
         Adds indentation, then the input string, and lastly a newline to the
         output buffer. If s is an empty string (default) then an empty line is
         created with no indentation.
         """
-        assert isinstance(s, six.text_type), 's must be a unicode string'
-        assert '\n' not in s, \
-            'String to emit cannot contain newline strings.'
+        assert isinstance(s, str), "s must be a unicode string"
+        assert "\n" not in s, "String to emit cannot contain newline strings."
         if s:
-            self.emit_raw('%s%s\n' % (self.make_indent(), s))
+            self.emit_raw(f"{self.make_indent()}{s}\n")
         else:
-            self.emit_raw('\n')
+            self.emit_raw("\n")
 
     def emit_wrapped_text(
-            self,
-            s,                       # type: typing.Text
-            prefix='',               # type: typing.Text
-            initial_prefix='',       # type: typing.Text
-            subsequent_prefix='',    # type: typing.Text
-            width=80,                # type: int
-            break_long_words=False,  # type: bool
-            break_on_hyphens=False   # type: bool
-    ):
-        # type: (...) -> None
+        self,
+        s: typing.Text,
+        prefix: typing.Text = "",
+        initial_prefix: typing.Text = "",
+        subsequent_prefix: typing.Text = "",
+        width: int = 80,
+        break_long_words: bool = False,
+        break_on_hyphens: bool = False,
+    ) -> None:
         """
         Adds the input string to the output buffer with indentation and
         wrapping. The wrapping is performed by the :func:`textwrap.fill` Python
@@ -290,38 +273,40 @@ class Backend(object):
         indent = self.make_indent()
         prefix = indent + prefix
 
-        self.emit_raw(textwrap.fill(s,
-                                    initial_indent=prefix + initial_prefix,
-                                    subsequent_indent=prefix + subsequent_prefix,
-                                    width=width,
-                                    break_long_words=break_long_words,
-                                    break_on_hyphens=break_on_hyphens,
-                                    ) + '\n')
+        self.emit_raw(
+            textwrap.fill(
+                s,
+                initial_indent=prefix + initial_prefix,
+                subsequent_indent=prefix + subsequent_prefix,
+                width=width,
+                break_long_words=break_long_words,
+                break_on_hyphens=break_on_hyphens,
+            )
+            + "\n"
+        )
 
-    def emit_placeholder(self, s=''):
-        # type: (typing.Text) -> None
+    def emit_placeholder(self, s: typing.Text = "") -> None:
         """
         Emits replacements fields that can be used to format the output string later.
         """
-        self._append_output('{%s}' % s)
+        self._append_output("{%s}" % s)
 
-    def add_positional_placeholder(self, s):
-        # type: (typing.Text) -> None
+    def add_positional_placeholder(self, s: typing.Text) -> None:
         """
         Format replacement fields corresponding to empty calls to emit_placeholder.
         """
         self.positional_placeholders.append(s)
 
-    def add_named_placeholder(self, name, s):
-        # type: (typing.Text, typing.Text) -> None
+    def add_named_placeholder(self, name: typing.Text, s: typing.Text) -> None:
         """
         Format replacement fields corresponding to non-empty calls to emit_placeholder.
         """
         self.named_placeholders[name] = s
 
     @classmethod
-    def process_doc(cls, doc, handler):
-        # type: (str, typing.Callable[[str, str], str]) -> typing.Text
+    def process_doc(
+        cls, doc: str, handler: typing.Callable[[str, str], str]
+    ) -> typing.Text:
         """
         Helper for parsing documentation references in Stone docstrings and
         replacing them with more suitable annotations for the generated output.
@@ -334,8 +319,9 @@ class Backend(object):
                 for you. The returned string will be substituted in the
                 docstring in place of the reference.
         """
-        assert isinstance(doc, six.text_type), \
-            'Expected string (unicode in PY2), got %r.' % type(doc)
+        assert isinstance(doc, str), "Expected string (unicode in PY2), got %r." % type(
+            doc
+        )
         cur_index = 0
         parts = []
         for match in doc_ref_re.finditer(doc):
@@ -345,12 +331,12 @@ class Backend(object):
             cur_index = end
 
             # Call the handler with the next tag and value.
-            tag = match.group('tag')
-            val = match.group('val')
+            tag = match.group("tag")
+            val = match.group("val")
             sub = handler(tag, val)
             parts.append(sub)
         parts.append(doc[cur_index:])
-        return ''.join(parts)
+        return "".join(parts)
 
 
 class CodeBackend(Backend):
@@ -358,10 +344,10 @@ class CodeBackend(Backend):
     Extend this instead of :class:`Backend` when generating source code.
     Contains helper functions specific to code generation.
     """
+
     # pylint: disable=abstract-method
 
-    def filter_out_none_valued_keys(self, d):
-        # type: (typing.Dict[K, V]) -> typing.Dict[K, V]
+    def filter_out_none_valued_keys(self, d: typing.Dict[K, V]) -> typing.Dict[K, V]:
         """Given a dict, returns a new dict with all the same key/values except
         for keys that had values of None."""
         new_d = {}
@@ -372,15 +358,14 @@ class CodeBackend(Backend):
 
     def generate_multiline_list(
         self,
-        items,               # type: typing.List[typing.Text]
-        before='',           # type: typing.Text
-        after='',            # type: typing.Text
-        delim=('(', ')'),    # type: DelimTuple
-        compact=True,        # type: bool
-        sep=',',             # type: typing.Text
-        skip_last_sep=False  # type: bool
-    ):
-        # type: (...) -> None
+        items: typing.List[typing.Text],
+        before: typing.Text = "",
+        after: typing.Text = "",
+        delim: DelimTuple = ("(", ")"),
+        compact: bool = True,
+        sep: typing.Text = ",",
+        skip_last_sep: bool = False,
+    ) -> None:
         """
         Given a list of items, emits one item per line.
 
@@ -404,8 +389,9 @@ class CodeBackend(Backend):
             skip_last_sep (bool): When compact is false, whether the last line
                 should have a trailing separator. Ignored when compact is true.
         """
-        assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
-            isinstance(delim[1], six.text_type), 'delim must be a tuple of two unicode strings.'
+        assert (
+            len(delim) == 2 and isinstance(delim[0], str) and isinstance(delim[1], str)
+        ), "delim must be a tuple of two unicode strings."
 
         if len(items) == 0:
             self.emit(before + delim[0] + delim[1] + after)
@@ -416,6 +402,7 @@ class CodeBackend(Backend):
 
         if compact:
             self.emit(before + delim[0] + items[0] + sep)
+
             def emit_list(items):
                 items = items[1:]
                 for (i, item) in enumerate(items):
@@ -423,6 +410,7 @@ class CodeBackend(Backend):
                         self.emit(item + delim[1] + after)
                     else:
                         self.emit(item + sep)
+
             if before or delim[0]:
                 with self.indent(len(before) + len(delim[0])):
                     emit_list(items)
@@ -445,13 +433,12 @@ class CodeBackend(Backend):
     @contextmanager
     def block(
         self,
-        before='',         # type: typing.Text
-        after='',          # type: typing.Text
-        delim=('{', '}'),  # type: DelimTuple
-        dent=None,         # type: typing.Optional[int]
-        allman=False       # type: bool
-    ):
-        # type: (...) -> typing.Iterator[None]
+        before: typing.Text = "",
+        after: typing.Text = "",
+        delim: DelimTuple = ("{", "}"),
+        dent: typing.Optional[int] = None,
+        allman: bool = False,
+    ) -> typing.Iterator[None]:
         """
         A context manager that emits configurable lines before and after an
         indented block of text.
@@ -474,14 +461,14 @@ class CodeBackend(Backend):
                 is ignored. For more details about indent styles see
                 http://en.wikipedia.org/wiki/Indent_style
         """
-        assert len(delim) == 2, 'delim must be a tuple of length 2'
-        assert (isinstance(delim[0], (six.text_type, type(None))) and
-                isinstance(delim[1], (six.text_type, type(None)))), (
-            'delim must be a tuple of two optional strings.')
+        assert len(delim) == 2, "delim must be a tuple of length 2"
+        assert isinstance(delim[0], (str, type(None))) and isinstance(
+            delim[1], (str, type(None))
+        ), "delim must be a tuple of two optional strings."
 
         if before and not allman:
             if delim[0] is not None:
-                self.emit('{} {}'.format(before, delim[0]))
+                self.emit("{} {}".format(before, delim[0]))
             else:
                 self.emit(before)
         else:

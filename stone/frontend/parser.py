@@ -1,14 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from collections import OrderedDict
 import logging
+from collections import OrderedDict
 
 import ply.yacc as yacc
-
-from .lexer import (
-    Lexer,
-    NullToken,
-)
 
 from .ast import (
     AstAlias,
@@ -20,8 +13,8 @@ from .ast import (
     AstExampleField,
     AstExampleRef,
     AstField,
-    AstNamespace,
     AstImport,
+    AstNamespace,
     AstRouteDef,
     AstStructDef,
     AstStructPatch,
@@ -32,11 +25,12 @@ from .ast import (
     AstUnionPatch,
     AstVoidField,
 )
+from .lexer import Lexer, NullToken
 
-logger = logging.getLogger(str('stone.frontend.parser'))
+logger = logging.getLogger("stone.frontend.parser")
 
 
-class ParserFactory(object):
+class ParserFactory:
     """
     After instantiating a ParserFactory, call get_parser() to get an object
     with a parse() method. It so happens that the object is also a
@@ -54,7 +48,7 @@ class ParserFactory(object):
     tokens = Lexer.tokens
 
     # Ply feature: Starting grammar rule
-    start = str('spec')  # PLY wants a 'str' instance; this makes it work in Python 2 and 3
+    start = "spec"  # PLY wants a 'str' instance; this makes it work in Python 2 and 3
 
     def __init__(self, debug=False):
         self.debug = debug
@@ -88,7 +82,7 @@ class ParserFactory(object):
             path (Optional[str]): Path to specification on filesystem. Only
                 used to tag tokens with the file they originated from.
         """
-        assert not self.exhausted, 'Must call get_parser() to reset state.'
+        assert not self.exhausted, "Must call get_parser() to reset state."
         self.path = path
         parsed_data = self.yacc.parse(data, lexer=self.lexer, debug=self.debug)
         # It generally makes sense for lexer errors to come first, because
@@ -140,7 +134,7 @@ class ParserFactory(object):
     # This covers the case where we have garbage characters in a file that
     # splits a NL token into two separate tokens.
     def p_spec_ignore_newline(self, p):
-        'spec : spec NL'
+        "spec : spec NL"
         p[0] = p[1]
 
     def p_definition(self, p):
@@ -157,40 +151,38 @@ class ParserFactory(object):
     def p_namespace(self, p):
         """namespace : KEYWORD ID NL
                      | KEYWORD ID NL INDENT docsection DEDENT"""
-        if p[1] == 'namespace':
+        if p[1] == "namespace":
             doc = None
             if len(p) > 4:
                 doc = p[5]
-            p[0] = AstNamespace(
-                self.path, p.lineno(1), p.lexpos(1), p[2], doc)
+            p[0] = AstNamespace(self.path, p.lineno(1), p.lexpos(1), p[2], doc)
         else:
-            raise ValueError('Expected namespace keyword')
+            raise ValueError("Expected namespace keyword")
 
     def p_import(self, p):
-        'import : IMPORT ID NL'
+        "import : IMPORT ID NL"
         p[0] = AstImport(self.path, p.lineno(1), p.lexpos(1), p[2])
 
     def p_alias(self, p):
         """alias : KEYWORD ID EQ type_ref NL
                  | KEYWORD ID EQ type_ref NL INDENT annotation_ref_list docsection DEDENT"""
-        if p[1] == 'alias':
+        if p[1] == "alias":
             has_annotations = len(p) > 6 and p[7] is not None
             doc = p[8] if len(p) > 6 else None
-            p[0] = AstAlias(
-                self.path, p.lineno(1), p.lexpos(1), p[2], p[4], doc)
+            p[0] = AstAlias(self.path, p.lineno(1), p.lexpos(1), p[2], p[4], doc)
             if has_annotations:
                 p[0].set_annotations(p[7])
         else:
-            raise ValueError('Expected alias keyword')
+            raise ValueError("Expected alias keyword")
 
     def p_nl(self, p):
-        'NL : NEWLINE'
+        "NL : NEWLINE"
         p[0] = p[1]
 
     # Sometimes we'll have multiple consecutive newlines that the lexer has
     # trouble combining, so we do it in the parser.
     def p_nl_combine(self, p):
-        'NL : NL NEWLINE'
+        "NL : NL NEWLINE"
         p[0] = p[1]
 
     # --------------------------------------------------------------
@@ -262,7 +254,7 @@ class ParserFactory(object):
                 | LPAR RPAR
                 | empty"""
         if len(p) > 3:
-            if p[3] == ',':
+            if p[3] == ",":
                 p[0] = (p[2], p[4])
             elif isinstance(p[2], dict):
                 p[0] = ([], p[2])
@@ -274,10 +266,10 @@ class ParserFactory(object):
     def p_field_nullable(self, p):
         """nullable : Q
                     | empty"""
-        p[0] = p[1] == '?'
+        p[0] = p[1] == "?"
 
     def p_type_ref(self, p):
-        'type_ref : ID args nullable'
+        "type_ref : ID args nullable"
         p[0] = AstTypeRef(
             path=self.path,
             lineno=p.lineno(1),
@@ -290,7 +282,7 @@ class ParserFactory(object):
 
     # A reference to a type in another namespace.
     def p_foreign_type_ref(self, p):
-        'type_ref : ID DOT ID args nullable'
+        "type_ref : ID DOT ID args nullable"
         p[0] = AstTypeRef(
             path=self.path,
             lineno=p.lineno(1),
@@ -324,7 +316,8 @@ class ParserFactory(object):
             lexpos=p.lexpos(1),
             name=p[2],
             doc=p[5],
-            params=p[6])
+            params=p[6],
+        )
 
     # --------------------------------------------------------------
     # Structs
@@ -356,7 +349,7 @@ class ParserFactory(object):
         """enumerated_subtypes : uniont NL INDENT subtypes_list DEDENT
                                | empty"""
         if len(p) > 2:
-            p[0] = (p[4], p[1][0] == 'union')
+            p[0] = (p[4], p[1][0] == "union")
 
     def p_struct(self, p):
         """struct : STRUCT ID inheritance NL \
@@ -378,7 +371,8 @@ class ParserFactory(object):
             doc=p[6],
             subtypes=p[7],
             fields=p[8],
-            examples=p[9])
+            examples=p[9],
+        )
 
     def p_struct_patch(self, p):
         """struct_patch : PATCH STRUCT ID NL INDENT field_list examples DEDENT"""
@@ -388,14 +382,15 @@ class ParserFactory(object):
             lexpos=p.lexpos(1),
             name=p[3],
             fields=p[6],
-            examples=p[7])
+            examples=p[7],
+        )
 
     def p_inheritance(self, p):
         """inheritance : EXTENDS type_ref
                        | empty"""
         if p[1]:
             if p[2].nullable:
-                msg = 'Reference cannot be nullable.'
+                msg = "Reference cannot be nullable."
                 self.errors.append((msg, p.lineno(1), self.path))
             else:
                 p[0] = p[2]
@@ -407,14 +402,13 @@ class ParserFactory(object):
             p[0] = [p[1]]
 
     def p_enumerated_subtypes_list_extend(self, p):
-        'subtypes_list : subtypes_list subtype_field'
+        "subtypes_list : subtypes_list subtype_field"
         p[0] = p[1]
         p[0].append(p[2])
 
     def p_enumerated_subtype_field(self, p):
-        'subtype_field : ID type_ref NL'
-        p[0] = AstSubtypeField(
-            self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
+        "subtype_field : ID type_ref NL"
+        p[0] = AstSubtypeField(self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
 
     # --------------------------------------------------------------
     # Fields
@@ -434,7 +428,7 @@ class ParserFactory(object):
             p[0] = [p[1]]
 
     def p_field_list_extend(self, p):
-        'field_list : field_list field'
+        "field_list : field_list field"
         p[0] = p[1]
         p[0].append(p[2])
 
@@ -455,8 +449,7 @@ class ParserFactory(object):
         has_annotations = len(p) > 5 and p[6] is not None
         has_docstring = len(p) > 5 and p[7] is not None
         has_anony_def = len(p) > 5 and p[8] is not None
-        p[0] = AstField(
-            self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
+        p[0] = AstField(self.path, p.lineno(1), p.lexpos(1), p[1], p[2])
         if p[3] is not None:
             if p[3] is NullToken:
                 p[0].set_default(None)
@@ -476,7 +469,7 @@ class ParserFactory(object):
         p[0] = p[1]
 
     def p_tag_ref(self, p):
-        'tag_ref : ID'
+        "tag_ref : ID"
         p[0] = AstTagRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     def p_annotation(self, p):
@@ -485,11 +478,13 @@ class ParserFactory(object):
         if len(p) < 8:
             args, kwargs = p[5]
             p[0] = AstAnnotationDef(
-                self.path, p.lineno(1), p.lexpos(1), p[2], p[4], None, args, kwargs)
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[4], None, args, kwargs
+            )
         else:
             args, kwargs = p[7]
             p[0] = AstAnnotationDef(
-                self.path, p.lineno(1), p.lexpos(1), p[2], p[6], p[4], args, kwargs)
+                self.path, p.lineno(1), p.lexpos(1), p[2], p[6], p[4], args, kwargs
+            )
 
     def p_annotation_ref_list_create(self, p):
         """annotation_ref_list : annotation_ref
@@ -546,7 +541,8 @@ class ParserFactory(object):
             doc=p[6],
             fields=p[7],
             examples=p[8],
-            closed=p[1][0] == 'union_closed')
+            closed=p[1][0] == "union_closed",
+        )
 
     def p_union_patch(self, p):
         """union_patch : PATCH uniont ID NL INDENT field_list examples DEDENT"""
@@ -557,7 +553,8 @@ class ParserFactory(object):
             name=p[3],
             fields=p[6],
             examples=p[7],
-            closed=p[2][0] == 'union_closed')
+            closed=p[2][0] == "union_closed",
+        )
 
     def p_uniont(self, p):
         """uniont : UNION
@@ -605,7 +602,7 @@ class ParserFactory(object):
                 p[0].set_attrs(p[9])
 
     def p_route_name(self, p):
-        'route_name : ID route_path'
+        "route_name : ID route_path"
         if p[2]:
             p[0] = p[1] + p[2]
         else:
@@ -651,11 +648,11 @@ class ParserFactory(object):
             p[0] = p[4]
 
     def p_attr_fields_create(self, p):
-        'attr_fields : attr_field'
+        "attr_fields : attr_field"
         p[0] = [p[1]]
 
     def p_attr_fields_add(self, p):
-        'attr_fields : attr_fields attr_field'
+        "attr_fields : attr_fields attr_field"
         p[0] = p[1]
         p[0].append(p[2])
 
@@ -663,11 +660,9 @@ class ParserFactory(object):
         """attr_field : ID EQ primitive NL
                       | ID EQ tag_ref NL"""
         if p[3] is NullToken:
-            p[0] = AstAttrField(
-                self.path, p.lineno(1), p.lexpos(1), p[1], None)
+            p[0] = AstAttrField(self.path, p.lineno(1), p.lexpos(1), p[1], None)
         else:
-            p[0] = AstAttrField(
-                self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
+            p[0] = AstAttrField(self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
 
     # --------------------------------------------------------------
     # Doc sections
@@ -692,9 +687,9 @@ class ParserFactory(object):
             p[0] = p[1]
 
     def p_docstring_string(self, p):
-        'docstring : STRING'
+        "docstring : STRING"
         # Remove trailing whitespace on every line.
-        p[0] = '\n'.join([line.rstrip() for line in p[1].split('\n')])
+        p[0] = "\n".join([line.rstrip() for line in p[1].split("\n")])
 
     # --------------------------------------------------------------
     # Examples
@@ -716,14 +711,18 @@ class ParserFactory(object):
             p[0][p[1].label] = p[1]
 
     def p_examples_add(self, p):
-        'examples : examples example'
+        "examples : examples example"
         p[0] = p[1]
         if p[2].label in p[0]:
             existing_ex = p[0][p[2].label]
             self.errors.append(
-                ("Example with label '%s' already defined on line %d." %
-                 (existing_ex.label, existing_ex.lineno),
-                 p[2].lineno, p[2].path))
+                (
+                    "Example with label '%s' already defined on line %d."
+                    % (existing_ex.label, existing_ex.lineno),
+                    p[2].lineno,
+                    p[2].path,
+                )
+            )
         p[0][p[2].label] = p[2]
 
     # It's possible for no example fields to be specified.
@@ -735,23 +734,33 @@ class ParserFactory(object):
             for example_field in p[6]:
                 if example_field.name in seen_fields:
                     self.errors.append(
-                        ("Example with label '%s' defines field '%s' more "
-                        "than once." % (p[2], example_field.name),
-                        p.lineno(1), self.path))
+                        (
+                            "Example with label '%s' defines field '%s' more "
+                            "than once." % (p[2], example_field.name),
+                            p.lineno(1),
+                            self.path,
+                        )
+                    )
                 seen_fields.add(example_field.name)
             p[0] = AstExample(
-                self.path, p.lineno(1), p.lexpos(1), p[2], p[5],
-                OrderedDict((f.name, f) for f in p[6]))
+                self.path,
+                p.lineno(1),
+                p.lexpos(1),
+                p[2],
+                p[5],
+                OrderedDict((f.name, f) for f in p[6]),
+            )
         else:
             p[0] = AstExample(
-                self.path, p.lineno(1), p.lexpos(1), p[2], None, OrderedDict())
+                self.path, p.lineno(1), p.lexpos(1), p[2], None, OrderedDict()
+            )
 
     def p_example_fields_create(self, p):
-        'example_fields : example_field'
+        "example_fields : example_field"
         p[0] = [p[1]]
 
     def p_example_fields_add(self, p):
-        'example_fields : example_fields example_field'
+        "example_fields : example_fields example_field"
         p[0] = p[1]
         p[0].append(p[2])
 
@@ -760,21 +769,23 @@ class ParserFactory(object):
                          | ID EQ ex_list NL
                          | ID EQ ex_map NL"""
         if p[3] is NullToken:
-            p[0] = AstExampleField(
-                self.path, p.lineno(1), p.lexpos(1), p[1], None)
+            p[0] = AstExampleField(self.path, p.lineno(1), p.lexpos(1), p[1], None)
         else:
-            p[0] = AstExampleField(
-                self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
+            p[0] = AstExampleField(self.path, p.lineno(1), p.lexpos(1), p[1], p[3])
 
     def p_example_multiline(self, p):
         """example_field : ID EQ NL INDENT ex_map NL DEDENT"""
-        p[0] = AstExampleField(
-            self.path, p.lineno(1), p.lexpos(1), p[1], p[5])
+        p[0] = AstExampleField(self.path, p.lineno(1), p.lexpos(1), p[1], p[5])
 
     def p_example_field_ref(self, p):
-        'example_field : ID EQ ID NL'
-        p[0] = AstExampleField(self.path, p.lineno(1), p.lexpos(1),
-            p[1], AstExampleRef(self.path, p.lineno(3), p.lexpos(3), p[3]))
+        "example_field : ID EQ ID NL"
+        p[0] = AstExampleField(
+            self.path,
+            p.lineno(1),
+            p.lexpos(1),
+            p[1],
+            AstExampleRef(self.path, p.lineno(3), p.lexpos(3), p[3]),
+        )
 
     # --------------------------------------------------------------
     # Example of list
@@ -788,18 +799,18 @@ class ParserFactory(object):
             p[0] = p[2]
 
     def p_ex_list_item_primitive(self, p):
-        'ex_list_item : primitive'
+        "ex_list_item : primitive"
         if p[1] is NullToken:
             p[0] = None
         else:
             p[0] = p[1]
 
     def p_ex_list_item_id(self, p):
-        'ex_list_item : ID'
+        "ex_list_item : ID"
         p[0] = AstExampleRef(self.path, p.lineno(1), p.lexpos(1), p[1])
 
     def p_ex_list_item_list(self, p):
-        'ex_list_item : ex_list'
+        "ex_list_item : ex_list"
         p[0] = p[1]
 
     def p_ex_list_items_create(self, p):
@@ -842,7 +853,7 @@ class ParserFactory(object):
         try:
             p[0] = {p[1]: p[3]}
         except TypeError:
-            msg = u"%s is an invalid hash key because it cannot be hashed." % repr(p[1])
+            msg = "%s is an invalid hash key because it cannot be hashed." % repr(p[1])
             self.errors.append((msg, p.lineno(2), self.path))
             p[0] = {}
 
@@ -865,16 +876,19 @@ class ParserFactory(object):
     # In ply, this is how you define an empty rule. This is used when we want
     # the parser to treat a rule as optional.
     def p_empty(self, p):
-        'empty :'
+        "empty :"
 
     # Called by the parser whenever a token doesn't match any rule.
     def p_error(self, token):
         assert token is not None, "Unknown error, please report this."
-        logger.debug('Unexpected %s(%r) at line %d',
-                     token.type,
-                     token.value,
-                     token.lineno)
+        logger.debug(
+            "Unexpected %s(%r) at line %d", token.type, token.value, token.lineno
+        )
         self.errors.append(
-            ("Unexpected %s with value %s." %
-             (token.type, repr(token.value).lstrip('u')),
-             token.lineno, self.path))
+            (
+                "Unexpected %s with value %s."
+                % (token.type, repr(token.value).lstrip("u")),
+                token.lineno,
+                self.path,
+            )
+        )

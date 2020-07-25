@@ -1,22 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from collections import defaultdict
-
 import copy
 import inspect
 import logging
-
-_MYPY = False
-if _MYPY:
-    import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-re = importlib.import_module(str('re'))  # type: typing.Any
+import re
+import typing
+from collections import defaultdict
 
 from ..ir import (
     Alias,
@@ -36,22 +23,12 @@ from ..ir import (
     Float64,
     Int32,
     Int64,
-    is_alias,
-    is_field_type,
-    is_list_type,
-    is_map_type,
-    is_nullable_type,
-    is_primitive_type,
-    is_struct_type,
-    is_user_defined_type,
-    is_union_type,
-    is_void_type,
     List,
     Map,
     Nullable,
     Omitted,
-    Preview,
     ParameterError,
+    Preview,
     RedactedBlot,
     RedactedHash,
     String,
@@ -65,11 +42,19 @@ from ..ir import (
     UnionField,
     UserDefined,
     Void,
+    is_alias,
+    is_field_type,
+    is_list_type,
+    is_map_type,
+    is_nullable_type,
+    is_primitive_type,
+    is_struct_type,
+    is_union_type,
+    is_user_defined_type,
+    is_void_type,
     unwrap_aliases,
     unwrap_nullable,
 )
-
-from .exception import InvalidSpec
 from .ast import (
     AstAlias,
     AstAnnotationDef,
@@ -86,13 +71,19 @@ from .ast import (
     AstUnionPatch,
     AstVoidField,
 )
+from .exception import InvalidSpec
+
 
 def quote(s):
-    assert s.replace('_', '').replace('.', '').replace('/', '').isalnum(), \
-        'Only use quote() with names or IDs in Stone.'
+    assert (
+        s.replace("_", "").replace(".", "").replace("/", "").isalnum()
+    ), "Only use quote() with names or IDs in Stone."
     return "'%s'" % s
 
-def parse_data_types_from_doc_ref(api, doc, namespace_context, ignore_missing_entries=False):
+
+def parse_data_types_from_doc_ref(
+    api, doc, namespace_context, ignore_missing_entries=False
+):
     """
     Given a documentation string, parse it and return all references to other
     data types. If there are references to routes, include also the data types of
@@ -110,7 +101,8 @@ def parse_data_types_from_doc_ref(api, doc, namespace_context, ignore_missing_en
     """
     output = []
     data_types, routes_by_ns = parse_data_types_and_routes_from_doc_ref(
-        api, doc, namespace_context, ignore_missing_entries=ignore_missing_entries)
+        api, doc, namespace_context, ignore_missing_entries=ignore_missing_entries
+    )
     for d in data_types:
         output.append(d)
     for ns_name, routes in routes_by_ns.items():
@@ -124,6 +116,7 @@ def parse_data_types_from_doc_ref(api, doc, namespace_context, ignore_missing_en
                 raise
     return output
 
+
 def parse_route_name_and_version(route_repr):
     """
     Parse a route representation string and return the route name and version number.
@@ -132,22 +125,20 @@ def parse_route_name_and_version(route_repr):
 
     :return: A tuple containing route name and version number.
     """
-    if ':' in route_repr:
-        route_name, version = route_repr.split(':', 1)
+    if ":" in route_repr:
+        route_name, version = route_repr.split(":", 1)
         try:
             version = int(version)
         except ValueError:
-            raise ValueError('Invalid route representation: {}'.format(route_repr))
+            raise ValueError(f"Invalid route representation: {route_repr}")
     else:
         route_name = route_repr
         version = 1
     return route_name, version
 
+
 def parse_data_types_and_routes_from_doc_ref(
-    api,
-    doc,
-    namespace_context,
-    ignore_missing_entries=False
+    api, doc, namespace_context, ignore_missing_entries=False
 ):
     """
     Given a documentation string, parse it and return all references to other
@@ -169,19 +160,19 @@ def parse_data_types_and_routes_from_doc_ref(
 
     for match in doc_ref_re.finditer(doc):
         try:
-            tag = match.group('tag')
-            val = match.group('val')
+            tag = match.group("tag")
+            val = match.group("val")
             supplied_namespace = api.namespaces[namespace_context]
-            if tag == 'field':
-                if '.' in val:
-                    type_name, __ = val.split('.', 1)
+            if tag == "field":
+                if "." in val:
+                    type_name, __ = val.split(".", 1)
                     doc_type = supplied_namespace.data_type_by_name[type_name]
                     data_types.add(doc_type)
                 else:
                     pass  # no action required, because we must be referencing the same object
-            elif tag == 'route':
-                if '.' in val:
-                    namespace_name, val = val.split('.', 1)
+            elif tag == "route":
+                if "." in val:
+                    namespace_name, val = val.split(".", 1)
                     namespace = api.namespaces[namespace_name]
                 else:
                     namespace = supplied_namespace
@@ -193,9 +184,9 @@ def parse_data_types_and_routes_from_doc_ref(
 
                 route = namespace.routes_by_name[route_name].at_version[version]
                 routes[namespace.name].add(route)
-            elif tag == 'type':
-                if '.' in val:
-                    namespace_name, val = val.split('.', 1)
+            elif tag == "type":
+                if "." in val:
+                    namespace_name, val = val.split(".", 1)
                     doc_type = api.namespaces[namespace_name].data_type_by_name[val]
                     data_types.add(doc_type)
                 else:
@@ -206,18 +197,18 @@ def parse_data_types_and_routes_from_doc_ref(
                 raise
     return data_types, routes
 
+
 # Patterns for references in documentation
-doc_ref_re = re.compile(r':(?P<tag>[A-z]+):`(?P<val>.*?)`')
-doc_ref_val_re = re.compile(
-    r'^(null|true|false|-?\d+(\.\d*)?(e-?\d+)?|"[^\\"]*")$')
+doc_ref_re = re.compile(r":(?P<tag>[A-z]+):`(?P<val>.*?)`")
+doc_ref_val_re = re.compile(r'^(null|true|false|-?\d+(\.\d*)?(e-?\d+)?|"[^\\"]*")$')
 
 # Defined Annotations
 BUILTIN_ANNOTATION_CLASS_BY_STRING = {
-    'Deprecated': Deprecated,
-    'Omitted': Omitted,
-    'Preview': Preview,
-    'RedactedBlot': RedactedBlot,
-    'RedactedHash': RedactedHash,
+    "Deprecated": Deprecated,
+    "Omitted": Omitted,
+    "Preview": Preview,
+    "RedactedBlot": RedactedBlot,
+    "RedactedHash": RedactedHash,
 }
 
 
@@ -225,10 +216,10 @@ class Environment(dict):
     # The default environment won't have a name set since it applies to all
     # namespaces. But, every time it's copied to represent the environment
     # of a specific namespace, a name should be set.
-    namespace_name = None  # type: typing.Optional[typing.Text]
+    namespace_name: typing.Optional[typing.Text] = None
 
 
-class IRGenerator(object):
+class IRGenerator:
 
     data_types = [
         Bytes,
@@ -247,7 +238,8 @@ class IRGenerator(object):
     ]
 
     default_env = Environment(
-        **{data_type.__name__: data_type for data_type in data_types})
+        **{data_type.__name__: data_type for data_type in data_types}
+    )
 
     # FIXME: Version should not have a default.
     def __init__(self, partial_asts, version, debug=False, route_whitelist_filter=None):
@@ -261,7 +253,7 @@ class IRGenerator(object):
 
         self._partial_asts = partial_asts
         self._debug = debug
-        self._logger = logging.getLogger('stone.idl')
+        self._logger = logging.getLogger("stone.idl")
 
         self.api = Api(version=version)
 
@@ -321,14 +313,21 @@ class IRGenerator(object):
         """
         if len(desc) == 0 or not isinstance(desc[0], AstNamespace):
             if self._debug:
-                self._logger.info('Description: %r', desc)
-            raise InvalidSpec('First declaration in a stone must be '
-                              'a namespace. Possibly caused by preceding '
-                              'errors.', desc[0].lineno, desc[0].path)
+                self._logger.info("Description: %r", desc)
+            raise InvalidSpec(
+                "First declaration in a stone must be "
+                "a namespace. Possibly caused by preceding "
+                "errors.",
+                desc[0].lineno,
+                desc[0].path,
+            )
         for item in desc[1:]:
             if isinstance(item, AstNamespace):
-                raise InvalidSpec('Only one namespace declaration per file.',
-                                  item[0].lineno, item[0].path)
+                raise InvalidSpec(
+                    "Only one namespace declaration per file.",
+                    item[0].lineno,
+                    item[0].path,
+                )
         return desc.pop(0)
 
     def _add_data_types_and_routes_to_api(self, namespace, desc):
@@ -357,7 +356,9 @@ class IRGenerator(object):
             elif isinstance(item, AstRouteDef):
                 route = self._create_route(env, item)
                 namespace.add_route(route)
-                self._check_canonical_name_available(item, namespace.name, allow_duplicate=True)
+                self._check_canonical_name_available(
+                    item, namespace.name, allow_duplicate=True
+                )
             elif isinstance(item, AstImport):
                 # Handle imports later.
                 pass
@@ -374,11 +375,14 @@ class IRGenerator(object):
                 namespace.add_annotation_type(annotation_type)
                 self._check_canonical_name_available(item, namespace.name)
             else:
-                raise AssertionError('Unknown AST node type %r' %
-                                     item.__class__.__name__)
+                raise AssertionError(
+                    "Unknown AST node type %r" % item.__class__.__name__
+                )
 
     # TODO(peichao): the name conflict checking can be merged to _create_* functions using env.
-    def _check_canonical_name_available(self, item, namespace_name, allow_duplicate=False):
+    def _check_canonical_name_available(
+        self, item, namespace_name, allow_duplicate=False
+    ):
         base_name = self._get_base_name(item.name, namespace_name)
 
         if base_name not in self._item_by_canonical_name:
@@ -390,34 +394,37 @@ class IRGenerator(object):
 
             # Allow name conflicts between items of the same type when allow_duplicate is True
             if not is_conflict_between_same_type or not allow_duplicate:
-                msg = ("Name of %s '%s' conflicts with name of "
-                       "%s '%s' (%s:%s).") % (
+                msg = ("Name of %s '%s' conflicts with name of " "%s '%s' (%s:%s).") % (
                     self._get_user_friendly_item_type_as_string(item),
                     item.name,
                     self._get_user_friendly_item_type_as_string(stored_item),
                     stored_item.name,
-                    stored_item.path, stored_item.lineno)
+                    stored_item.path,
+                    stored_item.lineno,
+                )
 
                 raise InvalidSpec(msg, item.lineno, item.path)
 
     @classmethod
     def _get_user_friendly_item_type_as_string(cls, item):
         if isinstance(item, AstTypeDef):
-            return 'user-defined type'
+            return "user-defined type"
         elif isinstance(item, AstRouteDef):
-            return 'route'
+            return "route"
         elif isinstance(item, AstAlias):
-            return 'alias'
+            return "alias"
         elif isinstance(item, AstNamespace):
-            return 'namespace'
+            return "namespace"
         elif isinstance(item, AstAnnotationTypeDef):
-            return 'annotation type'
+            return "annotation type"
         else:
-            raise AssertionError('unhandled type %r' % item)
+            raise AssertionError("unhandled type %r" % item)
 
     def _get_base_name(self, input_str, namespace_name):
-        return (input_str.replace('_', '').replace('/', '').lower() +
-                namespace_name.replace('_', '').lower())
+        return (
+            input_str.replace("_", "").replace("/", "").lower()
+            + namespace_name.replace("_", "").lower()
+        )
 
     def _add_imports_to_env(self, raw_api):
         """
@@ -433,23 +440,27 @@ class IRGenerator(object):
             for item in desc:
                 if isinstance(item, AstImport):
                     if namespace.name == item.target:
-                        raise InvalidSpec('Cannot import current namespace.',
-                                          item.lineno, item.path)
+                        raise InvalidSpec(
+                            "Cannot import current namespace.", item.lineno, item.path
+                        )
                     if item.target not in self.api.namespaces:
                         raise InvalidSpec(
-                            'Namespace %s is not defined in any spec.' %
-                            quote(item.target),
-                            item.lineno, item.path)
+                            "Namespace %s is not defined in any spec."
+                            % quote(item.target),
+                            item.lineno,
+                            item.path,
+                        )
                     env = self._get_or_create_env(namespace.name)
                     imported_env = self._get_or_create_env(item.target)
                     if namespace.name in imported_env:
                         # Block circular imports. The Python backend can't
                         # easily generate code for circular references.
                         raise InvalidSpec(
-                            'Circular import of namespaces %s and %s '
-                            'detected.' %
-                            (quote(namespace.name), quote(item.target)),
-                            item.lineno, item.path)
+                            "Circular import of namespaces %s and %s "
+                            "detected." % (quote(namespace.name), quote(item.target)),
+                            item.lineno,
+                            item.path,
+                        )
                     env[item.target] = imported_env
 
     def _create_alias(self, env, item):
@@ -460,9 +471,15 @@ class IRGenerator(object):
         if item.name in env:
             existing_dt = env[item.name]
             raise InvalidSpec(
-                'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._ast_node.path,
-                existing_dt._ast_node.lineno), item.lineno, item.path)
+                "Symbol %s already defined (%s:%d)."
+                % (
+                    quote(item.name),
+                    existing_dt._ast_node.path,
+                    existing_dt._ast_node.lineno,
+                ),
+                item.lineno,
+                item.path,
+            )
 
         namespace = self.api.ensure_namespace(env.namespace_name)
         alias = Alias(item.name, namespace, item)
@@ -474,31 +491,48 @@ class IRGenerator(object):
         if item.name in env:
             existing_dt = env[item.name]
             raise InvalidSpec(
-                'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._ast_node.path,
-                existing_dt._ast_node.lineno), item.lineno, item.path)
+                "Symbol %s already defined (%s:%d)."
+                % (
+                    quote(item.name),
+                    existing_dt._ast_node.path,
+                    existing_dt._ast_node.lineno,
+                ),
+                item.lineno,
+                item.path,
+            )
 
         namespace = self.api.ensure_namespace(env.namespace_name)
 
         if item.args and item.kwargs:
             raise InvalidSpec(
-                'Annotations accept either positional or keyword arguments, not both',
-                item.lineno, item.path,
+                "Annotations accept either positional or keyword arguments, not both",
+                item.lineno,
+                item.path,
             )
 
-        if ((item.annotation_type_ns is None)
-                and (item.annotation_type in BUILTIN_ANNOTATION_CLASS_BY_STRING)):
+        if (item.annotation_type_ns is None) and (
+            item.annotation_type in BUILTIN_ANNOTATION_CLASS_BY_STRING
+        ):
             annotation_class = BUILTIN_ANNOTATION_CLASS_BY_STRING[item.annotation_type]
-            annotation = annotation_class(item.name, namespace, item, *item.args, **item.kwargs)
+            annotation = annotation_class(
+                item.name, namespace, item, *item.args, **item.kwargs
+            )
         else:
             if item.annotation_type_ns is not None:
                 namespace.add_imported_namespace(
                     self.api.ensure_namespace(item.annotation_type_ns),
-                    imported_annotation_type=True)
+                    imported_annotation_type=True,
+                )
 
-            annotation = CustomAnnotation(item.name, namespace, item,
-                item.annotation_type, item.annotation_type_ns, item.args,
-                item.kwargs)
+            annotation = CustomAnnotation(
+                item.name,
+                namespace,
+                item,
+                item.annotation_type,
+                item.annotation_type_ns,
+                item.args,
+                item.kwargs,
+            )
 
         env[item.name] = annotation
         return annotation
@@ -507,42 +541,67 @@ class IRGenerator(object):
         if item.name in env:
             existing_dt = env[item.name]
             raise InvalidSpec(
-                'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._ast_node.path,
-                existing_dt._ast_node.lineno), item.lineno, item.path)
+                "Symbol %s already defined (%s:%d)."
+                % (
+                    quote(item.name),
+                    existing_dt._ast_node.path,
+                    existing_dt._ast_node.lineno,
+                ),
+                item.lineno,
+                item.path,
+            )
 
         namespace = self.api.ensure_namespace(env.namespace_name)
 
         if item.name in BUILTIN_ANNOTATION_CLASS_BY_STRING:
-            raise InvalidSpec('Cannot redefine built-in annotation type %s.' %
-                              (quote(item.name), ), item.lineno, item.path)
+            raise InvalidSpec(
+                "Cannot redefine built-in annotation type %s." % (quote(item.name)),
+                item.lineno,
+                item.path,
+            )
 
         params = []
         for param in item.params:
             if param.annotations:
                 raise InvalidSpec(
-                    'Annotations cannot be applied to parameters of annotation types',
-                    param.lineno, param.path)
+                    "Annotations cannot be applied to parameters of annotation types",
+                    param.lineno,
+                    param.path,
+                )
             param_type = self._resolve_type(env, param.type_ref, True)
             dt, nullable_dt = unwrap_nullable(param_type)
 
             if isinstance(dt, Void):
                 raise InvalidSpec(
-                    'Parameter {} cannot be Void.'.format(quote(param.name)),
-                    param.lineno, param.path)
+                    "Parameter {} cannot be Void.".format(quote(param.name)),
+                    param.lineno,
+                    param.path,
+                )
             if nullable_dt and param.has_default:
                 raise InvalidSpec(
-                    'Parameter {} cannot be a nullable type and have '
-                    'a default specified.'.format(quote(param.name)),
-                    param.lineno, param.path)
+                    "Parameter {} cannot be a nullable type and have "
+                    "a default specified.".format(quote(param.name)),
+                    param.lineno,
+                    param.path,
+                )
             if not is_primitive_type(dt):
                 raise InvalidSpec(
-                    'Parameter {} must have a primitive type (possibly '
-                    'nullable).'.format(quote(param.name)),
-                    param.lineno, param.path)
+                    "Parameter {} must have a primitive type (possibly "
+                    "nullable).".format(quote(param.name)),
+                    param.lineno,
+                    param.path,
+                )
 
-            params.append(AnnotationTypeParam(param.name, param_type, param.doc,
-                param.has_default, param.default, param))
+            params.append(
+                AnnotationTypeParam(
+                    param.name,
+                    param_type,
+                    param.doc,
+                    param.has_default,
+                    param.default,
+                    param,
+                )
+            )
 
         annotation_type = AnnotationType(item.name, namespace, item.doc, params)
 
@@ -554,35 +613,52 @@ class IRGenerator(object):
         if item.name in env:
             existing_dt = env[item.name]
             raise InvalidSpec(
-                'Symbol %s already defined (%s:%d).' %
-                (quote(item.name), existing_dt._ast_node.path,
-                 existing_dt._ast_node.lineno), item.lineno, item.path)
+                "Symbol %s already defined (%s:%d)."
+                % (
+                    quote(item.name),
+                    existing_dt._ast_node.path,
+                    existing_dt._ast_node.lineno,
+                ),
+                item.lineno,
+                item.path,
+            )
         namespace = self.api.ensure_namespace(env.namespace_name)
         if isinstance(item, AstStructDef):
             try:
-                api_type = Struct(name=item.name, namespace=namespace,
-                                  ast_node=item)
+                api_type = Struct(name=item.name, namespace=namespace, ast_node=item)
             except ParameterError as e:
                 raise InvalidSpec(
-                    'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
-                    item.lineno, item.path)
+                    "Bad declaration of {}: {}".format(quote(item.name), e.args[0]),
+                    item.lineno,
+                    item.path,
+                )
         elif isinstance(item, AstUnionDef):
             api_type = Union(
-                name=item.name, namespace=namespace, ast_node=item,
-                closed=item.closed)
+                name=item.name, namespace=namespace, ast_node=item, closed=item.closed
+            )
         else:
-            raise AssertionError('Unknown type definition %r' % type(item))
+            raise AssertionError("Unknown type definition %r" % type(item))
 
         env[item.name] = api_type
         return api_type
 
     def _merge_patches(self):
         """Injects object patches into their original object definitions."""
-        for patched_item, patched_namespace in self._patch_data_by_canonical_name.values():
-            patched_item_base_name = self._get_base_name(patched_item.name, patched_namespace.name)
+        for (
+            patched_item,
+            patched_namespace,
+        ) in self._patch_data_by_canonical_name.values():
+            patched_item_base_name = self._get_base_name(
+                patched_item.name, patched_namespace.name
+            )
             if patched_item_base_name not in self._item_by_canonical_name:
-                raise InvalidSpec('Patch {} must correspond to a pre-existing data_type.'.format(
-                    quote(patched_item.name)), patched_item.lineno, patched_item.path)
+                raise InvalidSpec(
+                    "Patch {} must correspond to a pre-existing data_type.".format(
+                        quote(patched_item.name)
+                    ),
+                    patched_item.lineno,
+                    patched_item.path,
+                )
 
             existing_item = self._item_by_canonical_name[patched_item_base_name]
 
@@ -593,35 +669,49 @@ class IRGenerator(object):
                 existing_item.fields += patched_item.fields
                 self._inject_patched_examples(existing_item, patched_item)
             else:
-                raise AssertionError('Unknown Patch Object Type {}'.format(
-                    patched_item.__class__.__name__))
+                raise AssertionError(
+                    "Unknown Patch Object Type {}".format(
+                        patched_item.__class__.__name__
+                    )
+                )
 
     def _check_patch_type_mismatch(self, patched_item, existing_item):
         """Enforces that each patch has a corresponding, already-defined data type."""
+
         def raise_mismatch_error(patched_item, existing_item, data_type_name):
-            error_msg = ('Type mismatch. Patch {} corresponds to pre-existing '
-                'data_type {} ({}:{}) that has type other than {}.')
-            raise InvalidSpec(error_msg.format(
-                quote(patched_item.name),
-                quote(existing_item.name),
-                existing_item.path,
-                existing_item.lineno,
-                quote(data_type_name)), patched_item.lineno, patched_item.path)
+            error_msg = (
+                "Type mismatch. Patch {} corresponds to pre-existing "
+                "data_type {} ({}:{}) that has type other than {}."
+            )
+            raise InvalidSpec(
+                error_msg.format(
+                    quote(patched_item.name),
+                    quote(existing_item.name),
+                    existing_item.path,
+                    existing_item.lineno,
+                    quote(data_type_name),
+                ),
+                patched_item.lineno,
+                patched_item.path,
+            )
 
         if isinstance(patched_item, AstStructPatch):
             if not isinstance(existing_item, AstStructDef):
-                raise_mismatch_error(patched_item, existing_item, 'struct')
+                raise_mismatch_error(patched_item, existing_item, "struct")
         elif isinstance(patched_item, AstUnionPatch):
             if not isinstance(existing_item, AstUnionDef):
-                raise_mismatch_error(patched_item, existing_item, 'union')
+                raise_mismatch_error(patched_item, existing_item, "union")
             else:
                 if existing_item.closed != patched_item.closed:
                     raise_mismatch_error(
-                        patched_item, existing_item,
-                        'union_closed' if existing_item.closed else 'union')
+                        patched_item,
+                        existing_item,
+                        "union_closed" if existing_item.closed else "union",
+                    )
         else:
             raise AssertionError(
-                'Unknown Patch Object Type {}'.format(patched_item.__class__.__name__))
+                f"Unknown Patch Object Type {patched_item.__class__.__name__}"
+            )
 
     def _check_field_names_unique(self, existing_item, patched_item):
         """Enforces that patched fields don't already exist."""
@@ -629,11 +719,16 @@ class IRGenerator(object):
         for patched_field in patched_item.fields:
             if patched_field.name in existing_fields_by_name.keys():
                 existing_field = existing_fields_by_name[patched_field.name]
-                raise InvalidSpec('Patched field {} overrides pre-existing field in {} ({}:{}).'
-                    .format(quote(patched_field.name),
-                            quote(patched_item.name),
-                            existing_field.path,
-                            existing_field.lineno), patched_field.lineno, patched_field.path)
+                raise InvalidSpec(
+                    "Patched field {} overrides pre-existing field in {} ({}:{}).".format(
+                        quote(patched_field.name),
+                        quote(patched_item.name),
+                        existing_field.path,
+                        existing_field.lineno,
+                    ),
+                    patched_field.lineno,
+                    patched_field.path,
+                )
 
     def _inject_patched_examples(self, existing_item, patched_item):
         """Injects patched examples into original examples."""
@@ -643,9 +738,12 @@ class IRGenerator(object):
             if key in existing_examples:
                 existing_examples[key].fields.update(patched_example.fields)
             else:
-                error_msg = 'Example defined in patch {} must correspond to a pre-existing example.'
-                raise InvalidSpec(error_msg.format(
-                    quote(patched_item.name)), patched_example.lineno, patched_example.path)
+                error_msg = "Example defined in patch {} must correspond to a pre-existing example."
+                raise InvalidSpec(
+                    error_msg.format(quote(patched_item.name)),
+                    patched_example.lineno,
+                    patched_example.path,
+                )
 
     def _populate_type_attributes(self):
         """
@@ -663,27 +761,36 @@ class IRGenerator(object):
                     if annotation.annotation_type_ns:
                         if annotation.annotation_type_ns not in env:
                             raise InvalidSpec(
-                                'Namespace %s is not imported' %
-                                quote(annotation.annotation_type_ns), *loc)
+                                "Namespace %s is not imported"
+                                % quote(annotation.annotation_type_ns),
+                                *loc,
+                            )
                         annotation_type_env = env[annotation.annotation_type_ns]
                         if not isinstance(annotation_type_env, Environment):
                             raise InvalidSpec(
-                                '%s is not a namespace.' %
-                                quote(annotation.annotation_type_ns), *loc)
+                                "%s is not a namespace."
+                                % quote(annotation.annotation_type_ns),
+                                *loc,
+                            )
                     else:
                         annotation_type_env = env
 
                     if annotation.annotation_type_name not in annotation_type_env:
                         raise InvalidSpec(
-                            'Annotation type %s does not exist' %
-                            quote(annotation.annotation_type_name), *loc)
+                            "Annotation type %s does not exist"
+                            % quote(annotation.annotation_type_name),
+                            *loc,
+                        )
 
-                    annotation_type = annotation_type_env[annotation.annotation_type_name]
+                    annotation_type = annotation_type_env[
+                        annotation.annotation_type_name
+                    ]
 
                     if not isinstance(annotation_type, AnnotationType):
                         raise InvalidSpec(
-                            '%s is not an annotation type' % quote(annotation.annotation_type_name),
-                            *loc
+                            "%s is not an annotation type"
+                            % quote(annotation.annotation_type_name),
+                            *loc,
                         )
 
                     annotation.set_attributes(annotation_type)
@@ -691,8 +798,10 @@ class IRGenerator(object):
             for alias in namespace.aliases:
                 data_type = self._resolve_type(env, alias._ast_node.type_ref)
                 alias.set_attributes(alias._ast_node.doc, data_type)
-                annotations = [self._resolve_annotation_type(env, annotation)
-                               for annotation in alias._ast_node.annotations]
+                annotations = [
+                    self._resolve_annotation_type(env, annotation)
+                    for annotation in alias._ast_node.annotations
+                ]
                 alias.set_annotations(annotations)
 
             for data_type in namespace.data_types:
@@ -705,8 +814,7 @@ class IRGenerator(object):
                 elif isinstance(data_type, Union):
                     self._populate_union_type_attributes(env, data_type)
                 else:
-                    raise AssertionError('Unhandled type: %r' %
-                                         type(data_type))
+                    raise AssertionError("Unhandled type: %r" % type(data_type))
                 self._resolution_in_progress.remove(data_type)
 
         assert len(self._resolution_in_progress) == 0
@@ -727,24 +835,29 @@ class IRGenerator(object):
                 # to avoid out-of-order declaration issues, but using "extends"
                 # in Python forces the reference to happen earlier.
                 raise InvalidSpec(
-                    'A struct cannot extend an alias. '
-                    'Use the canonical name instead.',
-                    data_type._ast_node.lineno, data_type._ast_node.path)
+                    "A struct cannot extend an alias. "
+                    "Use the canonical name instead.",
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
+                )
             if isinstance(parent_type, Nullable):
                 raise InvalidSpec(
-                    'A struct cannot extend a nullable type.',
-                    data_type._ast_node.lineno, data_type._ast_node.path)
+                    "A struct cannot extend a nullable type.",
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
+                )
             if not isinstance(parent_type, Struct):
                 raise InvalidSpec(
-                    'A struct can only extend another struct: '
-                    '%s is not a struct.' % quote(parent_type.name),
-                    data_type._ast_node.lineno, data_type._ast_node.path)
+                    "A struct can only extend another struct: "
+                    "%s is not a struct." % quote(parent_type.name),
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
+                )
         api_type_fields = []
         for stone_field in data_type._ast_node.fields:
             api_type_field = self._create_struct_field(env, stone_field)
             api_type_fields.append(api_type_field)
-        data_type.set_attributes(
-            data_type._ast_node.doc, api_type_fields, parent_type)
+        data_type.set_attributes(data_type._ast_node.doc, api_type_fields, parent_type)
 
     def _populate_union_type_attributes(self, env, data_type):
         """
@@ -758,26 +871,34 @@ class IRGenerator(object):
             parent_type = self._resolve_type(env, extends, True)
             if isinstance(parent_type, Alias):
                 raise InvalidSpec(
-                    'A union cannot extend an alias. '
-                    'Use the canonical name instead.',
-                    data_type._ast_node.lineno, data_type._ast_node.path)
+                    "A union cannot extend an alias. "
+                    "Use the canonical name instead.",
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
+                )
             if isinstance(parent_type, Nullable):
                 raise InvalidSpec(
-                    'A union cannot extend a nullable type.',
-                    data_type._ast_node.lineno, data_type._ast_node.path)
+                    "A union cannot extend a nullable type.",
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
+                )
             if not isinstance(parent_type, Union):
                 raise InvalidSpec(
-                    'A union can only extend another union: '
-                    '%s is not a union.' % quote(parent_type.name),
-                    data_type._ast_node.lineno, data_type._ast_node.path)
+                    "A union can only extend another union: "
+                    "%s is not a union." % quote(parent_type.name),
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
+                )
 
         api_type_fields = []
         for stone_field in data_type._ast_node.fields:
-            if stone_field.name == 'other':
+            if stone_field.name == "other":
                 raise InvalidSpec(
                     "Union cannot define an 'other' field because it is "
                     "reserved as the catch-all field for open unions.",
-                    stone_field.lineno, stone_field.path)
+                    stone_field.lineno,
+                    stone_field.path,
+                )
             api_type_fields.append(self._create_union_field(env, stone_field))
 
         catch_all_field = None
@@ -788,19 +909,26 @@ class IRGenerator(object):
                 # because the parent now has an extra field that is not
                 # recognized by the child if it were substituted in for it.
                 raise InvalidSpec(
-                    "Union cannot be closed since parent type '%s' is open." % (
-                        parent_type.name),
-                    data_type._ast_node.lineno, data_type._ast_node.path)
+                    "Union cannot be closed since parent type '%s' is open."
+                    % (parent_type.name),
+                    data_type._ast_node.lineno,
+                    data_type._ast_node.path,
+                )
         else:
             if not parent_type or parent_type.closed:
                 # Create a catch-all field
                 catch_all_field = UnionField(
-                    name='other', data_type=Void(), doc=None,
-                    ast_node=data_type._ast_node, catch_all=True)
+                    name="other",
+                    data_type=Void(),
+                    doc=None,
+                    ast_node=data_type._ast_node,
+                    catch_all=True,
+                )
                 api_type_fields.append(catch_all_field)
 
         data_type.set_attributes(
-            data_type._ast_node.doc, api_type_fields, parent_type, catch_all_field)
+            data_type._ast_node.doc, api_type_fields, parent_type, catch_all_field
+        )
 
     def _populate_field_defaults(self):
         """
@@ -820,22 +948,27 @@ class IRGenerator(object):
 
                     if isinstance(field._ast_node.default, AstTagRef):
                         default_value = TagRef(
-                            field.data_type, field._ast_node.default.tag)
+                            field.data_type, field._ast_node.default.tag
+                        )
                     else:
                         default_value = field._ast_node.default
-                    if not (field._ast_node.type_ref.nullable and default_value is None):
+                    if not (
+                        field._ast_node.type_ref.nullable and default_value is None
+                    ):
                         # Verify that the type of the default value is correct for this field
                         try:
-                            if field.data_type.name in ('Float32', 'Float64'):
+                            if field.data_type.name in ("Float32", "Float64"):
                                 # You can assign int to the default value of float type
                                 # However float type should always have default value in float
                                 default_value = float(default_value)
                             field.data_type.check(default_value)
                         except ValueError as e:
                             raise InvalidSpec(
-                                'Field %s has an invalid default: %s' %
-                                (quote(field._ast_node.name), e),
-                                field._ast_node.lineno, field._ast_node.path)
+                                "Field %s has an invalid default: %s"
+                                % (quote(field._ast_node.name), e),
+                                field._ast_node.lineno,
+                                field._ast_node.path,
+                            )
                     field.set_default(default_value)
 
     def _populate_route_attributes(self):
@@ -878,14 +1011,18 @@ class IRGenerator(object):
 
                 if is_not_defined:
                     raise InvalidSpec(
-                        'Undefined route %s at version %d.' % (
-                            quote(new_route_name), new_route_version),
-                        route._ast_node.lineno, route._ast_node.path)
+                        "Undefined route %s at version %d."
+                        % (quote(new_route_name), new_route_version),
+                        route._ast_node.lineno,
+                        route._ast_node.path,
+                    )
 
                 if is_not_route:
                     raise InvalidSpec(
-                        '%s must be a route.' % quote(new_route_name),
-                        route._ast_node.lineno, route._ast_node.path)
+                        "%s must be a route." % quote(new_route_name),
+                        route._ast_node.lineno,
+                        route._ast_node.path,
+                    )
 
                 new_route = env[new_route_name].at_version[new_route_version]
                 deprecated = DeprecationInfo(new_route)
@@ -903,7 +1040,9 @@ class IRGenerator(object):
         except KeyError as e:
             raise InvalidSpec(
                 "Route does not define attr key '%s'." % e.args[0],
-                route._ast_node.lineno, route._ast_node.path)
+                route._ast_node.lineno,
+                route._ast_node.path,
+            )
 
         route.set_attributes(
             deprecated=deprecated,
@@ -911,7 +1050,8 @@ class IRGenerator(object):
             arg_data_type=arg_dt,
             result_data_type=result_dt,
             error_data_type=error_dt,
-            attrs=validated_attrs)
+            attrs=validated_attrs,
+        )
 
     def _create_struct_field(self, env, stone_field):
         """
@@ -927,24 +1067,30 @@ class IRGenerator(object):
         """
         if isinstance(stone_field, AstVoidField):
             raise InvalidSpec(
-                'Struct field %s cannot have a Void type.' %
-                quote(stone_field.name),
-                stone_field.lineno, stone_field.path)
+                "Struct field %s cannot have a Void type." % quote(stone_field.name),
+                stone_field.lineno,
+                stone_field.path,
+            )
 
         data_type = self._resolve_type(env, stone_field.type_ref)
-        annotations = [self._resolve_annotation_type(env, annotation)
-                       for annotation in stone_field.annotations]
+        annotations = [
+            self._resolve_annotation_type(env, annotation)
+            for annotation in stone_field.annotations
+        ]
 
         if isinstance(data_type, Void):
             raise InvalidSpec(
-                'Struct field %s cannot have a Void type.' %
-                quote(stone_field.name),
-                stone_field.lineno, stone_field.path)
+                "Struct field %s cannot have a Void type." % quote(stone_field.name),
+                stone_field.lineno,
+                stone_field.path,
+            )
         elif isinstance(data_type, Nullable) and stone_field.has_default:
-            raise InvalidSpec('Field %s cannot be a nullable '
-                              'type and have a default specified.' %
-                              quote(stone_field.name),
-                              stone_field.lineno, stone_field.path)
+            raise InvalidSpec(
+                "Field %s cannot be a nullable "
+                "type and have a default specified." % quote(stone_field.name),
+                stone_field.lineno,
+                stone_field.path,
+            )
         api_type_field = StructField(
             name=stone_field.name,
             data_type=data_type,
@@ -966,23 +1112,33 @@ class IRGenerator(object):
         Returns:
             stone.data_type.UnionField: A field of a union.
         """
-        annotations = [self._resolve_annotation_type(env, annotation)
-                       for annotation in stone_field.annotations]
+        annotations = [
+            self._resolve_annotation_type(env, annotation)
+            for annotation in stone_field.annotations
+        ]
 
         if isinstance(stone_field, AstVoidField):
             api_type_field = UnionField(
-                name=stone_field.name, data_type=Void(), doc=stone_field.doc,
-                ast_node=stone_field)
+                name=stone_field.name,
+                data_type=Void(),
+                doc=stone_field.doc,
+                ast_node=stone_field,
+            )
         else:
             data_type = self._resolve_type(env, stone_field.type_ref)
             if isinstance(data_type, Void):
-                raise InvalidSpec('Union member %s cannot have Void '
-                                  'type explicit, omit Void instead.' %
-                                  quote(stone_field.name),
-                                  stone_field.lineno, stone_field.path)
+                raise InvalidSpec(
+                    "Union member %s cannot have Void "
+                    "type explicit, omit Void instead." % quote(stone_field.name),
+                    stone_field.lineno,
+                    stone_field.path,
+                )
             api_type_field = UnionField(
-                name=stone_field.name, data_type=data_type,
-                doc=stone_field.doc, ast_node=stone_field)
+                name=stone_field.name,
+                data_type=data_type,
+                doc=stone_field.doc,
+                ast_node=stone_field,
+            )
         api_type_field.set_annotations(annotations)
         return api_type_field
 
@@ -1000,11 +1156,14 @@ class IRGenerator(object):
         Returns:
             stone.data_type.DataType: A parameterized instance.
         """
-        assert issubclass(data_type_class, DataType), \
-            'Expected stone.data_type.DataType, got %r' % data_type_class
+        assert issubclass(data_type_class, DataType), (
+            "Expected stone.data_type.DataType, got %r" % data_type_class
+        )
 
-        argspec = inspect.getargspec(data_type_class.__init__)  # noqa: E501 # pylint: disable=deprecated-method,useless-suppression
-        argspec.args.remove('self')
+        argspec = inspect.getargspec(  # pylint: disable=deprecated-method
+            data_type_class.__init__
+        )
+        argspec.args.remove("self")
         num_args = len(argspec.args)
         # Unfortunately, argspec.defaults is None if there are no defaults
         num_defaults = len(argspec.defaults or ())
@@ -1014,34 +1173,38 @@ class IRGenerator(object):
         if (num_args - num_defaults) > len(pos_args):
             # Report if a positional argument is missing
             raise InvalidSpec(
-                'Missing positional argument %s for %s type' %
-                (quote(argspec.args[len(pos_args)]),
-                 quote(data_type_class.__name__)),
-                *loc)
+                "Missing positional argument %s for %s type"
+                % (quote(argspec.args[len(pos_args)]), quote(data_type_class.__name__)),
+                *loc,
+            )
         elif (num_args - num_defaults) < len(pos_args):
             # Report if there are too many positional arguments
             raise InvalidSpec(
-                'Too many positional arguments for %s type' %
-                quote(data_type_class.__name__),
-                *loc)
+                "Too many positional arguments for %s type"
+                % quote(data_type_class.__name__),
+                *loc,
+            )
 
         # Map from arg name to bool indicating whether the arg has a default
         args = {}
         for i, key in enumerate(argspec.args):
-            args[key] = (i >= num_args - num_defaults)
+            args[key] = i >= num_args - num_defaults
 
         for key in kw_args:
             # Report any unknown keyword arguments
             if key not in args:
-                raise InvalidSpec('Unknown argument %s to %s type.' %
-                    (quote(key), quote(data_type_class.__name__)),
-                    *loc)
+                raise InvalidSpec(
+                    "Unknown argument %s to %s type."
+                    % (quote(key), quote(data_type_class.__name__)),
+                    *loc,
+                )
             # Report any positional args that are defined as keywords args.
             if not args[key]:
                 raise InvalidSpec(
-                    'Positional argument %s cannot be specified as a '
-                    'keyword argument.' % quote(key),
-                    *loc)
+                    "Positional argument %s cannot be specified as a "
+                    "keyword argument." % quote(key),
+                    *loc,
+                )
             del args[key]
 
         try:
@@ -1049,9 +1212,11 @@ class IRGenerator(object):
         except ParameterError as e:
             # Each data type validates its own attributes, and will raise a
             # ParameterError if the type or value is bad.
-            raise InvalidSpec('Bad argument to %s type: %s' %
-                (quote(data_type_class.__name__), e.args[0]),
-                *loc)
+            raise InvalidSpec(
+                "Bad argument to %s type: %s"
+                % (quote(data_type_class.__name__), e.args[0]),
+                *loc,
+            )
 
     def _resolve_type(self, env, type_ref, enforce_fully_defined=False):
         """
@@ -1070,33 +1235,32 @@ class IRGenerator(object):
             # to a file.
             if type_ref.ns not in env:
                 raise InvalidSpec(
-                    'Namespace %s is not imported' % quote(type_ref.ns), *loc)
+                    "Namespace %s is not imported" % quote(type_ref.ns), *loc
+                )
             env = env[type_ref.ns]
             if not isinstance(env, Environment):
-                raise InvalidSpec(
-                    '%s is not a namespace.' % quote(type_ref.ns), *loc)
+                raise InvalidSpec("%s is not a namespace." % quote(type_ref.ns), *loc)
         if type_ref.name not in env:
-            raise InvalidSpec(
-                'Symbol %s is undefined.' % quote(type_ref.name), *loc)
+            raise InvalidSpec("Symbol %s is undefined." % quote(type_ref.name), *loc)
 
         obj = env[type_ref.name]
         if obj is Void and type_ref.nullable:
-            raise InvalidSpec('Void cannot be marked nullable.',
-                              *loc)
+            raise InvalidSpec("Void cannot be marked nullable.", *loc)
         elif inspect.isclass(obj):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
-                obj, resolved_data_type_args, (type_ref.lineno, type_ref.path))
+                obj, resolved_data_type_args, (type_ref.lineno, type_ref.path)
+            )
         elif isinstance(obj, ApiRoutesByVersion):
-            raise InvalidSpec('A route cannot be referenced here.',
-                              *loc)
+            raise InvalidSpec("A route cannot be referenced here.", *loc)
         elif type_ref.args[0] or type_ref.args[1]:
             # An instance of a type cannot have any additional
             # attributes specified.
-            raise InvalidSpec('Attributes cannot be specified for '
-                              'instantiated type %s.' %
-                              quote(type_ref.name),
-                              *loc)
+            raise InvalidSpec(
+                "Attributes cannot be specified for "
+                "instantiated type %s." % quote(type_ref.name),
+                *loc,
+            )
         else:
             data_type = env[type_ref.name]
 
@@ -1105,19 +1269,24 @@ class IRGenerator(object):
             namespace = self.api.ensure_namespace(orig_namespace_name)
             if isinstance(data_type, UserDefined):
                 namespace.add_imported_namespace(
-                    self.api.ensure_namespace(type_ref.ns),
-                    imported_data_type=True)
+                    self.api.ensure_namespace(type_ref.ns), imported_data_type=True
+                )
             elif isinstance(data_type, Alias):
                 namespace.add_imported_namespace(
-                    self.api.ensure_namespace(type_ref.ns),
-                    imported_alias=True)
+                    self.api.ensure_namespace(type_ref.ns), imported_alias=True
+                )
 
-        if (enforce_fully_defined and isinstance(data_type, UserDefined) and
-                data_type._is_forward_ref):
+        if (
+            enforce_fully_defined
+            and isinstance(data_type, UserDefined)
+            and data_type._is_forward_ref
+        ):
             if data_type in self._resolution_in_progress:
                 raise InvalidSpec(
-                    'Unresolvable circular reference for type %s.' %
-                    quote(type_ref.name), *loc)
+                    "Unresolvable circular reference for type %s."
+                    % quote(type_ref.name),
+                    *loc,
+                )
             self._resolution_in_progress.add(data_type)
             if isinstance(data_type, Struct):
                 self._populate_struct_type_attributes(env, data_type)
@@ -1129,8 +1298,8 @@ class IRGenerator(object):
             unwrapped_dt, _ = unwrap_aliases(data_type)
             if isinstance(unwrapped_dt, Nullable):
                 raise InvalidSpec(
-                    'Cannot mark reference to nullable type as nullable.',
-                    *loc)
+                    "Cannot mark reference to nullable type as nullable.", *loc
+                )
             data_type = Nullable(data_type)
 
         return data_type
@@ -1143,15 +1312,18 @@ class IRGenerator(object):
         if annotation_ref.ns:
             if annotation_ref.ns not in env:
                 raise InvalidSpec(
-                    'Namespace %s is not imported' % quote(annotation_ref.ns), *loc)
+                    "Namespace %s is not imported" % quote(annotation_ref.ns), *loc
+                )
             env = env[annotation_ref.ns]
             if not isinstance(env, Environment):
                 raise InvalidSpec(
-                    '%s is not a namespace.' % quote(annotation_ref.ns), *loc)
+                    "%s is not a namespace." % quote(annotation_ref.ns), *loc
+                )
 
         if annotation_ref.annotation not in env:
             raise InvalidSpec(
-                'Annotation %s does not exist.' % quote(annotation_ref.annotation), *loc)
+                "Annotation %s does not exist." % quote(annotation_ref.annotation), *loc
+            )
 
         return env[annotation_ref.annotation]
 
@@ -1189,25 +1361,32 @@ class IRGenerator(object):
                 if item.version in env[item.name].at_version:
                     existing_dt = env[item.name].at_version[item.version]
                     raise InvalidSpec(
-                        'Route %s at version %d already defined (%s:%d).' % (
-                            quote(item.name), item.version, existing_dt._ast_node.path,
-                            existing_dt._ast_node.lineno),
-                        item.lineno, item.path)
+                        "Route %s at version %d already defined (%s:%d)."
+                        % (
+                            quote(item.name),
+                            item.version,
+                            existing_dt._ast_node.path,
+                            existing_dt._ast_node.lineno,
+                        ),
+                        item.lineno,
+                        item.path,
+                    )
             else:
                 existing_dt = env[item.name]
                 raise InvalidSpec(
-                    'Symbol %s already defined (%s:%d).' % (
-                        quote(item.name), existing_dt._ast_node.path,
-                        existing_dt._ast_node.lineno),
-                    item.lineno, item.path)
+                    "Symbol %s already defined (%s:%d)."
+                    % (
+                        quote(item.name),
+                        existing_dt._ast_node.path,
+                        existing_dt._ast_node.lineno,
+                    ),
+                    item.lineno,
+                    item.path,
+                )
         else:
             env[item.name] = ApiRoutesByVersion()
 
-        route = ApiRoute(
-            name=item.name,
-            version=item.version,
-            ast_node=item,
-        )
+        route = ApiRoute(name=item.name, version=item.version, ast_node=item)
         env[route.name].at_version[route.version] = route
         return route
 
@@ -1228,8 +1407,7 @@ class IRGenerator(object):
         for namespace in self.api.namespaces.values():
             env = self._get_or_create_env(namespace.name)
             for data_type in namespace.data_types:
-                if not (isinstance(data_type, Struct) and
-                        data_type._ast_node.subtypes):
+                if not (isinstance(data_type, Struct) and data_type._ast_node.subtypes):
                     continue
 
                 subtype_fields = []
@@ -1239,36 +1417,43 @@ class IRGenerator(object):
                     path = subtype_field.type_ref.path
                     if subtype_field.type_ref.name not in env:
                         raise InvalidSpec(
-                            'Undefined type %s.' % quote(subtype_name),
-                            lineno, path)
-                    subtype = self._resolve_type(
-                        env, subtype_field.type_ref, True)
+                            "Undefined type %s." % quote(subtype_name), lineno, path
+                        )
+                    subtype = self._resolve_type(env, subtype_field.type_ref, True)
                     if not isinstance(subtype, Struct):
                         raise InvalidSpec(
-                            'Enumerated subtype %s must be a struct.' %
-                            quote(subtype_name), lineno, path)
-                    f = UnionField(
-                        subtype_field.name, subtype, None, subtype_field)
+                            "Enumerated subtype %s must be a struct."
+                            % quote(subtype_name),
+                            lineno,
+                            path,
+                        )
+                    f = UnionField(subtype_field.name, subtype, None, subtype_field)
                     subtype_fields.append(f)
-                data_type.set_enumerated_subtypes(subtype_fields,
-                                                  data_type._ast_node.subtypes[1])
+                data_type.set_enumerated_subtypes(
+                    subtype_fields, data_type._ast_node.subtypes[1]
+                )
 
             # In an enumerated subtypes tree, regular structs may only exist at
             # the leaves. In other words, no regular struct may inherit from a
             # regular struct.
             for data_type in namespace.data_types:
-                if (not isinstance(data_type, Struct) or
-                        not data_type.has_enumerated_subtypes()):
+                if (
+                    not isinstance(data_type, Struct)
+                    or not data_type.has_enumerated_subtypes()
+                ):
                     continue
 
                 for subtype_field in data_type.get_enumerated_subtypes():
-                    if (not subtype_field.data_type.has_enumerated_subtypes() and
-                            len(subtype_field.data_type.subtypes) > 0):
+                    if (
+                        not subtype_field.data_type.has_enumerated_subtypes()
+                        and len(subtype_field.data_type.subtypes) > 0
+                    ):
                         raise InvalidSpec(
-                            "Subtype '%s' cannot be extended." %
-                            subtype_field.data_type.name,
+                            "Subtype '%s' cannot be extended."
+                            % subtype_field.data_type.name,
                             subtype_field.data_type._ast_node.lineno,
-                            subtype_field.data_type._ast_node.path)
+                            subtype_field.data_type._ast_node.path,
+                        )
 
     def _populate_examples(self):
         """Construct every possible example for every type.
@@ -1302,20 +1487,23 @@ class IRGenerator(object):
                         env,
                         data_type.doc,
                         (data_type._ast_node.lineno + 1, data_type._ast_node.path),
-                        data_type)
+                        data_type,
+                    )
                 for field in data_type.fields:
                     if field.doc:
                         self._validate_doc_refs_helper(
                             env,
                             field.doc,
                             (field._ast_node.lineno + 1, field._ast_node.path),
-                            data_type)
+                            data_type,
+                        )
             for route in namespace.routes:
                 if route.doc:
                     self._validate_doc_refs_helper(
                         env,
                         route.doc,
-                        (route._ast_node.lineno + 1, route._ast_node.path))
+                        (route._ast_node.lineno + 1, route._ast_node.path),
+                    )
 
     def _validate_doc_refs_helper(self, env, doc, loc, type_context=None):
         """
@@ -1333,59 +1521,63 @@ class IRGenerator(object):
                 refs that don't name a type to be validated.
         """
         for match in doc_ref_re.finditer(doc):
-            tag = match.group('tag')
-            val = match.group('val')
-            if tag == 'field':
-                if '.' in val:
-                    type_name, field_name = val.split('.', 1)
+            tag = match.group("tag")
+            val = match.group("val")
+            if tag == "field":
+                if "." in val:
+                    type_name, field_name = val.split(".", 1)
                     if type_name not in env:
                         raise InvalidSpec(
-                            'Bad doc reference to field %s of '
-                            'unknown type %s.' % (field_name, quote(type_name)),
-                            *loc)
+                            "Bad doc reference to field %s of "
+                            "unknown type %s." % (field_name, quote(type_name)),
+                            *loc,
+                        )
                     elif isinstance(env[type_name], ApiRoutesByVersion):
                         raise InvalidSpec(
-                            'Bad doc reference to field %s of route %s.' %
-                            (quote(field_name), quote(type_name)),
-                            *loc)
+                            "Bad doc reference to field %s of route %s."
+                            % (quote(field_name), quote(type_name)),
+                            *loc,
+                        )
                     if isinstance(env[type_name], Environment):
                         # Handle reference to field in imported namespace.
-                        namespace_name, type_name, field_name = val.split('.', 2)
+                        namespace_name, type_name, field_name = val.split(".", 2)
                         data_type_to_check = env[namespace_name][type_name]
                     elif isinstance(env[type_name], Alias):
                         data_type_to_check = env[type_name].data_type
                     else:
                         data_type_to_check = env[type_name]
-                    if not any(field.name == field_name
-                               for field in data_type_to_check.all_fields):
+                    if not any(
+                        field.name == field_name
+                        for field in data_type_to_check.all_fields
+                    ):
                         raise InvalidSpec(
-                            'Bad doc reference to unknown field %s.' % quote(val),
-                            *loc)
+                            "Bad doc reference to unknown field %s." % quote(val), *loc
+                        )
                 else:
                     # Referring to a field that's a member of this type
                     assert type_context is not None
-                    if not any(field.name == val
-                               for field in type_context.all_fields):
+                    if not any(field.name == val for field in type_context.all_fields):
                         raise InvalidSpec(
-                            'Bad doc reference to unknown field %s.' %
-                            quote(val),
-                            *loc)
-            elif tag == 'link':
-                if not (1 < val.rfind(' ') < len(val) - 1):
+                            "Bad doc reference to unknown field %s." % quote(val), *loc
+                        )
+            elif tag == "link":
+                if not (1 < val.rfind(" ") < len(val) - 1):
                     # There must be a space somewhere in the middle of the
                     # string to separate the title from the uri.
                     raise InvalidSpec(
-                        'Bad doc reference to link (need a title and '
-                        'uri separated by a space): %s.' % quote(val),
-                        *loc)
-            elif tag == 'route':
-                if '.' in val:
+                        "Bad doc reference to link (need a title and "
+                        "uri separated by a space): %s." % quote(val),
+                        *loc,
+                    )
+            elif tag == "route":
+                if "." in val:
                     # Handle reference to route in imported namespace.
-                    namespace_name, val = val.split('.', 1)
+                    namespace_name, val = val.split(".", 1)
                     if namespace_name not in env:
                         raise InvalidSpec(
-                            "Unknown doc reference to namespace '%s'." %
-                            namespace_name, *loc)
+                            "Unknown doc reference to namespace '%s'." % namespace_name,
+                            *loc,
+                        )
                     env_to_check = env[namespace_name]
                 else:
                     env_to_check = env
@@ -1393,43 +1585,48 @@ class IRGenerator(object):
                 route_name, version = parse_route_name_and_version(val)
                 if route_name not in env_to_check:
                     raise InvalidSpec(
-                        'Unknown doc reference to route {}.'.format(quote(route_name)), *loc)
+                        "Unknown doc reference to route {}.".format(quote(route_name)),
+                        *loc,
+                    )
                 if not isinstance(env_to_check[route_name], ApiRoutesByVersion):
                     raise InvalidSpec(
-                        'Doc reference to type {} is not a route.'.format(quote(route_name)), *loc)
+                        "Doc reference to type {} is not a route.".format(
+                            quote(route_name)
+                        ),
+                        *loc,
+                    )
                 if version not in env_to_check[route_name].at_version:
                     raise InvalidSpec(
-                        'Doc reference to route {} has undefined version {}.'.format(
-                            quote(route_name), version),
-                        *loc)
-            elif tag == 'type':
-                if '.' in val:
+                        "Doc reference to route {} has undefined version {}.".format(
+                            quote(route_name), version
+                        ),
+                        *loc,
+                    )
+            elif tag == "type":
+                if "." in val:
                     # Handle reference to type in imported namespace.
-                    namespace_name, val = val.split('.', 1)
+                    namespace_name, val = val.split(".", 1)
                     if namespace_name not in env:
                         raise InvalidSpec(
-                            "Unknown doc reference to namespace '%s'." %
-                            namespace_name, *loc)
+                            "Unknown doc reference to namespace '%s'." % namespace_name,
+                            *loc,
+                        )
                     env_to_check = env[namespace_name]
                 else:
                     env_to_check = env
                 if val not in env_to_check:
-                    raise InvalidSpec(
-                        "Unknown doc reference to type '%s'." % val,
-                        *loc)
+                    raise InvalidSpec("Unknown doc reference to type '%s'." % val, *loc)
                 elif not isinstance(env_to_check[val], (Struct, Union)):
                     raise InvalidSpec(
-                        'Doc reference to type %s is not a struct or union.' %
-                        quote(val), *loc)
-            elif tag == 'val':
+                        "Doc reference to type %s is not a struct or union."
+                        % quote(val),
+                        *loc,
+                    )
+            elif tag == "val":
                 if not doc_ref_val_re.match(val):
-                    raise InvalidSpec(
-                        'Bad doc reference value %s.' % quote(val),
-                        *loc)
+                    raise InvalidSpec("Bad doc reference value %s." % quote(val), *loc)
             else:
-                raise InvalidSpec(
-                    'Unknown doc reference tag %s.' % quote(tag),
-                    *loc)
+                raise InvalidSpec("Unknown doc reference tag %s." % quote(tag), *loc)
 
     def _validate_annotations(self):
         """
@@ -1456,7 +1653,9 @@ class IRGenerator(object):
             raise InvalidSpec(
                 "Redactors can only be applied to alias definitions, not "
                 "to alias references.",
-                field._ast_node.lineno, field._ast_node.path)
+                field._ast_node.lineno,
+                field._ast_node.path,
+            )
 
         self._validate_object_can_be_tagged_with_redactor(field)
 
@@ -1472,13 +1671,16 @@ class IRGenerator(object):
 
         while isinstance(curr_data_type, Alias) or isinstance(curr_data_type, Nullable):
             # aliases have redactors assocaited with the type itself
-            if hasattr(curr_data_type, 'redactor') and curr_data_type.redactor:
-                raise InvalidSpec("A redactor has already been defined for '%s' by '%s'." %
-                                  (str(name), str(curr_data_type.name)), *loc)
+            if hasattr(curr_data_type, "redactor") and curr_data_type.redactor:
+                raise InvalidSpec(
+                    "A redactor has already been defined for '%s' by '%s'."
+                    % (str(name), str(curr_data_type.name)),
+                    *loc,
+                )
 
             curr_data_type = curr_data_type.data_type
 
-        if hasattr(annotated_object, 'redactor') and annotated_object.redactor:
+        if hasattr(annotated_object, "redactor") and annotated_object.redactor:
             if is_map_type(curr_data_type) or is_list_type(curr_data_type):
                 while True:
                     if is_map_type(curr_data_type):
@@ -1486,34 +1688,40 @@ class IRGenerator(object):
                     else:
                         curr_data_type = curr_data_type.data_type
 
-                    should_continue = (is_map_type(curr_data_type) or is_list_type(curr_data_type)
-                        or is_nullable_type(curr_data_type))
+                    should_continue = (
+                        is_map_type(curr_data_type)
+                        or is_list_type(curr_data_type)
+                        or is_nullable_type(curr_data_type)
+                    )
 
                     if should_continue is False:
                         break
 
             if is_user_defined_type(curr_data_type) or is_void_type(curr_data_type):
-                raise InvalidSpec("Redactors can't be applied to user-defined or void types.", *loc)
+                raise InvalidSpec(
+                    "Redactors can't be applied to user-defined or void types.", *loc
+                )
 
     def _validate_stone_cfg(self):
         """
         Returns:
              Struct: A schema for route attributes.
         """
+
         def mk_route_schema():
-            s = Struct('Route', ApiNamespace('stone_cfg'), None)
+            s = Struct("Route", ApiNamespace("stone_cfg"), None)
             s.set_attributes(None, [], None)
             return s
 
         try:
-            stone_cfg = self.api.namespaces.pop('stone_cfg')
+            stone_cfg = self.api.namespaces.pop("stone_cfg")
         except KeyError:
             return mk_route_schema()
 
         if stone_cfg.routes:
             route = stone_cfg.routes[0]
             raise InvalidSpec(
-                'No routes can be defined in the stone_cfg namespace.',
+                "No routes can be defined in the stone_cfg namespace.",
                 route._ast_node.lineno,
                 route._ast_node.path,
             )
@@ -1522,7 +1730,7 @@ class IRGenerator(object):
             return mk_route_schema()
 
         for data_type in stone_cfg.data_types:
-            if data_type.name != 'Route':
+            if data_type.name != "Route":
                 raise InvalidSpec(
                     "Only a struct named 'Route' can be defined in the "
                     "stone_cfg namespace.",
@@ -1540,21 +1748,23 @@ class IRGenerator(object):
         so that they include only the route datatypes and their direct dependencies.
         """
         assert self._routes is not None, "Missing route whitelist"
-        assert 'route_whitelist' in self._routes
-        assert 'datatype_whitelist' in self._routes
+        assert "route_whitelist" in self._routes
+        assert "datatype_whitelist" in self._routes
 
         # Get route whitelist in canonical form
         route_whitelist = {}
-        for namespace_name, route_reprs in self._routes['route_whitelist'].items():
+        for namespace_name, route_reprs in self._routes["route_whitelist"].items():
             new_route_reprs = []
-            if route_reprs == ['*']:
+            if route_reprs == ["*"]:
                 namespace = self.api.namespaces[namespace_name]
-                new_route_reprs = [route.name_with_version() for route in namespace.routes]
+                new_route_reprs = [
+                    route.name_with_version() for route in namespace.routes
+                ]
             else:
                 for route_repr in route_reprs:
                     route_name, version = parse_route_name_and_version(route_repr)
                     if version > 1:
-                        new_route_reprs.append('{}:{}'.format(route_name, version))
+                        new_route_reprs.append(f"{route_name}:{version}")
                     else:
                         new_route_reprs.append(route_name)
             route_whitelist[namespace_name] = new_route_reprs
@@ -1564,60 +1774,87 @@ class IRGenerator(object):
         for namespace_name, route_reprs in route_whitelist.items():
             # Error out if user supplied nonexistent namespace
             if namespace_name not in self.api.namespaces:
-                raise AssertionError('Namespace %s is not defined!' % namespace_name)
+                raise AssertionError("Namespace %s is not defined!" % namespace_name)
             namespace = self.api.namespaces[namespace_name]
 
             # Parse namespace doc refs and add them to the starting data types
             if namespace.doc is not None:
                 route_data_types.extend(
-                    parse_data_types_from_doc_ref(self.api, namespace.doc, namespace_name))
+                    parse_data_types_from_doc_ref(
+                        self.api, namespace.doc, namespace_name
+                    )
+                )
 
             # Parse user-specified routes and add them to the starting data types
             # Note that this may add duplicates, but that's okay, as the recursion
             # keeps track of visited data types.
-            assert '*' not in route_reprs
+            assert "*" not in route_reprs
             for routes_repr in route_reprs:
                 route_name, version = parse_route_name_and_version(routes_repr)
-                if route_name not in namespace.routes_by_name or \
-                        version not in namespace.routes_by_name[route_name].at_version:
-                    raise AssertionError('Route %s at version %d is not defined!' %
-                                         (route_name, version))
+                if (
+                    route_name not in namespace.routes_by_name
+                    or version not in namespace.routes_by_name[route_name].at_version
+                ):
+                    raise AssertionError(
+                        "Route %s at version %d is not defined!" % (route_name, version)
+                    )
 
                 route = namespace.routes_by_name[route_name].at_version[version]
-                route_data_types.extend(namespace.get_route_io_data_types_for_route(route))
+                route_data_types.extend(
+                    namespace.get_route_io_data_types_for_route(route)
+                )
                 if route.doc is not None:
                     route_data_types.extend(
-                        parse_data_types_from_doc_ref(self.api, route.doc, namespace_name))
+                        parse_data_types_from_doc_ref(
+                            self.api, route.doc, namespace_name
+                        )
+                    )
 
         # Parse the datatype whitelist and populate any starting data types
-        for namespace_name, datatype_names in self._routes['datatype_whitelist'].items():
+        for namespace_name, datatype_names in self._routes[
+            "datatype_whitelist"
+        ].items():
             if namespace_name not in self.api.namespaces:
-                raise AssertionError('Namespace %s is not defined!' % namespace_name)
+                raise AssertionError("Namespace %s is not defined!" % namespace_name)
 
             # Parse namespace doc refs and add them to the starting data types
             namespace = self.api.namespaces[namespace_name]
             if namespace.doc is not None:
                 route_data_types.extend(
-                    parse_data_types_from_doc_ref(self.api, namespace.doc, namespace_name))
+                    parse_data_types_from_doc_ref(
+                        self.api, namespace.doc, namespace_name
+                    )
+                )
 
             for datatype_name in datatype_names:
-                if datatype_name not in self.api.namespaces[namespace_name].data_type_by_name:
-                    raise AssertionError('Datatype %s is not defined!' % datatype_name)
-                data_type = self.api.namespaces[namespace_name].data_type_by_name[datatype_name]
+                if (
+                    datatype_name
+                    not in self.api.namespaces[namespace_name].data_type_by_name
+                ):
+                    raise AssertionError("Datatype %s is not defined!" % datatype_name)
+                data_type = self.api.namespaces[namespace_name].data_type_by_name[
+                    datatype_name
+                ]
                 route_data_types.append(data_type)
 
         # Recurse on dependencies
-        output_types_by_ns, output_routes_by_ns = self._find_dependencies(route_data_types)
+        output_types_by_ns, output_routes_by_ns = self._find_dependencies(
+            route_data_types
+        )
 
         # Update the IR representation. This involves editing the data types and
         # routes for each namespace.
         for namespace in self.api.namespaces.values():
-            data_types = list(set(output_types_by_ns[namespace.name]))  # defaults to empty list
+            data_types = list(
+                set(output_types_by_ns[namespace.name])
+            )  # defaults to empty list
             namespace.data_types = data_types
             namespace.data_type_by_name = {d.name: d for d in data_types}
 
-            output_route_reprs = [output_route.name_with_version()
-                                  for output_route in output_routes_by_ns[namespace.name]]
+            output_route_reprs = [
+                output_route.name_with_version()
+                for output_route in output_routes_by_ns[namespace.name]
+            ]
             if namespace.name in route_whitelist:
                 whitelisted_route_reprs = route_whitelist[namespace.name]
                 route_reprs = list(set(whitelisted_route_reprs + output_route_reprs))
@@ -1644,8 +1881,9 @@ class IRGenerator(object):
             self._find_dependencies_recursive(t, seen, output_types, output_routes)
         return output_types, output_routes
 
-    def _find_dependencies_recursive(self, data_type, seen, output_types,
-                                     output_routes, type_context=None):
+    def _find_dependencies_recursive(
+        self, data_type, seen, output_types, output_routes, type_context=None
+    ):
         # Define a function that recursively traverses data types and populates
         # the data structures defined above.
         if data_type in seen:
@@ -1660,28 +1898,41 @@ class IRGenerator(object):
             seen.add(data_type)
             output_types[data_type.namespace.name].append(data_type)
             for field in data_type.all_fields:
-                self._find_dependencies_recursive(field, seen, output_types, output_routes,
-                                                  type_context=data_type)
+                self._find_dependencies_recursive(
+                    field, seen, output_types, output_routes, type_context=data_type
+                )
             if data_type.parent_type is not None:
-                self._find_dependencies_recursive(data_type.parent_type, seen, output_types,
-                                                  output_routes)
+                self._find_dependencies_recursive(
+                    data_type.parent_type, seen, output_types, output_routes
+                )
             if data_type.doc is not None:
                 doc_types, routes_by_ns = parse_data_types_and_routes_from_doc_ref(
-                    self.api, data_type.doc, data_type.namespace.name)
+                    self.api, data_type.doc, data_type.namespace.name
+                )
                 for t in doc_types:
-                    self._find_dependencies_recursive(t, seen, output_types, output_routes)
+                    self._find_dependencies_recursive(
+                        t, seen, output_types, output_routes
+                    )
                 for namespace_name, routes in routes_by_ns.items():
                     route_namespace = self.api.namespaces[namespace_name]
                     for route in routes:
                         output_routes[namespace_name].add(route)
-                        route_types = route_namespace.get_route_io_data_types_for_route(route)
+                        route_types = route_namespace.get_route_io_data_types_for_route(
+                            route
+                        )
                         for route_type in route_types:
-                            self._find_dependencies_recursive(route_type, seen, output_types,
-                                                              output_routes)
+                            self._find_dependencies_recursive(
+                                route_type, seen, output_types, output_routes
+                            )
             if is_struct_type(data_type) and data_type.has_enumerated_subtypes():
                 for subtype in data_type.get_enumerated_subtypes():
-                    self._find_dependencies_recursive(subtype, seen, output_types, output_routes,
-                                                      type_context=data_type)
+                    self._find_dependencies_recursive(
+                        subtype,
+                        seen,
+                        output_types,
+                        output_routes,
+                        type_context=data_type,
+                    )
         elif is_alias(data_type) or is_field_type(data_type):
             assert (is_field_type(data_type)) == (type_context is not None)
             if is_alias(data_type):
@@ -1689,32 +1940,42 @@ class IRGenerator(object):
             else:
                 namespace_context = type_context.namespace.name
             seen.add(data_type)
-            self._find_dependencies_recursive(data_type.data_type, seen, output_types,
-                                              output_routes)
+            self._find_dependencies_recursive(
+                data_type.data_type, seen, output_types, output_routes
+            )
             if data_type.doc is not None:
                 doc_types, routes_by_ns = parse_data_types_and_routes_from_doc_ref(
-                    self.api, data_type.doc, namespace_context)
+                    self.api, data_type.doc, namespace_context
+                )
                 for t in doc_types:
-                    self._find_dependencies_recursive(t, seen, output_types, output_routes)
+                    self._find_dependencies_recursive(
+                        t, seen, output_types, output_routes
+                    )
                 for namespace_name, routes in routes_by_ns.items():
                     route_namespace = self.api.namespaces[namespace_name]
                     for route in routes:
                         output_routes[namespace_name].add(route)
-                        route_types = route_namespace.get_route_io_data_types_for_route(route)
+                        route_types = route_namespace.get_route_io_data_types_for_route(
+                            route
+                        )
                         for route_type in route_types:
-                            self._find_dependencies_recursive(route_type, seen, output_types,
-                                                              output_routes)
+                            self._find_dependencies_recursive(
+                                route_type, seen, output_types, output_routes
+                            )
         elif is_list_type(data_type) or is_nullable_type(data_type):
             # recurse on underlying field for aliases, lists, nullables, and fields
             seen.add(data_type)
-            self._find_dependencies_recursive(data_type.data_type, seen, output_types,
-                                              output_routes)
+            self._find_dependencies_recursive(
+                data_type.data_type, seen, output_types, output_routes
+            )
         elif is_map_type(data_type):
             # recurse on key/value fields for maps
             seen.add(data_type)
-            self._find_dependencies_recursive(data_type.key_data_type, seen, output_types,
-                                              output_routes)
-            self._find_dependencies_recursive(data_type.value_data_type, seen, output_types,
-                                              output_routes)
+            self._find_dependencies_recursive(
+                data_type.key_data_type, seen, output_types, output_routes
+            )
+            self._find_dependencies_recursive(
+                data_type.value_data_type, seen, output_types, output_routes
+            )
         else:
             assert False, "Unexpected type in: %s" % data_type

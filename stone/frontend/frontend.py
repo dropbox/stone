@@ -1,16 +1,14 @@
 import logging
 
 from .exception import InvalidSpec
-from .parser import (
-    ParserFactory,
-)
 from .ir_generator import IRGenerator
+from .parser import ParserFactory
 
-logger = logging.getLogger('stone.frontend.frontend')
+logger = logging.getLogger("stone.frontend.frontend")
 
 
 # FIXME: Version should not have a default.
-def specs_to_ir(specs, version='0.1b1', debug=False, route_whitelist_filter=None):
+def specs_to_ir(specs, version="0.1b1", debug=False, route_whitelist_filter=None):
     """
     Converts a collection of Stone specifications into the intermediate
     representation used by Stone backends.
@@ -35,7 +33,7 @@ def specs_to_ir(specs, version='0.1b1', debug=False, route_whitelist_filter=None
     partial_asts = []
 
     for path, text in specs:
-        logger.info('Parsing spec %s', path)
+        logger.info("Parsing spec %s", path)
         parser = parser_factory.get_parser()
         if debug:
             parser.test_lexing(text)
@@ -47,9 +45,13 @@ def specs_to_ir(specs, version='0.1b1', debug=False, route_whitelist_filter=None
             msg, lineno, path = parser.get_errors()[0]
             raise InvalidSpec(msg, lineno, path)
         elif len(partial_ast) == 0:
-            logger.info('Empty spec: %s', path)
+            logger.info("Empty spec: %s", path)
         else:
             partial_asts.append(partial_ast)
 
-    return IRGenerator(partial_asts, version, debug=debug,
-                       route_whitelist_filter=route_whitelist_filter).generate_IR()
+    return IRGenerator(
+        partial_asts,
+        version,
+        debug=debug,
+        route_whitelist_filter=route_whitelist_filter,
+    ).generate_IR()

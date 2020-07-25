@@ -23,10 +23,8 @@ import time
 
 import six
 
-from stone.backends.python_rsrc import (
-    stone_base as bb,
-    stone_validators as bv,
-)
+from stone.backends.python_rsrc import stone_base as bb
+from stone.backends.python_rsrc import stone_validators as bv
 
 _MYPY = False
 if _MYPY:
@@ -35,7 +33,6 @@ if _MYPY:
 
 # ------------------------------------------------------------------------
 class CallerPermissionsInterface(object):
-
     @property
     def permissions(self):
         """
@@ -45,10 +42,10 @@ class CallerPermissionsInterface(object):
 
 
 class CallerPermissionsDefault(CallerPermissionsInterface):
-
     @property
     def permissions(self):
         return []
+
 
 # ------------------------------------------------------------------------
 class StoneEncoderInterface(object):
@@ -75,9 +72,9 @@ class StoneEncoderInterface(object):
         """
         raise NotImplementedError
 
+
 # ------------------------------------------------------------------------
 class StoneSerializerBase(StoneEncoderInterface):
-
     def __init__(self, caller_permissions, alias_validators):
         # type: (CallerPermissionsInterface, typing.Mapping[bv.Validator, typing.Callable[[typing.Any], None]]) -> None # noqa: E501
         """
@@ -94,9 +91,12 @@ class StoneSerializerBase(StoneEncoderInterface):
                 raise a ``stone_validators.ValidationError`` on failure.
                 Defaults to ``None``.
         """
-        self.caller_permissions = (caller_permissions if
-            caller_permissions else CallerPermissionsDefault())
-        self._alias_validators = {}  # type: typing.Dict[bv.Validator, typing.Callable[[typing.Any], None]] # noqa: E501
+        self.caller_permissions = (
+            caller_permissions if caller_permissions else CallerPermissionsDefault()
+        )
+        self._alias_validators = (
+            {}
+        )  # type: typing.Dict[bv.Validator, typing.Callable[[typing.Any], None]] # noqa: E501
 
         if alias_validators is not None:
             self._alias_validators.update(alias_validators)
@@ -125,7 +125,9 @@ class StoneSerializerBase(StoneEncoderInterface):
             # Because Lists are mutable, we always validate them during
             # serialization
             validate_f = validator.validate  # type: typing.Callable[[typing.Any], None]
-            encode_f = self.encode_list  # type: typing.Callable[[typing.Any, typing.Any], typing.Any] # noqa: E501
+            encode_f = (
+                self.encode_list
+            )  # type: typing.Callable[[typing.Any, typing.Any], typing.Any] # noqa: E501
         elif isinstance(validator, bv.Map):
             # Also validate maps during serialization because they are also mutable
             validate_f = validator.validate
@@ -139,8 +141,11 @@ class StoneSerializerBase(StoneEncoderInterface):
         elif isinstance(validator, bv.Struct):
             if isinstance(validator, bv.StructTree):
                 if self.caller_permissions.permissions:
+
                     def validate_with_permissions(val):
-                        validator.validate_with_permissions(val, self.caller_permissions)
+                        validator.validate_with_permissions(
+                            val, self.caller_permissions
+                        )
 
                     validate_f = validate_with_permissions
                 else:
@@ -149,8 +154,11 @@ class StoneSerializerBase(StoneEncoderInterface):
             else:
                 # Fields are already validated on assignment
                 if self.caller_permissions.permissions:
+
                     def validate_with_permissions(val):
-                        validator.validate_with_permissions(val, self.caller_permissions)
+                        validator.validate_with_permissions(
+                            val, self.caller_permissions
+                        )
 
                     validate_f = validate_with_permissions
                 else:
@@ -161,7 +169,9 @@ class StoneSerializerBase(StoneEncoderInterface):
             validate_f = validator.validate_type_only
             encode_f = self.encode_union
         else:
-            raise bv.ValidationError('Unsupported data type {}'.format(type(validator).__name__))
+            raise bv.ValidationError(
+                "Unsupported data type {}".format(type(validator).__name__)
+            )
 
         validate_f(value)
 
@@ -223,10 +233,17 @@ class StoneSerializerBase(StoneEncoderInterface):
         """
         raise NotImplementedError
 
+
 # ------------------------------------------------------------------------
 class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
-
-    def __init__(self, caller_permissions, alias_validators, for_msgpack, old_style, should_redact):
+    def __init__(
+        self,
+        caller_permissions,
+        alias_validators,
+        for_msgpack,
+        old_style,
+        should_redact,
+    ):
         # type: (CallerPermissionsInterface, typing.Mapping[bv.Validator, typing.Callable[[typing.Any], None]], bool, bool, bool) -> None # noqa: E501
         """
         Args:
@@ -240,7 +257,8 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                 marked fields. Defaults to ``False``.
         """
         super(StoneToPythonPrimitiveSerializer, self).__init__(
-            caller_permissions, alias_validators=alias_validators)
+            caller_permissions, alias_validators=alias_validators
+        )
         self._for_msgpack = for_msgpack
         self._old_style = old_style
         self.should_redact = should_redact
@@ -265,7 +283,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         return self._old_style
 
     def encode_sub(self, validator, value):
-        if self.should_redact and hasattr(validator, '_redact'):
+        if self.should_redact and hasattr(validator, "_redact"):
             if isinstance(value, list):
                 return [validator._redact.apply(v) for v in value]
             elif isinstance(value, dict):
@@ -274,21 +292,26 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                 return validator._redact.apply(value)
 
         # Encode value normally
-        return super(StoneToPythonPrimitiveSerializer, self).encode_sub(validator, value)
+        return super(StoneToPythonPrimitiveSerializer, self).encode_sub(
+            validator, value
+        )
 
     def encode_list(self, validator, value):
         validated_value = validator.validate(value)
 
-        return [self.encode_sub(validator.item_validator, value_item) for value_item in
-                validated_value]
+        return [
+            self.encode_sub(validator.item_validator, value_item)
+            for value_item in validated_value
+        ]
 
     def encode_map(self, validator, value):
         validated_value = validator.validate(value)
 
         return {
-            self.encode_sub(validator.key_validator, key):
-                self.encode_sub(validator.value_validator, value) for
-            key, value in validated_value.items()
+            self.encode_sub(validator.key_validator, key): self.encode_sub(
+                validator.value_validator, value
+            )
+            for key, value in validated_value.items()
         }
 
     def encode_nullable(self, validator, value):
@@ -309,9 +332,8 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             if self.for_msgpack:
                 return value
             else:
-                return base64.b64encode(value).decode('ascii')
-        elif isinstance(validator, bv.Integer) \
-                and isinstance(value, bool):
+                return base64.b64encode(value).decode("ascii")
+        elif isinstance(validator, bv.Integer) and isinstance(value, bool):
             # bool is sub-class of int so it passes Integer validation,
             # but we want the bool to be encoded as ``0`` or ``1``, rather
             # than ``False`` or ``True``, respectively
@@ -327,7 +349,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         all_fields = validator.definition._all_fields_
 
         for extra_permission in self.caller_permissions.permissions:
-            all_fields_name = '_all_{}_fields_'.format(extra_permission)
+            all_fields_name = "_all_{}_fields_".format(extra_permission)
             all_fields = all_fields + getattr(validator.definition, all_fields_name, [])
 
         for field_name, field_validator in all_fields:
@@ -336,10 +358,9 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             except AttributeError as exc:
                 raise bv.ValidationError(exc.args[0])
 
-            value_key = '_%s_value' % field_name
+            value_key = "_%s_value" % field_name
 
-            if field_value is not None \
-                    and getattr(value, value_key) is not bb.NOT_SET:
+            if field_value is not None and getattr(value, value_key) is not bb.NOT_SET:
                 # Only serialize struct fields that have been explicitly
                 # set, even if there is a default
                 try:
@@ -351,14 +372,18 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
         return d
 
     def encode_struct_tree(self, validator, value):
-        assert type(value) in validator.definition._pytype_to_tag_and_subtype_, \
-            '%r is not a serializable subtype of %r.' % (type(value), validator.definition)
+        assert type(value) in validator.definition._pytype_to_tag_and_subtype_, (
+            "%r is not a serializable subtype of %r."
+            % (type(value), validator.definition)
+        )
 
         tags, subtype = validator.definition._pytype_to_tag_and_subtype_[type(value)]
 
         assert len(tags) == 1, tags
-        assert not isinstance(subtype, bv.StructTree), \
-            'Cannot serialize type %r because it enumerates subtypes.' % subtype.definition
+        assert not isinstance(subtype, bv.StructTree), (
+            "Cannot serialize type %r because it enumerates subtypes."
+            % subtype.definition
+        )
 
         if self.old_style:
             d = {
@@ -366,25 +391,29 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             }
         else:
             d = collections.OrderedDict()
-            d['.tag'] = tags[0]
+            d[".tag"] = tags[0]
             d.update(self.encode_struct(subtype, value))
 
         return d
 
     def encode_union(self, validator, value):
         if value._tag is None:
-            raise bv.ValidationError('no tag set')
+            raise bv.ValidationError("no tag set")
 
-        if not validator.definition._is_tag_present(value._tag, self.caller_permissions):
+        if not validator.definition._is_tag_present(
+            value._tag, self.caller_permissions
+        ):
             raise bv.ValidationError(
-                "caller does not have access to '{}' tag".format(value._tag))
+                "caller does not have access to '{}' tag".format(value._tag)
+            )
 
-        field_validator = validator.definition._get_val_data_type(value._tag,
-                                                                  self.caller_permissions)
+        field_validator = validator.definition._get_val_data_type(
+            value._tag, self.caller_permissions
+        )
 
-        is_none = isinstance(field_validator, bv.Void) \
-            or (isinstance(field_validator, bv.Nullable)
-                and value._value is None)
+        is_none = isinstance(field_validator, bv.Void) or (
+            isinstance(field_validator, bv.Nullable) and value._value is None
+        )
 
         def encode_sub(sub_validator, sub_value, parent_tag):
             try:
@@ -406,7 +435,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 
                 return {value._tag: encoded_val}
         elif is_none:
-            return {'.tag': value._tag}
+            return {".tag": value._tag}
         else:
             encoded_val = encode_sub(field_validator, value._value, value._tag)
 
@@ -416,23 +445,25 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                 # wrapped validator is
                 field_validator = field_validator.validator
 
-            if isinstance(field_validator, bv.Struct) \
-                    and not isinstance(field_validator, bv.StructTree):
+            if isinstance(field_validator, bv.Struct) and not isinstance(
+                field_validator, bv.StructTree
+            ):
                 d = collections.OrderedDict()  # type: typing.Dict[str, typing.Any]
-                d['.tag'] = value._tag
+                d[".tag"] = value._tag
                 d.update(encoded_val)
 
                 return d
             else:
-                return collections.OrderedDict((
-                    ('.tag', value._tag),
-                    (value._tag, encoded_val),
-                ))
+                return collections.OrderedDict(
+                    ((".tag", value._tag), (value._tag, encoded_val),)
+                )
+
 
 # ------------------------------------------------------------------------
 class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
     def encode(self, validator, value):
         return json.dumps(super(StoneToJsonSerializer, self).encode(validator, value))
+
 
 # --------------------------------------------------------------
 # JSON Encoder
@@ -440,8 +471,15 @@ class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
 # These interfaces are preserved for backward compatibility and symmetry with deserialization
 # functions.
 
-def json_encode(data_type, obj, caller_permissions=None, alias_validators=None, old_style=False,
-                should_redact=False):
+
+def json_encode(
+    data_type,
+    obj,
+    caller_permissions=None,
+    alias_validators=None,
+    old_style=False,
+    should_redact=False,
+):
     """Encodes an object into JSON based on its type.
 
     Args:
@@ -496,11 +534,20 @@ def json_encode(data_type, obj, caller_permissions=None, alias_validators=None, 
     """
     for_msgpack = False
     serializer = StoneToJsonSerializer(
-        caller_permissions, alias_validators, for_msgpack, old_style, should_redact)
+        caller_permissions, alias_validators, for_msgpack, old_style, should_redact
+    )
     return serializer.encode(data_type, obj)
 
-def json_compat_obj_encode(data_type, obj, caller_permissions=None, alias_validators=None,
-                           old_style=False, for_msgpack=False, should_redact=False):
+
+def json_compat_obj_encode(
+    data_type,
+    obj,
+    caller_permissions=None,
+    alias_validators=None,
+    old_style=False,
+    for_msgpack=False,
+    should_redact=False,
+):
     """Encodes an object into a JSON-compatible dict based on its type.
 
     Args:
@@ -516,15 +563,20 @@ def json_compat_obj_encode(data_type, obj, caller_permissions=None, alias_valida
     See json_encode() for additional information about validation.
     """
     serializer = StoneToPythonPrimitiveSerializer(
-        caller_permissions, alias_validators, for_msgpack, old_style, should_redact)
+        caller_permissions, alias_validators, for_msgpack, old_style, should_redact
+    )
     return serializer.encode(data_type, obj)
+
 
 # --------------------------------------------------------------
 # JSON Decoder
 class PythonPrimitiveToStoneDecoder(object):
-    def __init__(self, caller_permissions, alias_validators, for_msgpack, old_style, strict):
-        self.caller_permissions = (caller_permissions if
-            caller_permissions else CallerPermissionsDefault())
+    def __init__(
+        self, caller_permissions, alias_validators, for_msgpack, old_style, strict
+    ):
+        self.caller_permissions = (
+            caller_permissions if caller_permissions else CallerPermissionsDefault()
+        )
         self.alias_validators = alias_validators
         self.strict = strict
         self._old_style = old_style
@@ -562,20 +614,17 @@ class PythonPrimitiveToStoneDecoder(object):
             else:
                 return self.decode_union(data_type, obj)
         elif isinstance(data_type, bv.List):
-            return self.decode_list(
-                data_type, obj)
+            return self.decode_list(data_type, obj)
         elif isinstance(data_type, bv.Map):
-            return self.decode_map(
-                data_type, obj)
+            return self.decode_map(data_type, obj)
         elif isinstance(data_type, bv.Nullable):
-            return self.decode_nullable(
-                data_type, obj)
+            return self.decode_nullable(data_type, obj)
         elif isinstance(data_type, bv.Primitive):
             # Set validate to false because validation will be done by the
             # containing struct or union when the field is assigned.
             return self.make_stone_friendly(data_type, obj, False)
         else:
-            raise AssertionError('Cannot handle type %r.' % data_type)
+            raise AssertionError("Cannot handle type %r." % data_type)
 
     def decode_struct(self, data_type, obj):
         """
@@ -585,23 +634,26 @@ class PythonPrimitiveToStoneDecoder(object):
         if obj is None and data_type.has_default():
             return data_type.get_default()
         elif not isinstance(obj, dict):
-            raise bv.ValidationError('expected object, got %s' %
-                                     bv.generic_type_name(obj))
+            raise bv.ValidationError(
+                "expected object, got %s" % bv.generic_type_name(obj)
+            )
         all_fields = data_type.definition._all_fields_
         for extra_permission in self.caller_permissions.permissions:
-            all_extra_fields = '_all_{}_fields_'.format(extra_permission)
-            all_fields = all_fields + getattr(data_type.definition, all_extra_fields, [])
+            all_extra_fields = "_all_{}_fields_".format(extra_permission)
+            all_fields = all_fields + getattr(
+                data_type.definition, all_extra_fields, []
+            )
 
         if self.strict:
             all_field_names = data_type.definition._all_field_names_
             for extra_permission in self.caller_permissions.permissions:
-                all_extra_field_names = '_all_{}_field_names_'.format(extra_permission)
+                all_extra_field_names = "_all_{}_field_names_".format(extra_permission)
                 all_field_names = all_field_names.union(
-                    getattr(data_type.definition, all_extra_field_names, {}))
+                    getattr(data_type.definition, all_extra_field_names, {})
+                )
 
             for key in obj:
-                if (key not in all_field_names and
-                        not key.startswith('.tag')):
+                if key not in all_field_names and not key.startswith(".tag"):
                     raise bv.ValidationError("unknown field '%s'" % key)
         ins = data_type.definition()
         self.decode_struct_fields(ins, all_fields, obj)
@@ -643,13 +695,16 @@ class PythonPrimitiveToStoneDecoder(object):
             tag = obj
             if data_type.definition._is_tag_present(tag, self.caller_permissions):
                 val_data_type = data_type.definition._get_val_data_type(
-                    tag, self.caller_permissions)
+                    tag, self.caller_permissions
+                )
                 if not isinstance(val_data_type, (bv.Void, bv.Nullable)):
                     raise bv.ValidationError(
-                        "expected object for '%s', got symbol" % tag)
+                        "expected object for '%s', got symbol" % tag
+                    )
                 if tag == data_type.definition._catch_all:
                     raise bv.ValidationError(
-                        "unexpected use of the catch-all tag '%s'" % tag)
+                        "unexpected use of the catch-all tag '%s'" % tag
+                    )
             elif not self.strict and data_type.definition._catch_all:
                 tag = data_type.definition._catch_all
             else:
@@ -657,17 +712,19 @@ class PythonPrimitiveToStoneDecoder(object):
         elif isinstance(obj, dict):
             tag, val = self.decode_union_dict(data_type, obj)
         else:
-            raise bv.ValidationError("expected string or object, got %s" %
-                                     bv.generic_type_name(obj))
+            raise bv.ValidationError(
+                "expected string or object, got %s" % bv.generic_type_name(obj)
+            )
         return data_type.definition(six.ensure_str(tag), val)
 
     def decode_union_dict(self, data_type, obj):
-        if '.tag' not in obj:
+        if ".tag" not in obj:
             raise bv.ValidationError("missing '.tag' key")
-        tag = obj['.tag']
+        tag = obj[".tag"]
         if not isinstance(tag, six.string_types):
             raise bv.ValidationError(
-                'tag must be string, got %s' % bv.generic_type_name(tag))
+                "tag must be string, got %s" % bv.generic_type_name(tag)
+            )
 
         if not data_type.definition._is_tag_present(tag, self.caller_permissions):
             if not self.strict and data_type.definition._catch_all:
@@ -675,10 +732,11 @@ class PythonPrimitiveToStoneDecoder(object):
             else:
                 raise bv.ValidationError("unknown tag '%s'" % tag)
         if tag == data_type.definition._catch_all:
-            raise bv.ValidationError(
-                "unexpected use of the catch-all tag '%s'" % tag)
+            raise bv.ValidationError("unexpected use of the catch-all tag '%s'" % tag)
 
-        val_data_type = data_type.definition._get_val_data_type(tag, self.caller_permissions)
+        val_data_type = data_type.definition._get_val_data_type(
+            tag, self.caller_permissions
+        )
         if isinstance(val_data_type, bv.Nullable):
             val_data_type = val_data_type.validator
             nullable = True
@@ -692,14 +750,16 @@ class PythonPrimitiveToStoneDecoder(object):
                 # change of the void type to another.
                 if tag in obj:
                     if obj[tag] is not None:
-                        raise bv.ValidationError('expected null, got %s' %
-                                                 bv.generic_type_name(obj[tag]))
+                        raise bv.ValidationError(
+                            "expected null, got %s" % bv.generic_type_name(obj[tag])
+                        )
                 for key in obj:
-                    if key != tag and key != '.tag':
+                    if key != tag and key != ".tag":
                         raise bv.ValidationError("unexpected key '%s'" % key)
             val = None
-        elif isinstance(val_data_type,
-                        (bv.Primitive, bv.List, bv.StructTree, bv.Union, bv.Map)):
+        elif isinstance(
+            val_data_type, (bv.Primitive, bv.List, bv.StructTree, bv.Union, bv.Map)
+        ):
             if tag in obj:
                 raw_val = obj[tag]
                 try:
@@ -714,7 +774,7 @@ class PythonPrimitiveToStoneDecoder(object):
                 else:
                     raise bv.ValidationError("missing '%s' key" % tag)
             for key in obj:
-                if key != tag and key != '.tag':
+                if key != tag and key != ".tag":
                     raise bv.ValidationError("unexpected key '%s'" % key)
         elif isinstance(val_data_type, bv.Struct):
             if nullable and len(obj) == 1:  # only has a .tag key
@@ -741,11 +801,13 @@ class PythonPrimitiveToStoneDecoder(object):
             # Union member has no associated value
             tag = obj
             if data_type.definition._is_tag_present(tag, self.caller_permissions):
-                val_data_type = data_type.definition._get_val_data_type(tag,
-                                                                        self.caller_permissions)
+                val_data_type = data_type.definition._get_val_data_type(
+                    tag, self.caller_permissions
+                )
                 if not isinstance(val_data_type, (bv.Void, bv.Nullable)):
                     raise bv.ValidationError(
-                        "expected object for '%s', got symbol" % tag)
+                        "expected object for '%s', got symbol" % tag
+                    )
             else:
                 if not self.strict and data_type.definition._catch_all:
                     tag = data_type.definition._catch_all
@@ -754,12 +816,13 @@ class PythonPrimitiveToStoneDecoder(object):
         elif isinstance(obj, dict):
             # Union member has value
             if len(obj) != 1:
-                raise bv.ValidationError('expected 1 key, got %s' % len(obj))
+                raise bv.ValidationError("expected 1 key, got %s" % len(obj))
             tag = list(obj)[0]
             raw_val = obj[tag]
             if data_type.definition._is_tag_present(tag, self.caller_permissions):
-                val_data_type = data_type.definition._get_val_data_type(tag,
-                                                                        self.caller_permissions)
+                val_data_type = data_type.definition._get_val_data_type(
+                    tag, self.caller_permissions
+                )
                 if isinstance(val_data_type, bv.Nullable) and raw_val is None:
                     val = None
                 elif isinstance(val_data_type, bv.Void):
@@ -770,8 +833,9 @@ class PythonPrimitiveToStoneDecoder(object):
                         # in strict mode.
                         val = None
                     else:
-                        raise bv.ValidationError('expected null, got %s' %
-                                                 bv.generic_type_name(raw_val))
+                        raise bv.ValidationError(
+                            "expected null, got %s" % bv.generic_type_name(raw_val)
+                        )
                 else:
                     try:
                         val = self.json_compat_obj_decode_helper(val_data_type, raw_val)
@@ -784,8 +848,9 @@ class PythonPrimitiveToStoneDecoder(object):
                 else:
                     raise bv.ValidationError("unknown tag '%s'" % tag)
         else:
-            raise bv.ValidationError("expected string or object, got %s" %
-                                     bv.generic_type_name(obj))
+            raise bv.ValidationError(
+                "expected string or object, got %s" % bv.generic_type_name(obj)
+            )
         return data_type.definition(six.ensure_str(tag), val)
 
     def decode_struct_tree(self, data_type, obj):
@@ -801,35 +866,39 @@ class PythonPrimitiveToStoneDecoder(object):
         Searches through the JSON-object-compatible dict using the data type
         definition to determine which of the enumerated subtypes `obj` is.
         """
-        if '.tag' not in obj:
+        if ".tag" not in obj:
             raise bv.ValidationError("missing '.tag' key")
-        if not isinstance(obj['.tag'], six.string_types):
-            raise bv.ValidationError('expected string, got %s' %
-                                     bv.generic_type_name(obj['.tag']),
-                                     parent='.tag')
+        if not isinstance(obj[".tag"], six.string_types):
+            raise bv.ValidationError(
+                "expected string, got %s" % bv.generic_type_name(obj[".tag"]),
+                parent=".tag",
+            )
 
         # Find the subtype the tags refer to
-        full_tags_tuple = (obj['.tag'],)
+        full_tags_tuple = (obj[".tag"],)
         if full_tags_tuple in data_type.definition._tag_to_subtype_:
             subtype = data_type.definition._tag_to_subtype_[full_tags_tuple]
             if isinstance(subtype, bv.StructTree):
-                raise bv.ValidationError("tag '%s' refers to non-leaf subtype" %
-                                         ('.'.join(full_tags_tuple)))
+                raise bv.ValidationError(
+                    "tag '%s' refers to non-leaf subtype" % (".".join(full_tags_tuple))
+                )
             return subtype
         else:
             if self.strict:
                 # In strict mode, the entirety of the tag hierarchy should
                 # point to a known subtype.
-                raise bv.ValidationError("unknown subtype '%s'" %
-                                         '.'.join(full_tags_tuple))
+                raise bv.ValidationError(
+                    "unknown subtype '%s'" % ".".join(full_tags_tuple)
+                )
             else:
                 # If subtype was not found, use the base.
                 if data_type.definition._is_catch_all_:
                     return data_type
                 else:
                     raise bv.ValidationError(
-                        "unknown subtype '%s' and '%s' is not a catch-all" %
-                        ('.'.join(full_tags_tuple), data_type.definition.__name__))
+                        "unknown subtype '%s' and '%s' is not a catch-all"
+                        % (".".join(full_tags_tuple), data_type.definition.__name__)
+                    )
 
     def decode_list(self, data_type, obj):
         """
@@ -838,10 +907,12 @@ class PythonPrimitiveToStoneDecoder(object):
         """
         if not isinstance(obj, list):
             raise bv.ValidationError(
-                'expected list, got %s' % bv.generic_type_name(obj))
+                "expected list, got %s" % bv.generic_type_name(obj)
+            )
         return [
             self.json_compat_obj_decode_helper(data_type.item_validator, item)
-            for item in obj]
+            for item in obj
+        ]
 
     def decode_map(self, data_type, obj):
         """
@@ -850,10 +921,12 @@ class PythonPrimitiveToStoneDecoder(object):
         """
         if not isinstance(obj, dict):
             raise bv.ValidationError(
-                'expected dict, got %s' % bv.generic_type_name(obj))
+                "expected dict, got %s" % bv.generic_type_name(obj)
+            )
         return {
-            self.json_compat_obj_decode_helper(data_type.key_validator, key):
-            self.json_compat_obj_decode_helper(data_type.value_validator, value)
+            self.json_compat_obj_decode_helper(
+                data_type.key_validator, key
+            ): self.json_compat_obj_decode_helper(data_type.value_validator, value)
             for key, value in obj.items()
         }
 
@@ -882,14 +955,14 @@ class PythonPrimitiveToStoneDecoder(object):
         elif isinstance(data_type, bv.Bytes):
             if self.for_msgpack:
                 if isinstance(val, six.text_type):
-                    ret = val.encode('utf-8')
+                    ret = val.encode("utf-8")
                 else:
                     ret = val
             else:
                 try:
                     ret = base64.b64decode(val)
                 except (TypeError, binascii.Error):
-                    raise bv.ValidationError('invalid base64-encoded bytes')
+                    raise bv.ValidationError("invalid base64-encoded bytes")
         elif isinstance(data_type, bv.Void):
             if self.strict and val is not None:
                 raise bv.ValidationError("expected null, got value")
@@ -905,8 +978,15 @@ class PythonPrimitiveToStoneDecoder(object):
             self.alias_validators[data_type](ret)
         return ret
 
-def json_decode(data_type, serialized_obj, caller_permissions=None,
-                alias_validators=None, strict=True, old_style=False):
+
+def json_decode(
+    data_type,
+    serialized_obj,
+    caller_permissions=None,
+    alias_validators=None,
+    strict=True,
+    old_style=False,
+):
     """Performs the reverse operation of json_encode.
 
     Args:
@@ -941,16 +1021,27 @@ def json_decode(data_type, serialized_obj, caller_permissions=None,
     try:
         deserialized_obj = json.loads(serialized_obj)
     except ValueError:
-        raise bv.ValidationError('could not decode input as JSON')
+        raise bv.ValidationError("could not decode input as JSON")
     else:
         return json_compat_obj_decode(
-            data_type, deserialized_obj, caller_permissions=caller_permissions,
-            alias_validators=alias_validators, strict=strict, old_style=old_style)
+            data_type,
+            deserialized_obj,
+            caller_permissions=caller_permissions,
+            alias_validators=alias_validators,
+            strict=strict,
+            old_style=old_style,
+        )
 
 
-def json_compat_obj_decode(data_type, obj, caller_permissions=None,
-                           alias_validators=None, strict=True,
-                           old_style=False, for_msgpack=False):
+def json_compat_obj_decode(
+    data_type,
+    obj,
+    caller_permissions=None,
+    alias_validators=None,
+    strict=True,
+    old_style=False,
+    for_msgpack=False,
+):
     """
     Decodes a JSON-compatible object based on its data type into a
     representative Python object.
@@ -967,15 +1058,15 @@ def json_compat_obj_decode(data_type, obj, caller_permissions=None,
     Returns:
         See json_decode().
     """
-    decoder = PythonPrimitiveToStoneDecoder(caller_permissions,
-        alias_validators, for_msgpack, old_style, strict)
+    decoder = PythonPrimitiveToStoneDecoder(
+        caller_permissions, alias_validators, for_msgpack, old_style, strict
+    )
 
     if isinstance(data_type, bv.Primitive):
-        return decoder.make_stone_friendly(
-            data_type, obj, True)
+        return decoder.make_stone_friendly(data_type, obj, True)
     else:
-        return decoder.json_compat_obj_decode_helper(
-            data_type, obj)
+        return decoder.json_compat_obj_decode_helper(data_type, obj)
+
 
 # Adapted from:
 # http://code.activestate.com/recipes/306860-proleptic-gregorian-dates-and-strftime-before-1900/
@@ -983,7 +1074,8 @@ def json_compat_obj_decode(data_type, obj, caller_permissions=None,
 # number of %s before the s because those are all escaped. Can't simply
 # remove the s because the result of %sY should be %Y if %s isn't
 # supported, not the 4 digit year.
-_ILLEGAL_S = re.compile(r'((^|[^%])(%%)*%s)')
+_ILLEGAL_S = re.compile(r"((^|[^%])(%%)*%s)")
+
 
 def _findall(text, substr):
     # Also finds overlaps
@@ -1000,6 +1092,7 @@ def _findall(text, substr):
         i = j + 1
 
     return sites
+
 
 # Every 28 years the calendar repeats, except through century leap years
 # where it's 6 years. But only if you're using the Gregorian calendar. ;)
@@ -1037,10 +1130,10 @@ def _strftime(dt, fmt):
             sites.append(site)
 
     s = s1
-    syear = '%4d' % (dt.year,)
+    syear = "%4d" % (dt.year,)
 
     for site in sites:
-        s = s[:site] + syear + s[site + 4:]
+        s = s[:site] + syear + s[site + 4 :]
 
     return s
 
@@ -1050,23 +1143,27 @@ try:
 except ImportError:
     pass
 else:
-    msgpack_compat_obj_encode = functools.partial(json_compat_obj_encode,
-                                                  for_msgpack=True)
+    msgpack_compat_obj_encode = functools.partial(
+        json_compat_obj_encode, for_msgpack=True
+    )
 
     def msgpack_encode(data_type, obj):
         return msgpack.dumps(
-            msgpack_compat_obj_encode(data_type, obj), encoding='utf-8')
+            msgpack_compat_obj_encode(data_type, obj), encoding="utf-8"
+        )
 
-    msgpack_compat_obj_decode = functools.partial(json_compat_obj_decode,
-                                                  for_msgpack=True)
+    msgpack_compat_obj_decode = functools.partial(
+        json_compat_obj_decode, for_msgpack=True
+    )
 
-    def msgpack_decode(
-            data_type, serialized_obj, alias_validators=None, strict=True):
+    def msgpack_decode(data_type, serialized_obj, alias_validators=None, strict=True):
         # We decode everything as utf-8 because we want all object keys to be
         # unicode. Otherwise, we need to do a lot more refactoring to make
         # json/msgpack share the same code. We expect byte arrays to fail
         # decoding, but when they don't, we have to convert them to bytes.
         deserialized_obj = msgpack.loads(
-            serialized_obj, encoding='utf-8', unicode_errors='ignore')
+            serialized_obj, encoding="utf-8", unicode_errors="ignore"
+        )
         return msgpack_compat_obj_decode(
-            data_type, deserialized_obj, alias_validators, strict)
+            data_type, deserialized_obj, alias_validators, strict
+        )

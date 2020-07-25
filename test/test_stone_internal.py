@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
 
+from stone.frontend.ast import AstExample, AstExampleField, AstExampleRef
 from stone.ir import (
     ApiNamespace,
     Boolean,
@@ -16,21 +16,14 @@ from stone.ir import (
     Map,
     ParameterError,
     String,
+    Struct,
+    StructField,
     Timestamp,
     UInt32,
     UInt64,
-    Void,
-)
-from stone.ir import (
-    Struct,
-    StructField,
     Union,
     UnionField,
-)
-from stone.frontend.ast import (
-    AstExample,
-    AstExampleField,
-    AstExampleRef,
+    Void,
 )
 
 
@@ -48,22 +41,16 @@ class TestStoneInternal(unittest.TestCase):
         s = String(min_length=1, max_length=5)
         s.check_example(
             AstExampleField(
-                path='test.stone',
-                lineno=1,
-                lexpos=0,
-                name='v',
-                value='hello',
-            ))
+                path="test.stone", lineno=1, lexpos=0, name="v", value="hello",
+            )
+        )
 
         with self.assertRaises(InvalidSpec) as cm:
             s.check_example(
                 AstExampleField(
-                    path='test.stone',
-                    lineno=1,
-                    lexpos=0,
-                    name='v',
-                    value='',
-                ))
+                    path="test.stone", lineno=1, lexpos=0, name="v", value="",
+                )
+            )
         self.assertIn("'' has fewer than 1 character(s)", cm.exception.msg)
 
         #
@@ -74,22 +61,16 @@ class TestStoneInternal(unittest.TestCase):
 
         l1.check_example(
             AstExampleField(
-                path='test.stone',
-                lineno=1,
-                lexpos=0,
-                name='v',
-                value=['asd'],
-            ))
+                path="test.stone", lineno=1, lexpos=0, name="v", value=["asd"],
+            )
+        )
 
         with self.assertRaises(InvalidSpec) as cm:
             l1.check_example(
                 AstExampleField(
-                    path='test.stone',
-                    lineno=1,
-                    lexpos=0,
-                    name='v',
-                    value=[],
-                ))
+                    path="test.stone", lineno=1, lexpos=0, name="v", value=[],
+                )
+            )
         self.assertIn("has fewer than 1 item(s)", cm.exception.msg)
 
         #
@@ -100,22 +81,16 @@ class TestStoneInternal(unittest.TestCase):
 
         l1.check_example(
             AstExampleField(
-                path='test.stone',
-                lineno=1,
-                lexpos=0,
-                name='v',
-                value=[['asd']],
-            ))
+                path="test.stone", lineno=1, lexpos=0, name="v", value=[["asd"]],
+            )
+        )
 
         with self.assertRaises(InvalidSpec) as cm:
             l1.check_example(
                 AstExampleField(
-                    path='test.stone',
-                    lineno=1,
-                    lexpos=0,
-                    name='v',
-                    value=[[]],
-                ))
+                    path="test.stone", lineno=1, lexpos=0, name="v", value=[[]],
+                )
+            )
         self.assertIn("has fewer than 1 item(s)", cm.exception.msg)
 
         #
@@ -126,11 +101,7 @@ class TestStoneInternal(unittest.TestCase):
         # valid example
         m.check_example(
             AstExampleField(
-                path='test.stone',
-                lineno=1,
-                lexpos=0,
-                name='v',
-                value={"foo": "bar"}
+                path="test.stone", lineno=1, lexpos=0, name="v", value={"foo": "bar"}
             )
         )
 
@@ -138,11 +109,7 @@ class TestStoneInternal(unittest.TestCase):
         with self.assertRaises(InvalidSpec):
             m.check_example(
                 AstExampleField(
-                    path='test.stone',
-                    lineno=1,
-                    lexpos=0,
-                    name='v',
-                    value={1: "bar"}
+                    path="test.stone", lineno=1, lexpos=0, name="v", value={1: "bar"}
                 )
             )
 
@@ -150,64 +117,57 @@ class TestStoneInternal(unittest.TestCase):
             # errors because only string types can be used as keys
             Map(Int32(), String())
 
-        s = Struct('S', None, None)
+        s = Struct("S", None, None)
         s.set_attributes(
             "Docstring",
             [
-                StructField('a', UInt64(), 'a field', None),
-                StructField('b', List(String()), 'a field', None),
+                StructField("a", UInt64(), "a field", None),
+                StructField("b", List(String()), "a field", None),
             ],
         )
 
         s._add_example(
             AstExample(
-                'test.stone',
+                "test.stone",
                 lineno=1,
                 lexpos=0,
-                label='default',
-                text='Default example',
+                label="default",
+                text="Default example",
                 fields={
-                    'a': AstExampleField(
-                        path='test.stone',
-                        lineno=2,
-                        lexpos=0,
-                        name='a',
-                        value=132,
+                    "a": AstExampleField(
+                        path="test.stone", lineno=2, lexpos=0, name="a", value=132,
                     ),
-                    'b': AstExampleField(
-                        path='test.stone',
-                        lineno=2,
-                        lexpos=0,
-                        name='b',
-                        value=['a'],
+                    "b": AstExampleField(
+                        path="test.stone", lineno=2, lexpos=0, name="b", value=["a"],
                     ),
-                }
-            ))
+                },
+            )
+        )
 
     def test_string(self):
 
         s = String(min_length=1, max_length=3)
 
         # check correct str
-        s.check('1')
+        s.check("1")
 
         # check correct unicode
-        s.check(u'\u2650')
+        s.check("\u2650")
 
         # check bad item
         with self.assertRaises(ValueError) as cm:
             s.check(99)
-        self.assertIn('not a valid string', cm.exception.args[0])
+        self.assertIn("not a valid string", cm.exception.args[0])
 
         # check too many characters
         with self.assertRaises(ValueError) as cm:
-            s.check('12345')
-        self.assertIn('more than 3 character(s)', cm.exception.args[0])
+            s.check("12345")
+        self.assertIn("more than 3 character(s)", cm.exception.args[0])
 
         # check too few characters
         with self.assertRaises(ValueError) as cm:
-            s.check('')
-        self.assertIn('fewer than 1 character(s)', cm.exception.args[0])
+            s.check("")
+        self.assertIn("fewer than 1 character(s)", cm.exception.args[0])
 
     def test_int(self):
 
@@ -218,61 +178,61 @@ class TestStoneInternal(unittest.TestCase):
 
         # check number that is too large
         with self.assertRaises(ValueError) as cm:
-            i.check(2**31)
-        self.assertIn('not within range', cm.exception.args[0])
+            i.check(2 ** 31)
+        self.assertIn("not within range", cm.exception.args[0])
 
         # check number that is too small
         with self.assertRaises(ValueError) as cm:
-            i.check(-2**31 - 1)
-        self.assertIn('not within range', cm.exception.args[0])
+            i.check(-(2 ** 31) - 1)
+        self.assertIn("not within range", cm.exception.args[0])
 
         i = UInt32()
 
         # check number that is too large
         with self.assertRaises(ValueError) as cm:
-            i.check(2**32)
-        self.assertIn('not within range', cm.exception.args[0])
+            i.check(2 ** 32)
+        self.assertIn("not within range", cm.exception.args[0])
 
         # check number that is too small
         with self.assertRaises(ValueError) as cm:
             i.check(-1)
-        self.assertIn('not within range', cm.exception.args[0])
+        self.assertIn("not within range", cm.exception.args[0])
 
         i = Int64()
 
         # check number that is too large
         with self.assertRaises(ValueError) as cm:
-            i.check(2**63)
-        self.assertIn('not within range', cm.exception.args[0])
+            i.check(2 ** 63)
+        self.assertIn("not within range", cm.exception.args[0])
 
         # check number that is too small
         with self.assertRaises(ValueError) as cm:
-            i.check(-2**63 - 1)
-        self.assertIn('not within range', cm.exception.args[0])
+            i.check(-(2 ** 63) - 1)
+        self.assertIn("not within range", cm.exception.args[0])
 
         i = UInt64()
 
         # check number that is too large
         with self.assertRaises(ValueError) as cm:
-            i.check(2**64)
-        self.assertIn('not within range', cm.exception.args[0])
+            i.check(2 ** 64)
+        self.assertIn("not within range", cm.exception.args[0])
 
         # check number that is too small
         with self.assertRaises(ValueError) as cm:
             i.check(-1)
-        self.assertIn('not within range', cm.exception.args[0])
+        self.assertIn("not within range", cm.exception.args[0])
 
         i = Int64(min_value=0, max_value=10)
         with self.assertRaises(ValueError) as cm:
             i.check(20)
-        self.assertIn('20 is greater than 10', cm.exception.args[0])
+        self.assertIn("20 is greater than 10", cm.exception.args[0])
         with self.assertRaises(ValueError) as cm:
             i.check(-5)
-        self.assertIn('-5 is less than 0', cm.exception.args[0])
+        self.assertIn("-5 is less than 0", cm.exception.args[0])
 
         # check that bad ranges are rejected
         self.assertRaises(ParameterError, lambda: Int64(min_value=0.1))
-        self.assertRaises(ParameterError, lambda: Int64(max_value='10'))
+        self.assertRaises(ParameterError, lambda: Int64(max_value="10"))
 
     def test_boolean(self):
 
@@ -283,8 +243,8 @@ class TestStoneInternal(unittest.TestCase):
 
         # check non-bool
         with self.assertRaises(ValueError) as cm:
-            b.check('true')
-        self.assertIn('not a valid boolean', cm.exception.args[0])
+            b.check("true")
+        self.assertIn("not a valid boolean", cm.exception.args[0])
 
     def test_float(self):
 
@@ -295,51 +255,45 @@ class TestStoneInternal(unittest.TestCase):
 
         # check non-float
         with self.assertRaises(ValueError) as cm:
-            f.check('1.1')
-        self.assertIn('not a valid real', cm.exception.args[0])
+            f.check("1.1")
+        self.assertIn("not a valid real", cm.exception.args[0])
 
         f = Float64(min_value=0, max_value=100)
         with self.assertRaises(ValueError) as cm:
             f.check(101)
-        self.assertIn('is greater than', cm.exception.args[0])
+        self.assertIn("is greater than", cm.exception.args[0])
 
         with self.assertRaises(ParameterError) as cm:
-            Float64(min_value=0, max_value=10**330)
-        self.assertIn('too large for a float', cm.exception.args[0])
+            Float64(min_value=0, max_value=10 ** 330)
+        self.assertIn("too large for a float", cm.exception.args[0])
 
         with self.assertRaises(ParameterError) as cm:
-            Float32(min_value=0, max_value=10**50)
-        self.assertIn('greater than the maximum value', cm.exception.args[0])
+            Float32(min_value=0, max_value=10 ** 50)
+        self.assertIn("greater than the maximum value", cm.exception.args[0])
 
         # check that bad ranges are rejected
         self.assertRaises(ParameterError, lambda: Float64(min_value=1j))
-        self.assertRaises(ParameterError, lambda: Float64(max_value='10'))
+        self.assertRaises(ParameterError, lambda: Float64(max_value="10"))
 
     def test_timestamp(self):
-        t = Timestamp('%a, %d %b %Y %H:%M:%S')
+        t = Timestamp("%a, %d %b %Y %H:%M:%S")
 
         # check valid timestamp
-        t.check('Sat, 21 Aug 2010 22:31:20')
+        t.check("Sat, 21 Aug 2010 22:31:20")
 
         # check bad timestamp
         with self.assertRaises(ValueError) as cm:
-            t.check('Sat, 21 Aug 2010')
-        self.assertIn('does not match format', cm.exception.args[0])
+            t.check("Sat, 21 Aug 2010")
+        self.assertIn("does not match format", cm.exception.args[0])
 
     def test_struct(self):
 
-        ns = ApiNamespace('test')
+        ns = ApiNamespace("test")
 
-        quota_info = Struct(
-            'QuotaInfo',
-            None,
-            ns,
-        )
+        quota_info = Struct("QuotaInfo", None, ns)
         quota_info.set_attributes(
             "Information about a user's space quota.",
-            [
-                StructField('quota', UInt64(), 'Total amount of space.', None),
-            ],
+            [StructField("quota", UInt64(), "Total amount of space.", None)],
         )
 
         # add an example that doesn't fit the definition of a struct
@@ -349,31 +303,27 @@ class TestStoneInternal(unittest.TestCase):
                     path=None,
                     lineno=None,
                     lexpos=None,
-                    label='default',
+                    label="default",
                     text=None,
                     fields={
-                        'bad_field': AstExampleField(
-                            None,
-                            None,
-                            None,
-                            'bad_field',
-                            'xyz123')}))
-        self.assertIn('has unknown field', cm.exception.msg)
+                        "bad_field": AstExampleField(
+                            None, None, None, "bad_field", "xyz123"
+                        )
+                    },
+                )
+            )
+        self.assertIn("has unknown field", cm.exception.msg)
 
         quota_info._add_example(
             AstExample(
                 path=None,
                 lineno=None,
                 lexpos=None,
-                label='default',
+                label="default",
                 text=None,
-                fields={
-                    'quota': AstExampleField(
-                        None,
-                        None,
-                        None,
-                        'quota',
-                        64000)}))
+                fields={"quota": AstExampleField(None, None, None, "quota", 64000)},
+            )
+        )
 
         # set null for a required field
         with self.assertRaises(InvalidSpec) as cm:
@@ -382,34 +332,29 @@ class TestStoneInternal(unittest.TestCase):
                     path=None,
                     lineno=None,
                     lexpos=None,
-                    label='null',
+                    label="null",
                     text=None,
-                    fields={
-                        'quota': AstExampleField(
-                            None,
-                            None,
-                            None,
-                            'quota',
-                            None)}))
+                    fields={"quota": AstExampleField(None, None, None, "quota", None)},
+                )
+            )
         self.assertEqual(
             "Bad example for field 'quota': null is not a valid integer",
-            cm.exception.msg)
+            cm.exception.msg,
+        )
 
-        self.assertTrue(quota_info._has_example('default'))
+        self.assertTrue(quota_info._has_example("default"))
 
         quota_info.nullable = True
 
         # test for structs within structs
-        account_info = Struct(
-            'AccountInfo',
-            None,
-            ns,
-        )
+        account_info = Struct("AccountInfo", None, ns)
         account_info.set_attributes(
             "Information about an account.",
             [
-                StructField('account_id', String(), 'Unique identifier for account.', None),
-                StructField('quota_info', quota_info, 'Quota', None)
+                StructField(
+                    "account_id", String(), "Unique identifier for account.", None
+                ),
+                StructField("quota_info", quota_info, "Quota", None),
             ],
         )
 
@@ -418,81 +363,72 @@ class TestStoneInternal(unittest.TestCase):
                 path=None,
                 lineno=None,
                 lexpos=None,
-                label='default',
+                label="default",
                 text=None,
                 fields={
-                    'account_id': AstExampleField(
+                    "account_id": AstExampleField(
+                        None, None, None, "account_id", "xyz123"
+                    ),
+                    "quota_info": AstExampleField(
                         None,
                         None,
                         None,
-                        'account_id',
-                        'xyz123'),
-                    'quota_info': AstExampleField(
-                        None,
-                        None,
-                        None,
-                        'quota_info',
-                        AstExampleRef(
-                            None,
-                            None,
-                            None,
-                            'default'))})
+                        "quota_info",
+                        AstExampleRef(None, None, None, "default"),
+                    ),
+                },
+            )
         )
 
         account_info._compute_examples()
 
         # ensure that an example for quota_info is propagated up
-        self.assertIn('quota_info', account_info.get_examples()['default'].value)
+        self.assertIn("quota_info", account_info.get_examples()["default"].value)
 
     def test_union(self):
 
-        ns = ApiNamespace('files')
+        ns = ApiNamespace("files")
 
-        update_parent_rev = Struct(
-            'UpdateParentRev',
-            None,
-            ns,
-        )
+        update_parent_rev = Struct("UpdateParentRev", None, ns)
         update_parent_rev.set_attributes(
             "Overwrite existing file if the parent rev matches.",
-            [
-                StructField('parent_rev', String(), 'The revision to be updated.', None)
-            ],
+            [StructField("parent_rev", String(), "The revision to be updated.", None)],
         )
         update_parent_rev._add_example(
             AstExample(
                 path=None,
                 lineno=None,
                 lexpos=None,
-                label='default',
+                label="default",
                 text=None,
                 fields={
-                    'parent_rev': AstExampleField(
-                        None,
-                        None,
-                        None,
-                        'parent_rev',
-                        'xyz123')}))
+                    "parent_rev": AstExampleField(
+                        None, None, None, "parent_rev", "xyz123"
+                    )
+                },
+            )
+        )
 
         # test variants with only tags, as well as those with structs.
-        conflict = Union(
-            'WriteConflictPolicy',
-            None,
-            ns,
-            True,
-        )
+        conflict = Union("WriteConflictPolicy", None, ns, True)
         conflict.set_attributes(
-            'Policy for managing write conflicts.',
+            "Policy for managing write conflicts.",
             [
                 UnionField(
-                    'reject', Void(),
-                    'On a write conflict, reject the new file.', None),
+                    "reject", Void(), "On a write conflict, reject the new file.", None
+                ),
                 UnionField(
-                    'overwrite', Void(),
-                    'On a write conflict, overwrite the existing file.', None),
+                    "overwrite",
+                    Void(),
+                    "On a write conflict, overwrite the existing file.",
+                    None,
+                ),
                 UnionField(
-                    'update_if_matching_parent_rev', update_parent_rev,
-                    'On a write conflict, overwrite the existing file.', None),
+                    "update_if_matching_parent_rev",
+                    update_parent_rev,
+                    "On a write conflict, overwrite the existing file.",
+                    None,
+                ),
             ],
         )
 
@@ -501,25 +437,31 @@ class TestStoneInternal(unittest.TestCase):
                 path=None,
                 lineno=None,
                 lexpos=None,
-                label='default',
+                label="default",
                 text=None,
                 fields={
-                    'update_if_matching_parent_rev': AstExampleField(
+                    "update_if_matching_parent_rev": AstExampleField(
                         None,
                         None,
                         None,
-                        'update_if_matching_parent_rev',
-                        AstExampleRef(None, None, None, 'default'))}))
+                        "update_if_matching_parent_rev",
+                        AstExampleRef(None, None, None, "default"),
+                    )
+                },
+            )
+        )
 
         conflict._compute_examples()
 
         # test that only null value is returned for an example of a Void type
-        self.assertEqual(conflict.get_examples()['reject'].value, {'.tag': 'reject'})
+        self.assertEqual(conflict.get_examples()["reject"].value, {".tag": "reject"})
 
         # test that dict is returned for a tagged struct variant
-        self.assertEqual(conflict.get_examples()['default'].value,
-            {'.tag': 'update_if_matching_parent_rev', 'parent_rev': 'xyz123'})
+        self.assertEqual(
+            conflict.get_examples()["default"].value,
+            {".tag": "update_if_matching_parent_rev", "parent_rev": "xyz123"},
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

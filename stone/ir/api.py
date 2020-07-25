@@ -1,11 +1,16 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+import typing
 from collections import OrderedDict
-# See <https://github.com/PyCQA/pylint/issues/73>
 from distutils.version import StrictVersion
-import six
+
+from stone.frontend.ast import AstRouteDef
 
 from .data_types import (
+    Alias,
+    Annotation,
+    AnnotationType,
+    DataType,
+    Struct,
+    UserDefined,
     doc_unwrap,
     is_alias,
     is_composite_type,
@@ -13,44 +18,20 @@ from .data_types import (
     is_nullable_type,
 )
 
-_MYPY = False
-if _MYPY:
-    import typing  # pylint: disable=import-error,useless-suppression
-
-    from .data_types import (  # noqa: F401 # pylint: disable=unused-import
-        Alias,
-        Annotation,
-        AnnotationType,
-        DataType,
-        List as DataTypeList,
-        Nullable,
-        Struct,
-        UserDefined,
-    )
-
-    from stone.frontend.ast import AstRouteDef  # noqa: F401 # pylint: disable=unused-import
-
-    # TODO: This can be changed back to a single declaration with a
-    # unicode literal after <https://github.com/python/mypy/pull/2516>
-    # makes it into a PyPi release
-    if six.PY3:
-        NamespaceDict = typing.Dict[typing.Text, 'ApiNamespace']
-    else:
-        NamespaceDict = typing.Dict[typing.Text, b'ApiNamespace']
+NamespaceDict = typing.Dict[typing.Text, "ApiNamespace"]
 
 
-class Api(object):
+class Api:
     """
     A full description of an API's namespaces, data types, and routes.
     """
-    def __init__(self, version):
-        # type: (str) -> None
-        self.version = StrictVersion(version)
-        self.namespaces = OrderedDict()  # type: NamespaceDict
-        self.route_schema = None  # type: typing.Optional[Struct]
 
-    def ensure_namespace(self, name):
-        # type: (str) -> ApiNamespace
+    def __init__(self, version: str) -> None:
+        self.version = StrictVersion(version)
+        self.namespaces: NamespaceDict = OrderedDict()
+        self.route_schema: typing.Optional[Struct] = None
+
+    def ensure_namespace(self, name: str) -> "ApiNamespace":
         """
         Only creates a namespace if it hasn't yet been defined.
 
@@ -62,13 +43,12 @@ class Api(object):
             self.namespaces[name] = ApiNamespace(name)
         return self.namespaces[name]
 
-    def normalize(self):
-        # type: () -> None
+    def normalize(self) -> None:
         """
         Alphabetizes namespaces and routes to make spec parsing order mostly
         irrelevant.
         """
-        ordered_namespaces = OrderedDict()  # type: NamespaceDict
+        ordered_namespaces: NamespaceDict = OrderedDict()
         # self.namespaces is currently ordered by declaration order.
         for namespace_name in sorted(self.namespaces.keys()):
             ordered_namespaces[namespace_name] = self.namespaces[namespace_name]
@@ -77,50 +57,46 @@ class Api(object):
         for namespace in self.namespaces.values():
             namespace.normalize()
 
-    def add_route_schema(self, route_schema):
-        # type: (Struct) -> None
+    def add_route_schema(self, route_schema: Struct) -> None:
         assert self.route_schema is None
         self.route_schema = route_schema
 
 
-class _ImportReason(object):
+class _ImportReason:
     """
     Tracks the reason a namespace was imported.
     """
 
-    def __init__(self):
-        # type: () -> None
+    def __init__(self) -> None:
         self.alias = False
         self.data_type = False
         self.annotation = False
         self.annotation_type = False
 
 
-class ApiNamespace(object):
+class ApiNamespace:
     """
     Represents a category of API endpoints and their associated data types.
     """
 
-    def __init__(self, name):
-        # type: (typing.Text) -> None
+    def __init__(self, name: typing.Text) -> None:
         self.name = name
-        self.doc = None                    # type: typing.Optional[six.text_type]
-        self.routes = []                   # type: typing.List[ApiRoute]
+        self.doc: typing.Optional[str] = None
+        self.routes: typing.List["ApiRoute"] = []
         # TODO (peichao): route_by_name is deprecated by routes_by_name and should be removed.
-        self.route_by_name = {}            # type: typing.Dict[typing.Text, ApiRoute]
-        self.routes_by_name = {}           # type: typing.Dict[typing.Text, ApiRoutesByVersion]
-        self.data_types = []               # type: typing.List[UserDefined]
-        self.data_type_by_name = {}        # type: typing.Dict[str, UserDefined]
-        self.aliases = []                  # type: typing.List[Alias]
-        self.alias_by_name = {}            # type: typing.Dict[str, Alias]
-        self.annotations = []              # type: typing.List[Annotation]
-        self.annotation_by_name = {}       # type: typing.Dict[str, Annotation]
-        self.annotation_types = []         # type: typing.List[AnnotationType]
-        self.annotation_type_by_name = {}  # type: typing.Dict[str, AnnotationType]
-        self._imported_namespaces = {}     # type: typing.Dict[ApiNamespace, _ImportReason]
+        self.route_by_name: typing.Dict[typing.Text, "ApiRoute"] = {}
+        self.routes_by_name: typing.Dict[typing.Text, "ApiRoutesByVersion"] = {}
+        self.data_types: typing.List[UserDefined] = []
+        self.data_type_by_name: typing.Dict[str, UserDefined] = {}
+        self.aliases: typing.List[Alias] = []
+        self.alias_by_name: typing.Dict[str, Alias] = {}
+        self.annotations: typing.List[Annotation] = []
+        self.annotation_by_name: typing.Dict[str, Annotation] = {}
+        self.annotation_types: typing.List[AnnotationType] = []
+        self.annotation_type_by_name: typing.Dict[str, AnnotationType] = {}
+        self._imported_namespaces: typing.Dict[ApiNamespace, _ImportReason] = {}
 
-    def add_doc(self, docstring):
-        # type: (six.text_type) -> None
+    def add_doc(self, docstring: str) -> None:
         """Adds a docstring for this namespace.
 
         The input docstring is normalized to have no leading whitespace and
@@ -129,15 +105,14 @@ class ApiNamespace(object):
         If a docstring already exists, the new normalized docstring is appended
         to the end of the existing one with two newlines separating them.
         """
-        assert isinstance(docstring, six.text_type), type(docstring)
-        normalized_docstring = doc_unwrap(docstring) + '\n'
+        assert isinstance(docstring, str), type(docstring)
+        normalized_docstring = doc_unwrap(docstring) + "\n"
         if self.doc is None:
             self.doc = normalized_docstring
         else:
             self.doc += normalized_docstring
 
-    def add_route(self, route):
-        # type: (ApiRoute) -> None
+    def add_route(self, route: "ApiRoute") -> None:
         self.routes.append(route)
         if route.version == 1:
             self.route_by_name[route.name] = route
@@ -145,33 +120,30 @@ class ApiNamespace(object):
             self.routes_by_name[route.name] = ApiRoutesByVersion()
         self.routes_by_name[route.name].at_version[route.version] = route
 
-    def add_data_type(self, data_type):
-        # type: (UserDefined) -> None
+    def add_data_type(self, data_type: UserDefined) -> None:
         self.data_types.append(data_type)
         self.data_type_by_name[data_type.name] = data_type
 
-    def add_alias(self, alias):
-        # type: (Alias) -> None
+    def add_alias(self, alias: Alias) -> None:
         self.aliases.append(alias)
         self.alias_by_name[alias.name] = alias
 
-    def add_annotation(self, annotation):
-        # type: (Annotation) -> None
+    def add_annotation(self, annotation: Annotation) -> None:
         self.annotations.append(annotation)
         self.annotation_by_name[annotation.name] = annotation
 
-    def add_annotation_type(self, annotation_type):
-        # type: (AnnotationType) -> None
+    def add_annotation_type(self, annotation_type: AnnotationType) -> None:
         self.annotation_types.append(annotation_type)
         self.annotation_type_by_name[annotation_type.name] = annotation_type
 
-    def add_imported_namespace(self,
-                               namespace,
-                               imported_alias=False,
-                               imported_data_type=False,
-                               imported_annotation=False,
-                               imported_annotation_type=False):
-        # type: (ApiNamespace, bool, bool, bool, bool) -> None
+    def add_imported_namespace(
+        self,
+        namespace: "ApiNamespace",
+        imported_alias: bool = False,
+        imported_data_type: bool = False,
+        imported_annotation: bool = False,
+        imported_annotation_type: bool = False,
+    ) -> None:
         """
         Keeps track of namespaces that this namespace imports.
 
@@ -187,8 +159,7 @@ class ApiNamespace(object):
                 annotation in the imported namespace, possibly indirectly (by
                 referencing an annotation elsewhere that has this type).
         """
-        assert self.name != namespace.name, \
-            'Namespace cannot import itself.'
+        assert self.name != namespace.name, "Namespace cannot import itself."
         reason = self._imported_namespaces.setdefault(namespace, _ImportReason())
         if imported_alias:
             reason.alias = True
@@ -199,8 +170,7 @@ class ApiNamespace(object):
         if imported_annotation_type:
             reason.annotation_type = True
 
-    def linearize_data_types(self):
-        # type: () -> typing.List[UserDefined]
+    def linearize_data_types(self) -> typing.List[UserDefined]:
         """
         Returns a list of all data types used in the namespace. Because the
         inheritance of data types can be modeled as a DAG, the list will be a
@@ -209,10 +179,9 @@ class ApiNamespace(object):
         defined in the correct order.
         """
         linearized_data_types = []
-        seen_data_types = set()  # type: typing.Set[UserDefined]
+        seen_data_types: typing.Set[UserDefined] = set()
 
-        def add_data_type(data_type):
-            # type: (UserDefined) -> None
+        def add_data_type(data_type: UserDefined) -> None:
             if data_type in seen_data_types:
                 return
             elif data_type.namespace != self:
@@ -228,18 +197,16 @@ class ApiNamespace(object):
 
         return linearized_data_types
 
-    def linearize_aliases(self):
-        # type: () -> typing.List[Alias]
+    def linearize_aliases(self) -> typing.List[Alias]:
         """
         Returns a list of all aliases used in the namespace. The aliases are
         ordered to ensure that if they reference other aliases those aliases
         come earlier in the list.
         """
         linearized_aliases = []
-        seen_aliases = set()  # type: typing.Set[Alias]
+        seen_aliases: typing.Set[Alias] = set()
 
-        def add_alias(alias):
-            # type: (Alias) -> None
+        def add_alias(alias: Alias) -> None:
             if alias in seen_aliases:
                 return
             elif alias.namespace != self:
@@ -254,39 +221,44 @@ class ApiNamespace(object):
 
         return linearized_aliases
 
-    def get_route_io_data_types(self):
-        # type: () -> typing.List[UserDefined]
+    def get_route_io_data_types(self) -> typing.List[UserDefined]:
         """
         Returns a list of all user-defined data types that are referenced as
         either an argument, result, or error of a route. If a List or Nullable
         data type is referenced, then the contained data type is returned
         assuming it's a user-defined type.
         """
-        data_types = set()  # type: typing.Set[UserDefined]
+        data_types: typing.Set[UserDefined] = set()
         for route in self.routes:
             data_types |= self.get_route_io_data_types_for_route(route)
         return sorted(data_types, key=lambda dt: dt.name)
 
-    def get_route_io_data_types_for_route(self, route):
-        # type: (ApiRoute) -> typing.Set[UserDefined]
+    def get_route_io_data_types_for_route(
+        self, route: "ApiRoute"
+    ) -> typing.Set[UserDefined]:
         """
         Given a route, returns a set of its argument/result/error datatypes.
         """
-        data_types = set()  # type: typing.Set[UserDefined]
-        for dtype in (route.arg_data_type, route.result_data_type, route.error_data_type):
+        data_types: typing.Set[UserDefined] = set()
+        for dtype in (
+            route.arg_data_type,
+            route.result_data_type,
+            route.error_data_type,
+        ):
             while is_list_type(dtype) or is_nullable_type(dtype):
-                data_list_type = dtype  # type: typing.Any
+                data_list_type: typing.Any = dtype
                 dtype = data_list_type.data_type
             if is_composite_type(dtype) or is_alias(dtype):
-                data_user_type = dtype  # type: typing.Any
+                data_user_type: typing.Any = dtype
                 data_types.add(data_user_type)
         return data_types
 
-    def get_imported_namespaces(self,
-                                must_have_imported_data_type=False,
-                                consider_annotations=False,
-                                consider_annotation_types=False):
-        # type: (bool, bool, bool) -> typing.List[ApiNamespace]
+    def get_imported_namespaces(
+        self,
+        must_have_imported_data_type: bool = False,
+        consider_annotations: bool = False,
+        consider_annotation_types: bool = False,
+    ) -> typing.List["ApiNamespace"]:
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and a data type is
@@ -308,11 +280,11 @@ class ApiNamespace(object):
             if must_have_imported_data_type and not reason.data_type:
                 continue
             if (not consider_annotations) and not (
-                    reason.data_type or reason.alias or reason.annotation_type
+                reason.data_type or reason.alias or reason.annotation_type
             ):
                 continue
             if (not consider_annotation_types) and not (
-                    reason.data_type or reason.alias or reason.annotation
+                reason.data_type or reason.alias or reason.annotation
             ):
                 continue
 
@@ -320,24 +292,23 @@ class ApiNamespace(object):
         imported_namespaces.sort(key=lambda n: n.name)
         return imported_namespaces
 
-    def get_namespaces_imported_by_route_io(self):
-        # type: () -> typing.List[ApiNamespace]
+    def get_namespaces_imported_by_route_io(self) -> typing.List["ApiNamespace"]:
         """
         Returns a list of Namespace objects. A namespace is a member of this
         list if it is imported by the current namespace and has a data type
         from it referenced as an argument, result, or error of a route.
         Namespaces are in ASCII order by name.
         """
-        namespace_data_types = sorted(self.get_route_io_data_types(),
-                                      key=lambda dt: dt.name)
+        namespace_data_types = sorted(
+            self.get_route_io_data_types(), key=lambda dt: dt.name
+        )
         referenced_namespaces = set()
         for data_type in namespace_data_types:
             if data_type.namespace != self:
                 referenced_namespaces.add(data_type.namespace)
         return sorted(referenced_namespaces, key=lambda n: n.name)
 
-    def normalize(self):
-        # type: () -> None
+    def normalize(self) -> None:
         """
         Alphabetizes routes to make route declaration order irrelevant.
         """
@@ -346,21 +317,18 @@ class ApiNamespace(object):
         self.aliases.sort(key=lambda alias: alias.name)
         self.annotations.sort(key=lambda annotation: annotation.name)
 
-    def __repr__(self):
-        # type: () -> str
-        return str('ApiNamespace({!r})').format(self.name)
+    def __repr__(self) -> str:
+        return f"ApiNamespace({self.name!r})"
 
 
-class ApiRoute(object):
+class ApiRoute:
     """
     Represents an API endpoint.
     """
 
-    def __init__(self,
-                 name,
-                 version,
-                 ast_node):
-        # type: (typing.Text, int, typing.Optional[AstRouteDef]) -> None
+    def __init__(
+        self, name: typing.Text, version: int, ast_node: typing.Optional[AstRouteDef]
+    ) -> None:
         """
         :param str name: Designated name of the endpoint.
         :param int version: Designated version of the endpoint.
@@ -371,16 +339,17 @@ class ApiRoute(object):
         self._ast_node = ast_node
 
         # These attributes are set later by set_attributes()
-        self.deprecated = None  # type: typing.Optional[DeprecationInfo]
-        self.raw_doc = None  # type: typing.Optional[typing.Text]
-        self.doc = None  # type: typing.Optional[typing.Text]
-        self.arg_data_type = None  # type: typing.Optional[DataType]
-        self.result_data_type = None  # type: typing.Optional[DataType]
-        self.error_data_type = None  # type: typing.Optional[DataType]
-        self.attrs = None  # type: typing.Optional[typing.Mapping[typing.Text, typing.Any]]
+        self.deprecated: typing.Optional[DeprecationInfo] = None
+        self.raw_doc: typing.Optional[typing.Text] = None
+        self.doc: typing.Optional[typing.Text] = None
+        self.arg_data_type: typing.Optional[DataType] = None
+        self.result_data_type: typing.Optional[DataType] = None
+        self.error_data_type: typing.Optional[DataType] = None
+        self.attrs: typing.Optional[typing.Mapping[typing.Text, typing.Any]] = None
 
-    def set_attributes(self, deprecated, doc, arg_data_type, result_data_type,
-                       error_data_type, attrs):
+    def set_attributes(
+        self, deprecated, doc, arg_data_type, result_data_type, error_data_type, attrs
+    ):
         """
         Converts a forward reference definition of a route into a full
         definition.
@@ -411,30 +380,28 @@ class ApiRoute(object):
         if self.version == 1:
             return self.name
         else:
-            return '{}:{}'.format(self.name, self.version)
+            return f"{self.name}:{self.version}"
 
     def __repr__(self):
-        return 'ApiRoute({})'.format(self.name_with_version())
+        return f"ApiRoute({self.name_with_version()})"
 
 
-class DeprecationInfo(object):
-
-    def __init__(self, by=None):
-        # type: (typing.Optional[ApiRoute]) -> None
+class DeprecationInfo:
+    def __init__(self, by: typing.Optional[ApiRoute] = None) -> None:
         """
         :param ApiRoute by: The route that replaces this deprecated one.
         """
         assert by is None or isinstance(by, ApiRoute), repr(by)
         self.by = by
 
-class ApiRoutesByVersion(object):
+
+class ApiRoutesByVersion:
     """
     Represents routes of different versions for a common name.
     """
 
-    def __init__(self):
-        # type: () -> None
+    def __init__(self) -> None:
         """
         :param at_version: The dict mapping a version number to a route.
         """
-        self.at_version = {}  # type: typing.Dict[int, ApiRoute]
+        self.at_version: typing.Dict[int, ApiRoute] = {}

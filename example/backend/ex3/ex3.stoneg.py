@@ -1,19 +1,15 @@
-from stone.ir import is_struct_type
 from stone.backend import CodeBackend
-from stone.backends.python_helpers import (
-    fmt_class,
-    fmt_var,
-)
+from stone.backends.python_helpers import fmt_class, fmt_var
+from stone.ir import is_struct_type
 
 
 class ExamplePythonBackend(CodeBackend):
-
     def generate(self, api):
         """Generates a module for each namespace."""
         for namespace in api.namespaces.values():
             # One module per namespace is created. The module takes the name
             # of the namespace.
-            with self.output_to_relative_path('{}.py'.format(namespace.name)):
+            with self.output_to_relative_path(f"{namespace.name}.py"):
                 self._generate_namespace_module(namespace)
 
     def _generate_namespace_module(self, namespace):
@@ -23,7 +19,7 @@ class ExamplePythonBackend(CodeBackend):
                 continue
 
             # Define a class for each struct
-            class_def = 'class {}(object):'.format(fmt_class(data_type.name))
+            class_def = "class {}(object):".format(fmt_class(data_type.name))
             self.emit(class_def)
 
             with self.indent():
@@ -35,10 +31,10 @@ class ExamplePythonBackend(CodeBackend):
                 self.emit()
 
                 # Define constructor to take each field
-                args = ['self']
+                args = ["self"]
                 for field in data_type.fields:
                     args.append(fmt_var(field.name))
-                self.generate_multiline_list(args, 'def __init__', ':')
+                self.generate_multiline_list(args, "def __init__", ":")
 
                 with self.indent():
                     if data_type.fields:
@@ -46,9 +42,9 @@ class ExamplePythonBackend(CodeBackend):
                         # Body of init should assign all init vars
                         for field in data_type.fields:
                             if field.doc:
-                                self.emit_wrapped_text(field.doc, '# ', '# ')
+                                self.emit_wrapped_text(field.doc, "# ", "# ")
                             member_name = fmt_var(field.name)
-                            self.emit('self.{0} = {0}'.format(member_name))
+                            self.emit("self.{0} = {0}".format(member_name))
                     else:
-                        self.emit('pass')
+                        self.emit("pass")
             self.emit()

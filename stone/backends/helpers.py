@@ -1,11 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import re
 
 _split_words_capitalization_re = re.compile(
-    '^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$'
+    "^[a-z0-9]+|[A-Z][a-z0-9]+|[A-Z]+(?=[A-Z][a-z0-9])|[A-Z]+$"
 )
-_split_words_dashes_re = re.compile('[-_/]+')
+_split_words_dashes_re = re.compile("[-_/]+")
 
 
 def split_words(name):
@@ -32,7 +30,7 @@ def fmt_camel(name):
     words = split_words(name)
     assert len(words) > 0
     first = words.pop(0).lower()
-    return first + ''.join([word.capitalize() for word in words])
+    return first + "".join([word.capitalize() for word in words])
 
 
 def fmt_dashes(name):
@@ -40,7 +38,7 @@ def fmt_dashes(name):
     Converts name to words separated by dashes. Words are identified by
     capitalization, dashes, and underscores.
     """
-    return '-'.join([word.lower() for word in split_words(name)])
+    return "-".join([word.lower() for word in split_words(name)])
 
 
 def fmt_pascal(name):
@@ -48,7 +46,7 @@ def fmt_pascal(name):
     Converts name to pascal case. Words are identified by capitalization,
     dashes, and underscores.
     """
-    return ''.join([word.capitalize() for word in split_words(name)])
+    return "".join([word.capitalize() for word in split_words(name)])
 
 
 def fmt_underscores(name):
@@ -56,4 +54,4 @@ def fmt_underscores(name):
     Converts name to words separated by underscores. Words are identified by
     capitalization, dashes, and underscores.
     """
-    return '_'.join([word.lower() for word in split_words(name)])
+    return "_".join([word.lower() for word in split_words(name)])

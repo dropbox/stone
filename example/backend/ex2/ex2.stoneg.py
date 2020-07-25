@@ -7,10 +7,10 @@ class ExamplePythonBackend(CodeBackend):
         for namespace in api.namespaces.values():
             # One module per namespace is created. The module takes the name
             # of the namespace.
-            with self.output_to_relative_path('{}.py'.format(namespace.name)):
+            with self.output_to_relative_path(f"{namespace.name}.py"):
                 self._generate_namespace_module(namespace)
 
     def _generate_namespace_module(self, namespace):  # pylint: disable=unused-argument
-        self.emit('def noop():')
+        self.emit("def noop():")
         with self.indent():
-            self.emit('pass')
+            self.emit("pass")

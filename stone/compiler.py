@@ -1,15 +1,10 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import logging
 import inspect
+import logging
 import os
 import shutil
 import traceback
 
-from stone.backend import (
-    Backend,
-    remove_aliases_from_api,
-)
+from stone.backend import Backend, remove_aliases_from_api
 
 
 class BackendException(Exception):
@@ -20,25 +15,22 @@ class BackendException(Exception):
         :type backend_name: str
         :type tb: str
         """
-        super(BackendException, self).__init__()
+        super().__init__()
         self.backend_name = backend_name
         self.traceback = tb
 
 
-class Compiler(object):
+class Compiler:
     """
     Applies a collection of backends found in a single backend module to an
     API specification.
     """
 
-    backend_extension = '.stoneg'
+    backend_extension = ".stoneg"
 
-    def __init__(self,
-                 api,
-                 backend_module,
-                 backend_args,
-                 build_path,
-                 clean_build=False):
+    def __init__(
+        self, api, backend_module, backend_args, build_path, clean_build=False
+    ):
         """
         Creates a Compiler.
 
@@ -53,7 +45,7 @@ class Compiler(object):
         :param bool clean_build: If True, the build_path is removed before
             source files are compiled into them.
         """
-        self._logger = logging.getLogger('stone.compiler')
+        self._logger = logging.getLogger("stone.compiler")
 
         self.api = api
         self.backend_module = backend_module
@@ -62,14 +54,13 @@ class Compiler(object):
 
         # Remove existing build directory if it's a clean build
         if clean_build and os.path.exists(self.build_path):
-            logging.info('Cleaning existing build directory %s...',
-                         self.build_path)
+            logging.info("Cleaning existing build directory %s...", self.build_path)
             shutil.rmtree(self.build_path)
 
     def build(self):
         """Creates outputs. Outputs are files made by a backend."""
         if os.path.exists(self.build_path) and not os.path.isdir(self.build_path):
-            self._logger.error('Output path must be a folder if it already exists')
+            self._logger.error("Output path must be a folder if it already exists")
             return
         Compiler._mkdir(self.build_path)
         self._execute_backend_on_spec()
@@ -103,10 +94,12 @@ class Compiler(object):
         api_no_aliases_cache = None
         for attr_key in dir(self.backend_module):
             attr_value = getattr(self.backend_module, attr_key)
-            if (inspect.isclass(attr_value) and
-                    issubclass(attr_value, Backend) and
-                    not inspect.isabstract(attr_value)):
-                self._logger.info('Running backend: %s', attr_value.__name__)
+            if (
+                inspect.isclass(attr_value)
+                and issubclass(attr_value, Backend)
+                and not inspect.isabstract(attr_value)
+            ):
+                self._logger.info("Running backend: %s", attr_value.__name__)
                 backend = attr_value(self.build_path, self.backend_args)
 
                 if backend.preserve_aliases:
@@ -123,4 +116,5 @@ class Compiler(object):
                     # in the stone parser, but rather a bug in the backend.
                     # Remove the last char of the traceback b/c it's a newline.
                     raise BackendException(
-                        attr_value.__name__, traceback.format_exc()[:-1])
+                        attr_value.__name__, traceback.format_exc()[:-1]
+                    )
