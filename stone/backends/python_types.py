@@ -124,6 +124,8 @@ class PythonTypesBackend(CodeBackend):
             self.emit('"""')
             self.emit()
 
+        self.emit("from __future__ import unicode_literals")
+
         self.emit_raw(validators_import)
 
         # Generate import statements for all referenced namespaces.
