@@ -10,7 +10,6 @@ from stone.ir import (
 from stone.backends.swift import (
     base,
     fmt_serial_type,
-    stone_warning,
     SwiftBaseBackend,
     undocumented,
 )
@@ -157,7 +156,7 @@ class SwiftBackend(SwiftBaseBackend):
         check_route_name_conflict(namespace)
 
         ns_class = fmt_class(namespace.name)
-        self.emit_raw(stone_warning)
+        self.emit_raw(base)
         self.emit('/// Routes for the {} namespace'.format(namespace.name))
 
         with self.block('open class {}Routes'.format(ns_class)):
