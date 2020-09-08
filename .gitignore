@@ -1,3 +1,5 @@
+.coverage
+coverage.xml
 /.cache/
 /.eggs/
 /.idea/
