@@ -8,6 +8,13 @@ disable=
     useless-else-on-loop,
     cell-var-from-loop, # https://github.com/PyCQA/pylint/issues/1934
     bad-string-format-type, # bogus errors
+    raise-missing-from,
+    # errors thrown on github actions not locally
+    unused-import,
+    wildcard-import,
+    bad-option-value,
+    attribute-defined-outside-init,
+    deprecated-lambda
 enable=useless-suppression
 
 [REPORTS]
