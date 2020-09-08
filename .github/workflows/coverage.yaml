@@ -19,11 +19,12 @@ jobs:
       - name: Install Requirements
         run: |
           python -m pip install --upgrade pip
-          pip install tox
+          pip install coverage pytest
           pip install -r test/requirements.txt
       - name: Generate Unit Test Coverage
         run: |
-          python -m tox -e codecov
+          coverage run --rcfile=.coveragerc -m pytest
+          coverage xml
       - name: Publish Coverage
         uses: codecov/codecov-action@v1.0.13
         with:
