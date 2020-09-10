@@ -145,7 +145,7 @@ class Backend(object):
 
     @contextmanager
     def output_to_relative_path(self, relative_path, mode='wb'):
-        # type: (typing.Text) -> typing.Iterator[None]
+        # type: (typing.Text, typing.Text) -> typing.Iterator[None]
         """
         Sets up backend so that all emits are directed towards the new file
         created at :param:`relative_path`.
