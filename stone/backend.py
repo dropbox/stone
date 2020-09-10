@@ -144,8 +144,8 @@ class Backend(object):
         raise NotImplementedError
 
     @contextmanager
-    def output_to_relative_path(self, relative_path):
-        # type: (typing.Text) -> typing.Iterator[None]
+    def output_to_relative_path(self, relative_path, mode='wb'):
+        # type: (typing.Text, typing.Text) -> typing.Iterator[None]
         """
         Sets up backend so that all emits are directed towards the new file
         created at :param:`relative_path`.
@@ -161,7 +161,7 @@ class Backend(object):
         self.logger.info('Generating %s', full_path)
         self.clear_output_buffer()
         yield
-        with open(full_path, 'wb') as f:
+        with open(full_path, mode) as f:
             f.write(self.output_buffer_to_string().encode('utf-8'))
         self.clear_output_buffer()
 
