@@ -13,7 +13,7 @@ Stone
 
 The Official Api Spec Language for Dropbox.
 
-Documentation can be found on `GitHub`_
+`Documentation`_ can be found on GitHub
 
 Installation
 ============
