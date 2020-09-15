@@ -2,10 +2,55 @@
 Stone
 =====
 
-*Warning: The documentation is undergoing a rewrite.*
+.. image:: https://img.shields.io/pypi/pyversions/dropbox.svg
+    :target: https://pypi.python.org/pypi/dropbox
 
-.. image:: https://travis-ci.org/dropbox/stone.svg?branch=master
-    :target: https://travis-ci.org/dropbox/stone
+.. image:: https://img.shields.io/pypi/v/dropbox.svg
+    :target: https://pypi.python.org/pypi/dropbox
+
+.. image:: https://codecov.io/gh/dropbox/stone/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/dropbox/stone
+
+The Official Api Spec Language for Dropbox.
+
+Documentation can be found on `GitHub`_
+
+Installation
+============
+
+Install stone using ``pip``::
+
+    $ pip install --user stone
+
+This will install a script ``stone`` to your PATH that can be run from the
+command line::
+
+    $ stone -h
+
+Alternative
+-----------
+
+If you choose not to install ``stone`` using the method above, you will need
+to ensure that you have the Python packages ``ply`` and ``six``, which can be
+installed through ``pip``::
+
+    $ pip install "ply>=3.4" "six>=1.3.0" "typing>=3.5.2"
+
+If the ``stone`` package is in your PYTHONPATH, you can replace ``stone``
+with ``python -m stone.cli`` as follows::
+
+    $ python -m stone.cli -h
+
+If you have the ``stone`` package on your machine, but did not install it or
+add its location to your PYTHONPATH, you can use the following::
+
+    $ PYTHONPATH=path/to/stone python -m stone.cli -h
+
+After installation, follow one of our `Examples`_ or read the `Documentation`_.
+
+
+Overview
+========
 
 Define an API once in Stone. Use backends, i.e. code generators, to translate
 your specification into objects and functions in the programming languages of
@@ -22,8 +67,7 @@ your choice.
 * `JSON Serializer <https://github.com/dropbox/stone/blob/master/docs/json_serializer.rst>`_
 * `Network Protocol <https://github.com/dropbox/stone/blob/master/docs/network_protocol.rst>`_
 
-Overview
-========
+*Warning: The documentation is undergoing a rewrite.*
 
 .. image:: docs/overview.png
 
@@ -119,33 +163,27 @@ result types defined without relation to each other. In other words, the
 type of response does not change based on the input to the endpoint. An
 exception to this rule is afforded for error responses.
 
-Installation
+Examples
+========
+
+We provide `Examples`_ to help get you started with a lot of the basic functionality of Stone.
+
+Getting Help
 ============
 
-Install stone using ``pip``::
+If you find a bug, please see `CONTRIBUTING.md`_ for information on how to report it.
 
-    $ pip install --user stone
+If you need help that is not specific to Stone, please reach out to `Dropbox Support`_.
 
-This will install a script ``stone`` to your PATH that can be run from the
-command line::
+License
+=======
 
-    $ stone -h
+Stone is distributed under the MIT license, please see `LICENSE`_ for more information.
 
-Alternative
------------
-
-If you choose not to install ``stone`` using the method above, you will need
-to ensure that you have the Python packages ``ply`` and ``six``, which can be
-installed through ``pip``::
-
-    $ pip install "ply>=3.4" "six>=1.3.0" "typing>=3.5.2"
-
-If the ``stone`` package is in your PYTHONPATH, you can replace ``stone``
-with ``python -m stone.cli`` as follows::
-
-    $ python -m stone.cli -h
-
-If you have the ``stone`` package on your machine, but did not install it or
-add its location to your PYTHONPATH, you can use the following::
-
-    $ PYTHONPATH=path/to/stone python -m stone.cli -h
+.. _logo: {logo_link}
+.. _repo: https://github.com/dropbox/stone
+.. _`Documentation`: https://github.com/dropbox/stone/tree/master/docs
+.. _`Examples`: https://github.com/dropbox/stone/tree/master/example/backend
+.. _LICENSE: https://github.com/dropbox/stone/blob/master/LICENSE
+.. _CONTRIBUTING.md: https://github.com/dropbox/stone/blob/master/CONTRIBUTING.md
+.. _`Dropbox Support`: https://www.dropbox.com/developers/contact
