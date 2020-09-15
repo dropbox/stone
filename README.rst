@@ -2,11 +2,11 @@
 Stone
 =====
 
-.. image:: https://img.shields.io/pypi/pyversions/dropbox.svg
-    :target: https://pypi.python.org/pypi/dropbox
+.. image:: https://img.shields.io/pypi/pyversions/stone.svg
+    :target: https://pypi.python.org/pypi/stone
 
-.. image:: https://img.shields.io/pypi/v/dropbox.svg
-    :target: https://pypi.python.org/pypi/dropbox
+.. image:: https://img.shields.io/pypi/v/stone.svg
+    :target: https://pypi.python.org/pypi/stone
 
 .. image:: https://codecov.io/gh/dropbox/stone/branch/master/graph/badge.svg
     :target: https://codecov.io/gh/dropbox/stone
