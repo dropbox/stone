@@ -97,8 +97,8 @@ _cmdline_parser.add_argument(
 )
 _cmdline_parser.add_argument(
     '--export-namespaces',
-    type=bool,
     default=False,
+    action='store_true',
     help=('Adds the export tag to each namespace.'
           'This is useful is you are not placing each namespace '
           'inside of a module and want to export each namespace individually')
