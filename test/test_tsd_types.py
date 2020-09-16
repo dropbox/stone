@@ -153,7 +153,8 @@ class TestTSDTypes(unittest.TestCase):
 
     def test__generate_types_multiple_ns_with_export(self):
         # type: () -> None
-        backend = _make_backend(target_folder_path="output", template_path="", custom_args=["--export-namespaces"])
+        backend = _make_backend(target_folder_path="output", template_path="",
+                                custom_args=["--export-namespaces"])
         ns1 = _make_namespace("accounts")
         ns2 = _make_namespace("files")
         result = _evaluate_namespace(backend, [ns1, ns2])
