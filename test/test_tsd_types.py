@@ -27,11 +27,15 @@ from stone.backends.tsd_types import TSDTypesBackend
 from test.backend_test_util import _mock_output
 
 
-def _make_backend(target_folder_path, template_path):
-    # type: (typing.Text, typing.Text) -> TSDTypesBackend
+def _make_backend(target_folder_path, template_path, custom_args=None):
+    # type: (typing.Text, typing.Text, typing.List) -> TSDTypesBackend
 
     args = Mock()
-    args.__iter__ = Mock(return_value=iter([template_path, "-i=0"]))
+    arg_values = [template_path, "-i=0"]
+    if custom_args:
+        arg_values = arg_values + custom_args
+
+    args.__iter__ = Mock(return_value=iter(arg_values))
 
     return TSDTypesBackend(
         target_folder_path=str(target_folder_path),
@@ -137,6 +141,33 @@ class TestTSDTypes(unittest.TestCase):
         }
 
         namespace files {
+          export interface User {
+            exists: boolean;
+          }
+
+        }
+
+
+        """)
+        self.assertEqual(result, expected)
+
+    def test__generate_types_multiple_ns_with_export(self):
+        # type: () -> None
+        backend = _make_backend(target_folder_path="output", template_path="", custom_args=["--export_namespaces=True"])
+        ns1 = _make_namespace("accounts")
+        ns2 = _make_namespace("files")
+        result = _evaluate_namespace(backend, [ns1, ns2])
+        expected = textwrap.dedent("""
+        type Timestamp = string;
+
+        export namespace accounts {
+          export interface User {
+            exists: boolean;
+          }
+
+        }
+
+        export namespace files {
           export interface User {
             exists: boolean;
           }

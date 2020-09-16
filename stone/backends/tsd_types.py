@@ -95,6 +95,14 @@ _cmdline_parser.add_argument(
          'This is useful for repo which requires absolute path as '
          'module name')
 )
+_cmdline_parser.add_argument(
+    '--export-namespaces',
+    type=bool,
+    default=False,
+    help=('Adds the export tag to each namespace.'
+          'This is useful is you are not placing each namespace '
+          'inside of a module and want to export each namespace individually')
+)
 
 
 _header = """\
@@ -263,8 +271,11 @@ class TSDTypesBackend(CodeBackend):
             # Use module for when emitting declaration files.
             return "declare module '%s%s' {" % (self.args.module_name_prefix, name)
         else:
-            # Use namespace for organizing code with-in the file.
-            return "namespace %s {" % name
+            if self.args.export_namespaces:
+                return "export namespace %s {" % name
+            else:
+                # Use namespace for organizing code with-in the file.
+                return "namespace %s {" % name
 
     def _parse_extra_args(self, api, extra_args_raw):
         """
