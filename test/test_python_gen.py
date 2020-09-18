@@ -653,8 +653,9 @@ class TestDropInModules(unittest.TestCase):
                 raise
 
     def test_type_name_with_module(self):
-        class Foo:
-            pass
+        class Foo():
+            def __init__(self):
+                pass
 
         assert bv.type_name_with_module(Foo) == "test.test_python_gen.Foo"
         assert bv.type_name_with_module(int) == "builtins.int"
