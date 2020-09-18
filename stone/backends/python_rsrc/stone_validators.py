@@ -75,6 +75,7 @@ def type_name_with_module(t):
 
 
 def generic_type_name(v):
+    # type: (typing.Any) -> six.text_type
     """Return a descriptive type name that isn't Python specific. For example,
     an int value will return 'integer' rather than 'int'."""
     if isinstance(v, bool):
