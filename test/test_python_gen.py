@@ -652,6 +652,13 @@ class TestDropInModules(unittest.TestCase):
                 self.assertEqual(prefix, str(e)[:len(prefix)])
                 raise
 
+    def test_type_name_with_module(self):
+        class Foo:
+            pass
+
+        assert bv.type_name_with_module(Foo) == "test.test_python_gen.Foo"
+        assert bv.type_name_with_module(int) == "builtins.int"
+
 
 test_spec = """\
 namespace ns

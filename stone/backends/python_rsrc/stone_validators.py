@@ -69,6 +69,11 @@ class ValidationError(Exception):
         return 'ValidationError(%r)' % six.text_type(self)
 
 
+def type_name_with_module(t):
+    # type: (typing.Type[typing.Any]) -> six.text_type
+    return '%s.%s' % (t.__module__, t.__name__)
+
+
 def generic_type_name(v):
     """Return a descriptive type name that isn't Python specific. For example,
     an int value will return 'integer' rather than 'int'."""
@@ -87,7 +92,7 @@ def generic_type_name(v):
     elif v is None:
         return 'null'
     else:
-        return type(v).__name__
+        return type_name_with_module(type(v))
 
 
 class Validator(six.with_metaclass(ABCMeta, object)):
@@ -535,7 +540,11 @@ class Struct(Composite):
         # relies on the parent class.
         if not isinstance(val, self.definition):
             raise ValidationError('expected type %s, got %s' %
-                (self.definition.__name__, generic_type_name(val)))
+                (
+                    type_name_with_module(self.definition),
+                    generic_type_name(val),
+                ),
+            )
 
     def has_default(self):
         return not self.definition._has_required_fields
@@ -600,7 +609,11 @@ class Union(Composite):
         """
         if not issubclass(self.definition, type(val)):
             raise ValidationError('expected type %s or subtype, got %s' %
-                (self.definition.__name__, generic_type_name(val)))
+                (
+                    type_name_with_module(self.definition),
+                    generic_type_name(val),
+                ),
+            )
 
 
 class Void(Primitive):
