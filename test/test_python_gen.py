@@ -658,7 +658,7 @@ class TestDropInModules(unittest.TestCase):
                 pass
 
         assert bv.type_name_with_module(Foo) == "test.test_python_gen.Foo"
-        assert bv.type_name_with_module(int) == "builtins.int"
+        assert bv.type_name_with_module(int) == "builtins.int" if six.PY3 else "__builtin__.int"
 
 
 test_spec = """\
