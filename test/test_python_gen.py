@@ -652,6 +652,14 @@ class TestDropInModules(unittest.TestCase):
                 self.assertEqual(prefix, str(e)[:len(prefix)])
                 raise
 
+    def test_type_name_with_module(self):
+        class Foo():
+            def __init__(self):
+                pass
+
+        assert bv.type_name_with_module(Foo) == "test.test_python_gen.Foo"
+        assert bv.type_name_with_module(int) == "builtins.int" if six.PY3 else "__builtin__.int"
+
 
 test_spec = """\
 namespace ns
