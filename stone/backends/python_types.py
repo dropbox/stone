@@ -95,7 +95,7 @@ class PythonTypesBackend(CodeBackend):
         Each namespace will have Python classes to represent data types and
         routes in the Stone spec.
         """
-        with self.output_to_relative_path('__init__.py'):
+        with self.output_to_relative_path('__init__.py', mode='ab'):
             pass
         with self.output_to_relative_path('stone_base.py'):
             self.emit("from stone.backends.python_rsrc.stone_base import *")

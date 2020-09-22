@@ -90,6 +90,8 @@ def fmt_obj(o):
         return 'false'
     if o is None:
         return 'nil'
+    if o == u'':
+        return '""'
     return pprint.pformat(o, width=1)
 
 
@@ -144,7 +146,7 @@ def fmt_default_value(namespace, field):
     elif is_numeric_type(field.data_type):
         return '.number({})'.format(field.default)
     elif is_string_type(field.data_type):
-        return '.str({})'.format(field.default)
+        return '.str({})'.format(fmt_obj(field.default))
     elif is_boolean_type(field.data_type):
         if field.default:
             bool_str = '1'
