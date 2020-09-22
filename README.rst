@@ -1,6 +1,5 @@
-=====
-Stone
-=====
+.. image:: https://cfl.dropboxstatic.com/static/images/sdk/stone_banner.png
+    :target: https://github.com/dropbox/stone
 
 .. image:: https://img.shields.io/pypi/pyversions/stone.svg
     :target: https://pypi.python.org/pypi/stone
