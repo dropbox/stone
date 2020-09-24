@@ -85,7 +85,7 @@ _cmdline_parser.add_argument(
     type=str,
     help='The client-side route arguments to append to each route by style type.', )
 _cmdline_parser.add_argument(
-    '-z'
+    '-z',
     '--style-to-request',
     required=True,
     type=str,
@@ -296,7 +296,7 @@ class ObjCBackend(ObjCBaseBackend):
                 with self.block_init():
                     self.emit('_client = client;')
             self.emit()
-            style_to_request = json.loads(self.args.z__style_to_request)
+            style_to_request = json.loads(self.args.style_to_request)
 
             for route in namespace.routes:
                 if not self._should_generate_route(route):
@@ -426,7 +426,7 @@ class ObjCBackend(ObjCBaseBackend):
             self.emit('{};'.format(init_signature))
             self.emit()
 
-            style_to_request = json.loads(self.args.z__style_to_request)
+            style_to_request = json.loads(self.args.style_to_request)
 
             for route in namespace.routes:
                 if not self._should_generate_route(route):
