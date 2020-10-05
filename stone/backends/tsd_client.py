@@ -128,7 +128,7 @@ class TSDClientBackend(CodeBackend):
 
         if route.arg_data_type.__class__ != Void:
             self.emit('public %s(arg: %s): Promise<%s>;' %
-                    (function_name, fmt_type(route.arg_data_type), 
+                    (function_name, fmt_type(route.arg_data_type),
                     fmt_type(route.result_data_type)))
         else:
             self.emit('public %s(): Promise<%s>;' %
