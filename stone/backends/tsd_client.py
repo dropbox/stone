@@ -23,6 +23,7 @@ from stone.backends.tsd_helpers import (
     fmt_tag,
     fmt_type,
 )
+from stone.ir import Void
 
 
 _cmdline_parser = argparse.ArgumentParser(prog='tsd-client-backend')
@@ -121,11 +122,17 @@ class TSDClientBackend(CodeBackend):
         if route.deprecated:
             self.emit(' * @deprecated')
 
-        self.emit(' * @param arg The request parameters.')
+        if route.arg_data_type.__class__ != Void:
+            self.emit(' * @param arg The request parameters.')
         self.emit(' */')
 
-        self.emit('public %s(arg: %s): Promise<%s>;' %
-                  (function_name, fmt_type(route.arg_data_type), fmt_type(route.result_data_type)))
+        if route.arg_data_type.__class__ != Void:
+            self.emit('public %s(arg: %s): Promise<%s>;' %
+                    (function_name, fmt_type(route.arg_data_type),
+                    fmt_type(route.result_data_type)))
+        else:
+            self.emit('public %s(): Promise<%s>;' %
+                    (function_name, fmt_type(route.result_data_type)))
 
     def _docf(self, tag, val):
         """
