@@ -23,9 +23,12 @@ class TestGeneratedJSClient(unittest.TestCase):
         route1.set_attributes(None, ':route:`get_metadata`', Void(), Void(), Void(), {})
         route2 = ApiRoute('get_metadata', 2, None)
         route2.set_attributes(None, ':route:`get_metadata:2`', Void(), Int32(), Void(), {})
+        route3 = ApiRoute('get_metadata', 3, None)
+        route3.set_attributes(None, ':route:`get_metadata:3`', Int32(), Int32(), Void(), {})
         ns = ApiNamespace('files')
         ns.add_route(route1)
         ns.add_route(route2)
+        ns.add_route(route3)
         api.namespaces[ns.name] = ns
         return api, ns
 
@@ -46,21 +49,29 @@ class TestGeneratedJSClient(unittest.TestCase):
             /**
              * get_metadata
              * @function DropboxBase#filesGetMetadata
-             * @arg {void} arg - The request parameters.
              * @returns {Promise.<void, Error.<void>>}
              */
-            routes.filesGetMetadata = function (arg) {
-              return this.request("files/get_metadata", arg);
+            routes.filesGetMetadata = function () {
+              return this.request("files/get_metadata", null);
             };
 
             /**
              * get_metadata_v2
              * @function DropboxBase#filesGetMetadataV2
-             * @arg {void} arg - The request parameters.
              * @returns {Promise.<number, Error.<void>>}
              */
-            routes.filesGetMetadataV2 = function (arg) {
-              return this.request("files/get_metadata_v2", arg);
+            routes.filesGetMetadataV2 = function () {
+              return this.request("files/get_metadata_v2", null);
+            };
+
+            /**
+             * get_metadata_v3
+             * @function DropboxBase#filesGetMetadataV3
+             * @arg {number} arg - The request parameters.
+             * @returns {Promise.<number, Error.<void>>}
+             */
+            routes.filesGetMetadataV3 = function (arg) {
+              return this.request("files/get_metadata_v3", arg);
             };
 
             export { routes };

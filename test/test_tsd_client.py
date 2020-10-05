@@ -22,9 +22,12 @@ class TestGeneratedTSDClient(unittest.TestCase):
         route1.set_attributes(None, ':route:`get_metadata`', Void(), Void(), Void(), {})
         route2 = ApiRoute('get_metadata', 2, None)
         route2.set_attributes(None, ':route:`get_metadata:2`', Void(), Int32(), Void(), {})
+        route3 = ApiRoute('get_metadata', 3, None)
+        route3.set_attributes(None, ':route:`get_metadata:3`', Int32(), Int32(), Void(), {})
         ns = ApiNamespace('files')
         ns.add_route(route1)
         ns.add_route(route2)
+        ns.add_route(route3)
         api.namespaces[ns.name] = ns
         return api, ns
 
@@ -44,17 +47,23 @@ class TestGeneratedTSDClient(unittest.TestCase):
              * getMetadata()
              *
              * When an error occurs, the route rejects the promise with type Error<void>.
-             * @param arg The request parameters.
              */
-            public filesGetMetadata(arg: void): Promise<void>;
+            public filesGetMetadata(): Promise<void>;
 
             /**
              * getMetadataV2()
              *
              * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadataV2(): Promise<number>;
+
+            /**
+             * getMetadataV3()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
              * @param arg The request parameters.
              */
-            public filesGetMetadataV2(arg: void): Promise<number>;
+            public filesGetMetadataV3(arg: number): Promise<number>;
             ''')
         self.assertEqual(result, expected)
 
