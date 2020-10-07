@@ -120,7 +120,7 @@ class PythonTypesBackend(CodeBackend):
 
         if namespace.doc is not None:
             self.emit('"""')
-            self.emit_raw(namespace.doc)
+            self.emit_raw(self.process_doc(namespace.doc, self._docf))
             self.emit('"""')
             self.emit()
 
