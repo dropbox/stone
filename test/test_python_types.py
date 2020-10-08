@@ -4,6 +4,7 @@ from stone.backends.python_types import PythonTypesBackend
 from stone.ir import (
     AnnotationType,
     AnnotationTypeParam,
+    Api,
     ApiNamespace,
     ApiRoute,
     CustomAnnotation,
@@ -42,7 +43,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         return backend.output_buffer_to_string()
 
     def _evaluate_namespace_definition(self, api, ns):
-        # type: (ApiNamespace) -> typing.Text
+        # type: (Api, ApiNamespace) -> typing.Text
         backend = self._mock_backend()
         backend._generate_base_namespace_module(api, ns)
         return backend.output_buffer_to_string()
@@ -66,11 +67,8 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
         route_schema = self._mk_route_schema()
 
-        class ApiHolder(object):
-            pass
-
-        api = ApiHolder()
-        api.route_schema = route_schema
+        api = Api('0.0')
+        api.add_route_schema(route_schema)
 
         result = self._evaluate_namespace_definition(api, ns)
 
