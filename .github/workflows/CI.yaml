@@ -34,3 +34,7 @@ jobs:
       - name: Run Unit Tests
         run: |
           python3 -m pytest
+      - name: Run MyPy
+        run: |
+          pip install enum34 mypy typed-ast
+          ./mypy-run.sh
