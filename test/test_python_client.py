@@ -1,7 +1,16 @@
 import textwrap
 
 from stone.backends.python_client import PythonClientBackend
-from stone.ir import ApiNamespace, ApiRoute, Void, Int32
+from stone.ir import (
+    ApiNamespace,
+    ApiRoute,
+    Int32,
+    List,
+    Map,
+    Nullable,
+    String,
+    Void,
+)
 
 MYPY = False
 if MYPY:
@@ -195,5 +204,18 @@ class TestGeneratedPythonClient(unittest.TestCase):
         self.assertEqual(
             'There is a name conflict between {!r} and {!r}'.format(route1, route2),
             str(cm.exception))
+
+    def test_route_argument_doc_string(self):
+        backend = PythonClientBackend(
+            target_folder_path='output',
+            args=['-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
+        ns = ApiNamespace('files')
+        self.assertEqual(backend._format_type_in_doc(ns, Int32()), 'int')
+        self.assertEqual(backend._format_type_in_doc(ns, Void()), 'None')
+        self.assertEqual(backend._format_type_in_doc(ns, List(String())), 'List[str]')
+        self.assertEqual(backend._format_type_in_doc(ns, Nullable(String())),
+                         'Nullable[str]')
+        self.assertEqual(backend._format_type_in_doc(ns, Map(String(), Int32())),
+                         'Map[str, int]')
 
     # TODO: add more unit tests for client code generation
