@@ -67,6 +67,42 @@ class TestGeneratedTSDClient(unittest.TestCase):
             ''')
         self.assertEqual(result, expected)
 
+    def test__generate_types_with_wrap_response_flag(self):
+        # type: () -> None
+        api, _ = self._get_api()
+        backend = TSDClientBackend(
+            target_folder_path="output",
+            args=['files', 'files', '--wrap-response-in', 'DropboxResponse']
+        )
+        backend._generate_routes(api, 0, 0)
+        result = backend.output_buffer_to_string()
+        expected = textwrap.dedent(
+            '''\
+
+            /**
+             * getMetadata()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadata(): Promise<void>;
+
+            /**
+             * getMetadataV2()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadataV2(): Promise<DropboxResponse<number>>;
+
+            /**
+             * getMetadataV3()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             * @param arg The request parameters.
+             */
+            public filesGetMetadataV3(arg: number): Promise<DropboxResponse<number>>;
+            ''')
+        self.assertEqual(result, expected)
+
     def test_route_with_version_number_conflict(self):
         # type: () -> None
         api, ns = self._get_api()
