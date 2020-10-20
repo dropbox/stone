@@ -84,7 +84,7 @@ class TestGeneratedTSDClient(unittest.TestCase):
              *
              * When an error occurs, the route rejects the promise with type Error<void>.
              */
-            public filesGetMetadata(): Promise<void>;
+            public filesGetMetadata(): Promise<DropboxResponse<void>>;
 
             /**
              * getMetadataV2()

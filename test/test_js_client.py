@@ -95,7 +95,7 @@ class TestGeneratedJSClient(unittest.TestCase):
             /**
              * get_metadata
              * @function DropboxBase#filesGetMetadata
-             * @returns {Promise.<void, Error.<void>>}
+             * @returns {Promise.<DropboxResponse<void>, Error.<void>>}
              */
             routes.filesGetMetadata = function () {
               return this.request("files/get_metadata", null);
