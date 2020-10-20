@@ -90,7 +90,7 @@ class JavascriptClientBackend(CodeBackend):
         return_type = None
         if self.args.wrap_response_in:
             if route.result_data_type.__class__ != Void:
-                return_type = '%s<%s>' % (self.args.wrap_response_in, 
+                return_type = '%s<%s>' % (self.args.wrap_response_in,
                     fmt_type(route.result_data_type))
             else:
                 return_type = fmt_type(route.result_data_type)
