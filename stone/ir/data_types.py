@@ -55,6 +55,30 @@ def generic_type_name(v):
         return type(v).__name__
 
 
+def record_custom_annotation_imports(annotation, namespace):
+    """
+    Records imports for custom annotations in the given namespace.
+
+    """
+    # first, check the annotation *type*
+    if annotation.annotation_type.namespace.name != namespace.name:
+        namespace.add_imported_namespace(
+            annotation.annotation_type.namespace,
+            imported_annotation_type=True)
+
+    # second, check if we need to import the annotation itself
+
+    # the annotation namespace is currently not actually used in the
+    # backends, which reconstruct the annotation from the annotation
+    # type directly. This could be changed in the future, and at
+    # the IR level it makes sense to include the dependency
+
+    if annotation.namespace.name != namespace.name:
+        namespace.add_imported_namespace(
+            annotation.namespace,
+            imported_annotation=True)
+
+
 class DataType(object):
     """
     Abstract class representing a data type.
@@ -118,6 +142,11 @@ class Composite(DataType):  # pylint: disable=abstract-method
     Composite types are any data type which can be constructed using primitive
     data types and other composite types.
     """
+    def __init__(self):
+        # contains custom annotations that apply to any containing data types (recursively)
+        # format is (location, CustomAnnotation) to indicate a custom annotation is applied
+        # to a location (Field or Alias)
+        self.recursive_custom_annotations = None
 
 
 class Nullable(Composite):
@@ -781,22 +810,7 @@ class UserDefined(Composite):
         # they are treated as globals at the IR level
         for field in self.fields:
             for annotation in field.custom_annotations:
-                # first, check the annotation *type*
-                if annotation.annotation_type.namespace.name != self.namespace.name:
-                    self.namespace.add_imported_namespace(
-                        annotation.annotation_type.namespace,
-                        imported_annotation_type=True)
-
-                # second, check if we need to import the annotation itself
-
-                # the annotation namespace is currently not actually used in the
-                # backends, which reconstruct the annotation from the annotation
-                # type directly. This could be changed in the future, and at
-                # the IR level it makes sense to include the dependency
-                if annotation.namespace.name != self.namespace.name:
-                    self.namespace.add_imported_namespace(
-                        annotation.namespace,
-                        imported_annotation=True)
+                record_custom_annotation_imports(annotation, self.namespace)
 
         # Indicate that the attributes of the type have been populated.
         self._is_forward_ref = False
@@ -1830,25 +1844,7 @@ class Alias(Composite):
             elif isinstance(annotation, CustomAnnotation):
                 # Note: we don't need to do this for builtin annotations because
                 # they are treated as globals at the IR level
-
-                # first, check the annotation *type*
-                if annotation.annotation_type.namespace.name != self.namespace.name:
-                    self.namespace.add_imported_namespace(
-                        annotation.annotation_type.namespace,
-                        imported_annotation_type=True)
-
-                # second, check if we need to import the annotation itself
-
-                # the annotation namespace is currently not actually used in the
-                # backends, which reconstruct the annotation from the annotation
-                # type directly. This could be changed in the future, and at
-                # the IR level it makes sense to include the dependency
-
-                if annotation.namespace.name != self.namespace.name:
-                    self.namespace.add_imported_namespace(
-                        annotation.namespace,
-                        imported_annotation=True)
-
+                record_custom_annotation_imports(annotation, self.namespace)
                 self.custom_annotations.append(annotation)
             else:
                 raise InvalidSpec("Aliases only support 'Redacted' and custom annotations, not %r" %
@@ -2001,53 +1997,6 @@ def unwrap(data_type):
             unwrapped_alias = True
         data_type = data_type.data_type
     return data_type, unwrapped_nullable, unwrapped_alias
-
-def get_custom_annotations_for_alias(data_type):
-    """
-    Given a Stone data type, returns all custom annotations applied to it.
-    """
-    # annotations can only be applied to Aliases, but they can be wrapped in
-    # Nullable. also, Aliases pointing to other Aliases don't automatically
-    # inherit their custom annotations, so we might have to traverse.
-    result = []
-    data_type, _ = unwrap_nullable(data_type)
-    while is_alias(data_type):
-        result.extend(data_type.custom_annotations)
-        data_type, _ = unwrap_nullable(data_type.data_type)
-    return result
-
-def get_custom_annotations_recursive(data_type):
-    """
-    Given a Stone data type, returns all custom annotations applied to any of
-    its memebers, as well as submembers, ..., to an arbitrary depth.
-    """
-    # because Stone structs can contain references to themselves (or otherwise
-    # be cyclical), we need ot keep track of the data types we've already seen
-    data_types_seen = set()
-
-    def recurse(data_type):
-        if data_type in data_types_seen:
-            return
-        data_types_seen.add(data_type)
-
-        dt, _, _ = unwrap(data_type)
-        if is_struct_type(dt) or is_union_type(dt):
-            for field in dt.fields:
-                for annotation in recurse(field.data_type):
-                    yield annotation
-                for annotation in field.custom_annotations:
-                    yield annotation
-        elif is_list_type(dt):
-            for annotation in recurse(dt.data_type):
-                yield annotation
-        elif is_map_type(dt):
-            for annotation in recurse(dt.value_data_type):
-                yield annotation
-
-        for annotation in get_custom_annotations_for_alias(data_type):
-            yield annotation
-
-    return recurse(data_type)
 
 
 def is_alias(data_type):

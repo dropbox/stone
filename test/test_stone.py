@@ -4886,7 +4886,53 @@ class TestStone(unittest.TestCase):
 
         struct = api.namespaces['test'].data_type_by_name['TestStruct']
         self.assertEqual(struct.fields[0].custom_annotations[0], annotation)
+        self.assertEqual(struct.recursive_custom_annotations, set([
+            (alias, api.namespaces['test'].annotation_by_name['VeryImportant']),
+            (struct.fields[0], api.namespaces['test'].annotation_by_name['SortaImportant']),
+        ]))
 
+        # Test recursive references are captured
+        ns2 = textwrap.dedent("""\
+            namespace testchain
 
+            import test
+
+            alias TestAliasChain = String
+                @test.SortaImportant
+
+            struct TestStructChain
+                f test.TestStruct
+                g List(TestAliasChain)
+            """)
+        ns3 = textwrap.dedent("""\
+            namespace teststruct
+
+            import testchain
+
+            struct TestStructToStruct
+                f testchain.TestStructChain
+            """)
+        ns4 = textwrap.dedent("""\
+            namespace testalias
+
+            import testchain
+
+            struct TestStructToAlias
+                f testchain.TestAliasChain
+            """)
+
+        api = specs_to_ir([('test.stone', text), ('testchain.stone', ns2),
+                           ('teststruct.stone', ns3), ('testalias.stone', ns4)])
+
+        struct_namespaces = [ns.name for ns in
+                             api.namespaces['teststruct'].get_imported_namespaces(
+                                 consider_annotation_types=True)]
+        self.assertTrue('test' in struct_namespaces)
+        alias_namespaces = [ns.name for ns in
+                            api.namespaces['testalias'].get_imported_namespaces(
+                                consider_annotation_types=True)]
+        self.assertTrue('test' in alias_namespaces)
+
+        
 if __name__ == '__main__':
     unittest.main()
