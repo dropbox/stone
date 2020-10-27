@@ -198,7 +198,7 @@ def main():
                     sys.exit(1)
                 else:
                     with open(spec_path) as f:
-                        specs.append((spec_path, f.read().decode('utf8')))
+                        specs.append((spec_path, f.read()))
             if read_from_stdin and specs:
                 print("error: Do not specify stdin and specification files "
                       "simultaneously.", file=sys.stderr)
@@ -241,7 +241,7 @@ def main():
 
         if args.route_whitelist_filter:
             with open(args.route_whitelist_filter) as f:
-                route_whitelist_filter = json.loads(f.read().decode('utf8'))
+                route_whitelist_filter = json.loads(f.read())
         else:
             route_whitelist_filter = None
 
