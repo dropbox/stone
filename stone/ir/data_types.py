@@ -143,6 +143,7 @@ class Composite(DataType):  # pylint: disable=abstract-method
     data types and other composite types.
     """
     def __init__(self):
+        super(Composite, self).__init__()
         # contains custom annotations that apply to any containing data types (recursively)
         # format is (location, CustomAnnotation) to indicate a custom annotation is applied
         # to a location (Field or Alias)
@@ -915,7 +916,6 @@ class Struct(UserDefined):
     """
     Defines a product type: Composed of other primitive and/or struct types.
     """
-    # pylint: disable=attribute-defined-outside-init
 
     composite_type = 'struct'
 
@@ -1373,7 +1373,6 @@ class Struct(UserDefined):
 
 class Union(UserDefined):
     """Defines a tagged union. Fields are variants."""
-    # pylint: disable=attribute-defined-outside-init
 
     composite_type = 'union'
 

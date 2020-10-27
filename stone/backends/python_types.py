@@ -672,8 +672,10 @@ class PythonTypesBackend(CodeBackend):
         # annotations applied directly to this type (through aliases or
         # passed in from the caller)
         indirect_annotations = dt.recursive_custom_annotations if is_composite_type(dt) else set()
-        all_annotations = data_type.recursive_custom_annotations if is_composite_type(data_type) else set()
-        remaining_annotations = [annotation for _, annotation in all_annotations.difference(indirect_annotations)]
+        all_annotations = (data_type.recursive_custom_annotations
+                           if is_composite_type(data_type) else set())
+        remaining_annotations = [annotation for _, annotation in
+                                 all_annotations.difference(indirect_annotations)]
         for annotation in itertools.chain(remaining_annotations,
                                           extra_annotations):
             yield (annotation.annotation_type,

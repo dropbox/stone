@@ -833,11 +833,13 @@ class IRGenerator(object):
                 for field in data_type.fields:
                     annotations.update(recurse(field.data_type))
                     # annotations can be defined directly on fields
-                    annotations.update([(field, annotation) for annotation in field.custom_annotations])
+                    annotations.update([(field, annotation)
+                                        for annotation in field.custom_annotations])
             elif is_alias(data_type):
                 annotations.update(recurse(data_type.data_type))
                 # annotations can be defined directly on aliases
-                annotations.update([(data_type, annotation) for annotation in data_type.custom_annotations])
+                annotations.update([(data_type, annotation)
+                                    for annotation in data_type.custom_annotations])
             elif is_list_type(data_type):
                 annotations.update(recurse(data_type.data_type))
             elif is_map_type(data_type):

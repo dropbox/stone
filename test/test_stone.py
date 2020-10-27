@@ -4933,6 +4933,6 @@ class TestStone(unittest.TestCase):
                                 consider_annotation_types=True)]
         self.assertTrue('test' in alias_namespaces)
 
-        
+
 if __name__ == '__main__':
     unittest.main()

@@ -108,7 +108,6 @@ _cmdline_parser.add_argument(
 
 
 class PythonClientBackend(CodeBackend):
-    # pylint: disable=attribute-defined-outside-init
 
     cmdline_parser = _cmdline_parser
     supported_auth_types = None
