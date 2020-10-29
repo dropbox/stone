@@ -23,6 +23,7 @@ from stone.backends.tsd_helpers import (
     fmt_tag,
     fmt_type,
 )
+from stone.ir import Void
 
 
 _cmdline_parser = argparse.ArgumentParser(prog='tsd-client-backend')
@@ -58,6 +59,12 @@ _cmdline_parser.add_argument(
     type=int,
     default=2,
     help=('Number of spaces to use per indentation level.')
+)
+_cmdline_parser.add_argument(
+    '--wrap-response-in',
+    type=str,
+    default='',
+    help=('Wraps the response in a response class')
 )
 
 _header = """\
@@ -121,11 +128,22 @@ class TSDClientBackend(CodeBackend):
         if route.deprecated:
             self.emit(' * @deprecated')
 
-        self.emit(' * @param arg The request parameters.')
+        if route.arg_data_type.__class__ != Void:
+            self.emit(' * @param arg The request parameters.')
         self.emit(' */')
 
-        self.emit('public %s(arg: %s): Promise<%s>;' %
-                  (function_name, fmt_type(route.arg_data_type), fmt_type(route.result_data_type)))
+        return_type = None
+        if self.args.wrap_response_in:
+            return_type = 'Promise<%s<%s>>;' % (self.args.wrap_response_in,
+                fmt_type(route.result_data_type))
+        else:
+            return_type = 'Promise<%s>;' % (fmt_type(route.result_data_type))
+
+        arg = ''
+        if route.arg_data_type.__class__ != Void:
+            arg = 'arg: %s' % fmt_type(route.arg_data_type)
+
+        self.emit('public %s(%s): %s' % (function_name, arg, return_type))
 
     def _docf(self, tag, val):
         """

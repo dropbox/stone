@@ -14,10 +14,9 @@ if _MYPY:
 
 from stone.ir import AnnotationType, ApiNamespace
 from stone.ir import (
-    get_custom_annotations_for_alias,
-    get_custom_annotations_recursive,
     is_alias,
     is_boolean_type,
+    is_composite_type,
     is_bytes_type,
     is_list_type,
     is_map_type,
@@ -120,7 +119,7 @@ class PythonTypesBackend(CodeBackend):
 
         if namespace.doc is not None:
             self.emit('"""')
-            self.emit_raw(namespace.doc)
+            self.emit_raw(self.process_doc(namespace.doc, self._docf))
             self.emit('"""')
             self.emit()
 
@@ -642,7 +641,7 @@ class PythonTypesBackend(CodeBackend):
         dt, _, _ = unwrap(data_type)
         if is_struct_type(dt) or is_union_type(dt):
             annotation_types_seen = set()
-            for annotation in get_custom_annotations_recursive(dt):
+            for _, annotation in dt.recursive_custom_annotations:
                 if annotation.annotation_type not in annotation_types_seen:
                     yield (annotation.annotation_type,
                            generate_func_call(
@@ -672,7 +671,12 @@ class PythonTypesBackend(CodeBackend):
 
         # annotations applied directly to this type (through aliases or
         # passed in from the caller)
-        for annotation in itertools.chain(get_custom_annotations_for_alias(data_type),
+        indirect_annotations = dt.recursive_custom_annotations if is_composite_type(dt) else set()
+        all_annotations = (data_type.recursive_custom_annotations
+                           if is_composite_type(data_type) else set())
+        remaining_annotations = [annotation for _, annotation in
+                                 all_annotations.difference(indirect_annotations)]
+        for annotation in itertools.chain(remaining_annotations,
                                           extra_annotations):
             yield (annotation.annotation_type,
                    generate_func_call(

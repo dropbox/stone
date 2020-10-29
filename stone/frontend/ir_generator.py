@@ -37,6 +37,7 @@ from ..ir import (
     Int32,
     Int64,
     is_alias,
+    is_composite_type,
     is_field_type,
     is_list_type,
     is_map_type,
@@ -297,6 +298,7 @@ class IRGenerator(object):
         self._populate_field_defaults()
         self._populate_enumerated_subtypes()
         self._populate_route_attributes()
+        self._populate_recursive_custom_annotations()
         self._populate_examples()
         self._validate_doc_refs()
         self._validate_annotations()
@@ -801,6 +803,75 @@ class IRGenerator(object):
 
         data_type.set_attributes(
             data_type._ast_node.doc, api_type_fields, parent_type, catch_all_field)
+
+    def _populate_recursive_custom_annotations(self):
+        """
+        Populates custom annotations applied to fields recursively. This is done in
+        a separate pass because it requires all fields and routes to be defined so that
+        recursive chains can be followed accurately.
+        """
+        data_types_seen = set()
+
+        def recurse(data_type):
+            # primitive types do not have annotations
+            if not is_composite_type(data_type):
+                return set()
+
+            # if we have already analyzed data type, just return result
+            if data_type.recursive_custom_annotations is not None:
+                return data_type.recursive_custom_annotations
+
+            # handle cycles safely (annotations will be found first time at top level)
+            if data_type in data_types_seen:
+                return set()
+            data_types_seen.add(data_type)
+
+            annotations = set()
+
+            # collect data types from subtypes recursively
+            if is_struct_type(data_type) or is_union_type(data_type):
+                for field in data_type.fields:
+                    annotations.update(recurse(field.data_type))
+                    # annotations can be defined directly on fields
+                    annotations.update([(field, annotation)
+                                        for annotation in field.custom_annotations])
+            elif is_alias(data_type):
+                annotations.update(recurse(data_type.data_type))
+                # annotations can be defined directly on aliases
+                annotations.update([(data_type, annotation)
+                                    for annotation in data_type.custom_annotations])
+            elif is_list_type(data_type):
+                annotations.update(recurse(data_type.data_type))
+            elif is_map_type(data_type):
+                # only map values support annotations for now
+                annotations.update(recurse(data_type.value_data_type))
+            elif is_nullable_type(data_type):
+                annotations.update(recurse(data_type.data_type))
+
+            data_type.recursive_custom_annotations = annotations
+            return annotations
+
+        for namespace in self.api.namespaces.values():
+            namespace_annotations = set()
+            for data_type in namespace.data_types:
+                namespace_annotations.update(recurse(data_type))
+
+            for alias in namespace.aliases:
+                namespace_annotations.update(recurse(alias))
+
+            for route in namespace.routes:
+                namespace_annotations.update(recurse(route.arg_data_type))
+                namespace_annotations.update(recurse(route.result_data_type))
+                namespace_annotations.update(recurse(route.error_data_type))
+
+            # record annotation types as dependencies of the namespace. this allows for
+            # an optimization when processing custom annotations to ignore annotation
+            # types that are not applied to the data type, rather than recursing into it
+            for _, annotation in namespace_annotations:
+                if annotation.annotation_type.namespace.name != namespace.name:
+                    namespace.add_imported_namespace(
+                        annotation.annotation_type.namespace,
+                        imported_annotation_type=True)
 
     def _populate_field_defaults(self):
         """

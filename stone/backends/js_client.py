@@ -22,6 +22,7 @@ from stone.backends.js_helpers import (
     fmt_type,
     fmt_url,
 )
+from stone.ir import Void
 
 _cmdline_parser = argparse.ArgumentParser(prog='js-client-backend')
 _cmdline_parser.add_argument(
@@ -36,6 +37,12 @@ _cmdline_parser.add_argument(
     help=('The name of the class the generated functions will be attached to. '
           'The name will be added to each function documentation, which makes '
           'it available for tools like JSDoc.'),
+)
+_cmdline_parser.add_argument(
+    '--wrap-response-in',
+    type=str,
+    default='',
+    help=('Wraps the response in a response class')
 )
 
 _header = """\
@@ -80,26 +87,46 @@ class JavascriptClientBackend(CodeBackend):
         if route.deprecated:
             self.emit(' * @deprecated')
 
-        self.emit(' * @arg {%s} arg - The request parameters.' %
-                  fmt_type(route.arg_data_type))
+        return_type = None
+        if self.args.wrap_response_in:
+            return_type = '%s<%s>' % (self.args.wrap_response_in,
+                fmt_type(route.result_data_type))
+        else:
+            return_type = fmt_type(route.result_data_type)
+
+        if route.arg_data_type.__class__ != Void:
+            self.emit(' * @arg {%s} arg - The request parameters.' %
+                    fmt_type(route.arg_data_type))
         self.emit(' * @returns {Promise.<%s, %s>}' %
-                (fmt_type(route.result_data_type),
+                (return_type,
                  fmt_error_type(route.error_data_type)))
         self.emit(' */')
 
-        self.emit('routes.%s = function (arg) {' % (function_name))
+        if route.arg_data_type.__class__ != Void:
+            self.emit('routes.%s = function (arg) {' % (function_name))
+        else:
+            self.emit('routes.%s = function () {' % (function_name))
         with self.indent(dent=2):
             url = fmt_url(namespace.name, route.name, route.version)
             if route_schema.fields:
                 additional_args = []
                 for field in route_schema.fields:
                     additional_args.append(fmt_obj(route.attrs[field.name]))
-                self.emit(
-                    "return this.request('{}', arg, {});".format(
-                        url, ', '.join(additional_args)))
+                if route.arg_data_type.__class__ != Void:
+                    self.emit(
+                        "return this.request('{}', arg, {});".format(
+                            url, ', '.join(additional_args)))
+                else:
+                    self.emit(
+                        "return this.request('{}', null, {});".format(
+                            url, ', '.join(additional_args)))
             else:
-                self.emit(
-                    'return this.request("%s", arg);' % url)
+                if route.arg_data_type.__class__ != Void:
+                    self.emit(
+                        'return this.request("%s", arg);' % url)
+                else:
+                    self.emit(
+                        'return this.request("%s", null);' % url)
         self.emit('};')
 
     def _docf(self, tag, val):

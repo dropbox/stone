@@ -22,9 +22,12 @@ class TestGeneratedTSDClient(unittest.TestCase):
         route1.set_attributes(None, ':route:`get_metadata`', Void(), Void(), Void(), {})
         route2 = ApiRoute('get_metadata', 2, None)
         route2.set_attributes(None, ':route:`get_metadata:2`', Void(), Int32(), Void(), {})
+        route3 = ApiRoute('get_metadata', 3, None)
+        route3.set_attributes(None, ':route:`get_metadata:3`', Int32(), Int32(), Void(), {})
         ns = ApiNamespace('files')
         ns.add_route(route1)
         ns.add_route(route2)
+        ns.add_route(route3)
         api.namespaces[ns.name] = ns
         return api, ns
 
@@ -44,17 +47,59 @@ class TestGeneratedTSDClient(unittest.TestCase):
              * getMetadata()
              *
              * When an error occurs, the route rejects the promise with type Error<void>.
-             * @param arg The request parameters.
              */
-            public filesGetMetadata(arg: void): Promise<void>;
+            public filesGetMetadata(): Promise<void>;
 
             /**
              * getMetadataV2()
              *
              * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadataV2(): Promise<number>;
+
+            /**
+             * getMetadataV3()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
              * @param arg The request parameters.
              */
-            public filesGetMetadataV2(arg: void): Promise<number>;
+            public filesGetMetadataV3(arg: number): Promise<number>;
+            ''')
+        self.assertEqual(result, expected)
+
+    def test__generate_types_with_wrap_response_flag(self):
+        # type: () -> None
+        api, _ = self._get_api()
+        backend = TSDClientBackend(
+            target_folder_path="output",
+            args=['files', 'files', '--wrap-response-in', 'DropboxResponse']
+        )
+        backend._generate_routes(api, 0, 0)
+        result = backend.output_buffer_to_string()
+        expected = textwrap.dedent(
+            '''\
+
+            /**
+             * getMetadata()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadata(): Promise<DropboxResponse<void>>;
+
+            /**
+             * getMetadataV2()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadataV2(): Promise<DropboxResponse<number>>;
+
+            /**
+             * getMetadataV3()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             * @param arg The request parameters.
+             */
+            public filesGetMetadataV3(arg: number): Promise<DropboxResponse<number>>;
             ''')
         self.assertEqual(result, expected)
 

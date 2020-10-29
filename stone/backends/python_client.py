@@ -18,6 +18,8 @@ from stone.backends.python_types import (
 )
 from stone.ir import (
     is_nullable_type,
+    is_list_type,
+    is_map_type,
     is_struct_type,
     is_tag_ref,
     is_union_type,
@@ -106,7 +108,6 @@ _cmdline_parser.add_argument(
 
 
 class PythonClientBackend(CodeBackend):
-    # pylint: disable=attribute-defined-outside-init
 
     cmdline_parser = _cmdline_parser
     supported_auth_types = None
@@ -533,6 +534,19 @@ class PythonClientBackend(CodeBackend):
         elif is_user_defined_type(data_type):
             return ':class:`{}.{}.{}`'.format(
                 self.args.types_package, namespace.name, fmt_type(data_type))
+        elif is_nullable_type(data_type):
+            return 'Nullable[{}]'.format(
+                self._format_type_in_doc(namespace, data_type.data_type),
+            )
+        elif is_list_type(data_type):
+            return 'List[{}]'.format(
+                self._format_type_in_doc(namespace, data_type.data_type),
+            )
+        elif is_map_type(data_type):
+            return 'Map[{}, {}]'.format(
+                self._format_type_in_doc(namespace, data_type.key_data_type),
+                self._format_type_in_doc(namespace, data_type.value_data_type),
+            )
         else:
             return fmt_type(data_type)
 
