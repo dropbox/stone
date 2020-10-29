@@ -229,7 +229,6 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Nullable(bv.String()), u'abc'), json.dumps('abc'))
 
     def test_json_encoder_union(self):
-        # pylint: disable=attribute-defined-outside-init
         class S(object):
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
@@ -331,7 +330,6 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Union(U), u, old_style=True), json.dumps({'g': m}))
 
     def test_json_encoder_error_messages(self):
-        # pylint: disable=attribute-defined-outside-init
         class S3(object):
             _all_field_names_ = {'j'}
             _all_fields_ = [('j', bv.UInt64(max_value=10))]
