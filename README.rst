@@ -7,7 +7,7 @@
 .. image:: https://img.shields.io/pypi/v/stone.svg
     :target: https://pypi.python.org/pypi/stone
 
-.. image:: https://codecov.io/gh/dropbox/stone/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/dropbox/stone/branch/main/graph/badge.svg
     :target: https://codecov.io/gh/dropbox/stone
 
 The Official Api Spec Language for Dropbox.
@@ -58,13 +58,13 @@ your choice.
 * Introduction
     * Motivation_
     * Installation_
-* `Language Reference <https://github.com/dropbox/stone/blob/master/docs/lang_ref.rst>`_
-* `Builtin Backends <https://github.com/dropbox/stone/blob/master/docs/builtin_backends.rst>`_
-* `Managing Specs <https://github.com/dropbox/stone/blob/master/docs/managing_specs.rst>`_
-* `Evolving a Spec <https://github.com/dropbox/stone/blob/master/docs/evolve_spec.rst>`_
-* `Backend Reference <https://github.com/dropbox/stone/blob/master/docs/backend_ref.rst>`_
-* `JSON Serializer <https://github.com/dropbox/stone/blob/master/docs/json_serializer.rst>`_
-* `Network Protocol <https://github.com/dropbox/stone/blob/master/docs/network_protocol.rst>`_
+* `Language Reference <https://github.com/dropbox/stone/blob/main/docs/lang_ref.rst>`_
+* `Builtin Backends <https://github.com/dropbox/stone/blob/main/docs/builtin_backends.rst>`_
+* `Managing Specs <https://github.com/dropbox/stone/blob/main/docs/managing_specs.rst>`_
+* `Evolving a Spec <https://github.com/dropbox/stone/blob/main/docs/evolve_spec.rst>`_
+* `Backend Reference <https://github.com/dropbox/stone/blob/main/docs/backend_ref.rst>`_
+* `JSON Serializer <https://github.com/dropbox/stone/blob/main/docs/json_serializer.rst>`_
+* `Network Protocol <https://github.com/dropbox/stone/blob/main/docs/network_protocol.rst>`_
 
 *Warning: The documentation is undergoing a rewrite.*
 
@@ -181,8 +181,8 @@ Stone is distributed under the MIT license, please see `LICENSE`_ for more infor
 
 .. _logo: {logo_link}
 .. _repo: https://github.com/dropbox/stone
-.. _`Documentation`: https://github.com/dropbox/stone/tree/master/docs
-.. _`Examples`: https://github.com/dropbox/stone/tree/master/example/backend
-.. _LICENSE: https://github.com/dropbox/stone/blob/master/LICENSE
-.. _CONTRIBUTING.md: https://github.com/dropbox/stone/blob/master/CONTRIBUTING.md
+.. _`Documentation`: https://github.com/dropbox/stone/tree/main/docs
+.. _`Examples`: https://github.com/dropbox/stone/tree/main/example/backend
+.. _LICENSE: https://github.com/dropbox/stone/blob/main/LICENSE
+.. _CONTRIBUTING.md: https://github.com/dropbox/stone/blob/main/CONTRIBUTING.md
 .. _`Dropbox Support`: https://www.dropbox.com/developers/contact
