@@ -30,6 +30,6 @@ They can also be run as a part of `tox` and they should be ran in a virtual envi
 
 [issues]: https://github.com/dropbox/stone/issues
 [pr]: https://github.com/dropbox/stone/pulls
-[coc]: https://github.com/dropbox/stone/blob/master/CODE_OF_CONDUCT.md
-[license]: https://github.com/dropbox/stone/blob/master/LICENSE
+[coc]: https://github.com/dropbox/stone/blob/main/CODE_OF_CONDUCT.md
+[license]: https://github.com/dropbox/stone/blob/main/LICENSE
 [cla]: https://opensource.dropbox.com/cla/
