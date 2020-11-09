@@ -1120,7 +1120,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         if is_user_defined_type(data_type):
                             if is_struct_type(data_type) and \
                                     not data_type.has_enumerated_subtypes():
-                                self.emit('jsonDict = [{} mutableCopy];'.
+                                self.emit('[jsonDict addEntriesFromDictionary:{}];'.
                                           format(serialize_call))
                             else:
                                 self.emit(
