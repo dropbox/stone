@@ -912,7 +912,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
         elif is_string_type(data_type):
             if data_type.pattern or data_type.min_length or data_type.max_length:
                 pattern = data_type.pattern.encode('unicode_escape').replace(
-                    six.ensure_binary("\""), 
+                    six.ensure_binary("\""),
                     six.ensure_binary("\\\"")) if data_type.pattern else None
                 validator = '{}:{}'.format(
                     fmt_validator(data_type),
