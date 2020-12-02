@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 import os
 import shutil
+import six
 
 from stone.ir import (
     is_list_type,
@@ -911,7 +912,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
         elif is_string_type(data_type):
             if data_type.pattern or data_type.min_length or data_type.max_length:
                 pattern = data_type.pattern.encode('unicode_escape').replace(
-                    "\"", "\\\"") if data_type.pattern else None
+                    six.ensure_binary("\""),
+                    six.ensure_binary("\\\"")) if data_type.pattern else None
                 validator = '{}:{}'.format(
                     fmt_validator(data_type),
                     fmt_func_args([
