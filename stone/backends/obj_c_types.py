@@ -921,7 +921,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(pattern)
+                        ('pattern', '@"{}"'.format(six.ensure_str(pattern))
                          if pattern else 'nil'),
                     ]))
 
