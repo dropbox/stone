@@ -23,10 +23,11 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install Requirements
         run: |
-          python3 -m pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install flake8 pylint pytest
+          pip install -r requirements.txt
           pip install -r test/requirements.txt
-          python3 setup.py install
+          python setup.py install
       - name: Run Linter
         run: |
           flake8 setup.py example stone test
