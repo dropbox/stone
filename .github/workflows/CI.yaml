@@ -29,11 +29,11 @@ jobs:
           python3 setup.py install
       - name: Run Linter
         run: |
-          python3 -m flake8 setup.py example stone test
-          python3 -m pylint --rcfile=.pylintrc setup.py example stone test
+          flake8 setup.py example stone test
+          pylint --rcfile=.pylintrc setup.py example stone test
       - name: Run Unit Tests
         run: |
-          python3 -m pytest
+          pytest
       - name: Run MyPy
         run: |
           pip install enum34 mypy typed-ast
