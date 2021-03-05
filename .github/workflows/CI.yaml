@@ -33,6 +33,7 @@ jobs:
         run: |
           pytest
       - name: Run MyPy
+        if: {{ matrix.python-version != 'pypy3' }}
         run: |
           pip install enum34 mypy typed-ast
           ./mypy-run.sh
