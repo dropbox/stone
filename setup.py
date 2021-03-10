@@ -22,7 +22,9 @@ with open('requirements.txt') as f:
     install_reqs += f.read().splitlines()
 
 setup_requires = [
-    'pytest-runner',
+    # Pin pytest-runner to 5.2.0, since 5.3.0 uses `find_namespaces` directive, not supported in
+    # Python 2.7
+    'pytest-runner == 5.2.0',
 ]
 
 # WARNING: This imposes limitations on test/requirements.txt such that the
