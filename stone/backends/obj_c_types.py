@@ -784,9 +784,10 @@ class ObjCTypesBackend(ObjCBaseBackend):
     def _generate_hash_check(self, data_type, field):
         if is_union_type(data_type) and is_void_type(field.data_type):
             self.emit('result = prime * result + [[self tagName] hash];')
+            self.emit('break;')
         else:
             self.emit('result = prime * result + [self.{} hash];'.format(fmt_var(field.name)))
-
+            self.emit('break;')
     def _generate_equality_func(self, data_type):
         is_equal_func_name = 'isEqualTo{}'.format(fmt_camel_upper(data_type.name))
         with self.block_func(func='isEqual',
