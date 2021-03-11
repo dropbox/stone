@@ -766,6 +766,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         enum_field_name = fmt_enum_name(field.name, data_type)
                         self.emit('case {}:'.format(enum_field_name))
                         self._generate_hash_func_helper(data_type, field)
+                        self.emit('break;')
             elif is_struct_type(data_type):
                 for field in data_type.all_fields:
                     self._generate_hash_func_helper(data_type, field)
@@ -784,10 +785,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
     def _generate_hash_check(self, data_type, field):
         if is_union_type(data_type) and is_void_type(field.data_type):
             self.emit('result = prime * result + [[self tagName] hash];')
-            self.emit('break;')
         else:
             self.emit('result = prime * result + [self.{} hash];'.format(fmt_var(field.name)))
-            self.emit('break;')
     def _generate_equality_func(self, data_type):
         is_equal_func_name = 'isEqualTo{}'.format(fmt_camel_upper(data_type.name))
         with self.block_func(func='isEqual',
