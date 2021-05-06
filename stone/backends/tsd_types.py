@@ -379,7 +379,8 @@ class TSDTypesBackend(CodeBackend):
             for param_name, param_type, param_docstring in extra_parameters:
                 if param_docstring:
                     self._emit_tsdoc_header(param_docstring)
-                self.emit('%s: %s;' % (param_name, param_type))
+                # Making all extra args optional parameters
+                self.emit('%s?: %s;' % (param_name, param_type))
 
             for field in struct_type.fields:
                 doc = field.doc
