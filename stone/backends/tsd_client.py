@@ -86,7 +86,7 @@ _cmdline_parser.add_argument(
     '--types-file',
     type=str,
     default='',
-    help=('If using the --import-namespaces flag, this if the file that contains '
+    help=('If using the --import-namespaces flag, this is the file that contains '
           'the named exports to import here.')
 )
 
