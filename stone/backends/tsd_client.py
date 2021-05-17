@@ -147,7 +147,7 @@ class TSDClientBackend(CodeBackend):
                 self.emit_raw(template[0:r_start] + ('\n' if not r_ends_with_newline else ''))
             self._generate_routes(api, spaces_per_indent, indent_level)
             self.emit_raw(template[r_end + 1:t_end] + ('\n' if not t_ends_with_newline else ''))
-    
+
     def _generate_import(self, api, type_file):
         namespaces = ", ".join(map(lambda namespace: namespace.name, api.namespaces.values()))
         self.emit("import { %s } from '%s';" % (namespaces, type_file))
