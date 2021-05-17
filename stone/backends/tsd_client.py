@@ -150,7 +150,7 @@ class TSDClientBackend(CodeBackend):
     
     def _generate_import(self, api, type_file):
         namespaces = ", ".join(map(lambda namespace: namespace.name, api.namespaces.values()))
-        self.emit("import { %s } from %s;" % namespaces, type_file)
+        self.emit("import { %s } from %s;" % (namespaces, type_file))
 
     def _generate_routes(self, api, spaces_per_indent, indent_level):
         with self.indent(dent=spaces_per_indent * (indent_level + 1)):
