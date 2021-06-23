@@ -53,7 +53,7 @@ def fmt_error_type(data_type, wrap_error_in=''):
     """
     Converts the error type into a JSDoc type.
     """
-    return '%s.<%s>' % (wrap_error_in if (wrap_error_in != '') else 'Error'), fmt_type(data_type)
+    return '%s.<%s>' % ((wrap_error_in if (wrap_error_in != '') else 'Error'), fmt_type(data_type))
 
 
 def fmt_type_name(data_type):

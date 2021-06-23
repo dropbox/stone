@@ -47,7 +47,7 @@ def fmt_error_type(data_type, inside_namespace=None, wrap_error_in=''):
     inside_namespace should be set to the namespace that the reference
     occurs in, or None if this parameter is not relevant.
     """
-    return '%s<%s>' % (wrap_error_in if (wrap_error_in != '') else 'Error'), fmt_type(data_type, inside_namespace)
+    return '%s<%s>' % ((wrap_error_in if (wrap_error_in != '') else 'Error'), fmt_type(data_type, inside_namespace))
 
 def fmt_type_name(data_type, inside_namespace=None):
     """
