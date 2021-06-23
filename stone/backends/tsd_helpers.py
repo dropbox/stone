@@ -41,13 +41,13 @@ _base_type_table = {
 }
 
 
-def fmt_error_type(data_type, inside_namespace=None):
+def fmt_error_type(data_type, inside_namespace=None, wrap_error_in=''):
     """
     Converts the error type into a TypeScript type.
     inside_namespace should be set to the namespace that the reference
     occurs in, or None if this parameter is not relevant.
     """
-    return 'Error<%s>' % fmt_type(data_type, inside_namespace)
+    return '%s<%s>' % (wrap_error_in if (wrap_error_in != '') else 'Error'), fmt_type(data_type, inside_namespace)
 
 def fmt_type_name(data_type, inside_namespace=None):
     """
