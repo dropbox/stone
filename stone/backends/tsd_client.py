@@ -66,7 +66,12 @@ _cmdline_parser.add_argument(
     default='',
     help=('Wraps the response in a response class')
 )
-
+_cmdline_parser.add_argument(
+    '--wrap-error-in',
+    type=str,
+    default='',
+    help=('Wraps the error in an error class')
+)
 _cmdline_parser.add_argument(
     '--import-namespaces',
     default=False,
@@ -169,7 +174,8 @@ class TSDClientBackend(CodeBackend):
             self.emit_wrapped_text(self.process_doc(route.doc, self._docf), prefix=' * ')
             self.emit(' *')
         self.emit_wrapped_text('When an error occurs, the route rejects the promise with type %s.'
-                               % fmt_error_type(route.error_data_type), prefix=' * ')
+                               % fmt_error_type(route.error_data_type,
+                               self.args.wrap_error_in), prefix=' * ')
         if route.deprecated:
             self.emit(' * @deprecated')
 
