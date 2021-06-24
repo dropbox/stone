@@ -48,7 +48,7 @@ def fmt_error_type(data_type, inside_namespace=None, wrap_error_in=''):
     occurs in, or None if this parameter is not relevant.
     """
     return '%s<%s>' % (
-        (wrap_error_in if (wrap_error_in != '') else 'Error'), 
+        (wrap_error_in if (wrap_error_in != '') else 'Error'),
         fmt_type(data_type, inside_namespace)
     )
 
