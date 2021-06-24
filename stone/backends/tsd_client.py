@@ -66,14 +66,12 @@ _cmdline_parser.add_argument(
     default='',
     help=('Wraps the response in a response class')
 )
-
 _cmdline_parser.add_argument(
     '--wrap-error-in',
     type=str,
     default='',
     help=('Wraps the error in an error class')
 )
-
 _cmdline_parser.add_argument(
     '--import-namespaces',
     default=False,
