@@ -180,7 +180,7 @@ class TSDClientBackend(CodeBackend):
             self.emit(' *')
         self.emit_wrapped_text('When an error occurs, the route rejects the promise with type %s.'
                                % fmt_error_type(route.error_data_type,
-                               self.args.wrap_error_in), prefix=' * ')
+                               wrap_error_in=self.args.wrap_error_in), prefix=' * ')
         if route.deprecated:
             self.emit(' * @deprecated')
 
