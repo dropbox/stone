@@ -181,4 +181,4 @@ def generate_imports_for_referenced_namespaces(backend, namespace, module_name_p
     backend.emit()
 
 def get_data_types_for_namespace(namespace):
-        return namespace.data_types + namespace.aliases
+    return namespace.data_types + namespace.aliases
