@@ -22,6 +22,7 @@ from stone.backends.tsd_helpers import (
     fmt_func,
     fmt_tag,
     fmt_type,
+    get_data_types_for_namespace,
 )
 from stone.ir import Void
 
@@ -153,12 +154,9 @@ class TSDClientBackend(CodeBackend):
             self._generate_routes(api, spaces_per_indent, indent_level)
             self.emit_raw(template[r_end + 1:t_end] + ('\n' if not t_ends_with_newline else ''))
 
-    def _get_data_types(self, namespace):
-        return namespace.data_types + namespace.aliases
-
     def _generate_import(self, api, type_file):
         # identify which routes belong to 
-        namespaces_with_types = filter(lambda namespace: len(self._get_data_types(namespace)) != 0, api.namespaces.values())
+        namespaces_with_types = filter(lambda namespace: len(get_data_types_for_namespace(namespace)) != 0, api.namespaces.values())
         namespaces = ", ".join(map(lambda namespace: namespace.name, namespaces_with_types))
         self.emit("import { %s } from '%s';" % (namespaces, type_file))
 

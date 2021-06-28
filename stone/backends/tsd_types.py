@@ -38,6 +38,7 @@ from stone.backends.tsd_helpers import (
     fmt_type_name,
     fmt_union,
     generate_imports_for_referenced_namespaces,
+    get_data_types_for_namespace,
 )
 
 
@@ -186,15 +187,12 @@ class TSDTypesBackend(CodeBackend):
         else:
             raise AssertionError('TypeScript template file does not exist.')
 
-    def _get_data_types(self, namespace):
-        return namespace.data_types + namespace.aliases
-
     def _generate_base_namespace_module(self, namespace_list, filename,
                                         template, extra_args,
                                         exclude_error_types=False):
 
         # Skip namespaces that do not contain types.
-        if all([len(self._get_data_types(ns)) == 0 for ns in namespace_list]):
+        if all([len(get_data_types_for_namespace(ns)) == 0 for ns in namespace_list]):
             return
 
         spaces_per_indent = self.args.spaces_per_indent
