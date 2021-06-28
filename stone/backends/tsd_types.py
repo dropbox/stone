@@ -236,7 +236,7 @@ class TSDTypesBackend(CodeBackend):
     def _generate_types(self, namespace, spaces_per_indent, extra_args):
         self.cur_namespace = namespace
         # Count aliases as data types too!
-        data_types = self._get_data_types(namespace)
+        data_types = get_data_types_for_namespace(namespace)
         # Skip namespaces that do not contain types.
         if len(data_types) == 0:
             return
