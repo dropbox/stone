@@ -36,5 +36,5 @@ jobs:
           python3 -m pytest
       - name: Run MyPy
         run: |
-          pip install enum34 mypy typed-ast
+          pip install enum34 mypy typed-ast types-six
           ./mypy-run.sh
