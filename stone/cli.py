@@ -5,6 +5,7 @@ A command-line interface for StoneAPI.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import codecs
+import imp
 import io
 import json
 import logging
@@ -174,11 +175,7 @@ def main():
         # The module should should contain an api variable that references a
         # :class:`stone.api.Api` object.
         try:
-            loader = importlib.machinery.SourceFileLoader('api', args.api[0])
-            spec = importlib.util.spec_from_loader(loader.name, loader)
-            module = importlib.util.module_from_spec(spec)
-            loader.exec_module(module)
-            api = module.api  # pylint: disable=redefined-outer-name
+            api = imp.load_source('api', args.api[0]).api  # pylint: disable=redefined-outer-name
         except ImportError as e:
             print('error: Could not import API description due to:',
                   e, file=sys.stderr)
@@ -351,10 +348,7 @@ def main():
         if new_python_path not in sys.path:
             sys.path.append(new_python_path)
         try:
-            loader = importlib.machinery.SourceFileLoader('user_backend', args.backend)
-            spec = importlib.util.spec_from_loader(loader.name, loader)
-            backend_module = importlib.util.module_from_spec(spec)
-            loader.exec_module(module)
+            backend_module = imp.load_source('user_backend', args.backend)
         except Exception:
             print("error: Importing backend '%s' module raised an exception:" %
                   args.backend, file=sys.stderr)
