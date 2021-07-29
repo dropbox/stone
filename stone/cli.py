@@ -174,8 +174,8 @@ def main():
         # The module should should contain an api variable that references a
         # :class:`stone.api.Api` object.
         try:
-            path = args.api[0]
-            api = importlib.machinery.SourceFileLoader('api', path).api # pylint: disable=redefined-outer-name
+            api = importlib.machinery.SourceFileLoader('api',
+                    args.api[0]).api  # pylint: disable=redefined-outer-name
         except ImportError as e:
             print('error: Could not import API description due to:',
                   e, file=sys.stderr)
