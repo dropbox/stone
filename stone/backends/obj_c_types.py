@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 import os
 import shutil
+import six
 
 from stone.ir import (
     is_list_type,
@@ -765,6 +766,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         enum_field_name = fmt_enum_name(field.name, data_type)
                         self.emit('case {}:'.format(enum_field_name))
                         self._generate_hash_func_helper(data_type, field)
+                        self.emit('break;')
             elif is_struct_type(data_type):
                 for field in data_type.all_fields:
                     self._generate_hash_func_helper(data_type, field)
@@ -785,7 +787,6 @@ class ObjCTypesBackend(ObjCBaseBackend):
             self.emit('result = prime * result + [[self tagName] hash];')
         else:
             self.emit('result = prime * result + [self.{} hash];'.format(fmt_var(field.name)))
-
     def _generate_equality_func(self, data_type):
         is_equal_func_name = 'isEqualTo{}'.format(fmt_camel_upper(data_type.name))
         with self.block_func(func='isEqual',
@@ -911,7 +912,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
         elif is_string_type(data_type):
             if data_type.pattern or data_type.min_length or data_type.max_length:
                 pattern = data_type.pattern.encode('unicode_escape').replace(
-                    "\"", "\\\"") if data_type.pattern else None
+                    six.ensure_binary("\""),
+                    six.ensure_binary("\\\"")) if data_type.pattern else None
                 validator = '{}:{}'.format(
                     fmt_validator(data_type),
                     fmt_func_args([
@@ -919,7 +921,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(pattern)
+                        ('pattern', '@"{}"'.format(six.ensure_str(pattern))
                          if pattern else 'nil'),
                     ]))
 

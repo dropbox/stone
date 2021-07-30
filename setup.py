@@ -14,22 +14,23 @@ except ImportError:
 
 from setuptools import setup
 
-install_reqs = [
-    'ply >= 3.4',
-    'six >= 1.3.0',
-]
+# WARNING: This imposes limitations on requirements.txt such that the
+# full Pip syntax is not supported. See also
+# <http://stackoverflow.com/questions/14399534/>.
+install_reqs = []
+with open('requirements.txt') as f:
+    install_reqs += f.read().splitlines()
 
 setup_requires = [
-    'pytest-runner',
-]
-
-test_reqs = [
-    'pytest < 5',
+    # Pin pytest-runner to 5.2.0, since 5.3.0 uses `find_namespaces` directive, not supported in
+    # Python 2.7
+    'pytest-runner == 5.2.0',
 ]
 
 # WARNING: This imposes limitations on test/requirements.txt such that the
 # full Pip syntax is not supported. See also
 # <http://stackoverflow.com/questions/14399534/>.
+test_reqs = []
 with open('test/requirements.txt') as f:
     test_reqs += f.read().splitlines()
 
@@ -38,7 +39,7 @@ with open('README.rst') as f:
 
 dist = setup(
     name='stone',
-    version='3.0.0',
+    version='3.2.1',
     install_requires=install_reqs,
     setup_requires=setup_requires,
     tests_require=test_reqs,
@@ -66,7 +67,7 @@ dist = setup(
     maintainer='Dropbox',
     url='https://github.com/dropbox/stone',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',

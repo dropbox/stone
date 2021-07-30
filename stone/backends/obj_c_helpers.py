@@ -32,7 +32,7 @@ from .helpers import split_words
 
 _primitive_table = {
     Boolean: 'NSNumber *',
-    Bytes: 'NSData',
+    Bytes: 'NSString *',
     Float32: 'NSNumber *',
     Float64: 'NSNumber *',
     Int32: 'NSNumber *',
@@ -48,7 +48,7 @@ _primitive_table = {
 
 _primitive_table_user_interface = {
     Boolean: 'BOOL',
-    Bytes: 'NSData',
+    Bytes: 'NSString *',
     Float32: 'double',
     Float64: 'double',
     Int32: 'int',
@@ -64,7 +64,7 @@ _primitive_table_user_interface = {
 
 _serial_table = {
     Boolean: 'DBBoolSerializer',
-    Bytes: 'DBNSDataSerializer',
+    Bytes: 'DBStringSerializer',
     Float32: 'DBNSNumberSerializer',
     Float64: 'DBNSNumberSerializer',
     Int32: 'DBNSNumberSerializer',

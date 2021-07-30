@@ -220,7 +220,7 @@ class JavascriptTypesBackend(CodeBackend):
         for param_name, param_type, param_docstring in extra_parameters:
             param_docstring = ' - %s' % param_docstring if param_docstring else ''
             self.emit_wrapped_text(
-                '@property {%s} %s%s' % (
+                '@property {%s} [%s]%s' % (
                     param_type,
                     param_name,
                     param_docstring,

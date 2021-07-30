@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 import os
 import shutil
+import six
 
 from contextlib import contextmanager
 
@@ -235,12 +236,13 @@ class SwiftTypesBackend(SwiftBaseBackend):
             )
         elif is_string_type(data_type):
             pat = data_type.pattern if data_type.pattern else None
-            pat = pat.encode('unicode_escape').replace("\"", "\\\"") if pat else pat
+            pat = pat.encode('unicode_escape').replace(six.ensure_binary("\""),
+                                                       six.ensure_binary("\\\"")) if pat else pat
             v = "stringValidator({})".format(
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(pat) if pat else None),
+                    ("pattern", '"{}"'.format(six.ensure_str(pat)) if pat else None),
                 ])
             )
         else:
