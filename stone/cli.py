@@ -5,7 +5,7 @@ A command-line interface for StoneAPI.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import codecs
-import imp
+import imp  # pylint: disable=deprecated-module
 import io
 import json
 import logging

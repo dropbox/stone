@@ -35,5 +35,5 @@ jobs:
       - name: Run MyPy
         if: matrix.python-version != 'pypy3' 
         run: |
-          pip install enum34 mypy typed-ast
+          pip install enum34 mypy typed-ast types-six
           ./mypy-run.sh
