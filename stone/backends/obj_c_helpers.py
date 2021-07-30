@@ -98,6 +98,7 @@ _wrapper_primitives = {
     Int32,
     Int64,
     String,
+    Bytes,
 }
 
 _reserved_words = {
