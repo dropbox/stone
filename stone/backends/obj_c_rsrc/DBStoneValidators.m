@@ -2,7 +2,7 @@
 /// Copyright (c) 2016 Dropbox, Inc. All rights reserved.
 ///
 
-#import <DBStoneValidators.h>
+#import <ObjectiveDropboxOfficial/DBStoneValidators.h>
 
 @implementation DBStoneValidators
 

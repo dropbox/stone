@@ -4,7 +4,7 @@
 
 #import <Foundation/Foundation.h>
 
-#import <DBSerializableProtocol.h>
+#import <ObjectiveDropboxOfficial/DBSerializableProtocol.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

@@ -466,7 +466,7 @@ def fmt_property(field):
 
 
 def fmt_import(header_file):
-    return '#import <{}.h>'.format(header_file)
+    return '#import <ObjectiveDropboxOfficial/{}.h>'.format(header_file)
 
 
 def fmt_property_str(prop, typ, attrs=None):

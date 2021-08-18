@@ -4,8 +4,8 @@
 
 #import <Foundation/Foundation.h>
 
-#import <DBSerializableProtocol.h>
-#import <DBStoneSerializers.h>
+#import <ObjectiveDropboxOfficial/DBSerializableProtocol.h>
+#import <ObjectiveDropboxOfficial/DBStoneSerializers.h>
 
 NS_ASSUME_NONNULL_BEGIN
 

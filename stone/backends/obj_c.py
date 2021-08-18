@@ -211,7 +211,7 @@ class ObjCBaseBackend(CodeBackend):
     def _generate_init_imports_h(self, data_type):
         self.emit('#import <Foundation/Foundation.h>')
         self.emit()
-        self.emit('#import <DBSerializableProtocol.h>')
+        self.emit('#import <ObjectiveDropboxOfficial/DBSerializableProtocol.h>')
 
         if data_type.parent_type and not is_union_type(data_type):
             self.emit(fmt_import(fmt_class_prefix(data_type.parent_type)))
