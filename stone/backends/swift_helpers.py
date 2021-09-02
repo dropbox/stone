@@ -90,7 +90,7 @@ def fmt_obj(o):
         return 'false'
     if o is None:
         return 'nil'
-    if o == u'':
+    if o == '':
         return '""'
     return pprint.pformat(o, width=1)
 

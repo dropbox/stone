@@ -115,7 +115,7 @@ class TSDClientBackend(CodeBackend):
 
         with self.output_to_relative_path(self.args.filename):
             if os.path.isfile(template_path):
-                with open(template_path, 'r') as template_file:
+                with open(template_path, 'r', encoding='utf-8') as template_file:
                     template = template_file.read()
             else:
                 raise AssertionError('TypeScript template file does not exist.')

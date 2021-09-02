@@ -133,7 +133,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
 
         if self.args.documentation:
             jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
-            with open(jazzy_cfg_path) as jazzy_file:
+            with open(jazzy_cfg_path, encoding='utf-8') as jazzy_file:
                 jazzy_cfg = json.load(jazzy_file)
 
             for idx, namespace in enumerate(api.namespaces.values()):

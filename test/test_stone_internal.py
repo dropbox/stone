@@ -192,7 +192,7 @@ class TestStoneInternal(unittest.TestCase):
         s.check('1')
 
         # check correct unicode
-        s.check(u'\u2650')
+        s.check('\u2650')
 
         # check bad item
         with self.assertRaises(ValueError) as cm:
