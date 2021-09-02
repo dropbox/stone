@@ -104,7 +104,7 @@ class ApiNamespace(object):
     def __init__(self, name):
         # type: (typing.Text) -> None
         self.name = name
-        self.doc = None                    # type: typing.Optional[six.text_type]
+        self.doc = None                    # type: typing.Optional[typing.Any]
         self.routes = []                   # type: typing.List[ApiRoute]
         # TODO (peichao): route_by_name is deprecated by routes_by_name and should be removed.
         self.route_by_name = {}            # type: typing.Dict[typing.Text, ApiRoute]
@@ -120,7 +120,7 @@ class ApiNamespace(object):
         self._imported_namespaces = {}     # type: typing.Dict[ApiNamespace, _ImportReason]
 
     def add_doc(self, docstring):
-        # type: (six.text_type) -> None
+        # type: (typing.Any) -> None
         """Adds a docstring for this namespace.
 
         The input docstring is normalized to have no leading whitespace and
