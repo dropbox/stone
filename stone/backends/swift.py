@@ -156,8 +156,6 @@ class SwiftBaseBackend(CodeBackend):
         elif tag in ('type', 'val', 'link'):
             return val
         else:
-            import pdb
-            pdb.set_trace()
             return val
 
 def fmt_serial_type(data_type):

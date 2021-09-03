@@ -842,7 +842,7 @@ class ParserFactory(object):
         try:
             p[0] = {p[1]: p[3]}
         except TypeError:
-            msg = u"%s is an invalid hash key because it cannot be hashed." % repr(p[1])
+            msg = "%s is an invalid hash key because it cannot be hashed." % repr(p[1])
             self.errors.append((msg, p.lineno(2), self.path))
             p[0] = {}
 

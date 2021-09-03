@@ -112,7 +112,7 @@ class TestDropInModules(unittest.TestCase):
     def test_bytes_validator(self):
         b = bv.Bytes(min_length=1, max_length=10)
         # Not a valid binary type
-        self.assertRaises(bv.ValidationError, lambda: b.validate(u'asdf'))
+        self.assertRaises(bv.ValidationError, lambda: b.validate('asdf'))
         # Too short
         self.assertRaises(bv.ValidationError, lambda: b.validate(b''))
         # Too long
@@ -212,7 +212,7 @@ class TestDropInModules(unittest.TestCase):
     def test_json_encoder(self):
         self.assertEqual(json_encode(bv.Void(), None), json.dumps(None))
         self.assertEqual(json_encode(bv.String(), 'abc'), json.dumps('abc'))
-        self.assertEqual(json_encode(bv.String(), u'\u2650'), json.dumps(u'\u2650'))
+        self.assertEqual(json_encode(bv.String(), '\u2650'), json.dumps('\u2650'))
         self.assertEqual(json_encode(bv.UInt32(), 123), json.dumps(123))
         # Because a bool is a subclass of an int, ensure they aren't mistakenly
         # encoded as a true/false in JSON when an integer is the data type.
@@ -226,7 +226,7 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Bytes(), b),
                          json.dumps(base64.b64encode(b).decode('ascii')))
         self.assertEqual(json_encode(bv.Nullable(bv.String()), None), json.dumps(None))
-        self.assertEqual(json_encode(bv.Nullable(bv.String()), u'abc'), json.dumps('abc'))
+        self.assertEqual(json_encode(bv.Nullable(bv.String()), 'abc'), json.dumps('abc'))
 
     def test_json_encoder_union(self):
         class S(object):
@@ -1489,7 +1489,7 @@ class TestGeneratedPython(unittest.TestCase):
         bs2 = msgpack_decode(bv.Bytes(), s)
         self.assertEqual(bs, bs2)
 
-        u = u'\u2650'
+        u = '\u2650'
         s = msgpack_encode(bv.String(), u)
         u2 = msgpack_decode(bv.String(), s)
         self.assertEqual(u, u2)
@@ -3366,7 +3366,7 @@ class TestAnnotationsGeneratedPython(unittest.TestCase):
                 caller_permissions=self.internal_and_alpha_cp, should_redact=True), json_data)
 
     def test_encoding_unicode_with_redaction(self):
-        unicode_val = u"Unicode val'`~$%&\u53c9\u71d2"
+        unicode_val = "Unicode val'`~$%&\u53c9\u71d2"
 
         json_data = {
             '.tag': 't2',

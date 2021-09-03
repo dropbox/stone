@@ -133,7 +133,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
 
         if self.args.documentation:
             jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
-            with open(jazzy_cfg_path) as jazzy_file:
+            with open(jazzy_cfg_path, encoding='utf-8') as jazzy_file:
                 jazzy_cfg = json.load(jazzy_file)
 
             for idx, namespace in enumerate(api.namespaces.values()):
@@ -787,6 +787,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
             self.emit('result = prime * result + [[self tagName] hash];')
         else:
             self.emit('result = prime * result + [self.{} hash];'.format(fmt_var(field.name)))
+
     def _generate_equality_func(self, data_type):
         is_equal_func_name = 'isEqualTo{}'.format(fmt_camel_upper(data_type.name))
         with self.block_func(func='isEqual',
@@ -1295,6 +1296,21 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     self.emit('static DBRoute *{};'.format(route_name))
                 self.emit()
 
+                self.emit('static NSObject *lockObj = nil;')
+                with self.block_func(
+                        func='initialize',
+                        args=[],
+                        return_type='void',
+                        class_func=True):
+                    self.emit('static dispatch_once_t onceToken;')
+                    with self.block(
+                            'dispatch_once(&onceToken, ^{',
+                            delim=(None, None),
+                            after='});'):
+                        self.emit('lockObj = [[NSObject alloc] init];')
+                    self.emit()
+                self.emit()
+
                 for route in namespace.routes:
                     route_name = fmt_route_var(namespace.name, route)
                     if route.version == 1:
@@ -1342,40 +1358,42 @@ class ObjCTypesBackend(ObjCBaseBackend):
                             args=[],
                             return_type='DBRoute *',
                             class_func=True):
-                        with self.block('if (!{})'.format(route_name)):
-                            with self.block(
-                                    '{} = [[DBRoute alloc] init:'.format(
-                                        route_name),
-                                    delim=(None, None),
-                                    after='];'):
-                                self.emit('@\"{}\"'.format(route_path))
-                                self.emit('namespace_:@\"{}\"'.format(
-                                    namespace.name))
-                                self.emit('deprecated:{}'.format(deprecated))
-                                self.emit('resultType:{}'.format(result_type))
-                                self.emit('errorType:{}'.format(error_type))
+                        with self.block('@synchronized(lockObj)'):
+                            with self.block('if (!{})'.format(route_name)):
+                                with self.block(
+                                        '{} = [[DBRoute alloc] init:'.format(
+                                            route_name),
+                                        delim=(None, None),
+                                        after='];'):
+                                    self.emit('@\"{}\"'.format(route_path))
+                                    self.emit('namespace_:@\"{}\"'.format(
+                                        namespace.name))
+                                    self.emit('deprecated:{}'.format(deprecated))
+                                    self.emit('resultType:{}'.format(result_type))
+                                    self.emit('errorType:{}'.format(error_type))
 
-                                attrs = []
-                                for field in route_schema.fields:
-                                    attr_key = field.name
-                                    attr_val = ("@\"{}\"".format(route.attrs
-                                            .get(attr_key)) if route.attrs
-                                        .get(attr_key)
-                                        else 'nil')
-                                    attrs.append('@\"{}\": {}'.format(
-                                        attr_key, attr_val))
+                                    attrs = []
+                                    for field in route_schema.fields:
+                                        attr_key = field.name
+                                        attr_val = ("@\"{}\"".format(route.attrs
+                                                .get(attr_key)) if route.attrs
+                                            .get(attr_key)
+                                            else 'nil')
+                                        attrs.append('@\"{}\": {}'.format(
+                                            attr_key, attr_val))
 
-                                self.generate_multiline_list(
-                                    attrs,
-                                    delim=('attrs:@{', '}'),
-                                    compact=True)
+                                    self.generate_multiline_list(
+                                        attrs,
+                                        delim=('attrs:@{', '}'),
+                                        compact=True)
 
-                                self.emit('dataStructSerialBlock:{}'.format(
-                                    dataStructSerialBlock))
-                                self.emit('dataStructDeserialBlock:{}'.format(
-                                    dataStructDeserialBlock))
+                                    self.emit('dataStructSerialBlock:{}'.format(
+                                        dataStructSerialBlock))
+                                    self.emit('dataStructDeserialBlock:{}'.format(
+                                        dataStructDeserialBlock))
 
-                        self.emit('return {};'.format(route_name))
+                            self.emit('return {};'.format(route_name))
+                        self.emit()
                     self.emit()
 
     def _generate_route_objects_h(

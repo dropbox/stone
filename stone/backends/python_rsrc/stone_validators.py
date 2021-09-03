@@ -70,12 +70,12 @@ class ValidationError(Exception):
 
 
 def type_name_with_module(t):
-    # type: (typing.Type[typing.Any]) -> six.text_type
+    # type: (typing.Type[typing.Any]) -> typing.Any
     return '%s.%s' % (t.__module__, t.__name__)
 
 
 def generic_type_name(v):
-    # type: (typing.Any) -> six.text_type
+    # type: (typing.Any) -> typing.Any
     """Return a descriptive type name that isn't Python specific. For example,
     an int value will return 'integer' rather than 'int'."""
     if isinstance(v, bool):
