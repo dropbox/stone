@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json
 import os
 import shutil
+import six
 
 from stone.ir import (
     is_list_type,
@@ -132,7 +133,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
 
         if self.args.documentation:
             jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
-            with open(jazzy_cfg_path) as jazzy_file:
+            with open(jazzy_cfg_path, encoding='utf-8') as jazzy_file:
                 jazzy_cfg = json.load(jazzy_file)
 
             for idx, namespace in enumerate(api.namespaces.values()):
@@ -765,6 +766,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         enum_field_name = fmt_enum_name(field.name, data_type)
                         self.emit('case {}:'.format(enum_field_name))
                         self._generate_hash_func_helper(data_type, field)
+                        self.emit('break;')
             elif is_struct_type(data_type):
                 for field in data_type.all_fields:
                     self._generate_hash_func_helper(data_type, field)
@@ -911,7 +913,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
         elif is_string_type(data_type):
             if data_type.pattern or data_type.min_length or data_type.max_length:
                 pattern = data_type.pattern.encode('unicode_escape').replace(
-                    "\"", "\\\"") if data_type.pattern else None
+                    six.ensure_binary("\""),
+                    six.ensure_binary("\\\"")) if data_type.pattern else None
                 validator = '{}:{}'.format(
                     fmt_validator(data_type),
                     fmt_func_args([
@@ -919,7 +922,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(pattern)
+                        ('pattern', '@"{}"'.format(six.ensure_str(pattern))
                          if pattern else 'nil'),
                     ]))
 
@@ -1293,6 +1296,21 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     self.emit('static DBRoute *{};'.format(route_name))
                 self.emit()
 
+                self.emit('static NSObject *lockObj = nil;')
+                with self.block_func(
+                        func='initialize',
+                        args=[],
+                        return_type='void',
+                        class_func=True):
+                    self.emit('static dispatch_once_t onceToken;')
+                    with self.block(
+                            'dispatch_once(&onceToken, ^{',
+                            delim=(None, None),
+                            after='});'):
+                        self.emit('lockObj = [[NSObject alloc] init];')
+                    self.emit()
+                self.emit()
+
                 for route in namespace.routes:
                     route_name = fmt_route_var(namespace.name, route)
                     if route.version == 1:
@@ -1340,40 +1358,42 @@ class ObjCTypesBackend(ObjCBaseBackend):
                             args=[],
                             return_type='DBRoute *',
                             class_func=True):
-                        with self.block('if (!{})'.format(route_name)):
-                            with self.block(
-                                    '{} = [[DBRoute alloc] init:'.format(
-                                        route_name),
-                                    delim=(None, None),
-                                    after='];'):
-                                self.emit('@\"{}\"'.format(route_path))
-                                self.emit('namespace_:@\"{}\"'.format(
-                                    namespace.name))
-                                self.emit('deprecated:{}'.format(deprecated))
-                                self.emit('resultType:{}'.format(result_type))
-                                self.emit('errorType:{}'.format(error_type))
+                        with self.block('@synchronized(lockObj)'):
+                            with self.block('if (!{})'.format(route_name)):
+                                with self.block(
+                                        '{} = [[DBRoute alloc] init:'.format(
+                                            route_name),
+                                        delim=(None, None),
+                                        after='];'):
+                                    self.emit('@\"{}\"'.format(route_path))
+                                    self.emit('namespace_:@\"{}\"'.format(
+                                        namespace.name))
+                                    self.emit('deprecated:{}'.format(deprecated))
+                                    self.emit('resultType:{}'.format(result_type))
+                                    self.emit('errorType:{}'.format(error_type))
 
-                                attrs = []
-                                for field in route_schema.fields:
-                                    attr_key = field.name
-                                    attr_val = ("@\"{}\"".format(route.attrs
-                                            .get(attr_key)) if route.attrs
-                                        .get(attr_key)
-                                        else 'nil')
-                                    attrs.append('@\"{}\": {}'.format(
-                                        attr_key, attr_val))
+                                    attrs = []
+                                    for field in route_schema.fields:
+                                        attr_key = field.name
+                                        attr_val = ("@\"{}\"".format(route.attrs
+                                                .get(attr_key)) if route.attrs
+                                            .get(attr_key)
+                                            else 'nil')
+                                        attrs.append('@\"{}\": {}'.format(
+                                            attr_key, attr_val))
 
-                                self.generate_multiline_list(
-                                    attrs,
-                                    delim=('attrs:@{', '}'),
-                                    compact=True)
+                                    self.generate_multiline_list(
+                                        attrs,
+                                        delim=('attrs:@{', '}'),
+                                        compact=True)
 
-                                self.emit('dataStructSerialBlock:{}'.format(
-                                    dataStructSerialBlock))
-                                self.emit('dataStructDeserialBlock:{}'.format(
-                                    dataStructDeserialBlock))
+                                    self.emit('dataStructSerialBlock:{}'.format(
+                                        dataStructSerialBlock))
+                                    self.emit('dataStructDeserialBlock:{}'.format(
+                                        dataStructDeserialBlock))
 
-                        self.emit('return {};'.format(route_name))
+                            self.emit('return {};'.format(route_name))
+                        self.emit()
                     self.emit()
 
     def _generate_route_objects_h(

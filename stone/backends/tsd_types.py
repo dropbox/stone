@@ -38,6 +38,7 @@ from stone.backends.tsd_helpers import (
     fmt_type_name,
     fmt_union,
     generate_imports_for_referenced_namespaces,
+    get_data_types_for_namespace,
 )
 
 
@@ -181,20 +182,17 @@ class TSDTypesBackend(CodeBackend):
         template_path = os.path.join(self.target_folder_path, self.args.template)
 
         if os.path.isfile(template_path):
-            with open(template_path, 'r') as template_file:
+            with open(template_path, 'r', encoding='utf-8') as template_file:
                 return template_file.read()
         else:
             raise AssertionError('TypeScript template file does not exist.')
-
-    def _get_data_types(self, namespace):
-        return namespace.data_types + namespace.aliases
 
     def _generate_base_namespace_module(self, namespace_list, filename,
                                         template, extra_args,
                                         exclude_error_types=False):
 
         # Skip namespaces that do not contain types.
-        if all([len(self._get_data_types(ns)) == 0 for ns in namespace_list]):
+        if all([len(get_data_types_for_namespace(ns)) == 0 for ns in namespace_list]):
             return
 
         spaces_per_indent = self.args.spaces_per_indent
@@ -238,7 +236,7 @@ class TSDTypesBackend(CodeBackend):
     def _generate_types(self, namespace, spaces_per_indent, extra_args):
         self.cur_namespace = namespace
         # Count aliases as data types too!
-        data_types = self._get_data_types(namespace)
+        data_types = get_data_types_for_namespace(namespace)
         # Skip namespaces that do not contain types.
         if len(data_types) == 0:
             return
@@ -379,7 +377,8 @@ class TSDTypesBackend(CodeBackend):
             for param_name, param_type, param_docstring in extra_parameters:
                 if param_docstring:
                     self._emit_tsdoc_header(param_docstring)
-                self.emit('%s: %s;' % (param_name, param_type))
+                # Making all extra args optional parameters
+                self.emit('%s?: %s;' % (param_name, param_type))
 
             for field in struct_type.fields:
                 doc = field.doc

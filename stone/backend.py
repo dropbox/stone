@@ -161,7 +161,7 @@ class Backend(object):
         self.logger.info('Generating %s', full_path)
         self.clear_output_buffer()
         yield
-        with open(full_path, mode) as f:
+        with open(full_path, mode) as f:  # pylint: disable=unspecified-encoding
             f.write(self.output_buffer_to_string().encode('utf-8'))
         self.clear_output_buffer()
 

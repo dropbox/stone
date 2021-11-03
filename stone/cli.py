@@ -5,7 +5,7 @@ A command-line interface for StoneAPI.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import codecs
-import imp
+import imp  # pylint: disable=deprecated-module
 import io
 import json
 import logging
@@ -197,7 +197,7 @@ def main():
                           file=sys.stderr)
                     sys.exit(1)
                 else:
-                    with open(spec_path) as f:
+                    with open(spec_path, encoding='utf-8') as f:
                         specs.append((spec_path, f.read()))
             if read_from_stdin and specs:
                 print("error: Do not specify stdin and specification files "
@@ -240,7 +240,7 @@ def main():
             route_filter = None
 
         if args.route_whitelist_filter:
-            with open(args.route_whitelist_filter) as f:
+            with open(args.route_whitelist_filter, encoding='utf-8') as f:
                 route_whitelist_filter = json.loads(f.read())
         else:
             route_whitelist_filter = None

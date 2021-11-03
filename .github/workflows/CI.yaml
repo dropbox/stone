@@ -10,31 +10,30 @@ jobs:
     # https://github.com/actions/python-versions/blob/main/versions-manifest.json
     strategy:
       matrix:
-        os: [macos-latest]
-        python-version: [3.5, 3.6, 3.7, 3.8, pypy3]
-        exclude:
-          - os: windows-latest
-            python-version: 3.6
+        os: [macos-latest, ubuntu-latest]
+        python-version: [3.6, 3.7, 3.8, pypy3]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python environment
-        uses: actions/setup-python@v2.1.4
+        uses: actions/setup-python@v2.2.1
         with:
-          python-version: ${{ matrix.python }}
+          python-version: ${{ matrix.python-version }}
       - name: Install Requirements
         run: |
-          python3 -m pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install flake8 pylint pytest
+          pip install -r requirements.txt
           pip install -r test/requirements.txt
-          python3 setup.py install
+          python setup.py install
       - name: Run Linter
         run: |
-          python3 -m flake8 setup.py example stone test
-          python3 -m pylint --rcfile=.pylintrc setup.py example stone test
+          flake8 setup.py example stone test
+          pylint --rcfile=.pylintrc setup.py example stone test
       - name: Run Unit Tests
         run: |
-          python3 -m pytest
+          pytest
       - name: Run MyPy
+        if: matrix.python-version != 'pypy3' 
         run: |
-          pip install enum34 mypy typed-ast
+          pip install enum34 mypy typed-ast types-six
           ./mypy-run.sh

@@ -17,7 +17,7 @@ class TestGeneratedTSDClient(unittest.TestCase):
     def _get_api(self):
         # type () -> Api
         api = Api(version='0.1b1')
-        api.route_schema = Struct(u'Route', 'stone_cfg', None)
+        api.route_schema = Struct('Route', 'stone_cfg', None)
         route1 = ApiRoute('get_metadata', 1, None)
         route1.set_attributes(None, ':route:`get_metadata`', Void(), Void(), Void(), {})
         route2 = ApiRoute('get_metadata', 2, None)

@@ -456,7 +456,7 @@ class TestTSDTypesE2E(unittest.TestCase):
             os.makedirs(self.stone_output_directory)
         self.template_file_name = "typescript.template"
         template_file_path = "{}/{}".format(self.stone_output_directory, self.template_file_name)
-        with open(template_file_path, "w") as template_file:
+        with open(template_file_path, "w", encoding='utf-8') as template_file:
             template_file.write("/*TYPES*/")
 
     def tearDown(self):
@@ -464,7 +464,7 @@ class TestTSDTypesE2E(unittest.TestCase):
         shutil.rmtree('output')
 
     def _verify_generated_output(self, filename, expected_namespace_types):
-        with open(filename, 'r') as f:
+        with open(filename, 'r', encoding='utf-8') as f:
             generated_types = f.read()
             self.assertEqual(generated_types, expected_namespace_types)
 
