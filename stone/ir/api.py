@@ -416,6 +416,31 @@ class ApiRoute(object):
     def __repr__(self):
         return 'ApiRoute({})'.format(self.name_with_version())
 
+    def _compare(self, lhs, rhs):
+        if not isinstance(lhs, ApiRoute):
+            raise TypeError("Expected ApiRoute for object: {}".format(lhs))
+        if not isinstance(rhs, ApiRoute):
+            raise TypeError("Expected ApiRoute for object: {}".format(rhs))
+        
+        if lhs.name < rhs.name or lhs.version < rhs.version:
+            return -1
+        elif lhs.name > rhs.name or lhs.version > rhs.version:
+            return 1
+        else:
+            return 0
+
+    def __lt__(self, other):
+        return self._compare(self, other) < 0
+    def __gt__(self, other):
+        return self._compare(self, other) > 0
+    def __eq__(self, other):
+        return self._compare(self, other) == 0
+    def __le__(self, other):
+        return self._compare(self, other) <= 0
+    def __ge__(self, other):
+        return self._compare(self, other) >= 0
+    def __ne__(self, other):
+        return self._compare(self, other) != 0
 
 class DeprecationInfo(object):
 

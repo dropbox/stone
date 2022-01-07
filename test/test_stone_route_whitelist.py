@@ -61,6 +61,55 @@ class TestStone(unittest.TestCase):
         self._compare_namespace_names(api, ['test'])
         self._compare_datatype_names(api.namespaces['test'], ['TestArg2', 'TestResult2'])
 
+    def test_stable_ordering(self):
+        """
+        Tests that route generation returns the same route order on generation.
+        """
+        text = textwrap.dedent("""\
+            namespace test
+
+            struct TestArg
+                f String
+                    "test doc"
+                example default
+                    f = "asdf"
+            struct TestResult
+                f String
+                    "test doc"
+                example default
+                    f = "asdf"
+            route TestRoute (TestArg, TestResult, Void)
+                "test doc"
+
+            route OtherRoute (Void, Void, Void)
+                "Additional Route"
+
+            """)
+        
+        route_whitelist = ["OtherRoute", "TestRoute"]
+
+        for x in range(2,100):
+            text += textwrap.dedent("""\
+            route TestRoute:{} (TestArg, TestResult, Void)
+                "test doc"
+            """.format(x))
+            route_whitelist.append("TestRoute:{}".format(x))
+
+
+        route_whitelist_filter = {
+            "route_whitelist": {"test": route_whitelist},
+            "datatype_whitelist": {}
+        }
+        
+        api = specs_to_ir([('test.stone', text)], route_whitelist_filter=route_whitelist_filter)
+        routes = api.namespaces['test'].routes
+        self.assertEqual(len(routes), 100)
+        self.assertEqual(routes[0].name, "OtherRoute")
+
+        for x in range(1,100):
+            self.assertEqual(routes[x].name, "TestRoute")
+            self.assertEqual(routes[x].version, x)
+
     def test_star(self):
         """
         Tests that inputs with "*" work as expected.
