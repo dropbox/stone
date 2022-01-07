@@ -421,7 +421,7 @@ class ApiRoute(object):
             raise TypeError("Expected ApiRoute for object: {}".format(lhs))
         if not isinstance(rhs, ApiRoute):
             raise TypeError("Expected ApiRoute for object: {}".format(rhs))
-        
+
         if lhs.name < rhs.name or lhs.version < rhs.version:
             return -1
         elif lhs.name > rhs.name or lhs.version > rhs.version:

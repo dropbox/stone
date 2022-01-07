@@ -85,28 +85,27 @@ class TestStone(unittest.TestCase):
                 "Additional Route"
 
             """)
-        
+
         route_whitelist = ["OtherRoute", "TestRoute"]
 
-        for x in range(2,100):
+        for x in range(2, 100):
             text += textwrap.dedent("""\
             route TestRoute:{} (TestArg, TestResult, Void)
                 "test doc"
             """.format(x))
             route_whitelist.append("TestRoute:{}".format(x))
 
-
         route_whitelist_filter = {
             "route_whitelist": {"test": route_whitelist},
             "datatype_whitelist": {}
         }
-        
+
         api = specs_to_ir([('test.stone', text)], route_whitelist_filter=route_whitelist_filter)
         routes = api.namespaces['test'].routes
         self.assertEqual(len(routes), 100)
         self.assertEqual(routes[0].name, "OtherRoute")
 
-        for x in range(1,100):
+        for x in range(1, 100):
             self.assertEqual(routes[x].name, "TestRoute")
             self.assertEqual(routes[x].version, x)
 
