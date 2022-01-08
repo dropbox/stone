@@ -105,6 +105,17 @@ _cmdline_parser.add_argument(
     type=str,
     help='The auth type of the client to generate.',
 )
+_cmdline_parser.add_argument(
+    '-a',
+    '--attribute',
+    action='append',
+    type=str,
+    default=[],
+    help=('Route attributes that the backend will have access to and '
+          'presumably expose in generated code. Use ":all" to select all '
+          'attributes defined in stone_cfg.Route. Attributes will be '
+          "exposed in the documentation, as the client doesn't use them."),
+)
 
 
 class PythonClientBackend(CodeBackend):
@@ -259,6 +270,7 @@ class PythonClientBackend(CodeBackend):
                 extra_request_args=extra_request_args,
                 extra_return_arg=extra_return_arg,
                 footer=footer,
+                attrs=route.attrs,
             )
 
             self._maybe_generate_deprecation_warning(route)
@@ -356,7 +368,7 @@ class PythonClientBackend(CodeBackend):
     def _generate_docstring_for_func(self, namespace, arg_data_type,
                                      result_data_type=None, error_data_type=None,
                                      overview=None, extra_request_args=None,
-                                     extra_return_arg=None, footer=None):
+                                     extra_return_arg=None, footer=None, attrs=None):
         """
         Generates a docstring for a function or method.
 
@@ -380,7 +392,14 @@ class PythonClientBackend(CodeBackend):
         :param str footer: Additional notes at the end of the docstring.
         """
         fields = [] if is_void_type(arg_data_type) else arg_data_type.fields
-        if not fields and not overview:
+
+        attrs_list = []
+        if self.args.attribute and attrs:
+            for attribute in self.args.attribute:
+                if attribute in attrs:
+                    attrs_list.append('{}: {}'.format(attribute, attrs[attribute]))
+
+        if not fields and not overview and not attrs_list:
             # If we don't have an overview or any input parameters, we skip the
             # docstring altogether.
             return
@@ -389,10 +408,16 @@ class PythonClientBackend(CodeBackend):
         if overview:
             self.emit_wrapped_text(overview)
 
+        if attrs_list:
+            if overview:
+                self.emit()
+            self.emit('Route attributes:')
+            [self.emit_wrapped_text(a, '    ') for a in attrs_list]
+
         # Description of all input parameters
         if extra_request_args or fields:
-            if overview:
-                # Add a blank line if we had an overview
+            if overview or attrs_list:
+                # Add a blank line if we had an overview or attrs
                 self.emit()
 
             if extra_request_args:
@@ -446,7 +471,7 @@ class PythonClientBackend(CodeBackend):
                 self.emit(':type arg: {}'.format(
                     self._format_type_in_doc(namespace, arg_data_type)))
 
-        if overview and not (extra_request_args or fields):
+        if (overview or attrs_list) and not (extra_request_args or fields):
             # Only output an empty line if we had an overview and haven't
             # started a section on declaring types.
             self.emit()

@@ -27,7 +27,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
 
         backend = PythonClientBackend(
             target_folder_path='output',
-            args=['-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
+            args=['-a', 'scope', '-a', 'foo', '-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
         backend._generate_routes(ns)
         return backend.output_buffer_to_string()
 
@@ -217,5 +217,35 @@ class TestGeneratedPythonClient(unittest.TestCase):
                          'Nullable[str]')
         self.assertEqual(backend._format_type_in_doc(ns, Map(String(), Int32())),
                          'Map[str, int]')
+
+    def test_route_arbitrary_attrs(self):
+        # type: () -> None
+
+        route1 = ApiRoute('get_metadata', 1, None)
+        route1.set_attributes(None, None, Void(), Void(), Void(), {'scope':'sudo', 'foo':'bar'})
+        ns = ApiNamespace('files')
+        ns.add_route(route1)
+
+        result = self._evaluate_namespace(ns)
+        expected = textwrap.dedent('''\
+            def files_get_metadata(self):
+                """
+                Route attributes:
+                    scope: sudo
+                    foo: bar
+            
+                :rtype: None
+                """
+                arg = None
+                r = self.request(
+                    files.get_metadata,
+                    'files',
+                    arg,
+                    None,
+                )
+                return None
+
+        ''')
+        self.assertEqual(result, expected)
 
     # TODO: add more unit tests for client code generation
