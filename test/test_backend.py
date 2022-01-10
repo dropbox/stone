@@ -505,5 +505,14 @@ int sq(int x) <
         field = dependent_struct.fields[0]
         self.assertIsInstance(field.data_type, String)
 
+    def test_route_hashing(self):
+        route = ApiRoute('test/route', 1, None)
+        same_route = ApiRoute("test/route", 1, None)
+        diff_version = ApiRoute("test/route", 2, None)
+        diff_route = ApiRoute("test/route_2", 1, None)
+        self.assertEqual(hash(route), hash(same_route))
+        self.assertNotEqual(hash(route), hash(diff_version))
+        self.assertNotEqual(hash(route), hash(diff_route))
+
 if __name__ == '__main__':
     unittest.main()

@@ -441,6 +441,20 @@ class ApiRoute(object):
         return self._compare(self, other) >= 0
     def __ne__(self, other):
         return self._compare(self, other) != 0
+    def __hash__(self):
+        return hash((
+            self.name,
+            self.version,
+            self._ast_node,
+            self.deprecated,
+            self.raw_doc,
+            self.doc,
+            self.arg_data_type,
+            self.result_data_type,
+            self.error_data_type,
+            id(self.attrs)
+        ))
+
 
 class DeprecationInfo(object):
 
