@@ -304,7 +304,6 @@ class TestGeneratedPythonClient(unittest.TestCase):
         ns.add_route(route)
 
         result = self._evaluate_namespace(ns)
-        print(result)
         expected = textwrap.dedent('''\
             def files_test_route(self,
                                  field1,
