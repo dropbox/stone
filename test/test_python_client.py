@@ -10,6 +10,8 @@ from stone.ir import (
     Nullable,
     String,
     Void,
+    StructField,
+    Struct,
 )
 
 MYPY = False
@@ -282,6 +284,50 @@ class TestGeneratedPythonClient(unittest.TestCase):
                     None,
                 )
                 return None
+
+        ''')
+        self.assertEqual(result, expected)
+
+    def test_route_with_doc_and_attribute_and_data_types(self):
+        # type: () -> None
+        ns = ApiNamespace('files')
+        struct = Struct('MyStruct', ns, None)
+        struct.set_attributes(None, [
+            StructField('field1', Int32(), None, None),
+            StructField('field2', Int32(), None, None),
+        ])
+
+        route = ApiRoute('test/route', 1, None)
+        route.set_attributes(
+            None, "Test string.", struct, Int32(), Void(), {'scope': 'events.read'}
+        )
+        ns.add_route(route)
+
+        result = self._evaluate_namespace(ns)
+        print(result)
+        expected = textwrap.dedent('''\
+            def files_test_route(self,
+                                 field1,
+                                 field2):
+                """
+                Test string.
+            
+                Route attributes:
+                    scope: events.read
+            
+                :type field1: int
+                :type field2: int
+                :rtype: int
+                """
+                arg = files.MyStruct(field1,
+                                     field2)
+                r = self.request(
+                    files.test_route,
+                    'files',
+                    arg,
+                    None,
+                )
+                return r
 
         ''')
         self.assertEqual(result, expected)
