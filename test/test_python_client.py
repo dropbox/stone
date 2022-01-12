@@ -311,10 +311,10 @@ class TestGeneratedPythonClient(unittest.TestCase):
                                  field2):
                 """
                 Test string.
-            
+
                 Route attributes:
                     scope: events.read
-            
+
                 :type field1: int
                 :type field2: int
                 :rtype: int
