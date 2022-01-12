@@ -107,7 +107,7 @@ _cmdline_parser.add_argument(
 )
 _cmdline_parser.add_argument(
     '-a',
-    '--attribute',
+    '--attribute-comment',
     action='append',
     type=str,
     default=[],
@@ -393,13 +393,13 @@ class PythonClientBackend(CodeBackend):
         """
         fields = [] if is_void_type(arg_data_type) else arg_data_type.fields
 
-        attrs_list = []
-        if self.args.attribute and attrs:
-            for attribute in self.args.attribute:
+        attrs_lines = []
+        if self.args.attribute_comment and attrs:
+            for attribute in self.args.attribute_comment:
                 if attribute in attrs:
-                    attrs_list.append('{}: {}'.format(attribute, attrs[attribute]))
+                    attrs_lines.append('{}: {}'.format(attribute, attrs[attribute]))
 
-        if not fields and not overview and not attrs_list:
+        if not fields and not overview and not attrs_lines:
             # If we don't have an overview or any input parameters, we skip the
             # docstring altogether.
             return
@@ -408,15 +408,15 @@ class PythonClientBackend(CodeBackend):
         if overview:
             self.emit_wrapped_text(overview)
 
-        if attrs_list:
+        if attrs_lines:
             if overview:
                 self.emit()
             self.emit('Route attributes:')
-            [self.emit_wrapped_text(a, '    ') for a in attrs_list]
+            [self.emit_wrapped_text(a, '    ') for a in attrs_lines]
 
         # Description of all input parameters
         if extra_request_args or fields:
-            if overview or attrs_list:
+            if overview or attrs_lines:
                 # Add a blank line if we had an overview or attrs
                 self.emit()
 
@@ -471,7 +471,7 @@ class PythonClientBackend(CodeBackend):
                 self.emit(':type arg: {}'.format(
                     self._format_type_in_doc(namespace, arg_data_type)))
 
-        if (overview or attrs_list) and not (extra_request_args or fields):
+        if (overview or attrs_lines) and not (extra_request_args or fields):
             # Only output an empty line if we had an overview and haven't
             # started a section on declaring types.
             self.emit()
