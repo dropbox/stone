@@ -27,7 +27,8 @@ class TestGeneratedPythonClient(unittest.TestCase):
 
         backend = PythonClientBackend(
             target_folder_path='output',
-            args=['-a', 'scope', '-a', 'another_attribute', '-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
+            args=['-a', 'scope', '-a', 'another_attribute',
+                  '-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'])
         backend._generate_routes(ns)
         return backend.output_buffer_to_string()
 
@@ -222,7 +223,9 @@ class TestGeneratedPythonClient(unittest.TestCase):
         # type: () -> None
 
         route1 = ApiRoute('get_metadata', 1, None)
-        route1.set_attributes(None, None, Void(), Void(), Void(), {'scope':'events.read', 'another_attribute':'foo'})
+        route1.set_attributes(None, None, Void(), Void(), Void(), {
+            'scope': 'events.read', 'another_attribute': 'foo'
+        })
         ns = ApiNamespace('files')
         ns.add_route(route1)
 
@@ -233,7 +236,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
                 Route attributes:
                     scope: events.read
                     another_attribute: foo
-            
+
                 :rtype: None
                 """
                 arg = None
@@ -265,7 +268,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
             def files_get_metadata(self):
                 """
                 Test string.
-                
+
                 Route attributes:
                     scope: events.read
 
@@ -282,6 +285,5 @@ class TestGeneratedPythonClient(unittest.TestCase):
 
         ''')
         self.assertEqual(result, expected)
-
 
     # TODO: add more unit tests for client code generation
