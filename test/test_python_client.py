@@ -224,12 +224,12 @@ class TestGeneratedPythonClient(unittest.TestCase):
     def test_route_with_attributes_in_docstring(self):
         # type: () -> None
 
-        route1 = ApiRoute('get_metadata', 1, None)
-        route1.set_attributes(None, None, Void(), Void(), Void(), {
+        route = ApiRoute('get_metadata', 1, None)
+        route.set_attributes(None, None, Void(), Void(), Void(), {
             'scope': 'events.read', 'another_attribute': 'foo'
         })
         ns = ApiNamespace('files')
-        ns.add_route(route1)
+        ns.add_route(route)
 
         result = self._evaluate_namespace(ns)
         expected = textwrap.dedent('''\
@@ -259,11 +259,11 @@ class TestGeneratedPythonClient(unittest.TestCase):
         In particular make sure there's spacing b/w overview and attrs.
         """
 
-        route1 = ApiRoute('get_metadata', 1, None)
-        route1.set_attributes(None, "Test string.", Void(), Void(), Void(),
+        route = ApiRoute('get_metadata', 1, None)
+        route.set_attributes(None, "Test string.", Void(), Void(), Void(),
                               {'scope': 'events.read'})
         ns = ApiNamespace('files')
-        ns.add_route(route1)
+        ns.add_route(route)
 
         result = self._evaluate_namespace(ns)
         expected = textwrap.dedent('''\
