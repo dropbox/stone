@@ -261,7 +261,7 @@ class TestGeneratedPythonClient(unittest.TestCase):
 
         route = ApiRoute('get_metadata', 1, None)
         route.set_attributes(None, "Test string.", Void(), Void(), Void(),
-                              {'scope': 'events.read'})
+                             {'scope': 'events.read'})
         ns = ApiNamespace('files')
         ns.add_route(route)
 
