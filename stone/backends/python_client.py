@@ -412,7 +412,8 @@ class PythonClientBackend(CodeBackend):
             if overview:
                 self.emit()
             self.emit('Route attributes:')
-            [self.emit_wrapped_text(a, '    ') for a in attrs_lines]
+            for a in attrs_lines:
+                self.emit_wrapped_text(a, '    ')
 
         # Description of all input parameters
         if extra_request_args or fields:
