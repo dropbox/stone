@@ -4,8 +4,8 @@
 name: Publish to PyPi
 
 on:
-  release:
-    types: [created]
+  pull_request:
+# DO NOT MERGE THIS CHANGE - for testing
 
 jobs:
   deploy:
