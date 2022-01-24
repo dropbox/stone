@@ -18,7 +18,7 @@ from setuptools import setup
 # full Pip syntax is not supported. See also
 # <http://stackoverflow.com/questions/14399534/>.
 install_reqs = []
-with open('requirements.txt', encoding='utf-8') as f:
+with open('requirements.txt') as f:  # pylint: disable=W1514
     install_reqs += f.read().splitlines()
 
 setup_requires = [
@@ -31,10 +31,10 @@ setup_requires = [
 # full Pip syntax is not supported. See also
 # <http://stackoverflow.com/questions/14399534/>.
 test_reqs = []
-with open('test/requirements.txt', encoding='utf-8') as f:
+with open('test/requirements.txt') as f:  # pylint: disable=W1514
     test_reqs += f.read().splitlines()
 
-with open('README.rst', encoding='utf-8') as f:
+with open('README.rst') as f:  # pylint: disable=W1514
     README = f.read()
 
 dist = setup(
@@ -67,7 +67,7 @@ dist = setup(
     maintainer='Dropbox',
     url='https://github.com/dropbox/stone',
     classifiers=[
-        'Development Status :: 5 - Stable',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
