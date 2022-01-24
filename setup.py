@@ -39,7 +39,7 @@ with open('README.rst', encoding='utf-8') as f:
 
 dist = setup(
     name='stone',
-    version='3.2.1',
+    version='3.3.0',
     install_requires=install_reqs,
     setup_requires=setup_requires,
     tests_require=test_reqs,
