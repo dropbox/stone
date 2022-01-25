@@ -253,6 +253,37 @@ class TestGeneratedPythonClient(unittest.TestCase):
         ''')
         self.assertEqual(result, expected)
 
+    def test_route_with_none_attribute_in_docstring(self):
+        # type: () -> None
+
+        route = ApiRoute('get_metadata', 1, None)
+        route.set_attributes(None, None, Void(), Void(), Void(), {
+            'scope': 'events.read', 'another_attribute': None
+        })
+        ns = ApiNamespace('files')
+        ns.add_route(route)
+
+        result = self._evaluate_namespace(ns)
+        expected = textwrap.dedent('''\
+            def files_get_metadata(self):
+                """
+                Route attributes:
+                    scope: events.read
+
+                :rtype: None
+                """
+                arg = None
+                r = self.request(
+                    files.get_metadata,
+                    'files',
+                    arg,
+                    None,
+                )
+                return None
+
+        ''')
+        self.assertEqual(result, expected)
+
     def test_route_with_attributes_and_doc_in_docstring(self):
         # type: () -> None
         """

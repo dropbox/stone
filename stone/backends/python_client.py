@@ -396,7 +396,7 @@ class PythonClientBackend(CodeBackend):
         attrs_lines = []
         if self.args.attribute_comment and attrs:
             for attribute in self.args.attribute_comment:
-                if attribute in attrs:
+                if attribute in attrs and attrs[attribute] is not None:
                     attrs_lines.append('{}: {}'.format(attribute, attrs[attribute]))
 
         if not fields and not overview and not attrs_lines:
