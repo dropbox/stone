@@ -25,11 +25,13 @@ from stone.backends.js_helpers import (
 from stone.ir import Void
 
 _cmdline_parser = argparse.ArgumentParser(prog='js-client-backend')
+
 _cmdline_parser.add_argument(
     'filename',
     help=('The name to give the single Javascript file that is created and '
           'contains all of the routes.'),
 )
+
 _cmdline_parser.add_argument(
     '-c',
     '--class-name',
@@ -38,6 +40,7 @@ _cmdline_parser.add_argument(
           'The name will be added to each function documentation, which makes '
           'it available for tools like JSDoc.'),
 )
+
 _cmdline_parser.add_argument(
     '--wrap-response-in',
     type=str,
@@ -50,6 +53,18 @@ _cmdline_parser.add_argument(
     type=str,
     default='',
     help=('Wraps the error in an error class')
+)
+
+_cmdline_parser.add_argument(
+    '-a',
+    '--attribute-comment',
+    action='append',
+    type=str,
+    default=[],
+    help=('Route attributes that the backend will have access to and '
+          'presumably expose in generated code. Use ":all" to select all '
+          'attributes defined in stone_cfg.Route. Attributes will be '
+          "exposed in the documentation, as the client doesn't use them."),
 )
 
 _header = """\
@@ -88,6 +103,17 @@ class JavascriptClientBackend(CodeBackend):
         self.emit('/**')
         if route.doc:
             self.emit_wrapped_text(self.process_doc(route.doc, self._docf), prefix=' * ')
+
+        attrs_lines = []
+        if self.args.attribute_comment and route.attrs:
+            for attribute in self.args.attribute_comment:
+                if attribute in route.attrs and route.attrs[attribute] is not None:
+                    attrs_lines.append(' *   {}: {}'.format(attribute, route.attrs[attribute]))
+        if attrs_lines:
+            self.emit(' * Route attributes:')
+            for a in attrs_lines:
+                self.emit(a)
+
         if self.args.class_name:
             self.emit(' * @function {}#{}'.format(self.args.class_name,
                                                   function_name))
