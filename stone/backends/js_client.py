@@ -62,8 +62,7 @@ _cmdline_parser.add_argument(
     type=str,
     default=[],
     help=('Route attributes that the backend will have access to and '
-          'presumably expose in generated code. Use ":all" to select all '
-          'attributes defined in stone_cfg.Route. Attributes will be '
+          'presumably expose in generated code. Attributes will be '
           "exposed in the documentation, as the client doesn't use them."),
 )
 

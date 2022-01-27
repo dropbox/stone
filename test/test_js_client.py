@@ -148,7 +148,7 @@ class TestGeneratedJSClient(unittest.TestCase):
             self.assertTrue(str(cm.exception).startswith(
                 'There is a name conflict between'))
 
-    def test_route_attribute_comments(self):
+    def test_route_with_attributes_in_docstring(self):
         # type: () -> None
 
         api, _ = self._get_api()
