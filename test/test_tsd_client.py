@@ -136,7 +136,6 @@ class TestGeneratedTSDClient(unittest.TestCase):
         )
         backend._generate_routes(api, 0, 0)
         result = backend.output_buffer_to_string()
-        print(result)
         expected = textwrap.dedent(
             '''\
 
@@ -149,7 +148,7 @@ class TestGeneratedTSDClient(unittest.TestCase):
              * When an error occurs, the route rejects the promise with type Error<void>.
              */
             public filesGetMetadata(): Promise<void>;
-            
+
             /**
              * getMetadataV2()
              *

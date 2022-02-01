@@ -173,7 +173,7 @@ class TestGeneratedJSClient(unittest.TestCase):
             routes.filesGetMetadata = function () {
               return this.request("files/get_metadata", null);
             };
-            
+
             /**
              * get_metadata_v2
              * Route attributes:
@@ -197,6 +197,4 @@ class TestGeneratedJSClient(unittest.TestCase):
 
             export { routes };
             ''')
-        print('result!', result)
         assert result == expected
-
