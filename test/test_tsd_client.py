@@ -19,11 +19,17 @@ class TestGeneratedTSDClient(unittest.TestCase):
         api = Api(version='0.1b1')
         api.route_schema = Struct('Route', 'stone_cfg', None)
         route1 = ApiRoute('get_metadata', 1, None)
-        route1.set_attributes(None, ':route:`get_metadata`', Void(), Void(), Void(), {})
+        route1.set_attributes(None, ':route:`get_metadata`', Void(), Void(), Void(), {
+            'scope': 'events.read'
+        })
         route2 = ApiRoute('get_metadata', 2, None)
-        route2.set_attributes(None, ':route:`get_metadata:2`', Void(), Int32(), Void(), {})
+        route2.set_attributes(None, ':route:`get_metadata:2`', Void(), Int32(), Void(), {
+            'scope': 'events.read'
+        })
         route3 = ApiRoute('get_metadata', 3, None)
-        route3.set_attributes(None, ':route:`get_metadata:3`', Int32(), Int32(), Void(), {})
+        route3.set_attributes(None, ':route:`get_metadata:3`', Int32(), Int32(), Void(), {
+            'scope': None
+        })
         ns = ApiNamespace('files')
         ns.add_route(route1)
         ns.add_route(route2)
@@ -120,3 +126,45 @@ class TestGeneratedTSDClient(unittest.TestCase):
             backend._generate_routes(api, 0, 0)
         self.assertTrue(str(cm.exception).startswith(
             'There is a name conflict between'))
+
+    def test_route_with_attributes_in_docstring(self):
+        # type: () -> None
+        api, _ = self._get_api()
+        backend = TSDClientBackend(
+            target_folder_path="output",
+            args=['files', 'files', '-a', 'scope']
+        )
+        backend._generate_routes(api, 0, 0)
+        result = backend.output_buffer_to_string()
+        expected = textwrap.dedent(
+            '''\
+
+            /**
+             * getMetadata()
+             *
+             * Route attributes:
+             *   scope: events.read
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadata(): Promise<void>;
+
+            /**
+             * getMetadataV2()
+             *
+             * Route attributes:
+             *   scope: events.read
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             */
+            public filesGetMetadataV2(): Promise<number>;
+
+            /**
+             * getMetadataV3()
+             *
+             * When an error occurs, the route rejects the promise with type Error<void>.
+             * @param arg The request parameters.
+             */
+            public filesGetMetadataV3(arg: number): Promise<number>;
+            ''')
+        self.assertEqual(result, expected)
