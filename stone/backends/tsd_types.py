@@ -249,7 +249,7 @@ class TSDTypesBackend(CodeBackend):
         if namespace.doc:
             self._emit_tsdoc_header(namespace.doc)
 
-        self.emit_wrapped_text(self._get_top_level_declaration(namespace.name))
+        self.emit(self._get_top_level_declaration(namespace.name))
 
         with self.indent(dent=spaces_per_indent):
             for data_type in data_types:
