@@ -27,7 +27,7 @@ jobs:
           coverage run --rcfile=.coveragerc -m pytest
           coverage xml
       - name: Publish Coverage
-        uses: codecov/codecov-action@v1.0.14
+        uses: codecov/codecov-action@v3.1.1
         with:
           flags: unit
           fail_ci_if_error: true
