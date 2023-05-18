@@ -5,6 +5,7 @@ from collections import defaultdict
 import copy
 import logging
 
+from inspect import isclass
 try:
     from inspect import getfullargspec as get_args
 except ImportError:
@@ -1158,7 +1159,7 @@ class IRGenerator(object):
         if obj is Void and type_ref.nullable:
             raise InvalidSpec('Void cannot be marked nullable.',
                               *loc)
-        elif inspect.isclass(obj):
+        elif isclass(obj):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
                 obj, resolved_data_type_args, (type_ref.lineno, type_ref.path))
