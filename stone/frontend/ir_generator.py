@@ -3,8 +3,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import defaultdict
 
 import copy
-import inspect
 import logging
+
+from inspect import isclass
+try:
+    from inspect import getfullargspec as get_args
+except ImportError:
+    from inspect import getargspec as get_args
 
 _MYPY = False
 if _MYPY:
@@ -1074,7 +1079,7 @@ class IRGenerator(object):
         assert issubclass(data_type_class, DataType), \
             'Expected stone.data_type.DataType, got %r' % data_type_class
 
-        argspec = inspect.getargspec(data_type_class.__init__)  # noqa: E501 # pylint: disable=deprecated-method,useless-suppression
+        argspec = get_args(data_type_class.__init__)  # noqa: E501 # pylint: disable=deprecated-method,useless-suppression
         argspec.args.remove('self')
         num_args = len(argspec.args)
         # Unfortunately, argspec.defaults is None if there are no defaults
@@ -1154,7 +1159,7 @@ class IRGenerator(object):
         if obj is Void and type_ref.nullable:
             raise InvalidSpec('Void cannot be marked nullable.',
                               *loc)
-        elif inspect.isclass(obj):
+        elif isclass(obj):
             resolved_data_type_args = self._resolve_args(env, type_ref.args)
             data_type = self._instantiate_data_type(
                 obj, resolved_data_type_args, (type_ref.lineno, type_ref.path))
