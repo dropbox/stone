@@ -29,6 +29,7 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 import argparse
+
 class _Tester(CodeBackend):
     """A no-op backend used to test helper methods."""
     def generate(self, api):

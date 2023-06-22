@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-
+import os
 from stone.backend import CodeBackend
 from stone.backends.swift_helpers import (
     fmt_class,
@@ -7,26 +7,31 @@ from stone.backends.swift_helpers import (
     fmt_obj,
     fmt_type,
     fmt_var,
+    fmt_objc_type,
+    mapped_list_info,
 )
+
 from stone.ir import (
     Boolean,
     Bytes,
-    DataType,
     Float32,
     Float64,
     Int32,
     Int64,
     List,
+    Map,
     String,
     Timestamp,
     UInt32,
     UInt64,
     Void,
     is_list_type,
+    is_map_type,
     is_timestamp_type,
     is_union_type,
     is_user_defined_type,
     unwrap_nullable,
+    is_nullable_type,
 )
 
 _serial_type_table = {
@@ -37,6 +42,7 @@ _serial_type_table = {
     Int32: 'Int32Serializer',
     Int64: 'Int64Serializer',
     List: 'ArraySerializer',
+    Map: 'DictionarySerializer',
     String: 'StringSerializer',
     Timestamp: 'NSDateSerializer',
     UInt32: 'UInt32Serializer',
@@ -44,6 +50,21 @@ _serial_type_table = {
     Void: 'VoidSerializer',
 }
 
+_nsnumber_type_table = {
+    Boolean: '.boolValue',
+    Bytes: '',
+    Float32: '.floatValue',
+    Float64: '.doubleValue',
+    Int32: '.int32Value',
+    Int64: '.int64Value',
+    List: '',
+    String: '',
+    Timestamp: '',
+    UInt32: '.uint32Value',
+    UInt64: '.uint64Value',
+    Void: '',
+    Map: '',
+}
 
 stone_warning = """\
 ///
@@ -98,24 +119,6 @@ class SwiftBaseBackend(CodeBackend):
             sep += '\n' + self.make_indent()
         return sep.join(out)
 
-    @contextmanager
-    def class_block(self, thing, protocols=None):
-        protocols = protocols or []
-        extensions = []
-
-        if isinstance(thing, DataType):
-            name = fmt_class(thing.name)
-            if thing.parent_type:
-                extensions.append(fmt_type(thing.parent_type))
-        else:
-            name = thing
-        extensions.extend(protocols)
-
-        extend_suffix = ': {}'.format(', '.join(extensions)) if extensions else ''
-
-        with self.block('open class {}{}'.format(name, extend_suffix)):
-            yield
-
     def _struct_init_args(self, data_type, namespace=None):  # pylint: disable=unused-argument
         args = []
         for field in data_type.all_fields:
@@ -134,6 +137,113 @@ class SwiftBaseBackend(CodeBackend):
             arg = (name, value)
             args.append(arg)
         return args
+
+    def _objc_init_args(self, data_type, include_defaults=True):
+        args = []
+        for field in data_type.all_fields:
+            name = fmt_var(field.name)
+            value = fmt_objc_type(field.data_type)
+            data_type, nullable = unwrap_nullable(field.data_type)
+
+            if not include_defaults and (field.has_default or nullable):
+                continue
+
+            arg = (name, value)
+            args.append(arg)
+        return args
+
+    def _objc_no_defualts_func_args(self, data_type, args_data=None):
+        args = []
+        for field in data_type.all_fields:
+            name = fmt_var(field.name)
+            _, nullable = unwrap_nullable(field.data_type)
+            if field.has_default or nullable:
+                continue
+            arg = (name, name)
+            args.append(arg)
+
+        if args_data is not None:
+            _, type_data_list = tuple(args_data)
+            extra_args = [tuple(type_data[:-1]) for type_data in type_data_list]
+            for name, _, extra_type in extra_args:
+                if not is_nullable_type(extra_type):
+                    arg = (name, name)
+                    args.append(arg)
+
+        return self._func_args(args)
+
+    def _objc_init_args_to_swift(self, data_type, args_data=None, include_defaults=True):
+        args = []
+        for field in data_type.all_fields:
+            name = fmt_var(field.name)
+            field_data_type, nullable = unwrap_nullable(field.data_type)
+            if not include_defaults and (field.has_default or nullable):
+                continue
+            nsnumber_type = _nsnumber_type_table.get(field_data_type.__class__)
+            value = '{}{}{}'.format(name,
+                                    '?' if nullable and nsnumber_type else '',
+                                    nsnumber_type)
+            if is_list_type(field_data_type):
+                _, prefix, suffix, list_data_type, _ = mapped_list_info(field_data_type)
+
+                value = '{}{}'.format(name,
+                                      '?' if nullable else '')
+                list_nsnumber_type = _nsnumber_type_table.get(list_data_type.__class__)
+
+                if not is_user_defined_type(list_data_type) and not list_nsnumber_type:
+                    value = name
+                else:
+                    value = '{}.map {}'.format(value,
+                                               prefix)
+
+                    if is_user_defined_type(list_data_type):
+                        value = '{}{{ $0.{} }}'.format(value,
+                                                       self._objc_swift_var_name(list_data_type))
+                    else:
+                        value = '{}{{ $0{} }}'.format(value,
+                                                      list_nsnumber_type)
+
+                    value = '{}{}'.format(value,
+                                          suffix)
+            elif is_map_type(field_data_type):
+                if is_user_defined_type(field_data_type.value_data_type):
+                    value = '{}{}.mapValues {{ $0.swift }}'.format(name,
+                                                                   '?' if nullable else '')
+            elif is_user_defined_type(field_data_type):
+                value = '{}{}.{}'.format(name,
+                                         '?' if nullable else '',
+                                         self._objc_swift_var_name(field_data_type))
+
+            arg = (name, value)
+            args.append(arg)
+
+        if args_data is not None:
+            _, type_data_list = tuple(args_data)
+            extra_args = [tuple(type_data[:-1]) for type_data in type_data_list]
+            for name, _, _ in extra_args:
+                args.append((name, name))
+
+        return self._func_args(args)
+
+    def _objc_swift_var_name(self, data_type):
+        parent_type = data_type.parent_type
+        uw_parent_type, _ = unwrap_nullable(parent_type)
+        sub_count = 1 if parent_type else 0
+        while is_user_defined_type(uw_parent_type) and parent_type.parent_type:
+            sub_count += 1
+            parent_type = parent_type.parent_type
+            uw_parent_type, _ = unwrap_nullable(parent_type)
+
+        if sub_count == 0 or is_union_type(data_type):
+            return 'swift'
+        else:
+            name = 'Swift'
+            i = 1
+            while i <= sub_count:
+                name = '{}{}'.format('sub' if i == sub_count else 'Sub',
+                                     name)
+                i += 1
+            return name
 
     def _docf(self, tag, val):
         if tag == 'route':
@@ -155,6 +265,20 @@ class SwiftBaseBackend(CodeBackend):
         else:
             return val
 
+    def _write_output_in_target_folder(self, output, file_name, objc=False, rop=None):
+        full_path = self.target_folder_path
+        if objc:
+            if rop is None:
+                full_path = full_path.replace('Source/SwiftyDropbox', 'Source/SwiftyDropboxObjC')
+            else:
+                full_path = '{}{}'.format(full_path, rop)
+
+        if not os.path.exists(full_path):
+            os.mkdir(full_path)
+        full_path = os.path.join(full_path, file_name)
+        with open(full_path, "w", encoding='utf-8') as fh:
+            fh.write(output)
+
 def fmt_serial_type(data_type):
     data_type, nullable = unwrap_nullable(data_type)
 
@@ -167,6 +291,9 @@ def fmt_serial_type(data_type):
 
         if is_list_type(data_type):
             result = result + '<{}>'.format(fmt_serial_type(data_type.data_type))
+        if is_map_type(data_type):
+            result = result + '<{}, {}>'.format(fmt_serial_type(data_type.key_data_type),
+            fmt_serial_type(data_type.value_data_type))
 
     return result if not nullable else 'NullableSerializer'
 
@@ -183,6 +310,8 @@ def fmt_serial_obj(data_type):
 
         if is_list_type(data_type):
             result = result + '({})'.format(fmt_serial_obj(data_type.data_type))
+        elif is_map_type(data_type):
+            result = result + '({})'.format(fmt_serial_obj(data_type.value_data_type))
         elif is_timestamp_type(data_type):
             result = result + '("{}")'.format(data_type.format)
         else:
