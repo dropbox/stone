@@ -689,7 +689,7 @@ class StructField(Field):
     @property
     def default(self):
         if not self.has_default:
-            raise Exception('Type has no default')
+            raise ValueError('Type has no default')
         else:
             return self._default
 
@@ -1382,7 +1382,7 @@ class Union(UserDefined):
 
     # TODO: Why is this a different signature than the parent? Is this
     # intentional?
-    def set_attributes(self, doc, fields,  # pylint: disable=arguments-differ
+    def set_attributes(self, doc, fields,
             parent_type=None, catch_all_field=None):
         """
         :param UnionField catch_all_field: The field designated as the
@@ -1475,7 +1475,6 @@ class Union(UserDefined):
             )
 
         # TODO: are we always guaranteed at least one field?
-        # pylint: disable=undefined-loop-variable
         try:
             field.data_type.check_example(example_field)
         except InvalidSpec as e:
@@ -1581,7 +1580,6 @@ class Union(UserDefined):
                 raise AssertionError('No example for label %r' % label)
 
             # TODO: are we always guaranteed at least one field?
-            # pylint: disable=undefined-loop-variable
             assert is_void_type(field.data_type)
             return Example(
                 field.name, field.doc, OrderedDict([('.tag', field.name)]))

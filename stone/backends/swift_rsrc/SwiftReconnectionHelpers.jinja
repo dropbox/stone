@@ -1,0 +1,31 @@
+///
+/// Copyright (c) 2022 Dropbox, Inc. All rights reserved.
+///
+
+import Foundation
+
+enum ReconnectionHelpers {
+    /// Seven character SDK git sha: `git rev-parse --short HEAD`
+    static let GitSha = "{{ git_sha }}"
+
+    static func rebuildRequest(apiRequest: ApiRequest, client: DropboxTransportClientInternal) throws -> DropboxBaseRequestBox {
+        let info = try persistedRequestInfo(from: apiRequest)
+
+        switch info.routeName {
+        {% for namespace, route in background_compatible_namespace_route_pairs %}
+            case "{{ fmt_func(route.name, route.version) }}":
+                return .{{ fmt_func(route.name, route.version) }}(
+                    rebuildRequest(
+                        apiRequest: apiRequest,
+                        info: info,
+                        route: {{ fmt_class(namespace.name) }}.{{ fmt_func(route.name, route.version) }},
+                        client: client
+                    )
+                )
+        {% endfor %}
+            default:
+                throw ReconnectionErrorKind.missingReconnectionCase
+        }
+    }
+}
+

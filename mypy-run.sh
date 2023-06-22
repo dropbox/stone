@@ -6,4 +6,3 @@ EXCLUDE='(^example/|^ez_setup\.py$|^setup\.py$)'
 INCLUDE=$(git ls-files "$@" | grep '\.py$' | grep -Ev "$EXCLUDE" | tr '\n' '\0' | xargs -0 | cat)
 MYPY_CMD=mypy
 $MYPY_CMD $INCLUDE
-$MYPY_CMD --py2 $INCLUDE
