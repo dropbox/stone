@@ -285,20 +285,9 @@ class SwiftBackend(SwiftBaseBackend):
         template.globals['fmt_func'] = fmt_func
         template.globals['fmt_class'] = fmt_class
 
-        cmd = "git rev-parse --short HEAD"
-
-        process = subprocess.Popen(cmd.split(), cwd="..", text=True, stdout=subprocess.PIPE)
-        output, error = process.communicate()
-        git_sha = output[:7]
-
-        if error is not None:
-            print("error: Git sha creation error: '%s'" % error,
-                  file=sys.stderr)
-            sys.exit(1)
-
         output_from_parsed_template = template.render(
-            background_compatible_namespace_route_pairs=background_compatible_pairs,
-            git_sha=git_sha)
+            background_compatible_namespace_route_pairs=background_compatible_pairs
+        )
         self._write_output_in_target_folder(output_from_parsed_template,
                                             'ReconnectionHelpers.swift')
 
