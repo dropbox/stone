@@ -1,9 +1,7 @@
 import json
 import os
-import sys
 import jinja2
 import textwrap
-import subprocess
 
 from stone.ir import (
     is_struct_type,
