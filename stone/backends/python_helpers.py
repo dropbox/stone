@@ -4,12 +4,10 @@ from contextlib import contextmanager
 
 import pprint
 
-from stone.backend import Backend, CodeBackend
 from stone.backends.helpers import (
     fmt_pascal,
     fmt_underscores,
 )
-from stone.ir import ApiNamespace
 from stone.ir import (
     AnnotationType,
     Boolean,

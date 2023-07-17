@@ -22,11 +22,6 @@ from stone.backends.python_type_mapping import (
     OverrideDefaultTypesDict,
 )
 from stone.ir import (
-    Alias,
-    AnnotationType,
-    Api,
-    ApiNamespace,
-    DataType,
     is_nullable_type,
     is_struct_type,
     is_union_type,

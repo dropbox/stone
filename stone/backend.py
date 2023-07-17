@@ -17,7 +17,6 @@ from stone.ir import (
 
 _MYPY = False
 if _MYPY:
-    from stone.ir import Api
     import typing  # pylint: disable=import-error,useless-suppression
 
     # Generic Dict key-val types
