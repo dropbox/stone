@@ -17,8 +17,8 @@ from stone.ir import (
 
 _MYPY = False
 if _MYPY:
-    from stone.ir import Api
-    import typing # noqa: F401 # pylint: disable=import-error,useless-suppression
+    from stone.ir import Api # noqa: F401
+    import typing  # noqa: F401 # pylint: disable=import-error,useless-suppression
 
     # Generic Dict key-val types
     DelimTuple = typing.Tuple[typing.Text, typing.Text]
