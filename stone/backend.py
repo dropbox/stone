@@ -27,6 +27,8 @@ if _MYPY:
 
 
 def remove_aliases_from_api(api):
+    # type: (Api) -> Api
+
     # Resolve nested aliases from each namespace first. This way, when we replace an alias with
     # its source later on, it too is alias free.
     for namespace in api.namespaces.values():
