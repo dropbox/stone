@@ -5,7 +5,7 @@ A command-line interface for StoneAPI.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import codecs
-import imp  # pylint: disable=deprecated-module
+import importlib
 import io
 import json
 import logging
@@ -137,7 +137,6 @@ _filter_ns_group.add_argument(
     help='If set, backends will not see any routes for the specified namespaces.',
 )
 
-
 def main():
     """The entry point for the program."""
 
@@ -169,7 +168,8 @@ def main():
         # The module should should contain an api variable that references a
         # :class:`stone.api.Api` object.
         try:
-            api = imp.load_source('api', args.api[0]).api  # pylint: disable=redefined-outer-name
+            api_module = _load_module('api', args.api[0])
+            api = api_module.api
         except ImportError as e:
             print('error: Could not import API description due to:',
                   e, file=sys.stderr)
@@ -342,7 +342,7 @@ def main():
         if new_python_path not in sys.path:
             sys.path.append(new_python_path)
         try:
-            backend_module = imp.load_source('user_backend', args.backend)
+            backend_module = _load_module('user_backend', args.backend)
         except Exception:
             print("error: Importing backend '%s' module raised an exception:" %
                   args.backend, file=sys.stderr)
@@ -368,6 +368,17 @@ def main():
         # easier to do debugging.
         return api
 
+def _load_module(name, path):
+    file_name = os.path.basename(path)
+    module_name = file_name.replace('.', '_')
+
+    module_specs = importlib.util.spec_from_file_location(module_name, path)
+    module = importlib.util.module_from_spec(module_specs)
+    module_specs.loader.exec_module(module)
+
+    sys.modules[name] = module
+
+    return module
 
 if __name__ == '__main__':
     # Assign api variable for easy debugging from a Python console
