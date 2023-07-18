@@ -168,8 +168,7 @@ def main():
         # The module should should contain an api variable that references a
         # :class:`stone.api.Api` object.
         try:
-            api_module = _load_module('api', args.api[0])
-            api = api_module.api
+            api = _load_module('api', args.api[0]).api
         except ImportError as e:
             print('error: Could not import API description due to:',
                   e, file=sys.stderr)
