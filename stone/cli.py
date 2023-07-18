@@ -139,7 +139,6 @@ _filter_ns_group.add_argument(
 
 def main():
     """The entry point for the program."""
-
     if '--' in sys.argv:
         cli_args = sys.argv[1:sys.argv.index('--')]
         backend_args = sys.argv[sys.argv.index('--') + 1:]
@@ -168,7 +167,8 @@ def main():
         # The module should should contain an api variable that references a
         # :class:`stone.api.Api` object.
         try:
-            api = _load_module('api', args.api[0]).api
+            api_module = _load_module('api', args.api[0])
+            api = api_module.api  # pylint: disable=redefined-outer-name
         except ImportError as e:
             print('error: Could not import API description due to:',
                   e, file=sys.stderr)
