@@ -33,7 +33,6 @@ if _MYPY:
 
 import argparse
 
-
 # This will be at the top of the generated file.
 base = """\
 # -*- coding: utf-8 -*-

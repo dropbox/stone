@@ -9,7 +9,7 @@ from inspect import isclass
 try:
     from inspect import getfullargspec as get_args
 except ImportError:
-    from inspect import getargspec as get_args
+    from inspect import getargspec as get_args  # type: ignore
 
 _MYPY = False
 if _MYPY:
