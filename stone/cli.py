@@ -377,7 +377,7 @@ def _load_module(name, path):
         module_specs.loader.exec_module(module)
     else:
         loader = importlib.machinery.SourceFileLoader(module_name, path)
-        module = loader.load_module() # noqa: W4902, E1120
+        module = loader.load_module()  # noqa: W4902, E1120
 
     sys.modules[name] = module
 
