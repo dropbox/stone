@@ -371,9 +371,13 @@ def _load_module(name, path):
     file_name = os.path.basename(path)
     module_name = file_name.replace('.', '_')
 
-    module_specs = importlib.util.spec_from_file_location(module_name, path)
-    module = importlib.util.module_from_spec(module_specs)
-    module_specs.loader.exec_module(module)
+    if sys.version_info[0] == 3 and sys.version_info[1] >= 5:
+        module_specs = importlib.util.spec_from_file_location(module_name, path)
+        module = importlib.util.module_from_spec(module_specs)
+        module_specs.loader.exec_module(module)
+    else:
+        loader = importlib.machinery.SourceFileLoader(module_name, path)
+        module = loader.load_module()
 
     sys.modules[name] = module
 
