@@ -24,7 +24,6 @@ if _MYPY:
 
 import argparse
 
-
 _cmdline_parser = argparse.ArgumentParser(prog='js-types-backend')
 _cmdline_parser.add_argument(
     'filename',
