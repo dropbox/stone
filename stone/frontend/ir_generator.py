@@ -1,11 +1,8 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from collections import defaultdict
-
 import copy
 import logging
-
+from collections import defaultdict
 from inspect import isclass
+
 try:
     from inspect import getfullargspec as get_args
 except ImportError:
@@ -228,7 +225,7 @@ class Environment(dict):
     namespace_name = None  # type: typing.Optional[typing.Text]
 
 
-class IRGenerator(object):
+class IRGenerator:
 
     data_types = [
         Bytes,
@@ -565,7 +562,7 @@ class IRGenerator(object):
                                   ast_node=item)
             except ParameterError as e:
                 raise InvalidSpec(
-                    'Bad declaration of %s: %s' % (quote(item.name), e.args[0]),
+                    'Bad declaration of {}: {}'.format(quote(item.name), e.args[0]),
                     item.lineno, item.path)
         elif isinstance(item, AstUnionDef):
             api_type = Union(

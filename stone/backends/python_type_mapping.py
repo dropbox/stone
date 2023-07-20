@@ -1,3 +1,4 @@
+from stone.backends.python_helpers import class_name_for_data_type, fmt_namespace
 from stone.ir import (
     Alias,
     ApiNamespace,
@@ -20,7 +21,6 @@ from stone.ir import (
     is_user_defined_type,
     is_void_type,
 )
-from stone.backends.python_helpers import class_name_for_data_type, fmt_namespace
 from stone.ir.data_types import String
 from stone.typing_hacks import cast
 
@@ -32,7 +32,7 @@ if MYPY:
     # Unfortunately these are codependent, so I'll weakly type the Dict in Callback
     Callback = typing.Callable[
         [ApiNamespace, DataType, typing.Dict[typing.Any, typing.Any]],
-        typing.Text
+        str
     ]
     OverrideDefaultTypesDict = typing.Dict[DataTypeCls, Callback]
 else:

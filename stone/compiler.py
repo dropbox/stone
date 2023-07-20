@@ -1,7 +1,5 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import logging
 import inspect
+import logging
 import os
 import shutil
 import traceback
@@ -20,12 +18,12 @@ class BackendException(Exception):
         :type backend_name: str
         :type tb: str
         """
-        super(BackendException, self).__init__()
+        super().__init__()
         self.backend_name = backend_name
         self.traceback = tb
 
 
-class Compiler(object):
+class Compiler:
     """
     Applies a collection of backends found in a single backend module to an
     API specification.

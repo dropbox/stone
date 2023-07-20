@@ -6,23 +6,21 @@ The goal of this module is to define all data types that are common to the
 languages and serialization formats we want to support.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
-from abc import ABCMeta, abstractmethod
-from collections import OrderedDict, deque
 import copy
 import datetime
 import math
 import numbers
 import re
-import six
+from abc import ABCMeta, abstractmethod
+from collections import OrderedDict, deque
 
-from ..frontend.exception import InvalidSpec
 from ..frontend.ast import (
     AstExampleField,
     AstExampleRef,
     AstTagRef,
 )
+from ..frontend.exception import InvalidSpec
 
 _MYPY = False
 if _MYPY:
@@ -47,7 +45,7 @@ def generic_type_name(v):
         return 'float'
     elif isinstance(v, (tuple, list)):
         return 'list'
-    elif isinstance(v, six.string_types):
+    elif isinstance(v, str):
         return 'string'
     elif v is None:
         return 'null'
@@ -79,7 +77,7 @@ def record_custom_annotation_imports(annotation, namespace):
             imported_annotation=True)
 
 
-class DataType(object):
+class DataType:
     """
     Abstract class representing a data type.
     """
@@ -143,7 +141,7 @@ class Composite(DataType):  # pylint: disable=abstract-method
     data types and other composite types.
     """
     def __init__(self):
-        super(Composite, self).__init__()
+        super().__init__()
         # contains custom annotations that apply to any containing data types (recursively)
         # format is (location, CustomAnnotation) to indicate a custom annotation is applied
         # to a location (Field or Alias)
@@ -153,7 +151,7 @@ class Composite(DataType):  # pylint: disable=abstract-method
 class Nullable(Composite):
 
     def __init__(self, data_type):
-        super(Nullable, self).__init__()
+        super().__init__()
         self.data_type = data_type
 
     def check(self, val):
@@ -188,11 +186,11 @@ class Void(Primitive):
 class Bytes(Primitive):
 
     def check(self, val):
-        if not isinstance(val, (bytes, six.text_type)):
+        if not isinstance(val, (bytes, str)):
             raise ValueError('%r is not valid bytes' % val)
 
     def check_example(self, ex_field):
-        if not isinstance(ex_field.value, (bytes, six.text_type)):
+        if not isinstance(ex_field.value, (bytes, str)):
             raise InvalidSpec("'%s' is not valid bytes" % ex_field.value,
                               ex_field.lineno, ex_field.path)
 
@@ -202,7 +200,7 @@ class Bytes(Primitive):
         except ValueError as e:
             raise InvalidSpec(e.args[0], attr_field.lineno, attr_field.path)
         v = attr_field.value
-        if isinstance(v, six.text_type):
+        if isinstance(v, str):
             return v.encode('utf-8')
         else:
             return v
@@ -222,7 +220,7 @@ class _BoundedInteger(Primitive):
         A more restrictive minimum or maximum value can be specified than the
         range inherent to the defined type.
         """
-        super(_BoundedInteger, self).__init__()
+        super().__init__()
         if min_value is not None:
             if not isinstance(min_value, numbers.Integral):
                 raise ParameterError('min_value must be an integral number')
@@ -302,7 +300,7 @@ class _BoundedFloat(Primitive):
         A more restrictive minimum or maximum value can be specified than the
         range inherent to the defined type.
         """
-        super(_BoundedFloat, self).__init__()
+        super().__init__()
         if min_value is not None:
             if not isinstance(min_value, numbers.Real):
                 raise ParameterError('min_value must be a real number')
@@ -398,7 +396,7 @@ class Boolean(Primitive):
 class String(Primitive):
 
     def __init__(self, min_length=None, max_length=None, pattern=None):
-        super(String, self).__init__()
+        super().__init__()
         if min_length is not None:
             if not isinstance(min_length, numbers.Integral):
                 raise ParameterError('min_length must be an integral number')
@@ -419,7 +417,7 @@ class String(Primitive):
         self.pattern_re = None
 
         if pattern:
-            if not isinstance(pattern, six.string_types):
+            if not isinstance(pattern, str):
                 raise ParameterError('pattern must be a string')
             try:
                 self.pattern_re = re.compile(pattern)
@@ -429,7 +427,7 @@ class String(Primitive):
                         pattern, e.args[0]))
 
     def check(self, val):
-        if not isinstance(val, six.string_types):
+        if not isinstance(val, str):
             raise ValueError('%s is not a valid string' %
                              generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
@@ -451,13 +449,13 @@ class String(Primitive):
 class Timestamp(Primitive):
 
     def __init__(self, fmt):
-        super(Timestamp, self).__init__()
-        if not isinstance(fmt, six.string_types):
+        super().__init__()
+        if not isinstance(fmt, str):
             raise ParameterError('format must be a string')
         self.format = fmt
 
     def check(self, val):
-        if not isinstance(val, six.string_types):
+        if not isinstance(val, str):
             raise ValueError('timestamp must be specified as a string')
 
         # Raises a ValueError if val is the incorrect format
@@ -474,7 +472,7 @@ class Timestamp(Primitive):
             self.check(attr_field.value)
         except ValueError as e:
             msg = e.args[0]
-            if isinstance(msg, six.binary_type):
+            if isinstance(msg, bytes):
                 # For Python 2 compatibility.
                 msg = msg.decode('utf-8')
             raise InvalidSpec(msg, attr_field.lineno, attr_field.path)
@@ -483,7 +481,7 @@ class Timestamp(Primitive):
 class List(Composite):
 
     def __init__(self, data_type, min_items=None, max_items=None):
-        super(List, self).__init__()
+        super().__init__()
         self.data_type = data_type
 
         if min_items is not None and min_items < 0:
@@ -524,7 +522,7 @@ class List(Composite):
 
 class Map(Composite):
     def __init__(self, key_data_type, value_data_type):
-        super(Map, self).__init__()
+        super().__init__()
 
         if not isinstance(key_data_type, String):
             raise ParameterError("Only String primitives are supported as key types.")
@@ -579,7 +577,7 @@ def doc_unwrap(raw_doc):
     return docstring
 
 
-class Field(object):
+class Field:
     """
     Represents a field in a composite type.
     """
@@ -655,7 +653,7 @@ class Field(object):
                     'Annotation %r not recognized for field.' % annotation, self._ast_node.lineno)
 
     def __repr__(self):
-        return 'Field(%r, %r)' % (self.name,
+        return 'Field({!r}, {!r})'.format(self.name,
                                   self.data_type)
 
 
@@ -678,7 +676,7 @@ class StructField(Field):
         :param ast_node: Raw field definition from the parser.
         :type ast_node: stone.frontend.ast.AstField
         """
-        super(StructField, self).__init__(name, data_type, doc, ast_node)
+        super().__init__(name, data_type, doc, ast_node)
         self.has_default = False
         self._default = None
 
@@ -707,7 +705,7 @@ class StructField(Field):
         return attr
 
     def __repr__(self):
-        return 'StructField(%r, %r, %r)' % (self.name,
+        return 'StructField({!r}, {!r}, {!r})'.format(self.name,
                                             self.data_type,
                                             self.omitted_caller)
 
@@ -723,11 +721,11 @@ class UnionField(Field):
                  doc,
                  ast_node,
                  catch_all=False):
-        super(UnionField, self).__init__(name, data_type, doc, ast_node)
+        super().__init__(name, data_type, doc, ast_node)
         self.catch_all = catch_all
 
     def __repr__(self):
-        return 'UnionField(%r, %r, %r, %r)' % (self.name,
+        return 'UnionField({!r}, {!r}, {!r}, {!r})'.format(self.name,
                                                self.data_type,
                                                self.catch_all,
                                                self.omitted_caller)
@@ -752,7 +750,7 @@ class UserDefined(Composite):
         :param ast_node: Raw type definition from the parser.
         :type ast_node: stone.frontend.ast.AstTypeDef
         """
-        super(UserDefined, self).__init__()
+        super().__init__()
         self._name = name
         self.namespace = namespace
         self._ast_node = ast_node
@@ -895,15 +893,15 @@ class UserDefined(Composite):
         return examples
 
 
-class Example(object):
+class Example:
     """An example of a struct or union type."""
 
     def __init__(self, label, text, value, ast_node=None):
-        assert isinstance(label, six.text_type), type(label)
+        assert isinstance(label, str), type(label)
         self.label = label
-        assert isinstance(text, (six.text_type, type(None))), type(text)
+        assert isinstance(text, (str, type(None))), type(text)
         self.text = doc_unwrap(text) if text else text
-        assert isinstance(value, (six.text_type, OrderedDict)), type(value)
+        assert isinstance(value, (str, OrderedDict)), type(value)
         self.value = value
         self._ast_node = ast_node
 
@@ -933,7 +931,7 @@ class Struct(UserDefined):
         self._enumerated_subtypes = None  # Optional[List[Tuple[str, DataType]]]
         self._is_catch_all = None  # Optional[Bool]
 
-        super(Struct, self).set_attributes(doc, fields, parent_type)
+        super().set_attributes(doc, fields, parent_type)
 
         if self.parent_type:
             self.parent_type.subtypes.append(self)
@@ -1368,7 +1366,7 @@ class Struct(UserDefined):
         return flat_example
 
     def __repr__(self):
-        return 'Struct(%r, %r)' % (self.name, self.fields)
+        return 'Struct({!r}, {!r})'.format(self.name, self.fields)
 
 
 class Union(UserDefined):
@@ -1377,7 +1375,7 @@ class Union(UserDefined):
     composite_type = 'union'
 
     def __init__(self, name, namespace, ast_node, closed):
-        super(Union, self).__init__(name, namespace, ast_node)
+        super().__init__(name, namespace, ast_node)
         self.closed = closed
 
     # TODO: Why is this a different signature than the parent? Is this
@@ -1393,7 +1391,7 @@ class Union(UserDefined):
         if parent_type:
             assert isinstance(parent_type, Union)
 
-        super(Union, self).set_attributes(doc, fields, parent_type)
+        super().set_attributes(doc, fields, parent_type)
 
         self.catch_all_field = catch_all_field
         self.parent_type = parent_type
@@ -1603,10 +1601,10 @@ class Union(UserDefined):
             return True
 
     def __repr__(self):
-        return 'Union(%r, %r)' % (self.name, self.fields)
+        return 'Union({!r}, {!r})'.format(self.name, self.fields)
 
 
-class TagRef(object):
+class TagRef:
     """
     Used when an ID in Stone refers to a tag of a union.
     TODO(kelkabany): Support tag values.
@@ -1617,10 +1615,10 @@ class TagRef(object):
         self.tag_name = tag_name
 
     def __repr__(self):
-        return 'TagRef(%r, %r)' % (self.union_data_type, self.tag_name)
+        return 'TagRef({!r}, {!r})'.format(self.union_data_type, self.tag_name)
 
 
-class AnnotationTypeParam(object):
+class AnnotationTypeParam:
     """
     A parameter that can be supplied to a custom annotation type.
     """
@@ -1637,11 +1635,11 @@ class AnnotationTypeParam(object):
             try:
                 self.data_type.check(self.default)
             except ValueError as e:
-                raise InvalidSpec('Default value for parameter %s is invalid: %s' % (
+                raise InvalidSpec('Default value for parameter {} is invalid: {}'.format(
                     self.name, e), self._ast_node.lineno, self._ast_node.path)
 
 
-class AnnotationType(object):
+class AnnotationType:
     """
     Used when a spec defines a custom annotation type.
     """
@@ -1674,7 +1672,7 @@ class AnnotationType(object):
         return any(param.doc for param in self.params)
 
 
-class Annotation(object):
+class Annotation:
     """
     Used when a field is annotated with a pre-defined Stone action or a custom
     annotation.
@@ -1690,7 +1688,7 @@ class Deprecated(Annotation):
     Used when a field is annotated for deprecation.
     """
     def __repr__(self):
-        return 'Deprecated(%r, %r)' % (self.name, self.namespace)
+        return 'Deprecated({!r}, {!r})'.format(self.name, self.namespace)
 
 
 class Omitted(Annotation):
@@ -1698,11 +1696,11 @@ class Omitted(Annotation):
     Used when a field is annotated for omission.
     """
     def __init__(self, name, namespace, ast_node, omitted_caller):
-        super(Omitted, self).__init__(name, namespace, ast_node)
+        super().__init__(name, namespace, ast_node)
         self.omitted_caller = omitted_caller
 
     def __repr__(self):
-        return 'Omitted(%r, %r, %r)' % (self.name, self.namespace, self.omitted_caller)
+        return 'Omitted({!r}, {!r}, {!r})'.format(self.name, self.namespace, self.omitted_caller)
 
 
 class Preview(Annotation):
@@ -1710,7 +1708,7 @@ class Preview(Annotation):
     Used when a field is annotated for previewing.
     """
     def __repr__(self):
-        return 'Preview(%r, %r)' % (self.name, self.namespace)
+        return 'Preview({!r}, {!r})'.format(self.name, self.namespace)
 
 
 class Redacted(Annotation):
@@ -1718,7 +1716,7 @@ class Redacted(Annotation):
     Used when a field is annotated for redaction.
     """
     def __init__(self, name, namespace, ast_node, regex=None):
-        super(Redacted, self).__init__(name, namespace, ast_node)
+        super().__init__(name, namespace, ast_node)
         self.regex = regex
 
 
@@ -1727,7 +1725,7 @@ class RedactedBlot(Redacted):
     Used when a field is annotated to be blotted.
     """
     def __repr__(self):
-        return 'RedactedBlot(%r, %r, %r)' % (self.name, self.namespace, self.regex)
+        return 'RedactedBlot({!r}, {!r}, {!r})'.format(self.name, self.namespace, self.regex)
 
 
 class RedactedHash(Redacted):
@@ -1735,7 +1733,7 @@ class RedactedHash(Redacted):
     Used when a field is annotated to be hashed.
     """
     def __repr__(self):
-        return 'RedactedHash(%r, %r, %r)' % (self.name, self.namespace, self.regex)
+        return 'RedactedHash({!r}, {!r}, {!r})'.format(self.name, self.namespace, self.regex)
 
 
 class CustomAnnotation(Annotation):
@@ -1744,7 +1742,7 @@ class CustomAnnotation(Annotation):
     """
     def __init__(self, name, namespace, ast_node, annotation_type_name,
                  annotation_type_ns, args, kwargs):
-        super(CustomAnnotation, self).__init__(name, namespace, ast_node)
+        super().__init__(name, namespace, ast_node)
         self.annotation_type_name = annotation_type_name
         self.annotation_type_ns = annotation_type_ns
         self.args = args
@@ -1762,7 +1760,7 @@ class CustomAnnotation(Annotation):
                               self._ast_node.path)
 
         # check for unknown keyword arguments
-        acceptable_param_names = set((param.name for param in self.annotation_type.params))
+        acceptable_param_names = {param.name for param in self.annotation_type.params}
         for param_name in self.kwargs:
             if param_name not in acceptable_param_names:
                 raise InvalidSpec('Unknown parameter %s passed to annotation type %s' %
@@ -1818,7 +1816,7 @@ class Alias(Composite):
         :param ast_node: Raw type definition from the parser.
         :type ast_node: stone.frontend.ast.AstTypeDef
         """
-        super(Alias, self).__init__()
+        super().__init__()
         self._name = name
         self.namespace = namespace
         self._ast_node = ast_node
@@ -1891,7 +1889,7 @@ class Alias(Composite):
         return self.data_type.check_attr_repr(attr_field)
 
     def __repr__(self):
-        return 'Alias(%r, %r)' % (self.name, self.data_type)
+        return 'Alias({!r}, {!r})'.format(self.name, self.data_type)
 
 
 def unwrap_nullable(data_type):

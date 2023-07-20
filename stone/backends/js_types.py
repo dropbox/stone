@@ -1,21 +1,18 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
-import six
 import sys
 
+from stone.backend import CodeBackend
+from stone.backends.js_helpers import (
+    fmt_jsdoc_union,
+    fmt_type,
+    fmt_type_name,
+)
 from stone.ir import (
     is_user_defined_type,
     is_union_type,
     is_struct_type,
     is_void_type,
     unwrap,
-)
-from stone.backend import CodeBackend
-from stone.backends.js_helpers import (
-    fmt_jsdoc_union,
-    fmt_type,
-    fmt_type_name,
 )
 
 _MYPY = False
@@ -94,7 +91,7 @@ class JavascriptTypesBackend(CodeBackend):
         extra_args = {}
 
         def die(m, extra_arg_raw):
-            print('Invalid --extra-arg:%s: %s' % (m, extra_arg_raw),
+            print('Invalid --extra-arg:{}: {}'.format(m, extra_arg_raw),
                   file=sys.stderr)
             sys.exit(1)
 
@@ -110,20 +107,20 @@ class JavascriptTypesBackend(CodeBackend):
             elif (not isinstance(extra_arg['match'], list) or
                     len(extra_arg['match']) != 2):
                 die('match key is not a list of two strings', extra_arg_raw)
-            elif (not isinstance(extra_arg['match'][0], six.text_type) or
-                    not isinstance(extra_arg['match'][1], six.text_type)):
+            elif (not isinstance(extra_arg['match'][0], str) or
+                    not isinstance(extra_arg['match'][1], str)):
                 print(type(extra_arg['match'][0]))
                 die('match values are not strings', extra_arg_raw)
             elif 'arg_name' not in extra_arg:
                 die('No arg_name key', extra_arg_raw)
-            elif not isinstance(extra_arg['arg_name'], six.text_type):
+            elif not isinstance(extra_arg['arg_name'], str):
                 die('arg_name is not a string', extra_arg_raw)
             elif 'arg_type' not in extra_arg:
                 die('No arg_type key', extra_arg_raw)
-            elif not isinstance(extra_arg['arg_type'], six.text_type):
+            elif not isinstance(extra_arg['arg_type'], str):
                 die('arg_type is not a string', extra_arg_raw)
             elif ('arg_docstring' in extra_arg and
-                    not isinstance(extra_arg['arg_docstring'], six.text_type)):
+                    not isinstance(extra_arg['arg_docstring'], str)):
                 die('arg_docstring is not a string', extra_arg_raw)
 
             attr_key, attr_val = extra_arg['match'][0], extra_arg['match'][1]
@@ -213,7 +210,7 @@ class JavascriptTypesBackend(CodeBackend):
         for param_name, param_type, param_docstring in extra_parameters:
             param_docstring = ' - %s' % param_docstring if param_docstring else ''
             self.emit_wrapped_text(
-                '@property {%s} [%s]%s' % (
+                '@property {{{}}} [{}]{}'.format(
                     param_type,
                     param_name,
                     param_docstring,
@@ -231,7 +228,7 @@ class JavascriptTypesBackend(CodeBackend):
             # Translate nullable types into optional properties.
             field_name = '[' + field.name + ']' if nullable else field.name
             self.emit_wrapped_text(
-                '@property {%s} %s%s' % (
+                '@property {{{}}} {}{}'.format(
                     field_js_type,
                     field_name,
                     self.process_doc(field_doc, self._docf),
@@ -258,7 +255,7 @@ class JavascriptTypesBackend(CodeBackend):
                 if variant.doc:
                     variant_doc += ' ' + variant.doc
                 self.emit_wrapped_text(
-                    '@property {%s} [%s]%s' % (
+                    '@property {{{}}} [{}]{}'.format(
                         fmt_type(variant_data_type),
                         variant.name,
                         variant_doc,

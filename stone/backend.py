@@ -1,12 +1,11 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from abc import ABCMeta, abstractmethod
-from contextlib import contextmanager
 import argparse
 import logging
 import os
-import six
 import textwrap
+from abc import ABCMeta, abstractmethod
+from contextlib import contextmanager
+
+import six
 
 from stone.frontend.ir_generator import doc_ref_re
 from stone.ir import (
@@ -21,7 +20,7 @@ if _MYPY:
     import typing  # pylint: disable=import-error,useless-suppression
 
     # Generic Dict key-val types
-    DelimTuple = typing.Tuple[typing.Text, typing.Text]
+    DelimTuple = typing.Tuple[str, str]
     K = typing.TypeVar('K')
     V = typing.TypeVar('V')
 
@@ -67,8 +66,7 @@ def remove_aliases_from_api(api):
     return api
 
 
-@six.add_metaclass(ABCMeta)
-class Backend(object):
+class Backend(metaclass=ABCMeta):
     """
     The parent class for all backends. All backends should extend this
     class to be recognized as such.
@@ -245,11 +243,11 @@ class Backend(object):
         output buffer. If s is an empty string (default) then an empty line is
         created with no indentation.
         """
-        assert isinstance(s, six.text_type), 's must be a unicode string'
+        assert isinstance(s, str), 's must be a unicode string'
         assert '\n' not in s, \
             'String to emit cannot contain newline strings.'
         if s:
-            self.emit_raw('%s%s\n' % (self.make_indent(), s))
+            self.emit_raw('{}{}\n'.format(self.make_indent(), s))
         else:
             self.emit_raw('\n')
 
@@ -334,7 +332,7 @@ class Backend(object):
                 for you. The returned string will be substituted in the
                 docstring in place of the reference.
         """
-        assert isinstance(doc, six.text_type), \
+        assert isinstance(doc, str), \
             'Expected string (unicode in PY2), got %r.' % type(doc)
         cur_index = 0
         parts = []
@@ -404,8 +402,8 @@ class CodeBackend(Backend):
             skip_last_sep (bool): When compact is false, whether the last line
                 should have a trailing separator. Ignored when compact is true.
         """
-        assert len(delim) == 2 and isinstance(delim[0], six.text_type) and \
-            isinstance(delim[1], six.text_type), 'delim must be a tuple of two unicode strings.'
+        assert len(delim) == 2 and isinstance(delim[0], str) and \
+            isinstance(delim[1], str), 'delim must be a tuple of two unicode strings.'
 
         if len(items) == 0:
             self.emit(before + delim[0] + delim[1] + after)
@@ -475,8 +473,8 @@ class CodeBackend(Backend):
                 http://en.wikipedia.org/wiki/Indent_style
         """
         assert len(delim) == 2, 'delim must be a tuple of length 2'
-        assert (isinstance(delim[0], (six.text_type, type(None))) and
-                isinstance(delim[1], (six.text_type, type(None)))), (
+        assert (isinstance(delim[0], (str, type(None))) and
+                isinstance(delim[1], (str, type(None)))), (
             'delim must be a tuple of two optional strings.')
 
         if before and not allman:

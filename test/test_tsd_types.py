@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import textwrap
 
 MYPY = False
@@ -16,7 +14,7 @@ try:
     from unittest.mock import Mock
 except ImportError:
     # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
-    from mock import Mock  # type: ignore
+    from unittest.mock import Mock  # type: ignore
 
 from stone.ir import (
     ApiNamespace,
@@ -74,7 +72,7 @@ def _evaluate_namespace(backend, namespace_list):
 
 class TestTSDTypes(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestTSDTypes, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.maxDiff = None  # Increase text diff size
 
     def test__generate_types_single_ns(self):
@@ -447,7 +445,7 @@ union B
 class TestTSDTypesE2E(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
-        super(TestTSDTypesE2E, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.maxDiff = None  # Increase text diff size
 
     def setUp(self):
@@ -464,7 +462,7 @@ class TestTSDTypesE2E(unittest.TestCase):
         shutil.rmtree('output')
 
     def _verify_generated_output(self, filename, expected_namespace_types):
-        with open(filename, 'r', encoding='utf-8') as f:
+        with open(filename, encoding='utf-8') as f:
             generated_types = f.read()
             self.assertEqual(generated_types, expected_namespace_types)
 

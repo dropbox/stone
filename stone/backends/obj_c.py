@@ -1,7 +1,11 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from contextlib import contextmanager
 
+from stone.backend import CodeBackend
+from stone.backends.obj_c_helpers import (
+    fmt_camel_upper,
+    fmt_class,
+    fmt_class_prefix,
+    fmt_import, )
 from stone.ir import (
     is_list_type,
     is_map_type,
@@ -11,12 +15,6 @@ from stone.ir import (
     is_user_defined_type,
     is_void_type,
     unwrap_nullable, )
-from stone.backend import CodeBackend
-from stone.backends.obj_c_helpers import (
-    fmt_camel_upper,
-    fmt_class,
-    fmt_class_prefix,
-    fmt_import, )
 
 stone_warning = """\
 ///

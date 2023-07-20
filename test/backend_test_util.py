@@ -7,7 +7,7 @@ try:
     from unittest.mock import DEFAULT, Mock
 except ImportError:
     # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
-    from mock import DEFAULT, Mock  # type: ignore
+    from unittest.mock import DEFAULT, Mock  # type: ignore
 
 from stone.backend import Backend
 

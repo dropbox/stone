@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import textwrap
 
 MYPY = False
@@ -12,7 +10,7 @@ try:
     from unittest.mock import Mock
 except ImportError:
     # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
-    from mock import Mock  # type: ignore
+    from unittest.mock import Mock  # type: ignore
 
 from stone.ir import (
     Alias,
@@ -266,7 +264,7 @@ U = TypeVar('U')"""
 
 class TestPythonTypeStubs(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestPythonTypeStubs, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.maxDiff = 1000000  # Increase text diff size
 
     def _evaluate_namespace(self, ns):

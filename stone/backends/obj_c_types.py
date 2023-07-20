@@ -1,22 +1,14 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
 import os
 import shutil
+
 import six
 
-from stone.ir import (
-    is_list_type,
-    is_map_type,
-    is_nullable_type,
-    is_numeric_type,
-    is_string_type,
-    is_struct_type,
-    is_timestamp_type,
-    is_union_type,
-    is_user_defined_type,
-    is_void_type,
-    unwrap_nullable, )
+from stone.backends.obj_c import (
+    base_file_comment,
+    comment_prefix,
+    ObjCBaseBackend,
+    undocumented, )
 from stone.backends.obj_c_helpers import (
     append_to_jazzy_category_dict,
     fmt_alloc_call,
@@ -47,11 +39,18 @@ from stone.backends.obj_c_helpers import (
     fmt_validator,
     fmt_var,
     is_primitive_type, )
-from stone.backends.obj_c import (
-    base_file_comment,
-    comment_prefix,
-    ObjCBaseBackend,
-    undocumented, )
+from stone.ir import (
+    is_list_type,
+    is_map_type,
+    is_nullable_type,
+    is_numeric_type,
+    is_string_type,
+    is_struct_type,
+    is_timestamp_type,
+    is_union_type,
+    is_user_defined_type,
+    is_void_type,
+    unwrap_nullable, )
 
 _MYPY = False
 if _MYPY:
@@ -907,8 +906,8 @@ class ObjCTypesBackend(ObjCBaseBackend):
         elif is_string_type(data_type):
             if data_type.pattern or data_type.min_length or data_type.max_length:
                 pattern = data_type.pattern.encode('unicode_escape').replace(
-                    six.ensure_binary("\""),
-                    six.ensure_binary("\\\"")) if data_type.pattern else None
+                    b"\"",
+                    b"\\\"") if data_type.pattern else None
                 validator = '{}:{}'.format(
                     fmt_validator(data_type),
                     fmt_func_args([

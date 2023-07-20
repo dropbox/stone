@@ -2,9 +2,9 @@ import textwrap
 import unittest
 
 from stone.backends.js_client import JavascriptClientBackend
-from test.backend_test_util import _mock_output
 from stone.ir import Api, ApiNamespace, ApiRoute, Void, Int32
 from stone.ir.data_types import Struct
+from test.backend_test_util import _mock_output
 
 MYPY = False
 if MYPY:
@@ -13,7 +13,7 @@ if MYPY:
 
 class TestGeneratedJSClient(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestGeneratedJSClient, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def _get_api(self):
         # type () -> Api

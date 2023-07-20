@@ -10,7 +10,6 @@ the future, this could be imported from a pre-installed Python package, rather
 than being added to a project.
 """
 
-from __future__ import absolute_import, unicode_literals
 
 import base64
 import binascii
@@ -34,7 +33,7 @@ if _MYPY:
 
 
 # ------------------------------------------------------------------------
-class CallerPermissionsInterface(object):
+class CallerPermissionsInterface:
 
     @property
     def permissions(self):
@@ -51,7 +50,7 @@ class CallerPermissionsDefault(CallerPermissionsInterface):
         return []
 
 # ------------------------------------------------------------------------
-class StoneEncoderInterface(object):
+class StoneEncoderInterface:
     """
     Interface defining a stone object encoder.
     """
@@ -239,7 +238,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
             should_redact (bool, optional): Whether to perform redaction on
                 marked fields. Defaults to ``False``.
         """
-        super(StoneToPythonPrimitiveSerializer, self).__init__(
+        super().__init__(
             caller_permissions, alias_validators=alias_validators)
         self._for_msgpack = for_msgpack
         self._old_style = old_style
@@ -274,7 +273,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
                 return validator._redact.apply(value)
 
         # Encode value normally
-        return super(StoneToPythonPrimitiveSerializer, self).encode_sub(validator, value)
+        return super().encode_sub(validator, value)
 
     def encode_list(self, validator, value):
         validated_value = validator.validate(value)
@@ -352,7 +351,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 
     def encode_struct_tree(self, validator, value):
         assert type(value) in validator.definition._pytype_to_tag_and_subtype_, \
-            '%r is not a serializable subtype of %r.' % (type(value), validator.definition)
+            '{!r} is not a serializable subtype of {!r}.'.format(type(value), validator.definition)
 
         tags, subtype = validator.definition._pytype_to_tag_and_subtype_[type(value)]
 
@@ -432,7 +431,7 @@ class StoneToPythonPrimitiveSerializer(StoneSerializerBase):
 # ------------------------------------------------------------------------
 class StoneToJsonSerializer(StoneToPythonPrimitiveSerializer):
     def encode(self, validator, value):
-        return json.dumps(super(StoneToJsonSerializer, self).encode(validator, value))
+        return json.dumps(super().encode(validator, value))
 
 # --------------------------------------------------------------
 # JSON Encoder
@@ -521,7 +520,7 @@ def json_compat_obj_encode(data_type, obj, caller_permissions=None, alias_valida
 
 # --------------------------------------------------------------
 # JSON Decoder
-class PythonPrimitiveToStoneDecoder(object):
+class PythonPrimitiveToStoneDecoder:
     def __init__(self, caller_permissions, alias_validators, for_msgpack, old_style, strict):
         self.caller_permissions = (caller_permissions if
             caller_permissions else CallerPermissionsDefault())
@@ -637,7 +636,7 @@ class PythonPrimitiveToStoneDecoder(object):
         See json_compat_obj_decode() for argument descriptions.
         """
         val = None
-        if isinstance(obj, six.string_types):
+        if isinstance(obj, str):
             # Handles the shorthand format where the union is serialized as only
             # the string of the tag.
             tag = obj
@@ -665,7 +664,7 @@ class PythonPrimitiveToStoneDecoder(object):
         if '.tag' not in obj:
             raise bv.ValidationError("missing '.tag' key")
         tag = obj['.tag']
-        if not isinstance(tag, six.string_types):
+        if not isinstance(tag, str):
             raise bv.ValidationError(
                 'tag must be string, got %s' % bv.generic_type_name(tag))
 
@@ -737,7 +736,7 @@ class PythonPrimitiveToStoneDecoder(object):
         See json_compat_obj_decode() for argument descriptions.
         """
         val = None
-        if isinstance(obj, six.string_types):
+        if isinstance(obj, str):
             # Union member has no associated value
             tag = obj
             if data_type.definition._is_tag_present(tag, self.caller_permissions):
@@ -803,7 +802,7 @@ class PythonPrimitiveToStoneDecoder(object):
         """
         if '.tag' not in obj:
             raise bv.ValidationError("missing '.tag' key")
-        if not isinstance(obj['.tag'], six.string_types):
+        if not isinstance(obj['.tag'], str):
             raise bv.ValidationError('expected string, got %s' %
                                      bv.generic_type_name(obj['.tag']),
                                      parent='.tag')
@@ -881,7 +880,7 @@ class PythonPrimitiveToStoneDecoder(object):
                 raise bv.ValidationError(e.args[0])
         elif isinstance(data_type, bv.Bytes):
             if self.for_msgpack:
-                if isinstance(val, six.text_type):
+                if isinstance(val, str):
                     ret = val.encode('utf-8')
                 else:
                     ret = val
