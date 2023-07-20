@@ -9,12 +9,6 @@ import unittest
 import subprocess
 import sys
 import shutil
-try:
-    # Works for Py 3.3+
-    from unittest.mock import Mock
-except ImportError:
-    # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
-    from unittest.mock import Mock  # type: ignore
 
 from stone.ir import (
     ApiNamespace,
@@ -23,6 +17,7 @@ from stone.ir import (
     StructField)
 from stone.backends.tsd_types import TSDTypesBackend
 from test.backend_test_util import _mock_output
+from unittest.mock import Mock
 
 
 def _make_backend(target_folder_path, template_path, custom_args=None):  # type: ignore
