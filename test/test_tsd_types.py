@@ -27,7 +27,7 @@ from stone.backends.tsd_types import TSDTypesBackend
 from test.backend_test_util import _mock_output
 
 
-def _make_backend(target_folder_path, template_path, custom_args=None):
+def _make_backend(target_folder_path, template_path, custom_args=None):  # type: ignore
     # type: (typing.Text, typing.Text, typing.List) -> TSDTypesBackend
 
     args = Mock()

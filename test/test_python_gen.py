@@ -1245,8 +1245,8 @@ class TestGeneratedPython(unittest.TestCase):
         self.assertNotEqual(s, s_unequal)
 
     def test_struct_equality_with_different_types(self):
-        """Structs of different types that do not have an inheritance relationship are not considered
-        equal to each other."""
+        """Structs of different types that do not have an inheritance relationship are not
+        considered equal to each other."""
         s = self.decode(bv.Struct(self.ns.S), json.dumps({'f': 'F'}))
         t = self.decode(bv.Struct(self.ns.T), json.dumps({'f': 'F'}))
         self.assertNotEqual(s, t)

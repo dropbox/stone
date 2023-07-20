@@ -26,6 +26,8 @@ command line::
 
     $ stone -h
 
+Stone requires Python 3.
+
 Alternative
 -----------
 
