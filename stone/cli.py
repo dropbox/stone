@@ -379,7 +379,7 @@ def _load_module(name, path):
         loader = importlib.machinery.SourceFileLoader(module_name, path)
         module = loader.load_module()  # pylint: disable=deprecated-method,no-value-for-parameter
 
-    sys.modules[name] = module
+    sys.modules[module_name] = module
 
     return module
 
