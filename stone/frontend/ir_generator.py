@@ -9,19 +9,13 @@ from inspect import isclass
 try:
     from inspect import getfullargspec as get_args
 except ImportError:
-    from inspect import getargspec as get_args
+    from inspect import getargspec as get_args  # type: ignore
 
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-re = importlib.import_module(str('re'))  # type: typing.Any
+import re
 
 from ..ir import (
     Alias,

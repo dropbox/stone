@@ -35,14 +35,7 @@ _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
-# Hack to get around some of Python 2's standard library modules that
-# accept ascii-encodable unicode literals in lieu of strs, but where
-# actually passing such literals results in errors with mypy --py2. See
-# <https://github.com/python/typeshed/issues/756> and
-# <https://github.com/python/mypy/issues/2536>.
-import importlib
-argparse = importlib.import_module(str('argparse'))  # type: typing.Any
-
+import argparse
 
 _cmdline_parser = argparse.ArgumentParser(prog='swift-types-backend')
 _cmdline_parser.add_argument(
