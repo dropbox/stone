@@ -1,10 +1,10 @@
 import argparse
+import io
 import logging
 import os
 import textwrap
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
-from typing import io
 
 from stone.frontend.ir_generator import doc_ref_re
 from stone.ir import (
