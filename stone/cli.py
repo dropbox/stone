@@ -380,7 +380,7 @@ def _load_module(name, path):
         module = loader.load_module()  # pylint: disable=deprecated-method,no-value-for-parameter
 
     sys.modules[module_name] = module
-
+    logging.info("Loading module: {} as {}".format(name, module_name))
     return module
 
 if __name__ == '__main__':
