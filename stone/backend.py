@@ -4,8 +4,7 @@ import os
 import textwrap
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
-
-import six
+from typing import io
 
 from stone.frontend.ir_generator import doc_ref_re
 from stone.ir import (
@@ -212,7 +211,7 @@ class Backend(metaclass=ABCMeta):
 
     @contextmanager
     def capture_emitted_output(self, output_buffer):
-        # type: (six.StringIO) -> typing.Iterator[None]
+        # type: (io.StringIO) -> typing.Iterator[None]
         original_output = self.output
         self.output = []
         yield

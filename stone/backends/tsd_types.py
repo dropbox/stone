@@ -362,7 +362,9 @@ class TSDTypesBackend(CodeBackend):
             self._emit_tsdoc_header(struct_type.doc)
         parent_type = struct_type.parent_type
         extends_line = ' extends %s' % fmt_type_name(parent_type, namespace) if parent_type else ''
-        self.emit('export interface {}{} {{'.format(fmt_type_name(struct_type, namespace), extends_line))
+        self.emit(
+            'export interface {}{} {{'.format(fmt_type_name(struct_type, namespace), extends_line)
+        )
         with self.indent(dent=indent_spaces):
 
             for param_name, param_type, param_docstring in extra_parameters:
@@ -491,7 +493,9 @@ class TSDTypesBackend(CodeBackend):
                 if is_void_type(variant.data_type) is False and (
                     not is_struct_without_enumerated_subtypes
                 ):
-                    self.emit("{}: {};".format(variant.name, fmt_type(variant.data_type, namespace)))
+                    self.emit(
+                        "{}: {};".format(variant.name, fmt_type(variant.data_type, namespace))
+                    )
             self.emit('}')
             self.emit()
 

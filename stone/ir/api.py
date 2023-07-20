@@ -26,10 +26,7 @@ if _MYPY:
     )
 
     from stone.frontend.ast import AstRouteDef  # noqa: F401 # pylint: disable=unused-import
-
-
     NamespaceDict = typing.Dict[str, 'ApiNamespace']
-
 
 class Api:
     """

@@ -8,7 +8,6 @@ if _MYPY:
 
 
 class FilterExprLexer:
-
     tokens = (
         'ID',
         'LPAR',
@@ -105,7 +104,6 @@ class FilterExprLexer:
 
 
 class FilterExprParser:
-
     # Ply parser requiment: Tokens must be re-specified in parser
     tokens = FilterExprLexer.tokens
 
@@ -169,13 +167,12 @@ class FilterExprParser:
         if token:
             self.errors.append(
                 "Unexpected %s with value %s." %
-                 (token.type, repr(token.value).lstrip('u')))
+                (token.type, repr(token.value).lstrip('u')))
         else:
             self.errors.append('Unexpected end of expression.')
 
 
 class FilterExpr:
-
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
