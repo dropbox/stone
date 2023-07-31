@@ -167,7 +167,7 @@ def main():
         # The module should should contain an api variable that references a
         # :class:`stone.api.Api` object.
         try:
-            api_module = _load_module('api', args.api[0])
+            api_module = _load_module(args.api[0])
             api = api_module.api  # pylint: disable=redefined-outer-name
         except ImportError as e:
             print('error: Could not import API description due to:',
@@ -341,7 +341,7 @@ def main():
         if new_python_path not in sys.path:
             sys.path.append(new_python_path)
         try:
-            backend_module = _load_module('user_backend', args.backend)
+            backend_module = _load_module(args.backend)
         except Exception:
             print("error: Importing backend '%s' module raised an exception:" %
                   args.backend, file=sys.stderr)
@@ -367,7 +367,7 @@ def main():
         # easier to do debugging.
         return api
 
-def _load_module(name, path):
+def _load_module(path):
     file_name = os.path.basename(path)
     module_name = file_name.replace('.', '_')
 
@@ -379,8 +379,8 @@ def _load_module(name, path):
         loader = importlib.machinery.SourceFileLoader(module_name, path)
         module = loader.load_module()  # pylint: disable=deprecated-method,no-value-for-parameter
 
-    sys.modules[name] = module
-
+    sys.modules[module_name] = module
+    logging.info("Loading module: %s", module_name)
     return module
 
 if __name__ == '__main__':
