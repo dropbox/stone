@@ -22,7 +22,7 @@ import unittest
 
 class TestGeneratedPythonTypes(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestGeneratedPythonTypes, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def _mk_route_schema(self):
         s = Struct('Route', ApiNamespace('stone_cfg'), None)
@@ -171,7 +171,7 @@ class TestGeneratedPythonTypes(unittest.TestCase):
             StructField('unannotated_field', Int32(), None, None),
         ])
         struct.fields[0].set_annotations([annotation])
-        struct.recursive_custom_annotations = set([annotation])
+        struct.recursive_custom_annotations = {annotation}
 
         result = self._evaluate_struct(ns, struct)
 

@@ -2,7 +2,6 @@
 Backend for generating Python types that match the spec.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import argparse
 import itertools
@@ -370,7 +369,7 @@ class PythonTypesBackend(CodeBackend):
         for invoking a function. All arguments with a value of None are
         ignored."""
         filtered_d = self.filter_out_none_valued_keys(d)
-        return ', '.join(['%s=%s' % (k, v) for k, v in filtered_d.items()])
+        return ', '.join(['{}={}'.format(k, v) for k, v in filtered_d.items()])
 
     def _generate_struct_class_slots(self, data_type):
         """Creates a slots declaration for struct classes.
@@ -425,7 +424,7 @@ class PythonTypesBackend(CodeBackend):
         # public fields, as we still need to generate public attributes (`_field_names_` etc)
         child_omitted_callers = data_type.get_all_omitted_callers() | {None}
         parent_omitted_callers = data_type.parent_type.get_all_omitted_callers() if \
-            data_type.parent_type else set([])
+            data_type.parent_type else set()
 
         for omitted_caller in sorted(child_omitted_callers | parent_omitted_callers, key=str):
             is_public = omitted_caller is None
@@ -747,7 +746,7 @@ class PythonTypesBackend(CodeBackend):
         # subtypes.
         items = []
         for tag, subtype in data_type.get_all_subtypes_with_tags():
-            items.append("{0}: ({1}, {2})".format(
+            items.append("{}: ({}, {})".format(
                 fmt_class(subtype.name),
                 tag,
                 generate_validator_constructor(ns, subtype)))
@@ -862,7 +861,7 @@ class PythonTypesBackend(CodeBackend):
         # generate _all_fields_ for each omitted caller (and public)
         child_omitted_callers = data_type.get_all_omitted_callers()
         parent_omitted_callers = data_type.parent_type.get_all_omitted_callers() if \
-            data_type.parent_type else set([])
+            data_type.parent_type else set()
 
         all_omitted_callers = child_omitted_callers | parent_omitted_callers
         if len(all_omitted_callers) != 0:

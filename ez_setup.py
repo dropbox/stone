@@ -13,17 +13,16 @@ the appropriate options to ``use_setuptools()``.
 
 This file can also be run as a script to install or upgrade setuptools.
 """
+import contextlib
+import optparse
 import os
+import platform
 import shutil
+import subprocess
 import sys
 import tempfile
-import zipfile
-import optparse
-import subprocess
-import platform
 import textwrap
-import contextlib
-
+import zipfile
 from distutils import log
 
 try:
@@ -61,7 +60,7 @@ def _build_egg(egg, archive_filename, to_dir):
     # returning the result
     log.warn(egg)
     if not os.path.exists(egg):
-        raise IOError('Could not build the egg.')
+        raise OSError('Could not build the egg.')
 
 
 def get_zip_class():

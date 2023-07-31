@@ -1,15 +1,11 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from contextlib import contextmanager
-
 import pprint
+from contextlib import contextmanager
 
 from stone.backend import Backend, CodeBackend
 from stone.backends.helpers import (
     fmt_pascal,
     fmt_underscores,
 )
-from stone.ir import ApiNamespace
 from stone.ir import (
     AnnotationType,
     Boolean,
@@ -26,6 +22,7 @@ from stone.ir import (
     is_user_defined_type,
     is_alias,
 )
+from stone.ir import ApiNamespace
 
 _MYPY = False
 if _MYPY:

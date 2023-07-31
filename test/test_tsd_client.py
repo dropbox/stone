@@ -12,7 +12,7 @@ if MYPY:
 
 class TestGeneratedTSDClient(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestGeneratedTSDClient, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def _get_api(self):
         # type () -> Api

@@ -2,14 +2,10 @@ MYPY = False
 if MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
-try:
-    # Works for Py 3.3+
-    from unittest.mock import DEFAULT, Mock
-except ImportError:
-    # See https://github.com/python/mypy/issues/1153#issuecomment-253842414
-    from mock import DEFAULT, Mock  # type: ignore
+from unittest.mock import DEFAULT, Mock
 
 from stone.backend import Backend
+
 
 def _mock_output(backend):
     # type: (Backend) -> typing.Callable[[], str]

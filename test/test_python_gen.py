@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import base64
 import datetime
 import importlib
 import json
 import shutil
-import six
 import subprocess
 import sys
 import unittest
 
+import six
+
 import stone.backends.python_rsrc.stone_base as bb
 import stone.backends.python_rsrc.stone_serializers as ss
 import stone.backends.python_rsrc.stone_validators as bv
-
 from stone.backends.python_rsrc.stone_serializers import (
     CallerPermissionsInterface,
     json_encode,
@@ -51,7 +50,7 @@ class TestDropInModules(unittest.TestCase):
         # Passes
         s.validate('a')
         # Check that the validator is converting all strings to unicode
-        self.assertIsInstance(s.validate('a'), six.text_type)
+        self.assertIsInstance(s.validate('a'), str)
 
     def test_string_regex_anchoring(self):
         p, f = self.mk_validator_testers(bv.String(pattern=r'abc|xyz'))
@@ -202,7 +201,7 @@ class TestDropInModules(unittest.TestCase):
         self.assertRaises(bv.ValidationError, lambda: v.validate(123))
 
     def test_struct_validator(self):
-        class C(object):
+        class C:
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
             f = None
@@ -229,12 +228,12 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Nullable(bv.String()), 'abc'), json.dumps('abc'))
 
     def test_json_encoder_union(self):
-        class S(object):
+        class S:
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
             _f_value = bb.NOT_SET
 
-        class U(object):
+        class U:
             # pylint: disable=no-member
             _tagmap = {'a': bv.Int64(),
                        'b': bv.Void(),
@@ -330,22 +329,22 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(json_encode(bv.Union(U), u, old_style=True), json.dumps({'g': m}))
 
     def test_json_encoder_error_messages(self):
-        class S3(object):
+        class S3:
             _all_field_names_ = {'j'}
             _all_fields_ = [('j', bv.UInt64(max_value=10))]
             _j_value = bb.NOT_SET
 
-        class S2(object):
+        class S2:
             _all_field_names_ = {'i'}
             _all_fields_ = [('i', bv.Struct(S3))]
             _i_value = bb.NOT_SET
 
-        class S(object):
+        class S:
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.Struct(S2))]
             _f_value = bb.NOT_SET
 
-        class U(object):
+        class U:
             # pylint: disable=no-member
             _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
@@ -436,7 +435,7 @@ class TestDropInModules(unittest.TestCase):
                           lambda: json_decode(bv.Void(), json.dumps(12345), strict=True))
 
     def test_json_decoder_struct(self):
-        class S(object):
+        class S:
             _all_field_names_ = {'f', 'g'}
             _all_fields_ = [('f', bv.String()),
                             ('g', bv.Nullable(bv.String()))]
@@ -474,11 +473,11 @@ class TestDropInModules(unittest.TestCase):
         json_decode(bv.Struct(S), msg, strict=False)
 
     def test_json_decoder_union(self):
-        class S(object):
+        class S:
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.String())]
 
-        class U(object):
+        class U:
             _tagmap = {'a': bv.Int64(),
                        'b': bv.Void(),
                        'c': bv.Struct(S),
@@ -594,19 +593,19 @@ class TestDropInModules(unittest.TestCase):
         self.assertEqual(u._value.f, 'hello')
 
     def test_json_decoder_error_messages(self):
-        class S3(object):
+        class S3:
             _all_field_names_ = {'j'}
             _all_fields_ = [('j', bv.UInt64(max_value=10))]
 
-        class S2(object):
+        class S2:
             _all_field_names_ = {'i'}
             _all_fields_ = [('i', bv.Struct(S3))]
 
-        class S(object):
+        class S:
             _all_field_names_ = {'f'}
             _all_fields_ = [('f', bv.Struct(S2))]
 
-        class U(object):
+        class U:
             _tagmap = {'t': bv.Nullable(bv.Struct(S))}
             _tag = None
             _catch_all = None

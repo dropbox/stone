@@ -1,13 +1,11 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
 
-from stone.ir import (
-    is_nullable_type,
-    is_struct_type,
-    is_union_type,
-    is_void_type,
-    unwrap_nullable, )
+from stone.backends.obj_c import (
+    base_file_comment,
+    comment_prefix,
+    ObjCBaseBackend,
+    stone_warning,
+    undocumented, )
 from stone.backends.obj_c_helpers import (
     fmt_alloc_call,
     fmt_camel_upper,
@@ -26,12 +24,12 @@ from stone.backends.obj_c_helpers import (
     fmt_signature,
     fmt_type,
     fmt_var, )
-from stone.backends.obj_c import (
-    base_file_comment,
-    comment_prefix,
-    ObjCBaseBackend,
-    stone_warning,
-    undocumented, )
+from stone.ir import (
+    is_nullable_type,
+    is_struct_type,
+    is_union_type,
+    is_void_type,
+    unwrap_nullable, )
 
 _MYPY = False
 if _MYPY:

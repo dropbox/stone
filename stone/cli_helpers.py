@@ -1,5 +1,4 @@
 import abc
-import six
 
 from ply import lex, yacc
 
@@ -8,8 +7,7 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
-class FilterExprLexer(object):
-
+class FilterExprLexer:
     tokens = (
         'ID',
         'LPAR',
@@ -92,7 +90,7 @@ class FilterExprLexer(object):
     # Error handling rule
     def t_error(self, token):
         self.errors.append(
-            ('Illegal character %s.' % repr(token.value[0]).lstrip('u')))
+            'Illegal character %s.' % repr(token.value[0]).lstrip('u'))
         token.lexer.skip(1)
 
     # Test output
@@ -105,13 +103,12 @@ class FilterExprLexer(object):
             print(tok)
 
 
-class FilterExprParser(object):
-
+class FilterExprParser:
     # Ply parser requiment: Tokens must be re-specified in parser
     tokens = FilterExprLexer.tokens
 
     # Ply wants a 'str' instance; this makes it work in Python 2 and 3
-    start = str('expr')
+    start = 'expr'
 
     # To match most languages, give logical conjunctions a higher precedence
     # than logical disjunctions.
@@ -169,14 +166,13 @@ class FilterExprParser(object):
     def p_error(self, token):
         if token:
             self.errors.append(
-                ("Unexpected %s with value %s." %
-                 (token.type, repr(token.value).lstrip('u'))))
+                "Unexpected %s with value %s." %
+                (token.type, repr(token.value).lstrip('u')))
         else:
             self.errors.append('Unexpected end of expression.')
 
 
-class FilterExpr(object):
-
+class FilterExpr:
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -184,7 +180,7 @@ class FilterExpr(object):
         pass
 
 
-class FilterExprConjunction(object):
+class FilterExprConjunction:
 
     def __init__(self, conj, lhs, rhs):
         self.conj = conj
@@ -200,10 +196,10 @@ class FilterExprConjunction(object):
             assert False
 
     def __repr__(self):
-        return 'EvalConj(%r, %r, %r)' % (self.conj, self.lhs, self.rhs)
+        return 'EvalConj({!r}, {!r}, {!r})'.format(self.conj, self.lhs, self.rhs)
 
 
-class FilterExprPredicate(object):
+class FilterExprPredicate:
 
     def __init__(self, op, lhs, rhs):
         self.op = op
@@ -220,7 +216,7 @@ class FilterExprPredicate(object):
             assert False
 
     def __repr__(self):
-        return 'EvalPred(%r, %r, %r)' % (self.op, self.lhs, self.rhs)
+        return 'EvalPred({!r}, {!r}, {!r})'.format(self.op, self.lhs, self.rhs)
 
 
 def parse_route_attr_filter(route_attr_filter, debug=False):
@@ -232,6 +228,6 @@ def parse_route_attr_filter(route_attr_filter, debug=False):
     Returns:
         Tuple[FilterExpr, List[str]]: The second element is a list of errors.
     """
-    assert isinstance(route_attr_filter, six.text_type), type(route_attr_filter)
+    assert isinstance(route_attr_filter, str), type(route_attr_filter)
     parser = FilterExprParser(debug)
     return parser.parse(route_attr_filter)

@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -113,7 +111,7 @@ class JavascriptClientBackend(CodeBackend):
 
         return_type = None
         if self.args.wrap_response_in:
-            return_type = '%s<%s>' % (self.args.wrap_response_in,
+            return_type = '{}<{}>'.format(self.args.wrap_response_in,
                 fmt_type(route.result_data_type))
         else:
             return_type = fmt_type(route.result_data_type)

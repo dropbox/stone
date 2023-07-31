@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
 
+from stone.backend import (
+    remove_aliases_from_api,
+    CodeBackend
+)
 from stone.ir import (
     Alias,
     Api,
@@ -19,10 +22,6 @@ from stone.ir import (
     UnionField,
     resolve_aliases,
     strip_alias
-)
-from stone.backend import (
-    remove_aliases_from_api,
-    CodeBackend
 )
 
 _MYPY = False

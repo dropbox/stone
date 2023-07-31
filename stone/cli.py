@@ -2,15 +2,11 @@
 A command-line interface for StoneAPI.
 """
 
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-import codecs
 import importlib
 import io
 import json
 import logging
 import os
-import six
 import sys
 import traceback
 
@@ -65,18 +61,18 @@ _backend_help = (
     'The following backends are built-in: ' + ', '.join(_builtin_backends))
 _cmdline_parser.add_argument(
     'backend',
-    type=six.text_type,
+    type=str,
     help=_backend_help,
 )
 _cmdline_parser.add_argument(
     'output',
-    type=six.text_type,
+    type=str,
     help='The folder to save generated files to.',
 )
 _cmdline_parser.add_argument(
     'spec',
     nargs='*',
-    type=six.text_type,
+    type=str,
     help=('Path to API specifications. Each must have a .stone extension. '
           'If omitted or set to "-", the spec is read from stdin. Multiple '
           'namespaces can be provided over stdin by concatenating multiple '
@@ -90,7 +86,7 @@ _cmdline_parser.add_argument(
 _cmdline_parser.add_argument(
     '-f',
     '--filter-by-route-attr',
-    type=six.text_type,
+    type=str,
     help=('Removes routes that do not match the expression. The expression '
           'must specify a route attribute on the left-hand side and a value '
           'on the right-hand side. Use quotes for strings and bytes. The only '
@@ -102,7 +98,7 @@ _cmdline_parser.add_argument(
 _cmdline_parser.add_argument(
     '-r',
     '--route-whitelist-filter',
-    type=six.text_type,
+    type=str,
     help=('Restrict datatype generation to only the routes specified in the whitelist '
           'and their dependencies. Input should be a file containing a JSON dict with '
           'the following form: {"route_whitelist": {}, "datatype_whitelist": {}} '
@@ -202,20 +198,15 @@ def main():
             if debug:
                 print('Reading specification from stdin.')
 
-            if six.PY2:
-                UTF8Reader = codecs.getreader('utf8')
-                sys.stdin = UTF8Reader(sys.stdin)
-                stdin_text = sys.stdin.read()
-            else:
-                stdin_buffer = sys.stdin.buffer  # pylint: disable=no-member,useless-suppression
-                stdin_text = io.TextIOWrapper(stdin_buffer, encoding='utf-8').read()
+            stdin_buffer = sys.stdin.buffer  # pylint: disable=no-member,useless-suppression
+            stdin_text = io.TextIOWrapper(stdin_buffer, encoding='utf-8').read()
 
             parts = stdin_text.split('namespace')
             if len(parts) == 1:
                 specs.append(('stdin.1', parts[0]))
             else:
                 specs.append(
-                    ('stdin.1', '%snamespace%s' % (parts.pop(0), parts.pop(0))))
+                    ('stdin.1', '{}namespace{}'.format(parts.pop(0), parts.pop(0))))
                 while parts:
                     specs.append(('stdin.%s' % (len(specs) + 1),
                                   'namespace%s' % parts.pop(0)))
@@ -243,7 +234,7 @@ def main():
             api = specs_to_ir(specs, debug=debug,
                               route_whitelist_filter=route_whitelist_filter)
         except InvalidSpec as e:
-            print('%s:%s: error: %s' % (e.path, e.lineno, e.msg), file=sys.stderr)
+            print('{}:{}: error: {}'.format(e.path, e.lineno, e.msg), file=sys.stderr)
             if debug:
                 print('A traceback is included below in case this is a bug in '
                       'Stone.\n', traceback.format_exc(), file=sys.stderr)

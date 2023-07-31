@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import logging
 import os
 
@@ -10,7 +8,7 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
-class MultiToken(object):
+class MultiToken:
     """Object used to monkeypatch ply.lex so that we can return multiple
     tokens from one lex operation."""
     def __init__(self, tokens):
@@ -22,7 +20,7 @@ class MultiToken(object):
 NullToken = object()
 
 
-class Lexer(object):
+class Lexer:
     """
     Lexer. Tokenizes stone files.
     """
