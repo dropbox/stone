@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 # pylint: disable=deprecated-method,useless-suppression
 
@@ -4886,10 +4885,10 @@ class TestStone(unittest.TestCase):
 
         struct = api.namespaces['test'].data_type_by_name['TestStruct']
         self.assertEqual(struct.fields[0].custom_annotations[0], annotation)
-        self.assertEqual(struct.recursive_custom_annotations, set([
+        self.assertEqual(struct.recursive_custom_annotations, {
             (alias, api.namespaces['test'].annotation_by_name['VeryImportant']),
             (struct.fields[0], api.namespaces['test'].annotation_by_name['SortaImportant']),
-        ]))
+        })
 
         # Test recursive references are captured
         ns2 = textwrap.dedent("""\

@@ -22,7 +22,7 @@ import unittest
 
 class TestGeneratedPythonClient(unittest.TestCase):
     def __init__(self, *args, **kwargs):
-        super(TestGeneratedPythonClient, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def _evaluate_namespace(self, ns):
         # type: (ApiNamespace) -> typing.Text

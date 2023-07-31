@@ -1,5 +1,3 @@
-import six
-
 class InvalidSpec(Exception):
     """Raise this to indicate there was an error in a specification."""
 
@@ -10,9 +8,9 @@ class InvalidSpec(Exception):
             lineno: The line number the error occurred on.
             path: Path to the spec file with the error.
         """
-        super(InvalidSpec, self).__init__()
-        assert isinstance(msg, six.text_type), type(msg)
-        assert isinstance(lineno, (six.integer_types, type(None))), type(lineno)
+        super().__init__()
+        assert isinstance(msg, str), type(msg)
+        assert isinstance(lineno, ((int,), type(None))), type(lineno)
         self.msg = msg
         self.lineno = lineno
         self.path = path

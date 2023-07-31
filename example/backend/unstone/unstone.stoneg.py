@@ -7,16 +7,13 @@ Current limitations:
 - Aliases are lost (they are expanded in-line)
 - Docstrings are reformatted
 """
-from __future__ import absolute_import, division, print_function, unicode_literals
 
-import six
-
+from stone.backend import CodeBackend
 from stone.frontend.ast import AstTypeRef
 from stone.ir import DataType
 from stone.ir import List, String, Timestamp
 from stone.ir import Struct, Union, Void
 from stone.ir.data_types import _BoundedInteger, _BoundedFloat
-from stone.backend import CodeBackend
 
 
 class UnstoneBackend(CodeBackend):
@@ -50,7 +47,7 @@ class UnstoneBackend(CodeBackend):
                 for field in data_type.fields:
                     type_repr = self.format_data_type(field.data_type)
                     if not field.has_default:
-                        self.emit('%s %s' % (field.name, type_repr))
+                        self.emit('{} {}'.format(field.name, type_repr))
                     else:
                         self.emit('%s %s = %s' %
                             (field.name, type_repr, self.format_value(field.default)))
@@ -74,7 +71,7 @@ class UnstoneBackend(CodeBackend):
                         self.emit('%s' % (name))
                     else:
                         type_repr = self.format_data_type(field.data_type)
-                        self.emit('%s %s' % (name, type_repr))
+                        self.emit('{} {}'.format(name, type_repr))
                     if field.doc is not None:
                         with self.indent():
                             self.emit(self.format_value(field.doc))
@@ -86,7 +83,7 @@ class UnstoneBackend(CodeBackend):
     def generate_route(self, route):
         """Output a route definition."""
         self.emit('')
-        self.emit('route %s (%s, %s, %s)' % (
+        self.emit('route {} ({}, {}, {})'.format(
             route.name,
             self.format_data_type(route.arg_data_type),
             self.format_data_type(route.result_data_type),
@@ -136,10 +133,10 @@ class UnstoneBackend(CodeBackend):
 
     def format_value(self, val):
         """Helper function to format a value."""
-        if isinstance(val, six.text_type):
+        if isinstance(val, str):
             return self.format_string(val)
         else:
-            return six.text_type(val)
+            return str(val)
 
     def format_string(self, val):
         """Helper function to format a string."""

@@ -1,20 +1,15 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
 import os
 import shutil
-import six
-
 from contextlib import contextmanager
 
-from stone.ir import (
-    is_list_type,
-    is_numeric_type,
-    is_string_type,
-    is_struct_type,
-    is_union_type,
-    is_void_type,
-    unwrap_nullable,
+import six
+
+from stone.backends.swift import (
+    base,
+    fmt_serial_obj,
+    SwiftBaseBackend,
+    undocumented,
 )
 from stone.backends.swift_helpers import (
     check_route_name_conflict,
@@ -24,11 +19,14 @@ from stone.backends.swift_helpers import (
     fmt_var,
     fmt_type,
 )
-from stone.backends.swift import (
-    base,
-    fmt_serial_obj,
-    SwiftBaseBackend,
-    undocumented,
+from stone.ir import (
+    is_list_type,
+    is_numeric_type,
+    is_string_type,
+    is_struct_type,
+    is_union_type,
+    is_void_type,
+    unwrap_nullable,
 )
 
 _MYPY = False
@@ -229,8 +227,8 @@ class SwiftTypesBackend(SwiftBaseBackend):
             )
         elif is_string_type(data_type):
             pat = data_type.pattern if data_type.pattern else None
-            pat = pat.encode('unicode_escape').replace(six.ensure_binary("\""),
-                                                       six.ensure_binary("\\\"")) if pat else pat
+            pat = pat.encode('unicode_escape').replace(b"\"",
+                                                       b"\\\"") if pat else pat
             v = "stringValidator({})".format(
                 self._func_args([
                     ("minLength", data_type.min_length),

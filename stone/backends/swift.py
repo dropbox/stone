@@ -1,7 +1,13 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from contextlib import contextmanager
 
+from stone.backend import CodeBackend
+from stone.backends.swift_helpers import (
+    fmt_class,
+    fmt_func,
+    fmt_obj,
+    fmt_type,
+    fmt_var,
+)
 from stone.ir import (
     Boolean,
     Bytes,
@@ -22,15 +28,6 @@ from stone.ir import (
     is_user_defined_type,
     unwrap_nullable,
 )
-from stone.backend import CodeBackend
-from stone.backends.swift_helpers import (
-    fmt_class,
-    fmt_func,
-    fmt_obj,
-    fmt_type,
-    fmt_var,
-)
-
 
 _serial_type_table = {
     Boolean: 'BoolSerializer',

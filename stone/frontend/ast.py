@@ -1,8 +1,7 @@
 from collections import OrderedDict
-import six
 
 
-class ASTNode(object):
+class ASTNode:
 
     def __init__(self, path, lineno, lexpos):
         """
@@ -25,7 +24,7 @@ class AstNamespace(ASTNode):
             name (str): The namespace of the spec.
             doc (Optional[str]): The docstring for this namespace.
         """
-        super(AstNamespace, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.doc = doc
 
@@ -43,7 +42,7 @@ class AstImport(ASTNode):
         Args:
             target (str): The name of the namespace to import.
         """
-        super(AstImport, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.target = target
 
     def __str__(self):
@@ -61,7 +60,7 @@ class AstAlias(ASTNode):
             type_ref (AstTypeRef): The data type of the field.
             doc (Optional[str]): Documentation string for the alias.
         """
-        super(AstAlias, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
         self.doc = doc
@@ -87,12 +86,12 @@ class AstTypeDef(ASTNode):
             examples (Optional[OrderedDict[str, AstExample]]): Map from label
                 to example.
         """
-        super(AstTypeDef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
 
         self.name = name
         assert isinstance(extends, (AstTypeRef, type(None))), type(extends)
         self.extends = extends
-        assert isinstance(doc, (six.text_type, type(None)))
+        assert isinstance(doc, (str, type(None)))
         self.doc = doc
         assert isinstance(fields, list)
         self.fields = fields
@@ -122,7 +121,7 @@ class AstStructDef(AstTypeDef):
         See AstTypeDef for other constructor args.
         """
 
-        super(AstStructDef, self).__init__(
+        super().__init__(
             path, lineno, lexpos, name, extends, doc, fields, examples)
         assert isinstance(subtypes, (tuple, type(None))), type(subtypes)
         self.subtypes = subtypes
@@ -137,7 +136,7 @@ class AstStructDef(AstTypeDef):
 class AstStructPatch(ASTNode):
 
     def __init__(self, path, lineno, lexpos, name, fields, examples):
-        super(AstStructPatch, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         assert isinstance(fields, list)
         self.fields = fields
@@ -161,7 +160,7 @@ class AstUnionDef(AstTypeDef):
 
         See AstTypeDef for other constructor args.
         """
-        super(AstUnionDef, self).__init__(
+        super().__init__(
             path, lineno, lexpos, name, extends, doc, fields, examples)
         self.closed = closed
 
@@ -176,7 +175,7 @@ class AstUnionDef(AstTypeDef):
 class AstUnionPatch(ASTNode):
 
     def __init__(self, path, lineno, lexpos, name, fields, examples, closed):
-        super(AstUnionPatch, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         assert isinstance(fields, list)
         self.fields = fields
@@ -203,7 +202,7 @@ class AstTypeRef(ASTNode):
             ns (Optional[str]): Namespace that referred type is a member of.
                 If none, then refers to the current namespace.
         """
-        super(AstTypeRef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.args = args
         self.nullable = nullable
@@ -224,7 +223,7 @@ class AstTagRef(ASTNode):
         Args:
             tag (str): Name of the referenced type.
         """
-        super(AstTagRef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.tag = tag
 
     def __repr__(self):
@@ -239,7 +238,7 @@ class AstAnnotationRef(ASTNode):
         Args:
             annotation (str): Name of the referenced annotation.
         """
-        super(AstAnnotationRef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.annotation = annotation
         self.ns = ns
 
@@ -261,7 +260,7 @@ class AstAnnotationDef(ASTNode):
             args (str): Arguments to define annotation.
             kwargs (str): Keyword Arguments to define annotation.
         """
-        super(AstAnnotationDef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.annotation_type = annotation_type
         self.annotation_type_ns = annotation_type_ns
@@ -287,7 +286,7 @@ class AstAnnotationTypeDef(ASTNode):
             params (List[AstField]): Parameters that can be passed to the
                 annotation type.
         """
-        super(AstAnnotationTypeDef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.doc = doc
         self.params = params
@@ -311,7 +310,7 @@ class AstField(ASTNode):
             name (str): The name of the field.
             type_ref (AstTypeRef): The data type of the field.
         """
-        super(AstField, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
         self.doc = None
@@ -339,7 +338,7 @@ class AstField(ASTNode):
 class AstVoidField(ASTNode):
 
     def __init__(self, path, lineno, lexpos, name):
-        super(AstVoidField, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.doc = None
         self.annotations = []
@@ -362,7 +361,7 @@ class AstVoidField(ASTNode):
 class AstSubtypeField(ASTNode):
 
     def __init__(self, path, lineno, lexpos, name, type_ref):
-        super(AstSubtypeField, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.type_ref = type_ref
 
@@ -376,7 +375,7 @@ class AstRouteDef(ASTNode):
 
     def __init__(self, path, lineno, lexpos, name, version, deprecated,
                  arg_type_ref, result_type_ref, error_type_ref=None):
-        super(AstRouteDef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.version = version
         self.deprecated = deprecated
@@ -395,7 +394,7 @@ class AstRouteDef(ASTNode):
 class AstAttrField(ASTNode):
 
     def __init__(self, path, lineno, lexpos, name, value):
-        super(AstAttrField, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.value = value
 
@@ -408,7 +407,7 @@ class AstAttrField(ASTNode):
 class AstExample(ASTNode):
 
     def __init__(self, path, lineno, lexpos, label, text, fields):
-        super(AstExample, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.label = label
         self.text = text
         self.fields = fields
@@ -423,7 +422,7 @@ class AstExample(ASTNode):
 class AstExampleField(ASTNode):
 
     def __init__(self, path, lineno, lexpos, name, value):
-        super(AstExampleField, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.name = name
         self.value = value
 
@@ -436,7 +435,7 @@ class AstExampleField(ASTNode):
 class AstExampleRef(ASTNode):
 
     def __init__(self, path, lineno, lexpos, label):
-        super(AstExampleRef, self).__init__(path, lineno, lexpos)
+        super().__init__(path, lineno, lexpos)
         self.label = label
 
     def __repr__(self):

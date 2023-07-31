@@ -1,14 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
-from collections import OrderedDict
 import logging
+from collections import OrderedDict
 
 import ply.yacc as yacc
-
-from .lexer import (
-    Lexer,
-    NullToken,
-)
 
 from .ast import (
     AstAlias,
@@ -32,11 +25,15 @@ from .ast import (
     AstUnionPatch,
     AstVoidField,
 )
+from .lexer import (
+    Lexer,
+    NullToken,
+)
 
-logger = logging.getLogger(str('stone.frontend.parser'))
+logger = logging.getLogger('stone.frontend.parser')
 
 
-class ParserFactory(object):
+class ParserFactory:
     """
     After instantiating a ParserFactory, call get_parser() to get an object
     with a parse() method. It so happens that the object is also a
@@ -54,7 +51,7 @@ class ParserFactory(object):
     tokens = Lexer.tokens
 
     # Ply feature: Starting grammar rule
-    start = str('spec')  # PLY wants a 'str' instance; this makes it work in Python 2 and 3
+    start = 'spec'  # PLY wants a 'str' instance; this makes it work in Python 2 and 3
 
     def __init__(self, debug=False):
         self.debug = debug

@@ -1,8 +1,5 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import argparse
-
-from six import StringIO
+from io import StringIO
 
 from stone.backend import CodeBackend
 from stone.backends.python_helpers import (
@@ -48,7 +45,7 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 
-class ImportTracker(object):
+class ImportTracker:
     def __init__(self):
         # type: () -> None
         self.cur_namespace_typing_imports = set()  # type: typing.Set[typing.Text]
@@ -102,7 +99,7 @@ class PythonTypeStubsBackend(CodeBackend):
 
     def __init__(self, *args, **kwargs):
         # type: (...) -> None
-        super(PythonTypeStubsBackend, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._pep_484_type_mapping_callbacks = self._get_pep_484_type_mapping_callbacks()
 
     def generate(self, api):

@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import unittest
 
+from stone.frontend.ast import (
+    AstExample,
+    AstExampleField,
+    AstExampleRef,
+)
 from stone.ir import (
     ApiNamespace,
     Boolean,
@@ -26,11 +30,6 @@ from stone.ir import (
     StructField,
     Union,
     UnionField,
-)
-from stone.frontend.ast import (
-    AstExample,
-    AstExampleField,
-    AstExampleRef,
 )
 
 

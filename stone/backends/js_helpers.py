@@ -1,8 +1,9 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
-import six
 
+from stone.backends.helpers import (
+    fmt_camel,
+    fmt_pascal,
+)
 from stone.ir import (
     Boolean,
     Bytes,
@@ -19,10 +20,6 @@ from stone.ir import (
     is_list_type,
     is_struct_type,
     is_user_defined_type,
-)
-from stone.backends.helpers import (
-    fmt_camel,
-    fmt_pascal,
 )
 
 _base_type_table = {
@@ -42,7 +39,7 @@ _base_type_table = {
 
 
 def fmt_obj(o):
-    if isinstance(o, six.text_type):
+    if isinstance(o, str):
         # Prioritize single-quoted strings per JS style guides.
         return repr(o).lstrip('u')
     else:
@@ -53,7 +50,7 @@ def fmt_error_type(data_type, wrap_error_in=''):
     """
     Converts the error type into a JSDoc type.
     """
-    return '%s.<%s>' % (
+    return '{}.<{}>'.format(
         (wrap_error_in if (wrap_error_in != '') else 'Error'),
         fmt_type(data_type)
     )
@@ -65,7 +62,7 @@ def fmt_type_name(data_type):
     (Does not attempt to enumerate subtypes.)
     """
     if is_user_defined_type(data_type):
-        return fmt_pascal('%s%s' % (data_type.namespace.name, data_type.name))
+        return fmt_pascal('{}{}'.format(data_type.namespace.name, data_type.name))
     else:
         fmted_type = _base_type_table.get(data_type.__class__, 'Object')
         if is_list_type(data_type):

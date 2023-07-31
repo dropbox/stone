@@ -1,9 +1,6 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from collections import OrderedDict
 # See <https://github.com/PyCQA/pylint/issues/73>
 from distutils.version import StrictVersion  # pylint: disable=deprecated-module
-import six
 
 from .data_types import (
     doc_unwrap,
@@ -29,17 +26,9 @@ if _MYPY:
     )
 
     from stone.frontend.ast import AstRouteDef  # noqa: F401 # pylint: disable=unused-import
+    NamespaceDict = typing.Dict[str, 'ApiNamespace']
 
-    # TODO: This can be changed back to a single declaration with a
-    # unicode literal after <https://github.com/python/mypy/pull/2516>
-    # makes it into a PyPi release
-    if six.PY3:
-        NamespaceDict = typing.Dict[typing.Text, 'ApiNamespace']
-    else:
-        NamespaceDict = typing.Dict[typing.Text, b'ApiNamespace']
-
-
-class Api(object):
+class Api:
     """
     A full description of an API's namespaces, data types, and routes.
     """
@@ -83,7 +72,7 @@ class Api(object):
         self.route_schema = route_schema
 
 
-class _ImportReason(object):
+class _ImportReason:
     """
     Tracks the reason a namespace was imported.
     """
@@ -96,7 +85,7 @@ class _ImportReason(object):
         self.annotation_type = False
 
 
-class ApiNamespace(object):
+class ApiNamespace:
     """
     Represents a category of API endpoints and their associated data types.
     """
@@ -129,7 +118,7 @@ class ApiNamespace(object):
         If a docstring already exists, the new normalized docstring is appended
         to the end of the existing one with two newlines separating them.
         """
-        assert isinstance(docstring, six.text_type), type(docstring)
+        assert isinstance(docstring, str), type(docstring)
         normalized_docstring = doc_unwrap(docstring) + '\n'
         if self.doc is None:
             self.doc = normalized_docstring
@@ -348,10 +337,10 @@ class ApiNamespace(object):
 
     def __repr__(self):
         # type: () -> str
-        return str('ApiNamespace({!r})').format(self.name)
+        return 'ApiNamespace({!r})'.format(self.name)
 
 
-class ApiRoute(object):
+class ApiRoute:
     """
     Represents an API endpoint.
     """
@@ -456,7 +445,7 @@ class ApiRoute(object):
         ))
 
 
-class DeprecationInfo(object):
+class DeprecationInfo:
 
     def __init__(self, by=None):
         # type: (typing.Optional[ApiRoute]) -> None
@@ -466,7 +455,7 @@ class DeprecationInfo(object):
         assert by is None or isinstance(by, ApiRoute), repr(by)
         self.by = by
 
-class ApiRoutesByVersion(object):
+class ApiRoutesByVersion:
     """
     Represents routes of different versions for a common name.
     """

@@ -1,7 +1,7 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from stone.backend import Backend
-from stone.ir.api import ApiNamespace
+from stone.backends.helpers import (
+    fmt_camel,
+)
 from stone.ir import (
     Boolean,
     Bytes,
@@ -21,9 +21,7 @@ from stone.ir import (
     is_map_type,
     is_user_defined_type,
 )
-from stone.backends.helpers import (
-    fmt_camel,
-)
+from stone.ir.api import ApiNamespace
 
 _base_type_table = {
     Boolean: 'boolean',
@@ -47,7 +45,7 @@ def fmt_error_type(data_type, inside_namespace=None, wrap_error_in=''):
     inside_namespace should be set to the namespace that the reference
     occurs in, or None if this parameter is not relevant.
     """
-    return '%s<%s>' % (
+    return '{}<{}>'.format(
         (wrap_error_in if (wrap_error_in != '') else 'Error'),
         fmt_type(data_type, inside_namespace)
     )
@@ -62,7 +60,7 @@ def fmt_type_name(data_type, inside_namespace=None):
         if data_type.namespace == inside_namespace:
             return data_type.name
         else:
-            return '%s.%s' % (data_type.namespace.name, data_type.name)
+            return '{}.{}'.format(data_type.namespace.name, data_type.name)
     else:
         fmted_type = _base_type_table.get(data_type.__class__, 'Object')
         if is_list_type(data_type):
@@ -70,7 +68,7 @@ def fmt_type_name(data_type, inside_namespace=None):
         elif is_map_type(data_type):
             key_data_type = _base_type_table.get(data_type.key_data_type, 'string')
             value_data_type = fmt_type_name(data_type.value_data_type, inside_namespace)
-            fmted_type = '{[key: %s]: %s}' % (key_data_type, value_data_type)
+            fmted_type = '{{[key: {}]: {}}}'.format(key_data_type, value_data_type)
         return fmted_type
 
 def fmt_polymorphic_type_reference(data_type, inside_namespace=None):
@@ -138,7 +136,7 @@ def fmt_tag(cur_namespace, tag, val):
         anchor, link = val.rsplit(' ', 1)
         # There's no way to have links in TSDoc, so simply use JSDoc's formatting.
         # It's entirely possible some editors support this.
-        return '[%s]{@link %s}' % (anchor, link)
+        return '[{}]{{@link {}}}'.format(anchor, link)
     elif tag == 'val':
         # Value types seem to match JavaScript (true, false, null)
         return val

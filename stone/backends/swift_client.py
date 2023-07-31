@@ -1,12 +1,5 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
 
-from stone.ir import (
-    is_struct_type,
-    is_union_type,
-    is_void_type,
-)
 from stone.backends.swift import (
     base,
     fmt_serial_type,
@@ -19,6 +12,11 @@ from stone.backends.swift_helpers import (
     fmt_func,
     fmt_var,
     fmt_type,
+)
+from stone.ir import (
+    is_struct_type,
+    is_union_type,
+    is_void_type,
 )
 
 _MYPY = False

@@ -6,14 +6,12 @@ The data types defined here should not be specific to an RPC or serialization
 format.
 """
 
-from __future__ import absolute_import, unicode_literals
 
 import datetime
 import hashlib
 import math
 import numbers
 import re
-
 from abc import ABCMeta, abstractmethod
 
 import six
@@ -23,10 +21,7 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 # See <http://python3porting.com/differences.html#buffer>
-if six.PY3:
-    _binary_types = (bytes, memoryview)  # noqa: E501,F821 # pylint: disable=undefined-variable,useless-suppression
-else:
-    _binary_types = (bytes, buffer)  # noqa: E501,F821 # pylint: disable=undefined-variable,useless-suppression
+_binary_types = (bytes, memoryview)  # noqa: E501,F821 # pylint: disable=undefined-variable,useless-suppression
 
 
 class ValidationError(Exception):
@@ -39,7 +34,7 @@ class ValidationError(Exception):
             parent (str): Adds the parent as the closest reference point for
                 the error. Use :meth:`add_parent` to add more.
         """
-        super(ValidationError, self).__init__(message)
+        super().__init__(message)
         self.message = message
         self._parents = []
         if parent:
@@ -66,12 +61,12 @@ class ValidationError(Exception):
 
     def __repr__(self):
         # Not a perfect repr, but includes the error location information.
-        return 'ValidationError(%r)' % six.text_type(self)
+        return 'ValidationError(%r)' % str(self)
 
 
 def type_name_with_module(t):
     # type: (typing.Type[typing.Any]) -> typing.Any
-    return '%s.%s' % (t.__module__, t.__name__)
+    return '{}.{}'.format(t.__module__, t.__name__)
 
 
 def generic_type_name(v):
@@ -88,7 +83,7 @@ def generic_type_name(v):
         return 'float'
     elif isinstance(v, (tuple, list)):
         return 'list'
-    elif isinstance(v, six.string_types):
+    elif isinstance(v, str):
         return 'string'
     elif v is None:
         return 'null'
@@ -96,7 +91,7 @@ def generic_type_name(v):
         return type_name_with_module(type(v))
 
 
-class Validator(six.with_metaclass(ABCMeta, object)):
+class Validator(metaclass=ABCMeta):
     """All primitive and composite data types should be a subclass of this."""
     __slots__ = ("_redact",)
 
@@ -304,7 +299,7 @@ class String(Primitive):
         if min_length and max_length:
             assert max_length >= min_length, 'max_length must be >= min_length'
         if pattern is not None:
-            assert isinstance(pattern, six.string_types), \
+            assert isinstance(pattern, str), \
                 'pattern must be a string'
 
         self.min_length = min_length
@@ -325,7 +320,7 @@ class String(Primitive):
         In PY2, we enforce that a str type must be valid utf-8, and a unicode
         string will be returned.
         """
-        if not isinstance(val, six.string_types):
+        if not isinstance(val, str):
             raise ValidationError("'%s' expected to be a string, got %s"
                                   % (val, generic_type_name(val)))
         if not six.PY3 and isinstance(val, str):
@@ -387,7 +382,7 @@ class Timestamp(Primitive):
     def __init__(self, fmt):
         """fmt must be composed of format codes that the C standard (1989)
         supports, most notably in its strftime() function."""
-        assert isinstance(fmt, six.text_type), 'format must be a string'
+        assert isinstance(fmt, str), 'format must be a string'
         self.format = fmt
 
     def validate(self, val):
@@ -477,7 +472,7 @@ class Struct(Composite):
                     field_name: Name of the field (str).
                     validator: Validator object.
         """
-        super(Struct, self).__init__()
+        super().__init__()
         self.definition = definition
 
     def validate(self, val):
@@ -566,7 +561,7 @@ class StructTree(Struct):
     # See PyCQA/pylint#1043 for why this is disabled; this should show up
     # as a usless-suppression (and can be removed) once a fix is released
     def __init__(self, definition):  # pylint: disable=useless-super-delegation
-        super(StructTree, self).__init__(definition)
+        super().__init__(definition)
 
 
 class Union(Composite):
@@ -636,7 +631,7 @@ class Nullable(Validator):
     __slots__ = ("validator",)
 
     def __init__(self, validator):
-        super(Nullable, self).__init__()
+        super().__init__()
         assert isinstance(validator, (Primitive, Composite)), \
             'validator must be for a primitive or composite type'
         assert not isinstance(validator, Nullable), \
@@ -665,7 +660,7 @@ class Nullable(Validator):
         return None
 
 
-class Redactor(object):
+class Redactor:
     __slots__ = ("regex",)
 
     def __init__(self, regex):

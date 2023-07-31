@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import os
 import re
 
@@ -117,7 +115,7 @@ class TSDClientBackend(CodeBackend):
 
         with self.output_to_relative_path(self.args.filename):
             if os.path.isfile(template_path):
-                with open(template_path, 'r', encoding='utf-8') as template_file:
+                with open(template_path, encoding='utf-8') as template_file:
                     template = template_file.read()
             else:
                 raise AssertionError('TypeScript template file does not exist.')
@@ -162,7 +160,7 @@ class TSDClientBackend(CodeBackend):
             lambda namespace: len(get_data_types_for_namespace(namespace)) != 0,
             api.namespaces.values())
         namespaces = ", ".join(map(lambda namespace: namespace.name, namespaces_with_types))
-        self.emit("import { %s } from '%s';" % (namespaces, type_file))
+        self.emit("import {{ {} }} from '{}';".format(namespaces, type_file))
 
     def _generate_routes(self, api, spaces_per_indent, indent_level):
         with self.indent(dent=spaces_per_indent * (indent_level + 1)):
@@ -204,7 +202,7 @@ class TSDClientBackend(CodeBackend):
 
         return_type = None
         if self.args.wrap_response_in:
-            return_type = 'Promise<%s<%s>>;' % (self.args.wrap_response_in,
+            return_type = 'Promise<{}<{}>>;'.format(self.args.wrap_response_in,
                 fmt_type(route.result_data_type))
         else:
             return_type = 'Promise<%s>;' % (fmt_type(route.result_data_type))
@@ -213,7 +211,7 @@ class TSDClientBackend(CodeBackend):
         if route.arg_data_type.__class__ != Void:
             arg = 'arg: %s' % fmt_type(route.arg_data_type)
 
-        self.emit('public %s(%s): %s' % (function_name, arg, return_type))
+        self.emit('public {}({}): {}'.format(function_name, arg, return_type))
 
     def _docf(self, tag, val):
         """

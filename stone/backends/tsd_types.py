@@ -1,9 +1,6 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
 import os
 import re
-import six
 import sys
 
 _MYPY = False
@@ -176,7 +173,7 @@ class TSDTypesBackend(CodeBackend):
         template_path = os.path.join(self.target_folder_path, self.args.template)
 
         if os.path.isfile(template_path):
-            with open(template_path, 'r', encoding='utf-8') as template_file:
+            with open(template_path, encoding='utf-8') as template_file:
                 return template_file.read()
         else:
             raise AssertionError('TypeScript template file does not exist.')
@@ -261,7 +258,7 @@ class TSDTypesBackend(CodeBackend):
     def _get_top_level_declaration(self, name):
         if self.split_by_namespace:
             # Use module for when emitting declaration files.
-            return "declare module '%s%s' {" % (self.args.module_name_prefix, name)
+            return "declare module '{}{}' {{".format(self.args.module_name_prefix, name)
         else:
             if self.args.export_namespaces:
                 return "export namespace %s {" % name
@@ -276,7 +273,7 @@ class TSDTypesBackend(CodeBackend):
         extra_args = {}
 
         def invalid(msg, extra_arg_raw):
-            print('Invalid --extra-arg:%s: %s' % (msg, extra_arg_raw),
+            print('Invalid --extra-arg:{}: {}'.format(msg, extra_arg_raw),
                   file=sys.stderr)
             sys.exit(1)
 
@@ -292,20 +289,20 @@ class TSDTypesBackend(CodeBackend):
             elif (not isinstance(extra_arg['match'], list) or
                   len(extra_arg['match']) != 2):
                 invalid('match key is not a list of two strings', extra_arg_raw)
-            elif (not isinstance(extra_arg['match'][0], six.text_type) or
-                  not isinstance(extra_arg['match'][1], six.text_type)):
+            elif (not isinstance(extra_arg['match'][0], str) or
+                  not isinstance(extra_arg['match'][1], str)):
                 print(type(extra_arg['match'][0]))
                 invalid('match values are not strings', extra_arg_raw)
             elif 'arg_name' not in extra_arg:
                 invalid('No arg_name key', extra_arg_raw)
-            elif not isinstance(extra_arg['arg_name'], six.text_type):
+            elif not isinstance(extra_arg['arg_name'], str):
                 invalid('arg_name is not a string', extra_arg_raw)
             elif 'arg_type' not in extra_arg:
                 invalid('No arg_type key', extra_arg_raw)
-            elif not isinstance(extra_arg['arg_type'], six.text_type):
+            elif not isinstance(extra_arg['arg_type'], str):
                 invalid('arg_type is not a string', extra_arg_raw)
             elif ('arg_docstring' in extra_arg and
-                  not isinstance(extra_arg['arg_docstring'], six.text_type)):
+                  not isinstance(extra_arg['arg_docstring'], str)):
                 invalid('arg_docstring is not a string', extra_arg_raw)
 
             attr_key, attr_val = extra_arg['match'][0], extra_arg['match'][1]
@@ -352,7 +349,7 @@ class TSDTypesBackend(CodeBackend):
         Generates a TypeScript type for a stone alias.
         """
         namespace = alias_type.namespace
-        self.emit('export type %s = %s;' % (fmt_type_name(alias_type, namespace),
+        self.emit('export type {} = {};'.format(fmt_type_name(alias_type, namespace),
                                      fmt_type_name(alias_type.data_type, namespace)))
         self.emit()
 
@@ -365,14 +362,16 @@ class TSDTypesBackend(CodeBackend):
             self._emit_tsdoc_header(struct_type.doc)
         parent_type = struct_type.parent_type
         extends_line = ' extends %s' % fmt_type_name(parent_type, namespace) if parent_type else ''
-        self.emit('export interface %s%s {' % (fmt_type_name(struct_type, namespace), extends_line))
+        self.emit(
+            'export interface {}{} {{'.format(fmt_type_name(struct_type, namespace), extends_line)
+        )
         with self.indent(dent=indent_spaces):
 
             for param_name, param_type, param_docstring in extra_parameters:
                 if param_docstring:
                     self._emit_tsdoc_header(param_docstring)
                 # Making all extra args optional parameters
-                self.emit('%s?: %s;' % (param_name, param_type))
+                self.emit('{}?: {};'.format(param_name, param_type))
 
             for field in struct_type.fields:
                 doc = field.doc
@@ -389,7 +388,7 @@ class TSDTypesBackend(CodeBackend):
                     self._emit_tsdoc_header(doc)
                 # Translate nullable types into optional properties.
                 field_name = '%s?' % field.name if optional else field.name
-                self.emit('%s: %s;' % (field_name, field_ts_type))
+                self.emit('{}: {};'.format(field_name, field_ts_type))
 
         self.emit('}')
         self.emit()
@@ -475,14 +474,14 @@ class TSDTypesBackend(CodeBackend):
         for variant in union_type.fields:
             if variant.doc:
                 self._emit_tsdoc_header(variant.doc)
-            variant_name = '%s%s' % (union_type_name, fmt_pascal(variant.name))
+            variant_name = '{}{}'.format(union_type_name, fmt_pascal(variant.name))
             variant_type_names.append(variant_name)
 
             is_struct_without_enumerated_subtypes = _is_struct_without_enumerated_subtypes(
                 variant.data_type)
 
             if is_struct_without_enumerated_subtypes:
-                self.emit('export interface %s extends %s {' % (
+                self.emit('export interface {} extends {} {{'.format(
                     variant_name, fmt_type(variant.data_type, namespace)))
             else:
                 self.emit('export interface %s {' % variant_name)
@@ -494,13 +493,15 @@ class TSDTypesBackend(CodeBackend):
                 if is_void_type(variant.data_type) is False and (
                     not is_struct_without_enumerated_subtypes
                 ):
-                    self.emit("%s: %s;" % (variant.name, fmt_type(variant.data_type, namespace)))
+                    self.emit(
+                        "{}: {};".format(variant.name, fmt_type(variant.data_type, namespace))
+                    )
             self.emit('}')
             self.emit()
 
         if union_type.doc:
             self._emit_tsdoc_header(union_type.doc)
-        self.emit('export type %s = %s;' % (union_type_name, ' | '.join(variant_type_names)))
+        self.emit('export type {} = {};'.format(union_type_name, ' | '.join(variant_type_names)))
         self.emit()
 
     def _docf(self, tag, val):

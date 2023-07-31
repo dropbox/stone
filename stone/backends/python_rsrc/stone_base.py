@@ -2,7 +2,6 @@
 Helpers for representing Stone data types in Python.
 """
 
-from __future__ import absolute_import, unicode_literals
 
 import functools
 
@@ -12,7 +11,7 @@ _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
-class AnnotationType(object):
+class AnnotationType:
     # This is a base class for all annotation types.
     pass
 
@@ -21,7 +20,7 @@ if _MYPY:
     U = typing.TypeVar('U')
 
 
-class NotSet(object):
+class NotSet:
     __slots__ = ()
 
     def __copy__(self):
@@ -43,7 +42,7 @@ NOT_SET = NotSet()  # dummy object to denote that a field has not been set
 NO_DEFAULT = object()
 
 
-class Attribute(object):
+class Attribute:
     __slots__ = ("name", "default", "nullable", "user_defined", "validator")
 
     def __init__(self, name, nullable=False, user_defined=False):
@@ -86,7 +85,7 @@ class Attribute(object):
         setattr(instance, self.name, NOT_SET)
 
 
-class Struct(object):
+class Struct:
     # This is a base class for all classes representing Stone structs.
 
     # every parent class in the inheritance tree must define __slots__ in order to get full memory
@@ -125,7 +124,7 @@ class Struct(object):
         # type: (typing.Type[T], typing.Text, typing.Callable[[T, U], U]) -> None
         pass
 
-class Union(object):
+class Union:
     # TODO(kelkabany): Possible optimization is to remove _value if a
     # union is composed of only symbols.
     __slots__ = ['_tag', '_value']
@@ -195,7 +194,7 @@ class Union(object):
 
         return cls._tagmap[tag]
 
-class Route(object):
+class Route:
     __slots__ = ("name", "version", "deprecated", "arg_type", "result_type", "error_type", "attrs")
 
     def __init__(self, name, version, deprecated, arg_type, result_type, error_type, attrs):
