@@ -174,7 +174,7 @@ class SwiftBackend(SwiftBaseBackend):
         namespace_fields = []
         for namespace in api.namespaces.values():
             if self._namespace_contains_valid_routes_for_auth_type(namespace):
-                namespace_fields.append((namespace.name,
+                namespace_fields.append((fmt_var(namespace.name),
                                         fmt_class(self._class_name(namespace.name))))
 
         return namespace_fields
