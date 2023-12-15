@@ -8,9 +8,9 @@ import Foundation
 
 /// Routes for the {{ class_name(namespace.name) }} namespace
 /// For Objective-C compatible routes see DB{{ fmt_class(namespace.name) }}Routes
-public class {{ fmt_class(class_name(namespace.name)) }}Routes {
+public class {{ fmt_class(class_name(namespace.name)) }}Routes: DropboxTransportClientOwning {
     public let client: {{ transport_client_name }}
-    init(client: {{ transport_client_name }}) {
+    required init(client: {{ transport_client_name }}) {
         self.client = client
     }
 
