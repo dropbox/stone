@@ -33,7 +33,7 @@ public class {{ fmt_class(namespace.name) }} {
             do {
                 return "\(SerializeUtil.prepareJSONForSerialization(try {{ fmt_class(data_type.name) }}Serializer().serialize(self)))"
             } catch {
-                return "\(self)"
+                return "Failed to generate description for {{ fmt_class(data_type.name) }}: \(error)"
             }
         }
     }
@@ -106,7 +106,7 @@ public class {{ fmt_class(namespace.name) }} {
             do {
                 return "\(SerializeUtil.prepareJSONForSerialization(try {{ fmt_class(data_type.name) }}Serializer().serialize(self)))"
             } catch {
-                return "\(self)"
+                return "Failed to generate description for {{ fmt_class(data_type.name) }}: \(error)"
             }
         }
     }
