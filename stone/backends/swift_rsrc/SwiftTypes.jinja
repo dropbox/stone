@@ -11,7 +11,7 @@ public class {{ fmt_class(namespace.name) }} {
 {% for data_type in namespace.linearize_data_types() %}
     {{ data_type_doc(data_type) }}
     {% if is_struct_type(data_type) %}
-    public class {{ fmt_class(data_type.name) }}: {{ 'CustomStringConvertible' if not data_type.parent_type else fmt_type(data_type.parent_type) }} {
+    public class {{ fmt_class(data_type.name) }}: {{ 'CustomStringConvertible, JSONRepresentable' if not data_type.parent_type else fmt_type(data_type.parent_type) }} {
         {% for field in data_type.fields %}
         {{ struct_field_doc(field) }}
         public let {{ fmt_var(field.name) }}: {{ fmt_type(field.data_type) }}
@@ -29,11 +29,18 @@ public class {{ fmt_class(namespace.name) }} {
             {% endif %}
         }
         {% endif %}
+
+        {% if not data_type.parent_type %}
+        func json() throws -> JSON {
+            try {{ fmt_class(data_type.name) }}Serializer().serialize(self)
+        }
+        {% endif %}
+
         {{ 'public var' if not data_type.parent_type else 'public override var' }} description: String {
             do {
                 return "\(SerializeUtil.prepareJSONForSerialization(try {{ fmt_class(data_type.name) }}Serializer().serialize(self)))"
             } catch {
-                return "\(self)"
+                return "Failed to generate description for {{ fmt_class(data_type.name) }}: \(error)"
             }
         }
     }
@@ -96,17 +103,21 @@ public class {{ fmt_class(namespace.name) }} {
         }
     }
     {% elif is_union_type(data_type) %}
-    public enum {{ fmt_class(data_type.name) }}: CustomStringConvertible {
+    public enum {{ fmt_class(data_type.name) }}: CustomStringConvertible, JSONRepresentable {
         {% for field in data_type.all_fields %}
         {{ union_field_doc(field) }}
         case {{ fmt_var(field.name) }}{{ format_tag_type(field.data_type) }}
         {% endfor %}
 
+        func json() throws -> JSON {
+            try {{ fmt_class(data_type.name) }}Serializer().serialize(self)
+        }
+
         public var description: String {
             do {
                 return "\(SerializeUtil.prepareJSONForSerialization(try {{ fmt_class(data_type.name) }}Serializer().serialize(self)))"
             } catch {
-                return "\(self)"
+                return "Failed to generate description for {{ fmt_class(data_type.name) }}: \(error)"
             }
         }
     }
