@@ -6,7 +6,7 @@
 
 import Foundation
 
-public class {{ class_name }} {
+public class {{ class_name }}: DropboxTransportClientOwning {
     public var client: {{ transport_client_name }}
 
     {% for var, type in namespace_fields %}
@@ -14,7 +14,7 @@ public class {{ class_name }} {
     public var {{ var }}: {{ type }}Routes!
     {% endfor %}
 
-    public init(client: {{ transport_client_name }}) {
+    public required init(client: {{ transport_client_name }}) {
         self.client = client
 
         {% for var, type in namespace_fields %}
