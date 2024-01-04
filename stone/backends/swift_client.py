@@ -212,6 +212,7 @@ class SwiftBackend(SwiftBaseBackend):
         template_globals['objc_init_args_to_swift'] = self._objc_init_args_to_swift
         template_globals['objc_result_from_swift'] = self._objc_result_from_swift
         template_globals['objc_no_defualts_func_args'] = self._objc_no_defualts_func_args
+        template_globals['objc_app_auth_route_wrapper_already_defined'] = self._objc_app_auth_route_wrapper_already_defined
 
         ns_class = self._class_name(fmt_class(namespace.name))
 
@@ -220,6 +221,7 @@ class SwiftBackend(SwiftBaseBackend):
             template.globals = template_globals
 
             output_from_parsed_template = template.render(namespace=namespace)
+
             self._write_output_in_target_folder(output_from_parsed_template,
                                                 'DBX{}Routes.swift'.format(ns_class),
                                                 True,
@@ -245,15 +247,21 @@ class SwiftBackend(SwiftBaseBackend):
         template_globals['request_type_signature'] = self._request_type_signature
         template_globals['fmt_func'] = fmt_func
         template_globals['fmt_route_objc_class'] = self._fmt_route_objc_class
+        swift_class_name = '{}RequestBox'.format(self.args.class_name)
 
         if self.args.objc:
             template = self._jinja_template("ObjCRequestBox.jinja")
             template.globals = template_globals
 
+            # don't include the default case in the generated switch statement if it's unreachable
+            include_default_in_switch = len(background_objc_routes) < len(background_compatible_routes)
+
             class_name = 'DBX{}RequestBox'.format(self.args.class_name)
             output = template.render(background_compatible_routes=background_compatible_routes,
                                     background_objc_routes=background_objc_routes,
-                                    class_name=class_name)
+                                    class_name=swift_class_name,
+                                    include_default_in_switch=include_default_in_switch
+                                    )
             file_name = 'DBX{}RequestBox.swift'.format(self.args.class_name)
             self._write_output_in_target_folder(output,
                                                 file_name,
@@ -263,10 +271,9 @@ class SwiftBackend(SwiftBaseBackend):
             template = self._jinja_template("SwiftRequestBox.jinja")
             template.globals = template_globals
 
-            class_name = '{}RequestBox'.format(self.args.class_name)
             output = template.render(background_compatible_routes=background_compatible_routes,
                                      background_objc_routes=background_objc_routes,
-                                     class_name=class_name)
+                                     class_name=swift_class_name)
             self._write_output_in_target_folder(output,
                                                 '{}RequestBox.swift'.format(self.args.class_name))
 
@@ -276,15 +283,22 @@ class SwiftBackend(SwiftBaseBackend):
         if len(background_compatible_pairs) == 0:
             return
 
+        is_app_auth_client = self.args.auth_type == 'app'
+        class_name_prefix = 'AppAuth' if is_app_auth_client else ''
+        class_name = '{}ReconnectionHelpers'.format(class_name_prefix)
+        return_type = '{}RequestBox'.format(self.args.class_name)
+
         template = self._jinja_template("SwiftReconnectionHelpers.jinja")
         template.globals['fmt_func'] = fmt_func
         template.globals['fmt_class'] = fmt_class
+        template.globals['class_name'] = class_name
+        template.globals['return_type'] = return_type
 
         output_from_parsed_template = template.render(
             background_compatible_namespace_route_pairs=background_compatible_pairs
         )
-        self._write_output_in_target_folder(output_from_parsed_template,
-                                            'ReconnectionHelpers.swift')
+
+        self._write_output_in_target_folder(output_from_parsed_template, '{}.swift'.format(class_name))
 
     def _background_compatible_routes(self, api):
         background_compatible_pairs = self._background_compatible_namespace_route_pairs(api)
@@ -323,14 +337,26 @@ class SwiftBackend(SwiftBaseBackend):
         # jlocke: this is a bit of a hack to match the route grouping style of the Objective-C SDK
         # in app auth situations without blowing up the current user and team auth names
 
+        # route_auth_type can be either a string or a list of strings
         route_auth_type = route.attrs.get('auth')
         client_auth_type = self.args.auth_type
-        is_app_auth_route = route_auth_type == 'app'
+
+        # if building the app client, only include app auth routes
+        # if building the user or team client, include routes of all auth types except app auth exclusive routes
+
+        is_app_auth_only_route = route_auth_type == 'app'
+        route_auth_types_include_app = 'app' in route_auth_type
 
         if client_auth_type == 'app':
-            return is_app_auth_route
+            return is_app_auth_only_route  or route_auth_types_include_app
         else:
-            return not is_app_auth_route
+            return not is_app_auth_only_route
+
+    def _objc_app_auth_route_wrapper_already_defined(self, route):
+        client_auth_type = self.args.auth_type
+        is_app_auth_client = client_auth_type == 'app'
+
+        return is_app_auth_client and route.attrs.get('auth') != 'app'
 
     def _namespace_contains_valid_routes_for_auth_type(self, namespace):
         valid_count = 0
@@ -539,7 +565,7 @@ class SwiftBackend(SwiftBaseBackend):
         objc_class_to_route = {}
         for namespace in namespaces:
             for route in namespace.routes:
-                if self._background_session_route_style(route) is not None:
+                if self._background_session_route_style(route) is not None and self._valid_route_for_auth_type(route):
                     args_data = self._route_client_args(route)[0]
                     objc_class = self._fmt_route_objc_class(namespace, route, args_data)
                     objc_class_to_route[objc_class] = [namespace, route, args_data]
