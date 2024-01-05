@@ -212,7 +212,8 @@ class SwiftBackend(SwiftBaseBackend):
         template_globals['objc_init_args_to_swift'] = self._objc_init_args_to_swift
         template_globals['objc_result_from_swift'] = self._objc_result_from_swift
         template_globals['objc_no_defualts_func_args'] = self._objc_no_defualts_func_args
-        template_globals['objc_app_auth_route_wrapper_already_defined'] = self._objc_app_auth_route_wrapper_already_defined
+        template_globals['objc_app_auth_route_wrapper_already_defined'] = \
+            self._objc_app_auth_route_wrapper_already_defined
 
         ns_class = self._class_name(fmt_class(namespace.name))
 
@@ -254,14 +255,16 @@ class SwiftBackend(SwiftBaseBackend):
             template.globals = template_globals
 
             # don't include the default case in the generated switch statement if it's unreachable
-            include_default_in_switch = len(background_objc_routes) < len(background_compatible_routes)
+            include_default_in_switch = \
+                len(background_objc_routes) < len(background_compatible_routes)
 
-            class_name = 'DBX{}RequestBox'.format(self.args.class_name)
-            output = template.render(background_compatible_routes=background_compatible_routes,
-                                    background_objc_routes=background_objc_routes,
-                                    class_name=swift_class_name,
-                                    include_default_in_switch=include_default_in_switch
-                                    )
+            output = template.render(
+                background_compatible_routes=background_compatible_routes,
+                background_objc_routes=background_objc_routes,
+                class_name=swift_class_name,
+                include_default_in_switch=include_default_in_switch
+            )
+
             file_name = 'DBX{}RequestBox.swift'.format(self.args.class_name)
             self._write_output_in_target_folder(output,
                                                 file_name,
@@ -298,7 +301,9 @@ class SwiftBackend(SwiftBaseBackend):
             background_compatible_namespace_route_pairs=background_compatible_pairs
         )
 
-        self._write_output_in_target_folder(output_from_parsed_template, '{}.swift'.format(class_name))
+        self._write_output_in_target_folder(
+            output_from_parsed_template, '{}.swift'.format(class_name)
+        )
 
     def _background_compatible_routes(self, api):
         background_compatible_pairs = self._background_compatible_namespace_route_pairs(api)
@@ -342,13 +347,14 @@ class SwiftBackend(SwiftBaseBackend):
         client_auth_type = self.args.auth_type
 
         # if building the app client, only include app auth routes
-        # if building the user or team client, include routes of all auth types except app auth exclusive routes
+        # if building the user or team client, include routes of all auth types except
+        # app auth exclusive routes
 
         is_app_auth_only_route = route_auth_type == 'app'
         route_auth_types_include_app = 'app' in route_auth_type
 
         if client_auth_type == 'app':
-            return is_app_auth_only_route  or route_auth_types_include_app
+            return is_app_auth_only_route or route_auth_types_include_app
         else:
             return not is_app_auth_only_route
 
@@ -565,7 +571,8 @@ class SwiftBackend(SwiftBaseBackend):
         objc_class_to_route = {}
         for namespace in namespaces:
             for route in namespace.routes:
-                if self._background_session_route_style(route) is not None and self._valid_route_for_auth_type(route):
+                bg_route_style = self._background_session_route_style(route)
+                if bg_route_style is not None and self._valid_route_for_auth_type(route):
                     args_data = self._route_client_args(route)[0]
                     objc_class = self._fmt_route_objc_class(namespace, route, args_data)
                     objc_class_to_route[objc_class] = [namespace, route, args_data]
