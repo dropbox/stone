@@ -358,6 +358,10 @@ class SwiftBackend(SwiftBaseBackend):
         else:
             return not is_app_auth_only_route
 
+    # The objc compatibility wrapper generates a class to wrap each route providing properly
+    # typed completion handlers without generics. User and App clients are generated in separate
+    # passes, and if the wrapper is already defined for the user client, we must skip generating
+    # a second definition of it for the app client.
     def _objc_app_auth_route_wrapper_already_defined(self, route):
         client_auth_type = self.args.auth_type
         is_app_auth_client = client_auth_type == 'app'
