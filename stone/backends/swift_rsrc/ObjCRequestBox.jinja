@@ -7,7 +7,7 @@
 import Foundation
 import SwiftyDropbox
 
-extension DropboxBaseRequestBox {
+extension {{ class_name }} {
     var objc: DBXRequest {
         switch self {
             {% for route_args_data in background_objc_routes %}
@@ -17,8 +17,10 @@ extension DropboxBaseRequestBox {
             case .{{ fmt_func(route.name, route.version) }}(let swift):
                 return {{ fmt_route_objc_class(namespace, route, args_data) }}(swift: swift)
             {% endfor %}
+            {% if include_default_in_switch %}
             default:
                 fatalError("For Obj-C compatibility, add this route to the Objective-C compatibility module allow-list")
+            {% endif %}
         }
     }
 }

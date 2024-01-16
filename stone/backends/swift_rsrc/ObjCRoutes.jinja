@@ -80,6 +80,9 @@ public class DBX{{ namespace_name }}Routes: NSObject {
 {% for route_args_data in routes_for_objc_requests(namespace) %}
 {% set route = route_args_data[0] %}
 {% if valid_route_for_auth_type(route) is true %}
+
+{# do not redefine DBXRequests defined by the user auth client #}
+{% if not objc_app_auth_route_wrapper_already_defined(route) %}
 {% set args_data = route_args_data[1] %}
 {% set request_object_name = request_object_name(route, args_data) %}
 {% set result_serial_type = fmt_serial_type(route.result_data_type) %}
@@ -179,5 +182,6 @@ public class {{ fmt_route_objc_class(namespace, route, args_data) }}: NSObject, 
     }
 }
 
+{% endif %}
 {% endif %}
 {% endfor %}
