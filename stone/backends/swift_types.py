@@ -3,8 +3,6 @@ import os
 import shutil
 from contextlib import contextmanager
 
-import six
-
 from stone.backends.swift import (
     base,
     fmt_serial_obj,
@@ -233,7 +231,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(six.ensure_str(pat)) if pat else None),
+                    ("pattern", '"{}"'.format(str(pat)) if pat else None),
                 ])
             )
         else:
