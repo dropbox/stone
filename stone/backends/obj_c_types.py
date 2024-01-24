@@ -2,8 +2,6 @@ import json
 import os
 import shutil
 
-import six
-
 from stone.backends.obj_c import (
     base_file_comment,
     comment_prefix,
@@ -915,7 +913,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(six.ensure_str(pattern))
+                        ('pattern', '@"{}"'.format(str(pattern))
                          if pattern else 'nil'),
                     ]))
 
