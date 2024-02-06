@@ -176,13 +176,16 @@ class SwiftTypesBackend(SwiftBaseBackend):
         template_globals['data_objc_type_doc'] = self._data_objc_type_doc
         template_globals['objc_init_args'] = self._objc_init_args
         template_globals['fmt_objc_type'] = fmt_objc_type
-        template_globals['objc_return_field_value_oneliner'] = self._objc_return_field_value_oneliner
+        oneliner_func_key = 'objc_return_field_value_oneliner'
+        template_globals[oneliner_func_key] = self._objc_return_field_value_oneliner
         template_globals['field_is_user_defined'] = self._field_is_user_defined
         template_globals['field_is_user_defined_optional'] = self._field_is_user_defined_optional
         template_globals['field_is_user_defined_list'] = self._field_is_user_defined_list
         template_globals['field_is_user_defined_map'] = self._field_is_user_defined_map
-        template_globals['objc_return_field_value_specified_in_jinja'] = self._objc_return_field_value_specified_in_jinja
-        template_globals['objc_return_field_value_type_tuples'] = self._objc_return_field_value_type_tuples
+        in_jinja_key = 'objc_return_field_value_specified_in_jinja'
+        template_globals[in_jinja_key] = self._objc_return_field_value_specified_in_jinja
+        field_value_tuples_key = 'objc_return_field_value_type_tuples'
+        template_globals[field_value_tuples_key] = self._objc_return_field_value_type_tuples
         template_globals['objc_init_args_to_swift'] = self._objc_init_args_to_swift
         template_globals['objc_union_arg'] = self._objc_union_arg
         template_globals['objc_swift_var_name'] = self._objc_swift_var_name
@@ -389,9 +392,9 @@ class SwiftTypesBackend(SwiftBaseBackend):
 
     def _objc_return_field_value_specified_in_jinja(self, field) -> bool:
         eligible_kind = self._field_is_user_defined(field) or \
-                        self._field_is_user_defined_optional(field) or \
-                        self._field_is_user_defined_map(field) or \
-                        self._field_is_user_defined_list(field)
+            self._field_is_user_defined_optional(field) or \
+            self._field_is_user_defined_map(field) or \
+            self._field_is_user_defined_list(field)
 
         if not eligible_kind:
             return False
