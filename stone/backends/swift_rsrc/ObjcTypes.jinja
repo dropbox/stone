@@ -22,7 +22,37 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
     {% for field in data_type.fields %}
     {{ struct_field_doc(field, '    ') }}
     @objc
-    public var {{ fmt_var(field.name) }}: {{ fmt_objc_type(field.data_type) }} { {{ objc_return_field_value(data_type, field) }} }
+    {% if objc_return_field_value_specified_in_jinja(field) %}
+    public var {{ fmt_var(field.name) }}: {{ fmt_objc_type(field.data_type) }} {
+        {% if (field_is_user_defined(field)) or (field_is_user_defined_optional(field)) %}
+        switch {{ swift_var_name }}.{{ fmt_var(field.name) }} {
+        {% for tuple in objc_return_field_value_type_tuples(field) %}
+        case let {{ tuple[0] }} as {{ tuple[1] }}:
+            return {{ tuple[2] }}(swift: {{ tuple[0] }})
+        {% endfor %}
+        default:
+            {% if field_is_user_defined_optional(field) %}
+            return {{ swift_var_name }}.{{ fmt_var(field.name) }}.flatMap { {{ fmt_objc_type(field.data_type, False) }}(swift: $0) }
+            {% else %}
+            return {{ fmt_objc_type(field.data_type) }}(swift: {{ swift_var_name }}.{{ fmt_var(field.name) }})
+            {% endif %}
+        }
+        {% elif (field_is_user_defined_map(field)) or (field_is_user_defined_list(field)) %}
+        {{ swift_var_name }}.{{ fmt_var(field.name) }}.{{ 'mapValues' if field_is_user_defined_map(field) else 'map' }} {
+            switch $0 {
+            {% for tuple in objc_return_field_value_type_tuples(field) %} {#extract this snippet?#}
+            case let {{ tuple[0] }} as {{ tuple[1] }}:
+                return {{ tuple[2] }}(swift: {{ tuple[0] }})
+            {% endfor %}
+            default:
+                return {{ fmt_objc_type(field.data_type.data_type) }}(swift: $0)
+            }
+        }
+        {% endif %}
+    }
+    {% else %}
+    public var {{ fmt_var(field.name) }}: {{ fmt_objc_type(field.data_type) }} { {{ objc_return_field_value_oneliner(data_type, field) }} }
+    {% endif %}
     {% endfor %}
     {% if data_type.fields %}
 
