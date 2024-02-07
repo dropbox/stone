@@ -4,7 +4,7 @@
 
 import Foundation
 
-enum {{ class_name }} {
+enum {{ class_name }}: ReconnectionHelpersShared {
 
     static func rebuildRequest(apiRequest: ApiRequest, client: DropboxTransportClientInternal) throws -> {{ return_type }} {
         let info = try persistedRequestInfo(from: apiRequest)

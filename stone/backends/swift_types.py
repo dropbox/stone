@@ -52,17 +52,16 @@ _cmdline_parser.add_argument(
           '{route} for the route name.'),
 )
 _cmdline_parser.add_argument(
-    '-objc',
+    '--objc',
     action='store_true',
-    help='Generate the Objective-C compatibile files as well as the standard Swift files.',
+    help='Generate the Objective-C compatibile files',
 )
 _cmdline_parser.add_argument(
-    '-rop',
-    '--relative-objc-path',
-    type=str,
-    help='A custom output path for Objective-C compatible files relative to standard Swift files',
+    '-d',
+    '--documentation',
+    action='store_true',
+    help=('Sets whether documentation is generated.'),
 )
-
 
 class SwiftTypesBackend(SwiftBaseBackend):
     """
@@ -132,19 +131,16 @@ class SwiftTypesBackend(SwiftBaseBackend):
     cmdline_parser = _cmdline_parser
     def generate(self, api):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
-        self.logger.info('Copying StoneValidators.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
-                    self.target_folder_path)
-        self.logger.info('Copying StoneSerializers.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
-                    self.target_folder_path)
-        self.logger.info('Copying StoneBase.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
-                    self.target_folder_path)
-
-        jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
-        with open(jazzy_cfg_path, encoding='utf-8') as jazzy_file:
-            jazzy_cfg = json.load(jazzy_file)
+        if not self.args.objc:
+            self.logger.info('Copying StoneValidators.swift to output folder')
+            shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
+                        self.target_folder_path)
+            self.logger.info('Copying StoneSerializers.swift to output folder')
+            shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
+                        self.target_folder_path)
+            self.logger.info('Copying StoneBase.swift to output folder')
+            shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
+                        self.target_folder_path)
 
         template_loader = jinja2.FileSystemLoader(searchpath=rsrc_folder)
         template_env = jinja2.Environment(loader=template_loader,
@@ -207,15 +203,22 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 objc_output = objc_template.render(namespace=namespace,
                                                    route_schema=api.route_schema)
                 self._write_output_in_target_folder(objc_output,
-                                                    'DBX{}.swift'.format(ns_class),
-                                                    True,
-                                                    self.args.relative_objc_path)
+                                                    'DBX{}.swift'.format(ns_class))
             else:
                 swift_output = swift_template.render(namespace=namespace,
                                                      route_schema=api.route_schema)
                 self._write_output_in_target_folder(swift_output,
                                                     '{}.swift'.format(ns_class))
+        if self.args.documentation:
+            self._generate_jazzy_docs(api)
 
+    def _generate_jazzy_docs(self, api):
+        jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
+        with open(jazzy_cfg_path, encoding='utf-8') as jazzy_file:
+            jazzy_cfg = json.load(jazzy_file)
+
+        for namespace in api.namespaces.values():
+            ns_class = fmt_class(namespace.name)
             jazzy_cfg['custom_categories'][1]['children'].append(ns_class)
 
             if namespace.routes:
