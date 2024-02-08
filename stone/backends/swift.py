@@ -265,14 +265,8 @@ class SwiftBaseBackend(CodeBackend):
         else:
             return val
 
-    def _write_output_in_target_folder(self, output, file_name, objc=False, rop=None):
+    def _write_output_in_target_folder(self, output, file_name):
         full_path = self.target_folder_path
-        if objc:
-            if rop is None:
-                full_path = full_path.replace('Source/SwiftyDropbox', 'Source/SwiftyDropboxObjC')
-            else:
-                full_path = '{}{}'.format(full_path, rop)
-
         if not os.path.exists(full_path):
             os.mkdir(full_path)
         full_path = os.path.join(full_path, file_name)
