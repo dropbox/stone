@@ -87,15 +87,9 @@ _cmdline_parser.add_argument(
     help='The dict that maps a style type to a Swift request object name.',
 )
 _cmdline_parser.add_argument(
-    '-objc',
+    '--objc',
     action='store_true',
-    help='Generate the Objective-C compatibile files as well as the standard Swift files.',
-)
-_cmdline_parser.add_argument(
-    '-rop',
-    '--relative-objc-path',
-    type=str,
-    help='Custom output path for Objective-C compatible files relative to the standard Swift files',
+    help='Generate the Objective-C compatibile files.',
 )
 
 
@@ -146,7 +140,8 @@ class SwiftBackend(SwiftBaseBackend):
 
         self._generate_client(api)
         self._generate_request_boxes(api)
-        self._generate_reconnection_helpers(api)
+        if not self.args.objc:
+            self._generate_reconnection_helpers(api)
 
     def _generate_client(self, api):
         template_globals = {}
@@ -160,9 +155,7 @@ class SwiftBackend(SwiftBaseBackend):
             template.globals = template_globals
 
             self._write_output_in_target_folder(template.render(),
-                                                'DBX{}.swift'.format(self.args.module_name),
-                                                True,
-                                                self.args.relative_objc_path)
+                                                'DBX{}.swift'.format(self.args.module_name))
         else:
             template = self._jinja_template("SwiftClient.jinja")
             template.globals = template_globals
@@ -224,9 +217,7 @@ class SwiftBackend(SwiftBaseBackend):
             output_from_parsed_template = template.render(namespace=namespace)
 
             self._write_output_in_target_folder(output_from_parsed_template,
-                                                'DBX{}Routes.swift'.format(ns_class),
-                                                True,
-                                                self.args.relative_objc_path)
+                                                'DBX{}Routes.swift'.format(ns_class))
         else:
             template = self._jinja_template("SwiftRoutes.jinja")
             template.globals = template_globals
@@ -267,9 +258,7 @@ class SwiftBackend(SwiftBaseBackend):
 
             file_name = 'DBX{}RequestBox.swift'.format(self.args.class_name)
             self._write_output_in_target_folder(output,
-                                                file_name,
-                                                True,
-                                                self.args.relative_objc_path)
+                                                file_name)
         else:
             template = self._jinja_template("SwiftRequestBox.jinja")
             template.globals = template_globals
