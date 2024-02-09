@@ -14,6 +14,7 @@ from stone.ir import (
     UInt32,
     UInt64,
     Void,
+    is_struct_type,
     is_boolean_type,
     is_list_type,
     is_map_type,
@@ -236,3 +237,54 @@ def mapped_list_info(data_type):
             suffix = '{} }}'.format(suffix)
 
     return (list_depth, prefix, suffix, list_data_type, list_nullable)
+
+def field_is_user_defined(field):
+    data_type, nullable = unwrap_nullable(field.data_type)
+    return is_user_defined_type(data_type) and not nullable
+
+def field_is_user_defined_optional(field):
+    data_type, nullable = unwrap_nullable(field.data_type)
+    return is_user_defined_type(data_type) and nullable
+
+def field_is_user_defined_map(field):
+    data_type, _ = unwrap_nullable(field.data_type)
+    return is_map_type(data_type) and is_user_defined_type(data_type.value_data_type)
+
+def field_is_user_defined_list(field):
+    data_type, _ = unwrap_nullable(field.data_type)
+    if is_list_type(data_type):
+        list_data_type, _ = unwrap_nullable(data_type.data_type)
+        return is_user_defined_type(list_data_type)
+    else:
+        return False
+
+# List[typing.Tuple[let_name: str, swift_type: str, objc_type: str]]
+def objc_datatype_value_type_tuples(data_type):
+    ret = []
+
+    # if list type get the data type of the item
+    if is_list_type(data_type):
+        data_type = data_type.data_type
+
+    # if map type get the data type of the value
+    if is_map_type(data_type):
+        data_type = data_type.value_data_type
+
+    # if data_type is a struct type and has subtypes, process them into labels and types
+    if is_struct_type(data_type) and data_type.has_enumerated_subtypes():
+        all_subtypes = data_type.get_all_subtypes_with_tags()
+
+        for subtype in all_subtypes:
+            # subtype[0] is the tag name and subtype[1] is the subtype struct itself
+            struct = subtype[1]
+            case_let_name = fmt_var(struct.name)
+            swift_type = fmt_type(struct)
+            objc_type = fmt_objc_type(struct)
+            ret.append((case_let_name, swift_type, objc_type))
+    return ret
+
+def field_datatype_has_subtypes(field) -> bool:
+    return datatype_has_subtypes(field.data_type)
+
+def datatype_has_subtypes(data_type) -> bool:
+    return len(objc_datatype_value_type_tuples(data_type)) > 0

@@ -25,7 +25,12 @@ from stone.backends.swift_helpers import (
     fmt_route_name,
     fmt_objc_type,
     mapped_list_info,
-)
+    field_is_user_defined,
+    field_is_user_defined_optional,
+    field_is_user_defined_map,
+    field_is_user_defined_list,
+    objc_datatype_value_type_tuples,
+    field_datatype_has_subtypes,
 
 from stone.ir import (
     is_list_type,
@@ -177,14 +182,13 @@ class SwiftTypesBackend(SwiftBaseBackend):
         template_globals['fmt_objc_type'] = fmt_objc_type
         oneliner_func_key = 'objc_return_field_value_oneliner'
         template_globals[oneliner_func_key] = self._objc_return_field_value_oneliner
-        template_globals['field_is_user_defined'] = self._field_is_user_defined
-        template_globals['field_is_user_defined_optional'] = self._field_is_user_defined_optional
-        template_globals['field_is_user_defined_list'] = self._field_is_user_defined_list
-        template_globals['field_is_user_defined_map'] = self._field_is_user_defined_map
-        in_jinja_key = 'objc_return_field_value_specified_in_jinja'
-        template_globals[in_jinja_key] = self._objc_return_field_value_specified_in_jinja
-        field_value_tuples_key = 'objc_return_field_value_type_tuples'
-        template_globals[field_value_tuples_key] = self._objc_return_field_value_type_tuples
+        template_globals['field_is_user_defined'] = field_is_user_defined
+        template_globals['field_is_user_defined_optional'] = field_is_user_defined_optional
+        template_globals['field_is_user_defined_list'] = field_is_user_defined_list
+        template_globals['field_is_user_defined_map'] = field_is_user_defined_map
+        in_jinja_key = 'field_datatype_has_subtypes'
+        template_globals[in_jinja_key] = field_datatype_has_subtypes
+        template_globals['objc_datatype_value_type_tuples'] = objc_datatype_value_type_tuples
         template_globals['objc_init_args_to_swift'] = self._objc_init_args_to_swift
         template_globals['objc_union_arg'] = self._objc_union_arg
         template_globals['objc_swift_var_name'] = self._objc_swift_var_name
@@ -348,66 +352,6 @@ class SwiftTypesBackend(SwiftBaseBackend):
 
         result = ',\n                                    '.join(attrs)
         return result
-
-    # List[typing.Tuple[let_name: str, swift_type: str, objc_type: str]]
-    def _objc_return_field_value_type_tuples(self, field):
-        data_type = field.data_type
-        ret = []
-
-        # if list type get the data type of the item
-        if is_list_type(data_type):
-            data_type = data_type.data_type
-
-        # if map type get the data type of the value
-        if is_map_type(data_type):
-            data_type = data_type.value_data_type
-
-        # if data_type is a struct type and has subtypes, process them into labels and types
-        if is_struct_type(data_type) and data_type.has_enumerated_subtypes():
-            all_subtypes = data_type.get_all_subtypes_with_tags()
-
-            for subtype in all_subtypes:
-                # subtype[0] is the tag name and subtype[1] is the subtype struct itself
-                struct = subtype[1]
-                case_let_name = fmt_var(struct.name)
-                swift_type = fmt_type(struct)
-                objc_type = fmt_objc_type(struct)
-                ret.append((case_let_name, swift_type, objc_type))
-
-        return ret
-
-    def _field_is_user_defined(self, field):
-        data_type, nullable = unwrap_nullable(field.data_type)
-        return is_user_defined_type(data_type) and not nullable
-
-    def _field_is_user_defined_optional(self, field):
-        data_type, nullable = unwrap_nullable(field.data_type)
-        return is_user_defined_type(data_type) and nullable
-
-    def _field_is_user_defined_map(self, field):
-        data_type, _ = unwrap_nullable(field.data_type)
-        return is_map_type(data_type) and is_user_defined_type(data_type.value_data_type)
-
-    def _field_is_user_defined_list(self, field):
-        data_type, _ = unwrap_nullable(field.data_type)
-        if is_list_type(data_type):
-            list_data_type, _ = unwrap_nullable(data_type.data_type)
-            return is_user_defined_type(list_data_type)
-        else:
-            return False
-
-    def _objc_return_field_value_specified_in_jinja(self, field) -> bool:
-        eligible_kind = self._field_is_user_defined(field) or \
-            self._field_is_user_defined_optional(field) or \
-            self._field_is_user_defined_map(field) or \
-            self._field_is_user_defined_list(field)
-
-        if not eligible_kind:
-            return False
-
-        requires_iterating_over_subtypes = len(self._objc_return_field_value_type_tuples(field)) > 0
-
-        return requires_iterating_over_subtypes
 
     def _objc_return_field_value_oneliner(self, parent_type, field):
         data_type, nullable = unwrap_nullable(field.data_type)

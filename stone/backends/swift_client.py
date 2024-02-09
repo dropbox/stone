@@ -25,6 +25,7 @@ from stone.backends.swift_helpers import (
     fmt_type,
     fmt_objc_type,
     mapped_list_info,
+    datatype_has_subtypes,
 )
 from stone.ir import (
     is_struct_type,
@@ -605,6 +606,8 @@ class SwiftBackend(SwiftBaseBackend):
             if is_user_defined_type(list_data_type):
                 objc_type = fmt_objc_type(list_data_type, False)
                 factory_func = '.factory' if is_union_type(list_data_type) else ''
+                factory_func = '.wrapPreservingSubtypes' if datatype_has_subtypes(data_type) \
+                    else factory_func
                 value = '{}.map {}{{ {}{}(swift: $0) }}'.format(value,
                                                                 prefix,
                                                                 objc_type,
@@ -624,6 +627,8 @@ class SwiftBackend(SwiftBaseBackend):
         else:
             objc_data_type = fmt_objc_type(data_type)
             factory_func = '.factory' if is_union_type(data_type) else ''
+            factory_func = '.wrapPreservingSubtypes' if datatype_has_subtypes(data_type) \
+                else factory_func
             return '{}{}(swift: {})'.format(objc_data_type,
                                             factory_func,
                                             swift_var_name)
