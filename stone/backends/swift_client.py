@@ -247,7 +247,8 @@ class SwiftBackend(SwiftBaseBackend):
             template.globals = template_globals
 
             # don't include the default case in the generated switch statement if it's unreachable
-            include_default_in_switch = True # TODO(jlocke): implement this to eliminate the unreachable code warning
+            include_default_in_switch = True
+            # TODO(jlocke): implement this to eliminate the unreachable code warning
 
             output = template.render(
                 background_compatible_routes=background_compatible_routes,
