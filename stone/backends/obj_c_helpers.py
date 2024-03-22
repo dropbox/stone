@@ -150,6 +150,7 @@ _reserved_words = {
     'description',
     'id',
     'delete',
+    'hash',
 }
 
 _reserved_prefixes = {
