@@ -701,8 +701,10 @@ class PythonTypesBackend(CodeBackend):
 
             for field in data_type.fields:
                 field_name = fmt_var(field.name, check_reserved=True)
-                for annotation_type, processor in self._generate_custom_annotation_processors(
-                        ns, field.data_type, field.custom_annotations):
+                recursive_processors = self._generate_custom_annotation_processors(
+                    ns, field.data_type, field.custom_annotations)
+                recursive_processors = sorted(recursive_processors, key=lambda x: x[0].name)
+                for annotation_type, processor in recursive_processors:
                     annotation_class = class_name_for_annotation_type(annotation_type, ns)
                     self.emit('if annotation_type is {}:'.format(annotation_class))
                     with self.indent():
@@ -990,6 +992,8 @@ class PythonTypesBackend(CodeBackend):
                 # check if we have any annotations that apply to this field at all
                 if len(recursive_processors) == 0:
                     continue
+
+                recursive_processors = sorted(recursive_processors, key=lambda x: x[0].name)
 
                 field_name = fmt_func(field.name)
                 self.emit('if self.is_{}():'.format(field_name))

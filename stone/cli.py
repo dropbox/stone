@@ -2,7 +2,7 @@
 A command-line interface for StoneAPI.
 """
 
-import importlib
+import importlib.util, importlib.machinery
 import io
 import json
 import logging
