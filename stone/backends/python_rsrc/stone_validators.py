@@ -92,7 +92,7 @@ def generic_type_name(v):
 
 
 def get_value_string(v, max_length=1000):
-    # type: (typing.Any, int) -> String
+    # type: (typing.Any, int) -> str
     """Return a truncated version of the input string.  If the input string is longer than
        1000 characters, this will return the first 1000 characters and append with '...The
        string has been truncated due to its length' to indicate that it has been truncated."""
