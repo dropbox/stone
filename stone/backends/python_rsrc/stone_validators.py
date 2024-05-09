@@ -90,6 +90,7 @@ def generic_type_name(v):
     else:
         return type_name_with_module(type(v))
 
+
 def get_value_string(v, max_length=1000):
     # type: (typing.Any, int) -> String
     """Return a truncated version of the input string.  If the input string is longer than 1000 characters, this will
@@ -347,6 +348,10 @@ class String(Primitive):
                                   % (get_value_string(val), self.min_length, len(val)))
 
         if self.pattern and not self.pattern_re.match(val):
+            # Detect if pattern is matching an email address and return redacted error message.
+            if self.pattern == "^['#&A-Za-z0-9._%+-]+@[A-Za-z0-9-][A-Za-z0-9.-]*\\.[A-Za-z]{2,15}$":
+                val = "*****"
+
             raise ValidationError("'%s' did not match pattern '%s'"
                                   % (get_value_string(val), self.pattern))
         return val
