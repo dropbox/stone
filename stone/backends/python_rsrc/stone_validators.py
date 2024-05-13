@@ -91,6 +91,17 @@ def generic_type_name(v):
         return type_name_with_module(type(v))
 
 
+def get_value_string(v, max_length=1000):
+    # type: (typing.Any, int) -> str
+    """Return a truncated version of the input string.  If the input string is longer than
+       1000 characters, this will return the first 1000 characters and append with '[The
+       string has been truncated due to its length]' to indicate that it has been truncated."""
+    v_str = str(v)
+    if len(v_str) > max_length:
+        return v_str[:max_length] + ' [The string has been truncated due to its length]'
+    return v_str
+
+
 class Validator(metaclass=ABCMeta):
     """All primitive and composite data types should be a subclass of this."""
     __slots__ = ("_redact",)
@@ -322,7 +333,7 @@ class String(Primitive):
         """
         if not isinstance(val, str):
             raise ValidationError("'%s' expected to be a string, got %s"
-                                  % (val, generic_type_name(val)))
+                                  % (get_value_string(val), generic_type_name(val)))
         if not six.PY3 and isinstance(val, str):
             try:
                 val = val.decode('utf-8')
@@ -331,14 +342,18 @@ class String(Primitive):
 
         if self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must be at most %d characters, got %d"
-                                  % (val, self.max_length, len(val)))
+                                  % (get_value_string(val), self.max_length, len(val)))
         if self.min_length is not None and len(val) < self.min_length:
             raise ValidationError("'%s' must be at least %d characters, got %d"
-                                  % (val, self.min_length, len(val)))
+                                  % (get_value_string(val), self.min_length, len(val)))
 
         if self.pattern and not self.pattern_re.match(val):
+            # Detect if pattern is matching an email address and return redacted error message.
+            if self.pattern == "^['#&A-Za-z0-9._%+-]+@[A-Za-z0-9-][A-Za-z0-9.-]*\\.[A-Za-z]{2,15}$":
+                val = "*****"
+
             raise ValidationError("'%s' did not match pattern '%s'"
-                                  % (val, self.pattern))
+                                  % (get_value_string(val), self.pattern))
         return val
 
 
@@ -366,10 +381,10 @@ class Bytes(Primitive):
                                   % generic_type_name(val))
         elif self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must have at most %d bytes, got %d"
-                                  % (val, self.max_length, len(val)))
+                                  % (get_value_string(val), self.max_length, len(val)))
         elif self.min_length is not None and len(val) < self.min_length:
             raise ValidationError("'%s' has fewer than %d bytes, got %d"
-                                  % (val, self.min_length, len(val)))
+                                  % (get_value_string(val), self.min_length, len(val)))
         return val
 
 
@@ -425,13 +440,13 @@ class List(Composite):
 
     def validate(self, val):
         if not isinstance(val, (tuple, list)):
-            raise ValidationError('%r is not a valid list' % val)
+            raise ValidationError('%r is not a valid list' % get_value_string(val))
         elif self.max_items is not None and len(val) > self.max_items:
             raise ValidationError('%r has more than %s items'
-                                  % (val, self.max_items))
+                                  % (get_value_string(val), self.max_items))
         elif self.min_items is not None and len(val) < self.min_items:
             raise ValidationError('%r has fewer than %s items'
-                                  % (val, self.min_items))
+                                  % (get_value_string(val), self.min_items))
         return [self.item_validator.validate(item) for item in val]
 
 
@@ -449,7 +464,7 @@ class Map(Composite):
 
     def validate(self, val):
         if not isinstance(val, dict):
-            raise ValidationError('%r is not a valid dict' % val)
+            raise ValidationError('%r is not a valid dict' % get_value_string(val))
         return {
             self.key_validator.validate(key):
                 self.value_validator.validate(value) for key, value in val.items()
