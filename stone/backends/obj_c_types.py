@@ -1006,7 +1006,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         self.emit(
                             'jsonDict[@".tag"] = @"{}";'.format(fmt_var(tag)))
                 self.emit()
-            self.emit('return [jsonDict count] > 0 ? jsonDict : nil;')
+            self.emit('return jsonDict;')
         self.emit()
 
     def _generate_struct_deserializer(self, struct):
@@ -1152,7 +1152,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                     )
 
             self.emit()
-            self.emit('return [jsonDict count] > 0 ? jsonDict : nil;')
+            self.emit('return jsonDict;')
 
         self.emit()
 
