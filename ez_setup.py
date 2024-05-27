@@ -23,7 +23,7 @@ import sys
 import tempfile
 import textwrap
 import zipfile
-from distutils import log
+from setuptools import log
 
 try:
     from site import USER_SITE
