@@ -1,6 +1,6 @@
 from collections import OrderedDict
 # See <https://github.com/PyCQA/pylint/issues/73>
-from distutils.version import StrictVersion  # pylint: disable=deprecated-module
+from packaging.version import Version
 
 from .data_types import (
     doc_unwrap,
@@ -34,7 +34,7 @@ class Api:
     """
     def __init__(self, version):
         # type: (str) -> None
-        self.version = StrictVersion(version)
+        self.version = Version(version)
         self.namespaces = OrderedDict()  # type: NamespaceDict
         self.route_schema = None  # type: typing.Optional[Struct]
 
