@@ -640,6 +640,7 @@ class PythonTypesBackend(CodeBackend):
         dt, _, _ = unwrap(data_type)
         if is_struct_type(dt) or is_union_type(dt):
             annotation_types_seen = set()
+            # If data type enumerates subtypes, recurse to subtypes instead which in turn collect parents' custom annotations
             if is_struct_type(dt) and dt.has_enumerated_subtypes():
                 for subtype in dt.get_enumerated_subtypes():
                     for annotation_type, recursive_processor in self._generate_custom_annotation_processors(ns, subtype.data_type):

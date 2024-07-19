@@ -824,10 +824,11 @@ class IRGenerator:
 
             annotations = set()
 
-            # collect data types from subtypes recursively
             if is_struct_type(data_type) or is_union_type(data_type):
+                # collect custom annotations from ancestor data types
                 if data_type.parent_type:
                     annotations.update(recurse(data_type.parent_type))
+                # collct custom annotations from nested data types
                 for field in data_type.fields:
                     annotations.update(recurse(field.data_type))
                     # annotations can be defined directly on fields
