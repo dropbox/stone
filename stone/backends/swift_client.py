@@ -25,6 +25,7 @@ from stone.backends.swift_helpers import (
     fmt_func,
     fmt_var,
     fmt_type,
+    fmt_route_name,
     fmt_objc_type,
     mapped_list_info,
     datatype_has_subtypes,
@@ -282,6 +283,7 @@ class SwiftBackend(SwiftBaseBackend):
         return_type = '{}RequestBox'.format(self.args.class_name)
 
         template = self._jinja_template("SwiftReconnectionHelpers.jinja")
+        template.globals['fmt_route_name'] = fmt_route_name
         template.globals['fmt_func'] = fmt_func
         template.globals['fmt_class'] = fmt_class
         template.globals['class_name'] = class_name
