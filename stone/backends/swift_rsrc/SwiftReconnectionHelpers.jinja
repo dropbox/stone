@@ -11,7 +11,7 @@ enum {{ class_name }}: ReconnectionHelpersShared {
 
         switch info.routeName {
         {% for namespace, route in background_compatible_namespace_route_pairs %}
-            case "{{ fmt_func(route.name, route.version) }}":
+            case "{{ fmt_route_name(route) }}":
                 return .{{ fmt_func(route.name, route.version) }}(
                     rebuildRequest(
                         apiRequest: apiRequest,
