@@ -7,9 +7,17 @@
 import Foundation
 
 /// Allows for heterogenous collections of typed requests
-public enum {{ class_name }} {
+public enum {{ class_name }}: CustomStringConvertible {
     {% for route in background_compatible_routes %}
     case {{ fmt_func(route.name, route.version) }}({{ request_type_signature(route) }})
     {% endfor %}
-}
 
+    public var description: String {
+        switch self {
+        {% for route in background_compatible_routes %}
+        case .{{ fmt_func(route.name, route.version) }}(_):
+            return "{{ fmt_func(route.name, route.version) }}"
+        {% endfor %}
+        }
+    }
+}
