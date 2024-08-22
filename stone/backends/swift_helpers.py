@@ -138,6 +138,9 @@ def fmt_func(name, version):
     name = _format_camelcase(name)
     return name
 
+# todo: casing
+def fmt_func_namespace(name, version, namespace_name):
+    return '{}{}'.format(namespace_name, fmt_func(name, version))
 
 def fmt_type(data_type):
     data_type, nullable = unwrap_nullable(data_type)
@@ -175,6 +178,12 @@ def fmt_objc_type(data_type, allow_nullable=True):
 def fmt_var(name):
     return _format_camelcase(name)
 
+def fmt_var_spc(name): # todo
+    val = _format_camelcase(name)
+    if val == "hash":
+        return "hash_value"
+    return val
+
 
 def fmt_default_value(field):
     if is_tag_ref(field.default):
@@ -205,6 +214,8 @@ def fmt_route_name(route):
     else:
         return '{}_v{}'.format(route.name, route.version)
 
+def fmt_route_name_namespace(route, namespace_name):
+    return '{}_{}'.format(namespace_name, fmt_route_name(route))
 
 def check_route_name_conflict(namespace):
     """

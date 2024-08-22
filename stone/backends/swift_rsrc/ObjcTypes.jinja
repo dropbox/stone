@@ -23,7 +23,7 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
     {{ struct_field_doc(field, '    ') }}
     @objc
     {% if field_datatype_has_subtypes(field) %}
-    public var {{ fmt_var(field.name) }}: {{ fmt_objc_type(field.data_type) }} {
+    public var {{ fmt_var_spc(field.name) }}: {{ fmt_objc_type(field.data_type) }} {
         {% if (field_is_user_defined(field)) or (field_is_user_defined_optional(field)) %}
         {% if field_is_user_defined_optional(field) %}
         return {{ swift_var_name }}.{{ fmt_var(field.name) }}.flatMap { {{ fmt_objc_type(field.data_type, False) }}.wrapPreservingSubtypes(swift: $0) }
@@ -37,7 +37,7 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
         {% endif %}
     }
     {% else %}
-    public var {{ fmt_var(field.name) }}: {{ fmt_objc_type(field.data_type) }} { {{ objc_return_field_value_oneliner(data_type, field) }} }
+    public var {{ fmt_var_spc(field.name) }}: {{ fmt_objc_type(field.data_type) }} { {{ objc_return_field_value_oneliner(data_type, field) }} }
     {% endif %}
     {% endfor %}
     {% if data_type.fields %}

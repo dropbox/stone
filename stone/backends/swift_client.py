@@ -23,9 +23,12 @@ from stone.backends.swift_helpers import (
     check_route_name_conflict,
     fmt_class,
     fmt_func,
-    fmt_var,
     fmt_type,
+    fmt_var,
+    fmt_var_spc,
     fmt_route_name,
+    fmt_route_name_namespace,
+    fmt_func_namespace,
     fmt_objc_type,
     mapped_list_info,
     datatype_has_subtypes,
@@ -148,7 +151,6 @@ class SwiftBackend(SwiftBaseBackend):
     def _generate_client(self, api):
         template_globals = {}
         template_globals['class_name'] = self.args.class_name
-        template_globals['namespaces'] = api.namespaces.values()
         template_globals['namespace_fields'] = self._namespace_fields(api)
         template_globals['transport_client_name'] = self.args.transport_client_name
 
@@ -230,7 +232,9 @@ class SwiftBackend(SwiftBaseBackend):
                                                 '{}Routes.swift'.format(ns_class))
 
     def _generate_request_boxes(self, api):
-        background_compatible_routes = self._background_compatible_routes(api)
+        background_compatible_routes = self._background_compatible_namespace_route_pairs(api)
+        # print the pairs
+        print(background_compatible_routes)
 
         if len(background_compatible_routes) == 0:
             return
@@ -239,8 +243,10 @@ class SwiftBackend(SwiftBaseBackend):
 
         template_globals = {}
         template_globals['request_type_signature'] = self._request_type_signature
-        template_globals['fmt_func'] = fmt_func
+        template_globals['fmt_func'] = fmt_func # todod?
         template_globals['fmt_route_objc_class'] = self._fmt_route_objc_class
+        template_globals['fmt_func_namespace'] = fmt_func_namespace
+        template_globals['namespaces'] = api.namespaces.values()
         swift_class_name = '{}RequestBox'.format(self.args.class_name)
 
         if self.args.objc:
@@ -252,7 +258,7 @@ class SwiftBackend(SwiftBaseBackend):
             # TODO(jlocke): implement this to eliminate the unreachable code warning
 
             output = template.render(
-                background_compatible_routes=background_compatible_routes,
+                background_compatible_namespace_route_pairs=background_compatible_routes,
                 background_objc_routes=background_objc_routes,
                 class_name=swift_class_name,
                 include_default_in_switch=include_default_in_switch
@@ -265,7 +271,7 @@ class SwiftBackend(SwiftBaseBackend):
             template = self._jinja_template("SwiftRequestBox.jinja")
             template.globals = template_globals
 
-            output = template.render(background_compatible_routes=background_compatible_routes,
+            output = template.render(background_compatible_namespace_route_pairs=background_compatible_routes,
                                      background_objc_routes=background_objc_routes,
                                      class_name=swift_class_name)
             self._write_output_in_target_folder(output,
@@ -284,6 +290,8 @@ class SwiftBackend(SwiftBaseBackend):
 
         template = self._jinja_template("SwiftReconnectionHelpers.jinja")
         template.globals['fmt_route_name'] = fmt_route_name
+        template.globals['fmt_route_name_namespace'] = fmt_route_name_namespace
+        template.globals['fmt_func_namespace'] = fmt_func_namespace
         template.globals['fmt_func'] = fmt_func
         template.globals['fmt_class'] = fmt_class
         template.globals['class_name'] = class_name

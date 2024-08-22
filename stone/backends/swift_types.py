@@ -25,6 +25,7 @@ from stone.backends.swift_helpers import (
     fmt_default_value,
     fmt_func,
     fmt_var,
+    fmt_var_spc,
     fmt_type,
     fmt_route_name,
     fmt_objc_type,
@@ -160,6 +161,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
         template_globals['is_struct_type'] = is_struct_type
         template_globals['is_union_type'] = is_union_type
         template_globals['fmt_var'] = fmt_var
+        template_globals['fmt_var_spc'] = fmt_var_spc
         template_globals['fmt_type'] = fmt_type
         template_globals['func_args'] = self._func_args
         template_globals['struct_init_args'] = self._struct_init_args

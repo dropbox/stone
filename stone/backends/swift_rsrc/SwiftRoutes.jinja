@@ -38,7 +38,7 @@ public class {{ fmt_class(class_name(namespace.name)) }}Routes: DropboxTransport
         {% elif is_union_type(route.arg_data_type) %}
         let serverArgs = {{ fmt_var(route.arg_data_type.name) }}
         {% endif %}
-        return client.request({{ return_args(route, args_data) }})
+        return self.client.request({{ return_args(route, args_data) }})
     }
 
     {% endfor %}
