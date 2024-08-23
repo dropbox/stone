@@ -1704,10 +1704,6 @@ class IRGenerator:
             namespace.route_by_name = {}
             namespace.routes_by_name = {}
 
-            # We need a stable sort in order to keep the resultant output
-            # the same across runs.
-            routes.sort()
-
             for route in routes:
                 namespace.add_route(route)
 
