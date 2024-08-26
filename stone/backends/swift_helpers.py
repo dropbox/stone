@@ -99,6 +99,8 @@ _reserved_words = {
     'typealias',
     'var',
     'default',
+    'hash',
+    'client',
 }
 
 
