@@ -254,15 +254,10 @@ class SwiftBackend(SwiftBaseBackend):
             template = self._jinja_template("ObjCRequestBox.jinja")
             template.globals = template_globals
 
-            # don't include the default case in the generated switch statement if it's unreachable
-            include_default_in_switch = True
-            # TODO(jlocke): implement this to eliminate the unreachable code warning
-
             output = template.render(
                 background_compatible_routes=background_compatible_routes,
                 background_objc_routes=background_objc_routes,
-                class_name=swift_class_name,
-                include_default_in_switch=include_default_in_switch
+                class_name=swift_class_name
             )
 
             file_name = 'DBX{}RequestBox.swift'.format(self.args.class_name)
