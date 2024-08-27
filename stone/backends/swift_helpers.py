@@ -198,13 +198,17 @@ def fmt_default_value(field):
         raise TypeError('Can\'t handle default value type %r' %
                         type(field.data_type))
 
-
 def fmt_route_name(route):
     if route.version == 1:
         return route.name
     else:
         return '{}_v{}'.format(route.name, route.version)
 
+def fmt_route_name_namespace(route, namespace_name):
+    return '{}/{}'.format(namespace_name, fmt_route_name(route))
+
+def fmt_func_namespace(name, version, namespace_name):
+    return '{}_{}'.format(namespace_name, fmt_func(name, version))
 
 def check_route_name_conflict(namespace):
     """

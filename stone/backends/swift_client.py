@@ -26,6 +26,8 @@ from stone.backends.swift_helpers import (
     fmt_var,
     fmt_type,
     fmt_route_name,
+    fmt_route_name_namespace,
+    fmt_func_namespace,
     fmt_objc_type,
     mapped_list_info,
     datatype_has_subtypes,
@@ -230,7 +232,7 @@ class SwiftBackend(SwiftBaseBackend):
                                                 '{}Routes.swift'.format(ns_class))
 
     def _generate_request_boxes(self, api):
-        background_compatible_routes = self._background_compatible_routes(api)
+        background_compatible_routes = self._background_compatible_namespace_route_pairs(api)
 
         if len(background_compatible_routes) == 0:
             return
@@ -241,6 +243,8 @@ class SwiftBackend(SwiftBaseBackend):
         template_globals['request_type_signature'] = self._request_type_signature
         template_globals['fmt_func'] = fmt_func
         template_globals['fmt_route_objc_class'] = self._fmt_route_objc_class
+        template_globals['fmt_func_namespace'] = fmt_func_namespace
+        template_globals['fmt_route_name_namespace'] = fmt_route_name_namespace
         swift_class_name = '{}RequestBox'.format(self.args.class_name)
 
         if self.args.objc:
@@ -284,6 +288,8 @@ class SwiftBackend(SwiftBaseBackend):
 
         template = self._jinja_template("SwiftReconnectionHelpers.jinja")
         template.globals['fmt_route_name'] = fmt_route_name
+        template.globals['fmt_route_name_namespace'] = fmt_route_name_namespace
+        template.globals['fmt_func_namespace'] = fmt_func_namespace
         template.globals['fmt_func'] = fmt_func
         template.globals['fmt_class'] = fmt_class
         template.globals['class_name'] = class_name
@@ -296,10 +302,6 @@ class SwiftBackend(SwiftBaseBackend):
         self._write_output_in_target_folder(
             output_from_parsed_template, '{}.swift'.format(class_name)
         )
-
-    def _background_compatible_routes(self, api):
-        background_compatible_pairs = self._background_compatible_namespace_route_pairs(api)
-        return list(map(lambda arg_data: arg_data[1], background_compatible_pairs))
 
     def _background_compatible_namespace_route_pairs(self, api):
         namespaces = api.namespaces.values()
