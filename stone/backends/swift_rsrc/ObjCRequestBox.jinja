@@ -14,7 +14,7 @@ extension {{ class_name }} {
             {% set namespace = route_args_data[0] %}
             {% set route = route_args_data[1] %}
             {% set args_data = route_args_data[2] %}
-            case .{{ fmt_func(route.name, route.version) }}(let swift):
+            case .{{ fmt_func_namespace(route.name, route.version, namespace.name) }}(let swift):
                 return {{ fmt_route_objc_class(namespace, route, args_data) }}(swift: swift)
             {% endfor %}
             {% if include_default_in_switch %}
