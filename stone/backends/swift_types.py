@@ -1,14 +1,12 @@
 import json
 import os
 import shutil
-from contextlib import contextmanager
 
 import six
 import jinja2
 import textwrap
 
 from stone.backends.swift import (
-    base,
     fmt_serial_obj,
     SwiftBaseBackend,
     undocumented,
@@ -30,7 +28,8 @@ from stone.backends.swift_helpers import (
     field_is_user_defined_map,
     field_is_user_defined_list,
     objc_datatype_value_type_tuples,
-    field_datatype_has_subtypes,
+    field_datatype_has_subtypes
+)
 
 from stone.ir import (
     is_list_type,

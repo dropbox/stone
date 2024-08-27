@@ -30,11 +30,6 @@ from stone.backends.swift_helpers import (
     mapped_list_info,
     datatype_has_subtypes,
 )
-from stone.ir import (
-    is_struct_type,
-    is_union_type,
-    is_void_type,
-)
 
 _MYPY = False
 if _MYPY:
