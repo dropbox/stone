@@ -11,6 +11,7 @@ from stone.backends.swift import (
     SwiftBaseBackend,
     undocumented,
     _nsnumber_type_table,
+    fmt_bridged_legacy_objc_var,
 )
 
 from stone.backends.swift_helpers import (
@@ -22,18 +23,21 @@ from stone.backends.swift_helpers import (
     fmt_type,
     fmt_route_name,
     fmt_objc_type,
+    fmt_shim_union_psuedo_cast,
     mapped_list_info,
     field_is_user_defined,
     field_is_user_defined_optional,
     field_is_user_defined_map,
     field_is_user_defined_list,
     objc_datatype_value_type_tuples,
+    datatype_subtype_value_types,
     field_datatype_has_subtypes
 )
 
 from stone.ir import (
     is_list_type,
     is_numeric_type,
+    is_float_type,
     is_string_type,
     is_struct_type,
     is_union_type,
@@ -42,6 +46,11 @@ from stone.ir import (
     is_user_defined_type,
     is_boolean_type,
     is_map_type
+)
+
+from stone.backends.obj_c_helpers import (
+    fmt_type as fmt_legacy_objc_type,
+    fmt_class_prefix,
 )
 
 _MYPY = False
@@ -194,6 +203,11 @@ class SwiftTypesBackend(SwiftBaseBackend):
         template_globals['swift_union_arg_to_objc'] = self._swift_union_arg_to_objc
         template_globals['union_swift_arg_guard'] = self._union_swift_arg_guard
 
+        shim_flag = self.args.objc
+
+        if shim_flag:
+            self._add_shim_template_globals(template_globals)
+
         swift_template_file = "SwiftTypes.jinja"
         swift_template = template_env.get_template(swift_template_file)
         swift_template.globals = template_globals
@@ -201,6 +215,14 @@ class SwiftTypesBackend(SwiftBaseBackend):
         objc_template_file = "ObjcTypes.jinja"
         objc_template = template_env.get_template(objc_template_file)
         objc_template.globals = template_globals
+
+        shim_template_file = "SwiftObjcTypeMappings.jinja"
+        shim_template = template_env.get_template(shim_template_file)
+        shim_template.globals = template_globals
+
+        arg_shim_template_file = "SwiftObjcArgTypeMappings.jinja"
+        arg_shim_template = template_env.get_template(arg_shim_template_file)
+        arg_shim_template.globals = template_globals
 
         for namespace in api.namespaces.values():
             ns_class = fmt_class(namespace.name)
@@ -215,8 +237,39 @@ class SwiftTypesBackend(SwiftBaseBackend):
                                                      route_schema=api.route_schema)
                 self._write_output_in_target_folder(swift_output,
                                                     '{}.swift'.format(ns_class))
+            if shim_flag:
+                shim_output = shim_template.render(namespace=namespace,
+                                                route_schema=api.route_schema)
+                self._write_output_in_target_folder(shim_output,
+                                                    'ShimTypeMappings{}.swift'.format(ns_class))
+                arg_shim_output = arg_shim_template.render(namespace=namespace,
+                                                           route_schema=api.route_schema)
+                self._write_output_in_target_folder(arg_shim_output,
+                                                    'ShimArgTypeMappings{}.swift'.format(ns_class))
+
         if self.args.documentation:
             self._generate_jazzy_docs(api)
+
+    def _add_shim_template_globals(self, template_globals):
+        template_globals['fmt_class_prefix'] = fmt_class_prefix
+        legacy_objc_init_key = 'shim_objc_init_args_to_legacy_objc'
+        template_globals[legacy_objc_init_key] = self._shim_objc_init_args_legacy_objc
+        template_globals['shim_objc_union_associated_type'] = self._shim_objc_union_associated_type
+        template_globals['fmt_shim_union_psuedo_cast'] = fmt_shim_union_psuedo_cast
+        template_globals['unwrap_nullable'] = unwrap_nullable
+        template_globals['fmt_bridged_legacy_objc_var'] = fmt_bridged_legacy_objc_var
+        template_globals['fmt_legacy_objc_type'] = fmt_legacy_objc_type
+        template_globals['datatype_subtype_value_types'] = datatype_subtype_value_types
+        objc_init_key = 'shim_legacy_objc_init_args_to_objc'
+        template_globals[objc_init_key] = self._shim_legacy_objc_init_args_to_objc
+        legacy_associated_type_key = 'shim_legacy_objc_union_associated_type'
+        template_globals[legacy_associated_type_key] = self._shim_legacy_objc_union_associated_type
+        union_init_key = 'shim_legacy_objc_union_associated_type_init'
+        template_globals[union_init_key] = self._shim_legacy_objc_union_associated_type_init
+        union_check_case_key = 'fmt_legacy_objc_union_case_check'
+        template_globals[union_check_case_key] = self._fmt_legacy_objc_union_case_check
+        template_globals['fmt_legacy_objc_type'] = fmt_legacy_objc_type
+        template_globals['is_void_type'] = is_void_type
 
     def _generate_jazzy_docs(self, api):
         jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
@@ -367,7 +420,13 @@ class SwiftTypesBackend(SwiftBaseBackend):
 
             if is_user_defined_type(list_data_type):
                 objc_type = fmt_objc_type(list_data_type, False)
-                value = '{}{}.map {}{{ {}(swift: $0) }}'.format(value,
+                if is_union_type(list_data_type):
+                    value = '{}{}.map {}{{ {}.factory(swift: $0) }}'.format(value,
+                                                                '?' if nullable else '',
+                                                                prefix,
+                                                                objc_type)
+                else:
+                    value = '{}{}.map {}{{ {}(swift: $0) }}'.format(value,
                                                                 '?' if nullable else '',
                                                                 prefix,
                                                                 objc_type)
@@ -378,17 +437,23 @@ class SwiftTypesBackend(SwiftBaseBackend):
                                                                   map_func,
                                                                   prefix,
                                                                   '?' if list_nullable else '')
-
             value = '{}{}'.format(value, suffix)
             return value
-        elif is_map_type(data_type) and is_user_defined_type(data_type.value_data_type):
+        elif is_map_type(data_type):
             objc_type = fmt_objc_type(data_type.value_data_type)
             value = '{}.{}'.format(swift_var_name,
-                                   fmt_var(field.name))
-            value = '{}{}.mapValues {{ {}(swift: $0) }}'.format(value,
-                                                                '?' if nullable else '',
-                                                                objc_type)
-            return value
+                                fmt_var(field.name))
+            if is_user_defined_type(data_type.value_data_type):
+                value = '{}{}.mapValues {{ {}(swift: $0) }}'.format(value,
+                                                                    '?' if nullable else '',
+                                                                    objc_type)
+                return value
+            elif is_float_type(data_type.value_data_type):
+                value = '{}.{}{}.mapValues({{ $0 as NSNumber }})'.format(swift_var_name,
+                                fmt_var(field.name), '?' if nullable else '')
+                return value
+            else:
+                return value
         elif is_user_defined_type(data_type):
             value = ''
             swift_arg_name = '{}.{}'.format(swift_var_name,
@@ -398,9 +463,14 @@ class SwiftTypesBackend(SwiftBaseBackend):
                     swift_var_name,
                     fmt_var(field.name))
                 swift_arg_name = 'swift'
-            return '{}{}(swift: {})'.format(value,
-                                            fmt_objc_type(field.data_type, False),
-                                            swift_arg_name)
+            if is_union_type(data_type):
+                return '{}{}.factory(swift: {})'.format(value,
+                                                fmt_objc_type(data_type, False),
+                                                swift_arg_name)
+            else:
+                return '{}{}(swift: {})'.format(value,
+                                                fmt_objc_type(data_type, False),
+                                                swift_arg_name)
         elif is_numeric_type(data_type) or is_boolean_type(data_type):
             return '{}.{} as NSNumber{}'.format(swift_var_name,
                                                 fmt_var(field.name),
@@ -474,7 +544,10 @@ class SwiftTypesBackend(SwiftBaseBackend):
                                   suffix)
             return value
         elif is_user_defined_type(field_data_type):
-            return '{}(swift: swiftArg)'.format(fmt_objc_type(field_data_type))
+            if is_union_type(field_data_type):
+                return '{}.factory(swift: swiftArg)'.format(fmt_objc_type(field_data_type))
+            else:
+                return '{}(swift: swiftArg)'.format(fmt_objc_type(field_data_type))
         elif is_void_type(field_data_type):
             return ''
         elif nsnumber_type:

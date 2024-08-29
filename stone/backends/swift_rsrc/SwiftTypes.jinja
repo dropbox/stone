@@ -28,6 +28,8 @@ public class {{ fmt_class(namespace.name) }} {
             super.init({{ field_name_args(data_type.parent_type) }})
             {% endif %}
         }
+        {% elif not data_type.parent_type %}
+        public init() { }
         {% endif %}
 
         {% if not data_type.parent_type %}

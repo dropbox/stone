@@ -117,7 +117,11 @@ public class {{ fmt_route_objc_class(namespace, route, args_data) }}: NSObject, 
             var callError: DBXCallError?
             switch error {
             case .routeError(let box, _, _, _):
+                {% if is_union_type(route.error_data_type) %}
+                routeError = {{ error_type }}.factory(swift: box.unboxed)
+                {% else %}
                 routeError = {{ error_type }}(swift: box.unboxed)
+                {% endif %}
                 callError = nil
             default:
                 routeError = nil

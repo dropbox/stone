@@ -31,6 +31,10 @@ from stone.backends.swift_helpers import (
     datatype_has_subtypes,
 )
 
+from stone.backends.obj_c_helpers import (
+    fmt_class_prefix
+)
+
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -137,13 +141,22 @@ class SwiftBackend(SwiftBaseBackend):
 
     def generate(self, api):
         for namespace in api.namespaces.values():
-            if namespace.routes:
+            if self._namespace_contains_valid_routes_for_auth_type(namespace):
                 self._generate_routes(namespace)
 
         self._generate_client(api)
         self._generate_request_boxes(api)
         if not self.args.objc:
             self._generate_reconnection_helpers(api)
+
+    # Argument cast when mapping a legacy objc route to an objc route
+    # ', let args = args as? DBUSERSGetAccountBatchArg'
+    def shim_rpc_function_argument_if_necessary(self, data_type):
+        if is_user_defined_type(data_type) and len(data_type.fields) > 0:
+            class_name = fmt_class_prefix(data_type)
+            return ', let args = args as? {}'.format(class_name)
+        else:
+            return ''
 
     def _generate_client(self, api):
         template_globals = {}
@@ -158,6 +171,8 @@ class SwiftBackend(SwiftBaseBackend):
 
             self._write_output_in_target_folder(template.render(),
                                                 'DBX{}.swift'.format(self.args.module_name))
+
+            self._generate_sdk_migration_shim(api)
         else:
             template = self._jinja_template("SwiftClient.jinja")
             template.globals = template_globals
@@ -295,6 +310,32 @@ class SwiftBackend(SwiftBaseBackend):
         self._write_output_in_target_folder(
             output_from_parsed_template, '{}.swift'.format(class_name)
         )
+
+    def _generate_sdk_migration_shim(self, api):
+        template = self._jinja_template("SwiftObjcShimHelpers.jinja")
+        template_globals = {}
+        template_globals['namespaces'] = api.namespaces.values()
+        template_globals['route_client_args'] = self._route_client_args
+        template_globals['fmt_route_objc_class'] = self._fmt_route_objc_class
+        template_globals['fmt_func'] = fmt_func
+        template_globals['fmt_objc_type'] = fmt_objc_type
+        template_globals['objc_to_legacy_objc_mapper'] = self._shim_objc_to_legacy_objc_type_mapper
+        template_globals['fmt_route_name_namespace'] = fmt_route_name_namespace
+        template_globals['shim_rpc_function_arg'] = self.shim_rpc_function_argument_if_necessary
+        template_globals['route_args'] = self._route_args
+        template_globals['is_struct_type'] = is_struct_type
+        template_globals['is_union_type'] = is_union_type
+        template_globals['fmt_var'] = fmt_var
+        objc_init_key = 'shim_legacy_objc_init_args_to_objc'
+        template_globals[objc_init_key] = self._shim_legacy_objc_init_args_to_objc
+        template_globals['fmt_class_prefix'] = fmt_class_prefix
+
+        template.globals = template_globals
+
+        output_from_parsed_template = template.render()
+
+        self._write_output_in_target_folder(output_from_parsed_template,
+                                        'ShimSwiftObjcHelpers.swift')
 
     def _background_compatible_namespace_route_pairs(self, api):
         namespaces = api.namespaces.values()
@@ -556,6 +597,23 @@ class SwiftBackend(SwiftBaseBackend):
 
             result_type = '{}, {}'.format(result_type, error_type)
             return result_type
+
+    # Used in objc to legacy objc type RPC completion mapping, optionals only.
+    # 'mapDBXCameraUploadsMobileCommitCameraUploadResultToDBOptional(object: result)'
+    # 'mapDBXCameraUploadsMobileCommitCameraUploadErrorToDBOptional(object: routeError)'
+    def _shim_objc_to_legacy_objc_type_mapper(self, data_type, mapped_object_name):
+        if data_type.name == 'Void':
+            return 'nil'
+        elif is_list_type(data_type):
+            if is_user_defined_type(data_type.data_type):
+                list_data_type = fmt_objc_type(data_type.data_type)
+                return '{}?.map {{ map{}ToDBOptional(object: $0) }}'.format(mapped_object_name,
+                                                                            list_data_type)
+            else:
+                return '{}'.format(mapped_object_name)
+        else:
+            return 'map{}ToDBOptional(object: {})'.format(fmt_objc_type(data_type),
+                                                        mapped_object_name)
 
     def _background_compatible_routes_for_objc_requests(self, api):
         namespaces = api.namespaces.values()
