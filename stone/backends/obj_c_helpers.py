@@ -151,6 +151,9 @@ _reserved_words = {
     'id',
     'delete',
     'hash',
+    'boolvalue',
+    'floatvalue',
+    'intvalue',
 }
 
 _reserved_prefixes = {
