@@ -104,12 +104,29 @@ public class {{ fmt_route_objc_class(namespace, route, args_data) }}: NSObject, 
         self.response(queue: nil, completionHandler: completionHandler)
     }
 
+    {% if route.attrs.get('style') == 'rpc' and ('user' in route.attrs.get('auth') or 'noauth' in route.attrs.get('auth')) and not route.deprecated %}
     @objc
     @discardableResult public func response(
         queue: DispatchQueue?,
         completionHandler: @escaping ({{ result_type }}) -> Void
     ) -> Self {
+        self.response(queue: nil, analyticsBlock: nil, completionHandler: completionHandler)
+    }
+    {% endif %}
+
+    @objc
+    @discardableResult public func response(
+        queue: DispatchQueue? = nil,
+        {% if route.attrs.get('style') == 'rpc' and ('user' in route.attrs.get('auth') or 'noauth' in route.attrs.get('auth')) and not route.deprecated %}
+        analyticsBlock: AnalyticsBlock? = nil,
+        {% endif %}
+        completionHandler: @escaping ({{ result_type }}) -> Void
+    ) -> Self {
+        {% if route.attrs.get('style') == 'rpc' and ('user' in route.attrs.get('auth') or 'noauth' in route.attrs.get('auth')) and not route.deprecated %}
+        swift.response(queue: queue, analyticsBlock: analyticsBlock) { result, error in
+        {% else %}
         swift.response(queue: queue) { result, error in
+        {% endif %}
             {% if route.error_data_type.name != 'Void' %}
             {% set error_type = 'DBX' + fmt_class(route.error_data_type.namespace.name) + fmt_class(route.error_data_type.name) %}
             {% set error_call = 'routeError, callError' %}

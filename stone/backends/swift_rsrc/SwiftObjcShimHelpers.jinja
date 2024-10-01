@@ -13,7 +13,8 @@ import stone_sdk_swift_objc
 public class SDKShimHelpers: NSObject {
     // MARK: DBAPIRpcTask
 
-    @objc public static func setResponseBlockRPC(block: @escaping DBRpcResponseBlockImpl, on task: DBXRequest, with queue: OperationQueue?) -> Bool {
+    @objc
+    @discardableResult public static func setResponseBlockRPC(block: @escaping DBRpcResponseBlockImpl, on task: DBXRequest, with queue: OperationQueue?, analyticsBlock: AnalyticsBlock?) -> Bool {
         {% for namespace in namespaces | selectattr('name', '!=', 'team') %}
         {% for route in namespace.routes %}
         {% if route.attrs.get('style') == 'rpc' and ('user' in route.attrs.get('auth') or 'noauth' in route.attrs.get('auth')) and not route.deprecated %}
@@ -22,21 +23,21 @@ public class SDKShimHelpers: NSObject {
         {% set objc_error_mapper = objc_to_legacy_objc_mapper(route.error_data_type, 'routeError') %}
         if let task = task as? {{ objc_request_class }} {
             {% if route.result_data_type.name == 'Void' and route.error_data_type.name == 'Void' %}
-            task.response { networkError in
+            task.response(analyticsBlock: analyticsBlock) { networkError in
                 let mappedCallError = callErrorToDB(error: networkError)
                 let wrappedBlock = { block(networkError == nil ? DBNilObject() : nil, nil, mappedCallError) }
             {% elif route.result_data_type.name == 'Void' %}
-            task.response { routeError, networkError in
+            task.response(analyticsBlock: analyticsBlock) { routeError, networkError in
                 let mappedError = {{ objc_error_mapper }}
                 let mappedCallError = callErrorToDB(error: networkError)
                 let wrappedBlock = { block((networkError == nil && routeError == nil) ? DBNilObject() : nil, mappedError, mappedCallError) }
             {% elif route.error_data_type.name == 'Void' %}
-            task.response { result, networkError in
+            task.response(analyticsBlock: analyticsBlock) { result, networkError in
                 let mappedResult = {{ objc_result_mapper }}
                 let mappedCallError = callErrorToDB(error: networkError)
                 let wrappedBlock = { block(mappedResult, nil, mappedCallError) }
             {% else %}
-            task.response { result, routeError, networkError in
+            task.response(analyticsBlock: analyticsBlock) { result, routeError, networkError in
                 let mappedResult = {{ objc_result_mapper }}
                 let mappedError = {{ objc_error_mapper }}
                 let mappedCallError = callErrorToDB(error: networkError)
