@@ -13,7 +13,7 @@ import stone_sdk_swift_objc
 public class SDKShimHelpers: NSObject {
     // MARK: DBAPIRpcTask
 
-    @objc public static  func setResponseBlockRPC(block: @escaping DBRpcResponseBlockImpl, on task: DBXRequest, with queue: OperationQueue) -> Bool {
+    @objc public static func setResponseBlockRPC(block: @escaping DBRpcResponseBlockImpl, on task: DBXRequest, with queue: OperationQueue?) -> Bool {
         {% for namespace in namespaces | selectattr('name', '!=', 'team') %}
         {% for route in namespace.routes %}
         {% if route.attrs.get('style') == 'rpc' and ('user' in route.attrs.get('auth') or 'noauth' in route.attrs.get('auth')) and not route.deprecated %}
