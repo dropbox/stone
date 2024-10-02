@@ -152,7 +152,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
     cmdline_parser = _cmdline_parser
     def generate(self, api):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
-        if not self.args.objc:
+        if not self.args.objc and not self.args.objc_shim:
             self.logger.info('Copying StoneValidators.swift to output folder')
             shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
                         self.target_folder_path)

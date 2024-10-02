@@ -151,7 +151,7 @@ class SwiftBackend(SwiftBaseBackend):
 
         self._generate_client(api)
         self._generate_request_boxes(api)
-        if not self.args.objc:
+        if not self.args.objc and not self.args.objc_shim:
             self._generate_reconnection_helpers(api)
 
     # Argument cast when mapping a legacy objc route to an objc route
