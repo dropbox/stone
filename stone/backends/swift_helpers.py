@@ -138,7 +138,6 @@ def fmt_func(name, version):
     name = _format_camelcase(name)
     return name
 
-
 def fmt_type(data_type):
     data_type, nullable = unwrap_nullable(data_type)
 
@@ -175,6 +174,11 @@ def fmt_objc_type(data_type, allow_nullable=True):
 def fmt_var(name):
     return _format_camelcase(name)
 
+# Type check component when mapping an objc union to a legacy objc union
+# e.g.: `asPricePlanTypePremium`
+def fmt_shim_union_psuedo_cast(name):
+    arg = _format_camelcase(name, lower_first=False)
+    return 'as{}'.format(arg)
 
 def fmt_default_value(field):
     if is_tag_ref(field.default):
@@ -267,6 +271,17 @@ def field_is_user_defined_list(field):
 # List[typing.Tuple[let_name: str, swift_type: str, objc_type: str]]
 def objc_datatype_value_type_tuples(data_type):
     ret = []
+    for d_type in datatype_subtype_value_types(data_type):
+        case_let_name = fmt_var(d_type.name)
+        swift_type = fmt_type(d_type)
+        objc_type = fmt_objc_type(d_type)
+        ret.append((case_let_name, swift_type, objc_type))
+
+    return ret
+
+# List[typing.Tuple[let_name: str, type: DataType]]
+def datatype_subtype_value_types(data_type):
+    ret = []
 
     # if list type get the data type of the item
     if is_list_type(data_type):
@@ -282,11 +297,7 @@ def objc_datatype_value_type_tuples(data_type):
 
         for subtype in all_subtypes:
             # subtype[0] is the tag name and subtype[1] is the subtype struct itself
-            struct = subtype[1]
-            case_let_name = fmt_var(struct.name)
-            swift_type = fmt_type(struct)
-            objc_type = fmt_objc_type(struct)
-            ret.append((case_let_name, swift_type, objc_type))
+            ret.append((subtype[1]))
     return ret
 
 def field_datatype_has_subtypes(field) -> bool:

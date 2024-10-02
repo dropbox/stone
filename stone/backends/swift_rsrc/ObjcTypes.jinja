@@ -52,9 +52,22 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
         self.{{ swift_var_name }} = {{ swift_type }}({{ objc_init_args_to_swift(data_type) }})
         {% endif %}
     }
+    {% elif data_type.parent_type.fields %}
+
+    @objc
+    public override init({{ func_args(objc_init_args(data_type.parent_type)) }}) {
+        let swift = {{ swift_type }}({{ objc_init_args_to_swift(data_type.parent_type) }})
+        self.{{ swift_var_name }} = swift
+        super.init(swift: swift)
+    }
+    {% elif not data_type.parent_type %}
+    public override init() {
+        self.{{ swift_var_name }} = {{ swift_type }}()
+        super.init()
+    }
     {% endif %}
 
-    let {{ swift_var_name }}: {{ swift_type }}
+    public let {{ swift_var_name }}: {{ swift_type }}
 
     public init(swift: {{ swift_type }}) {
         self.{{ swift_var_name }} = swift
@@ -85,9 +98,9 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
 {% set swift_enum = namespace_class_name + '.' + fmt_class(data_type.name) %}
 @objc
 public class {{ union_class_name }}: NSObject {
-    let swift: {{ swift_enum }}
+    public let swift: {{ swift_enum }}
 
-    public init(swift: {{ swift_enum }}) {
+    fileprivate init(swift: {{ swift_enum }}) {
         self.swift = swift
     }
 
