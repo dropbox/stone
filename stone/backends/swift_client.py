@@ -97,6 +97,11 @@ _cmdline_parser.add_argument(
     action='store_true',
     help='Generate the Objective-C compatibile files.',
 )
+_cmdline_parser.add_argument(
+    '--objc-shim',
+    action='store_true',
+    help='Generate the Objective-C to Swift migration files.',
+)
 
 
 class SwiftBackend(SwiftBaseBackend):
@@ -172,6 +177,7 @@ class SwiftBackend(SwiftBaseBackend):
             self._write_output_in_target_folder(template.render(),
                                                 'DBX{}.swift'.format(self.args.module_name))
 
+        elif self.args.objc_shim:
             self._generate_sdk_migration_shim(api)
         else:
             template = self._jinja_template("SwiftClient.jinja")
@@ -235,6 +241,8 @@ class SwiftBackend(SwiftBaseBackend):
 
             self._write_output_in_target_folder(output_from_parsed_template,
                                                 'DBX{}Routes.swift'.format(ns_class))
+        elif self.args.objc_shim:
+            return
         else:
             template = self._jinja_template("SwiftRoutes.jinja")
             template.globals = template_globals
@@ -273,6 +281,8 @@ class SwiftBackend(SwiftBaseBackend):
             file_name = 'DBX{}RequestBox.swift'.format(self.args.class_name)
             self._write_output_in_target_folder(output,
                                                 file_name)
+        elif self.args.objc_shim:
+            return
         else:
             template = self._jinja_template("SwiftRequestBox.jinja")
             template.globals = template_globals

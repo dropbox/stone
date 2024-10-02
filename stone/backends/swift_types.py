@@ -70,13 +70,18 @@ _cmdline_parser.add_argument(
 _cmdline_parser.add_argument(
     '--objc',
     action='store_true',
-    help='Generate the Objective-C compatibile files',
+    help='Generate the Objective-C compatibile files.',
 )
 _cmdline_parser.add_argument(
     '-d',
     '--documentation',
     action='store_true',
     help=('Sets whether documentation is generated.'),
+)
+_cmdline_parser.add_argument(
+    '--objc-shim',
+    action='store_true',
+    help='Generate the Objective-C to Swift migration files.',
 )
 
 class SwiftTypesBackend(SwiftBaseBackend):
@@ -203,9 +208,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
         template_globals['swift_union_arg_to_objc'] = self._swift_union_arg_to_objc
         template_globals['union_swift_arg_guard'] = self._union_swift_arg_guard
 
-        shim_flag = self.args.objc
-
-        if shim_flag:
+        if self.args.objc_shim:
             self._add_shim_template_globals(template_globals)
 
         swift_template_file = "SwiftTypes.jinja"
@@ -232,12 +235,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                                                    route_schema=api.route_schema)
                 self._write_output_in_target_folder(objc_output,
                                                     'DBX{}.swift'.format(ns_class))
-            else:
-                swift_output = swift_template.render(namespace=namespace,
-                                                     route_schema=api.route_schema)
-                self._write_output_in_target_folder(swift_output,
-                                                    '{}.swift'.format(ns_class))
-            if shim_flag:
+            elif self.args.objc_shim:
                 shim_output = shim_template.render(namespace=namespace,
                                                 route_schema=api.route_schema)
                 self._write_output_in_target_folder(shim_output,
@@ -246,7 +244,11 @@ class SwiftTypesBackend(SwiftBaseBackend):
                                                            route_schema=api.route_schema)
                 self._write_output_in_target_folder(arg_shim_output,
                                                     'ShimArgTypeMappings{}.swift'.format(ns_class))
-
+            else:
+                swift_output = swift_template.render(namespace=namespace,
+                                                     route_schema=api.route_schema)
+                self._write_output_in_target_folder(swift_output,
+                                                    '{}.swift'.format(ns_class))
         if self.args.documentation:
             self._generate_jazzy_docs(api)
 
