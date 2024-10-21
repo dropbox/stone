@@ -300,8 +300,5 @@ def datatype_subtype_value_types(data_type):
             ret.append((subtype[1]))
     return ret
 
-def field_datatype_has_subtypes(field) -> bool:
-    return datatype_has_subtypes(field.data_type)
-
 def datatype_has_subtypes(data_type) -> bool:
     return len(objc_datatype_value_type_tuples(data_type)) > 0

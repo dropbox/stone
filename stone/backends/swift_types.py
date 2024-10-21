@@ -31,7 +31,7 @@ from stone.backends.swift_helpers import (
     field_is_user_defined_list,
     objc_datatype_value_type_tuples,
     datatype_subtype_value_types,
-    field_datatype_has_subtypes
+    datatype_has_subtypes,
 )
 
 from stone.ir import (
@@ -199,8 +199,6 @@ class SwiftTypesBackend(SwiftBaseBackend):
         template_globals['field_is_user_defined_optional'] = field_is_user_defined_optional
         template_globals['field_is_user_defined_list'] = field_is_user_defined_list
         template_globals['field_is_user_defined_map'] = field_is_user_defined_map
-        in_jinja_key = 'field_datatype_has_subtypes'
-        template_globals[in_jinja_key] = field_datatype_has_subtypes
         template_globals['objc_datatype_value_type_tuples'] = objc_datatype_value_type_tuples
         template_globals['objc_init_args_to_swift'] = self._objc_init_args_to_swift
         template_globals['objc_union_arg'] = self._objc_union_arg
@@ -428,10 +426,13 @@ class SwiftTypesBackend(SwiftBaseBackend):
                                                                 prefix,
                                                                 objc_type)
                 else:
-                    value = '{}{}.map {}{{ {}(swift: $0) }}'.format(value,
+                    has_subtypes = datatype_has_subtypes(list_data_type)
+                    value = '{}{}.map {}{{ {}{}(swift: $0) }}'.format(value,
                                                                 '?' if nullable else '',
                                                                 prefix,
-                                                                objc_type)
+                                                                objc_type,
+                                                                '.wrapPreservingSubtypes' if
+                                                                has_subtypes else '')
             elif is_numeric_type(list_data_type):
                 map_func = 'compactMap' if list_nullable else 'map'
                 value = '{}{}.{} {}{{ $0 as NSNumber{} }}'.format(value,
@@ -445,10 +446,13 @@ class SwiftTypesBackend(SwiftBaseBackend):
             objc_type = fmt_objc_type(data_type.value_data_type)
             value = '{}.{}'.format(swift_var_name,
                                 fmt_var(field.name))
+            has_subtypes = datatype_has_subtypes(data_type.value_data_type)
             if is_user_defined_type(data_type.value_data_type):
-                value = '{}{}.mapValues {{ {}(swift: $0) }}'.format(value,
+                value = '{}{}.mapValues {{ {}{}(swift: $0) }}'.format(value,
                                                                     '?' if nullable else '',
-                                                                    objc_type)
+                                                                    objc_type,
+                                                                    '.wrapPreservingSubtypes' if
+                                                                    has_subtypes else '')
                 return value
             elif is_float_type(data_type.value_data_type):
                 value = '{}.{}{}.mapValues({{ $0 as NSNumber }})'.format(swift_var_name,
@@ -470,8 +474,10 @@ class SwiftTypesBackend(SwiftBaseBackend):
                                                 fmt_objc_type(data_type, False),
                                                 swift_arg_name)
             else:
-                return '{}{}(swift: {})'.format(value,
+                has_subtypes = datatype_has_subtypes(data_type)
+                return '{}{}{}(swift: {})'.format(value,
                                                 fmt_objc_type(data_type, False),
+                                                '.wrapPreservingSubtypes' if has_subtypes else '',
                                                 swift_arg_name)
         elif is_numeric_type(data_type) or is_boolean_type(data_type):
             return '{}.{} as NSNumber{}'.format(swift_var_name,
