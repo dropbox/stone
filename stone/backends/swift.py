@@ -11,6 +11,14 @@ from stone.backends.swift_helpers import (
     mapped_list_info,
 )
 
+from stone.backends.obj_c_helpers import (
+    fmt_class_prefix as legacy_fmt_class_prefix,
+    fmt_class_caps,
+    fmt_var as fmt_legacy_objc_var,
+    fmt_type as fmt_legacy_objc_type,
+    fmt_camel_upper as fmt_legacy_camel_upper,
+)
+
 from stone.ir import (
     Boolean,
     Bytes,
@@ -30,6 +38,8 @@ from stone.ir import (
     is_timestamp_type,
     is_union_type,
     is_user_defined_type,
+    is_numeric_type,
+    is_boolean_type,
     unwrap_nullable,
     is_nullable_type,
 )
@@ -172,6 +182,9 @@ class SwiftBaseBackend(CodeBackend):
 
         return self._func_args(args)
 
+    # swift initializer args for objc types
+    # 'id: id, path: path, isDeleted: isDeleted.boolValue,
+    # 'propertyGroups: propertyGroups.compactMap { $0.swift }'
     def _objc_init_args_to_swift(self, data_type, args_data=None, include_defaults=True):
         args = []
         for field in data_type.all_fields:
@@ -206,9 +219,16 @@ class SwiftBaseBackend(CodeBackend):
                     value = '{}{}'.format(value,
                                           suffix)
             elif is_map_type(field_data_type):
+                list_nsnumber_type = _nsnumber_type_table.get(
+                    field_data_type.value_data_type.__class__)
+
                 if is_user_defined_type(field_data_type.value_data_type):
                     value = '{}{}.mapValues {{ $0.swift }}'.format(name,
                                                                    '?' if nullable else '')
+                elif list_nsnumber_type:
+                    value = '{}{}.mapValues {{ $0{} }}'.format(name,
+                                                            '?' if nullable else '',
+                                                            list_nsnumber_type)
             elif is_user_defined_type(field_data_type):
                 value = '{}{}.{}'.format(name,
                                          '?' if nullable else '',
@@ -222,8 +242,194 @@ class SwiftBaseBackend(CodeBackend):
             extra_args = [tuple(type_data[:-1]) for type_data in type_data_list]
             for name, _, _ in extra_args:
                 args.append((name, name))
+        return self._func_args(args)
+
+    # Init args for mapping a legacy objc object to an objc object
+    # 'id: object.id_, path: object.path, isDeleted: object.isDeleted, propertyGroups:
+    #  object.propertyGroups.compactMap { mapDBFILEPROPERTIESPropertyGroupToDBX(object: $0) }'
+    def _shim_legacy_objc_init_args_to_objc(self, data_type, source_var_name, args_data=None):
+        args = []
+        for field in data_type.all_fields:
+            arg = self._shim_legacy_objc_init_arg_to_objc(field, data_type, source_var_name)
+            args.append(arg)
+
+        if args_data is not None:
+            _, type_data_list = tuple(args_data)
+            extra_args = [tuple(type_data[:-1]) for type_data in type_data_list]
+            for name, _, _ in extra_args:
+                args.append((name, name))
+        return self._func_args(args)
+
+    # Union type check when mapping a legacy objc object to an objc object
+    # 'isRouteAccessDenied' or 'isPaperDocument'
+    def _fmt_legacy_objc_union_case_check(self, var, data_type):
+        legacy_objc_name = fmt_bridged_legacy_objc_var(var, fmt_legacy_objc_type(data_type,
+                                                                no_ptr=True), False)
+        return 'is{}'.format(fmt_legacy_camel_upper(legacy_objc_name))
+
+    # Init args for mapping an objc object to a legacy objc object
+    # 'id_: object.id, path: object.path, isDeleted: object.isDeleted, propertyGroups:
+    # object.propertyGroups.compactMap { mapDBXFilePropertiesPropertyGroupToDB(object: $0) }'
+    def _shim_objc_init_args_legacy_objc(self, data_type, args_data=None):
+        args = []
+        for field in data_type.all_fields:
+            arg = self._shim_objc_init_arg_legacy_objc(field, len(args) == 0)
+            args.append(arg)
+
+        if len(args) == 0:
+            args.append(('default', '()'))
+
+        if args_data is not None:
+            _, type_data_list = tuple(args_data)
+            extra_args = [tuple(type_data[:-1]) for type_data in type_data_list]
+            for name, _, _ in extra_args:
+                args.append((name, name))
 
         return self._func_args(args)
+
+    # When mapping from an objc object to a legacy objc object, type mapper for the
+    # union associated type
+    # 'object.complete.compactMap { mapDBXTeamMemberAddResultToDB(object: $0) }'
+    # 'object.templateNotFound'
+    # 'mapDBXAuthInvalidAccountTypeErrorToDB(object: object.invalidAccountType)'
+    def _shim_objc_union_associated_type(self, field, is_first_pass=True):
+        # return just the value, no parameter name needed
+        return self._shim_objc_init_arg_legacy_objc(field, is_first_pass)[1]
+
+    # When mapping from an objc object to a legacy objc object, type mapper for the
+    # a single constituent field type, with the parameter name
+    # ('complete', 'object.complete.compactMap { mapDBXTeamMemberAddResultToDB(object: $0) }')
+    def _shim_objc_init_arg_legacy_objc(self, field, is_first_pass=True):
+        name = fmt_var(field.name)
+        field_data_type, nullable = unwrap_nullable(field.data_type)
+        type_name_for_trimming = fmt_legacy_objc_type(field_data_type, no_ptr=True)
+
+        legacy_objc_name = fmt_bridged_legacy_objc_var(field.name, type_name_for_trimming,
+                                                    is_first_pass)
+
+        value = 'object.{}'.format(name)
+        if nullable and isinstance(field_data_type, Bytes):
+            value = 'object.{}.flatMap {{ String(data: $0, encoding: .utf8) }}'.format(name)
+        elif not nullable and isinstance(field_data_type, Bytes):
+            value = 'String(data: object.{}, encoding: .utf8) ?? .init()'.format(name)
+        elif is_list_type(field_data_type):
+            _, prefix, suffix, list_data_type, _ = mapped_list_info(field_data_type)
+
+            value = 'object.{}{}'.format(name,
+                                    '?' if nullable else '')
+            list_nsnumber_type = _nsnumber_type_table.get(list_data_type.__class__)
+
+            if not is_user_defined_type(list_data_type) and not list_nsnumber_type:
+                value = 'object.{}'.format(name)
+            else:
+                value = '{}.compactMap {}'.format(value, prefix)
+
+                if is_user_defined_type(list_data_type):
+                    value = '{}{{ map{}ToDB(object: $0) }}'.format(value,
+                                                    fmt_objc_type(list_data_type))
+                else:
+                    value = '{}{{ $0 }}'.format(value)
+
+                value = '{}{}'.format(value,
+                                    suffix)
+        elif is_map_type(field_data_type):
+            if is_user_defined_type(field_data_type.value_data_type):
+                value = 'object.{}{}.mapValues {{ map{}ToDB(object: $0) }}'.format(name,
+                            '?' if nullable else '',
+                            fmt_objc_type(field_data_type.value_data_type))
+
+        elif is_user_defined_type(field_data_type):
+            value = 'map{}ToDB{}(object: object.{})'.format(
+                fmt_objc_type(field_data_type),
+                'Optional' if nullable else '',
+                name)
+        return (legacy_objc_name, value)
+
+    # When mapping from a legacy objc object to an objc object, type mapper for the
+    # union associated type
+    # 'mapDBAUTHInvalidAccountTypeErrorToDBX(object: object.invalidAccountType)'
+    # 'object.base64Data'
+    # 'object.complete.compactMap { mapDBTEAMTeamMemberAddResultToDBX(object: $0) }'
+    def _shim_legacy_objc_union_associated_type(self, field, parent_data_type):
+        # return just the value, no parameter name needed
+        return self._shim_legacy_objc_init_arg_to_objc(field, parent_data_type, 'object')[1]
+
+    # When mapping from a legacy objc object to an objc object, type mapper for the
+    # union associated type
+    # 'mapDBAUTHInvalidAccountTypeErrorToDBX(object: object.invalidAccountType)'
+    # 'object.base64Data'
+    # 'object.complete.compactMap { mapDBTEAMTeamMemberAddResultToDBX(object: $0) }'
+    def _shim_legacy_objc_init_arg_to_objc(self, field, parent_data_type, source_var_name):
+        name = fmt_var(field.name)
+        legacy_objc_name = fmt_legacy_objc_var(field.name)
+        field_data_type, nullable = unwrap_nullable(field.data_type)
+        value = '{}.{}'.format(source_var_name, legacy_objc_name)
+        if isinstance(field_data_type, Bytes):
+            value = '{}{}.{}{}'.format(value, '?' if nullable else '', 'data(using: .utf8)',
+                                    '' if nullable else ' ?? Data()')
+        elif is_list_type(field_data_type):
+            _, prefix, suffix, list_data_type, _ = mapped_list_info(field_data_type)
+
+            value = '{}.{}{}'.format(source_var_name,
+                                    legacy_objc_name,
+                                    '?' if nullable else '')
+
+            if not is_user_defined_type(list_data_type):
+                value = '{}.{}'.format(source_var_name, legacy_objc_name)
+            if is_user_defined_type(list_data_type):
+                value = '{}.compactMap {}'.format(value, prefix)
+                value = '{}{{ map{}ToDBX(object: $0) }}'.format(value,
+                                                    legacy_fmt_class_prefix(list_data_type))
+                value = '{}{}'.format(value, suffix)
+        elif is_map_type(field_data_type):
+            if is_user_defined_type(field_data_type.value_data_type):
+                value = '{}.{}{}.mapValues {{ map{}ToDBX(object: $0) }}'.format(
+                    source_var_name,
+                    legacy_objc_name,
+                    '?' if nullable else '',
+                    self._fmt_class_prefix_namespace(field_data_type.value_data_type,
+                                                parent_data_type.namespace))
+
+        elif is_user_defined_type(field_data_type):
+            value = 'map{}ToDBX{}(object: {}.{})'.format(
+                legacy_fmt_class_prefix(field_data_type),
+                'Optional' if nullable else '',
+                source_var_name,
+                legacy_objc_name)
+        return (name, value)
+
+    # Initialize an objc union from a legacy objc union
+    # '.paperAccessDenied(paperAccessDenied.swift)'
+    # '.complete(complete.map { $0.swift })'
+    def _shim_legacy_objc_union_associated_type_init(self, field):
+        name = fmt_var(field.name)
+        field_data_type, nullable = unwrap_nullable(field.data_type)
+        nsnumber_type = _nsnumber_type_table.get(field_data_type.__class__)
+
+        value = '.{name}({name})'.format(name=name)
+        if is_numeric_type(field_data_type) or is_boolean_type(field_data_type):
+            value = '.{name}({name}{})'.format(nsnumber_type, name=name)
+        elif is_list_type(field_data_type):
+            _, _, _, list_data_type, _ = mapped_list_info(field_data_type)
+            if is_user_defined_type(list_data_type):
+                value = '.{name}({name}.map {{ {}.swift }})'.format('$0', name=name)
+        elif is_map_type(field_data_type):
+            if is_user_defined_type(field_data_type.value_data_type):
+                value = '.{}{}.mapValues {{ map{}ToDBX(object: $0) }}'.format(name,
+                            '?' if nullable else '',
+                            self._fmt_class_prefix_namespace(field_data_type.value_data_type,
+                                                            field_data_type.namespace))
+        elif is_user_defined_type(field_data_type):
+            if field_data_type.parent_type and not is_union_type(field_data_type):
+                value = '.{name}({name}{}.subSwift)'.format('?' if nullable else '', name=name)
+            else:
+                value = '.{name}({name}{}.swift)'.format('?' if nullable else '', name=name)
+        return value
+
+    # 'DBFILEPROPERTIESPropertyGroup'
+    def _fmt_class_prefix_namespace(self, data_type, namespace):
+        return 'DB{}{}'.format(
+            fmt_class_caps(namespace.name), fmt_class(data_type.name))
 
     def _objc_swift_var_name(self, data_type):
         parent_type = data_type.parent_type
@@ -312,3 +518,74 @@ def fmt_serial_obj(data_type):
             result = 'Serialization._{}'.format(result)
 
     return result if not nullable else 'NullableSerializer({})'.format(result)
+
+# Manual reproduction of the effects of Apple's objc to swift name translation
+# see https://github.com/swiftlang/swift/blob/main/docs/CToSwiftNameTranslation-OmitNeedlessWords.md
+# Adding routes to the sdk migration shim may necessitate adding more cases here
+def fmt_bridged_legacy_objc_var(var, type_name, first_pass):
+    legacy_objc_name = fmt_legacy_objc_var(var)
+
+    if legacy_objc_name == 'valueAnswerScores' and type_name == 'DBCONTEXTENGINEValueUnion':
+        legacy_objc_name = 'valueAnswer'
+    elif legacy_objc_name == 'valueAnswerScores' and type_name == 'DBCONTEXTENGINEScores':
+        legacy_objc_name = 'valueAnswer'
+    elif (legacy_objc_name == "replayPlan" and type_name
+          == "DBCASHCATALOGCONSTANTSSTONEProductPlanType"):
+        legacy_objc_name = "replay"
+    elif (legacy_objc_name == "replayPlanFreemium" and type_name
+          == "DBCASHCATALOGCONSTANTSSTONEProductPlanType"):
+        legacy_objc_name = "replayFreemium"
+    elif (legacy_objc_name == "replayPlanTrial" and type_name
+          == "DBCASHCATALOGCONSTANTSSTONEProductPlanType"):
+        legacy_objc_name = "replayTrial"
+    elif legacy_objc_name == "removeExpiry" and type_name == "DBSHARINGLinkExpiry":
+        legacy_objc_name = "remove"
+    elif legacy_objc_name == "removePassword" and type_name == "DBSHARINGLinkPassword":
+        legacy_objc_name = "remove"
+    elif legacy_objc_name == "requireRole" and type_name == "DBACCOUNTRole":
+        legacy_objc_name = "require"
+    elif legacy_objc_name == "startTime" and type_name == "DBASSISTANTTime":
+        legacy_objc_name = "start"
+    elif legacy_objc_name == "endTime" and type_name == "DBASSISTANTTime":
+        legacy_objc_name = "end"
+    elif legacy_objc_name == "resolvedWithDetails" and type_name == "DBCOMMENTS2ResolvedDetails":
+        legacy_objc_name = "resolvedWith"
+    elif legacy_objc_name == "answerScores" and type_name == "DBCONTEXTENGINEScores":
+        legacy_objc_name = "answer"
+    elif (legacy_objc_name == "ignoreReason" and type_name
+          == 'DBCONTEXTENGINEAnswersWorkflowAnswerRejectionReason'):
+        legacy_objc_name = 'ignore'
+    elif legacy_objc_name == "boltToken" and type_name == 'DBEKMSBoltChannelToken':
+        legacy_objc_name = 'bolt'
+    elif legacy_objc_name == "captureDate" and type_name == 'NSDate *':
+        legacy_objc_name = 'capture'
+    elif legacy_objc_name == "rangeStartToken" and type_name == 'DBFQLToken':
+        legacy_objc_name = 'rangeStart'
+    elif legacy_objc_name == "rangeEndToken" and type_name == 'DBFQLToken':
+        legacy_objc_name = 'rangeEnd'
+    elif legacy_objc_name == "operator" and type_name == 'DBFQLOperator':
+        legacy_objc_name = 'with'
+    elif legacy_objc_name == "operator" and type_name == 'DBFQLOperator':
+        legacy_objc_name = 'with'
+    elif legacy_objc_name == "startTime" and type_name == 'DBGENIETime':
+        legacy_objc_name = 'start'
+    elif legacy_objc_name == "endTime" and type_name == 'DBGENIETime':
+        legacy_objc_name = 'end'
+    elif (legacy_objc_name == "missingPermissions" and type_name
+          == 'NSArray<DBPROFILESERVICESProfileServicePermissionType *>'):
+        legacy_objc_name = 'missing'
+    elif (legacy_objc_name == "googlePlayDetails" and type_name
+          == 'DBSTOREGooglePlaySubscriptionDetails'):
+        legacy_objc_name = 'googlePlay'
+
+    if first_pass:
+        if legacy_objc_name == 'internal':
+            legacy_objc_name = 'withInternal'
+        elif legacy_objc_name == 'public':
+            legacy_objc_name = 'withPublic'
+        elif legacy_objc_name == 'operator':
+            legacy_objc_name = 'with'
+        elif legacy_objc_name == 'extension':
+            legacy_objc_name = 'withExtension'
+
+    return legacy_objc_name

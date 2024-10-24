@@ -22,23 +22,7 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
     {% for field in data_type.fields %}
     {{ struct_field_doc(field, '    ') }}
     @objc
-    {% if field_datatype_has_subtypes(field) %}
-    public var {{ fmt_var(field.name) }}: {{ fmt_objc_type(field.data_type) }} {
-        {% if (field_is_user_defined(field)) or (field_is_user_defined_optional(field)) %}
-        {% if field_is_user_defined_optional(field) %}
-        return {{ swift_var_name }}.{{ fmt_var(field.name) }}.flatMap { {{ fmt_objc_type(field.data_type, False) }}.wrapPreservingSubtypes(swift: $0) }
-        {% else %}
-        return {{ fmt_objc_type(field.data_type) }}.wrapPreservingSubtypes(swift: {{ swift_var_name }}.{{ fmt_var(field.name) }})
-        {% endif %}
-        {% elif (field_is_user_defined_map(field)) or (field_is_user_defined_list(field)) %}
-        {{ swift_var_name }}.{{ fmt_var(field.name) }}.{{ 'mapValues' if field_is_user_defined_map(field) else 'map' }} {
-            return {{ fmt_objc_type(field.data_type.data_type) }}.wrapPreservingSubtypes(swift: $0)
-        }
-        {% endif %}
-    }
-    {% else %}
     public var {{ fmt_var(field.name) }}: {{ fmt_objc_type(field.data_type) }} { {{ objc_return_field_value_oneliner(data_type, field) }} }
-    {% endif %}
     {% endfor %}
     {% if data_type.fields %}
 
@@ -52,11 +36,24 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
         self.{{ swift_var_name }} = {{ swift_type }}({{ objc_init_args_to_swift(data_type) }})
         {% endif %}
     }
+    {% elif data_type.parent_type.fields %}
+
+    @objc
+    public override init({{ func_args(objc_init_args(data_type.parent_type)) }}) {
+        let swift = {{ swift_type }}({{ objc_init_args_to_swift(data_type.parent_type) }})
+        self.{{ swift_var_name }} = swift
+        super.init(swift: swift)
+    }
+    {% elif not data_type.parent_type %}
+    public override init() {
+        self.{{ swift_var_name }} = {{ swift_type }}()
+        super.init()
+    }
     {% endif %}
 
-    let {{ swift_var_name }}: {{ swift_type }}
+    public let {{ swift_var_name }}: {{ swift_type }}
 
-    public init(swift: {{ swift_type }}) {
+    {{ "fileprivate" if (objc_datatype_value_type_tuples(data_type)|length > 0) else "public" }} init(swift: {{ swift_type }}) {
         self.{{ swift_var_name }} = swift
         {% if data_type.parent_type %}
         super.init(swift: swift)
@@ -74,6 +71,7 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
             return DBX{{ namespace_class_name }}{{ data_type_class_name }}(swift: swift)
         }
     }
+    {% else %}
     {% endif %}
 
     @objc
@@ -85,9 +83,9 @@ public class DBX{{ namespace_class_name }}{{ data_type_class_name }}: {{ 'NSObje
 {% set swift_enum = namespace_class_name + '.' + fmt_class(data_type.name) %}
 @objc
 public class {{ union_class_name }}: NSObject {
-    let swift: {{ swift_enum }}
+    public let swift: {{ swift_enum }}
 
-    public init(swift: {{ swift_enum }}) {
+    fileprivate init(swift: {{ swift_enum }}) {
         self.swift = swift
     }
 
