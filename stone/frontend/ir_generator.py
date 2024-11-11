@@ -824,8 +824,11 @@ class IRGenerator:
 
             annotations = set()
 
-            # collect data types from subtypes recursively
             if is_struct_type(data_type) or is_union_type(data_type):
+                # collect custom annotations from ancestor data types
+                if data_type.parent_type:
+                    annotations.update(recurse(data_type.parent_type))
+                # collct custom annotations from nested data types
                 for field in data_type.fields:
                     annotations.update(recurse(field.data_type))
                     # annotations can be defined directly on fields
@@ -1700,10 +1703,6 @@ class IRGenerator:
             namespace.routes = []
             namespace.route_by_name = {}
             namespace.routes_by_name = {}
-
-            # We need a stable sort in order to keep the resultant output
-            # the same across runs.
-            routes.sort()
 
             for route in routes:
                 namespace.add_route(route)

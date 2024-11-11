@@ -1,14 +1,17 @@
 import json
 import os
 import shutil
-from contextlib import contextmanager
+
+import jinja2
+import textwrap
 
 from stone.backends.swift import (
-    base,
     fmt_serial_obj,
     SwiftBaseBackend,
     undocumented,
+    _nsnumber_type_table,
 )
+
 from stone.backends.swift_helpers import (
     check_route_name_conflict,
     fmt_class,
@@ -16,7 +19,17 @@ from stone.backends.swift_helpers import (
     fmt_func,
     fmt_var,
     fmt_type,
+    fmt_route_name,
+    fmt_objc_type,
+    mapped_list_info,
+    field_is_user_defined,
+    field_is_user_defined_optional,
+    field_is_user_defined_map,
+    field_is_user_defined_list,
+    objc_datatype_value_type_tuples,
+    field_datatype_has_subtypes
 )
+
 from stone.ir import (
     is_list_type,
     is_numeric_type,
@@ -25,6 +38,9 @@ from stone.ir import (
     is_union_type,
     is_void_type,
     unwrap_nullable,
+    is_user_defined_type,
+    is_boolean_type,
+    is_map_type
 )
 
 _MYPY = False
@@ -41,7 +57,17 @@ _cmdline_parser.add_argument(
           'given route; use {ns} as a placeholder for namespace name and '
           '{route} for the route name.'),
 )
-
+_cmdline_parser.add_argument(
+    '--objc',
+    action='store_true',
+    help='Generate the Objective-C compatibile files',
+)
+_cmdline_parser.add_argument(
+    '-d',
+    '--documentation',
+    action='store_true',
+    help=('Sets whether documentation is generated.'),
+)
 
 class SwiftTypesBackend(SwiftBaseBackend):
     """
@@ -52,16 +78,16 @@ class SwiftTypesBackend(SwiftBaseBackend):
     Endpoint argument (struct):
 
     ```
-    open class CopyArg: CustomStringConvertible {
-        open let fromPath: String
-        open let toPath: String
+    public class CopyArg: CustomStringConvertible {
+        public let fromPath: String
+        public let toPath: String
         public init(fromPath: String, toPath: String) {
             stringValidator(pattern: "/(.|[\\r\\n])*")(value: fromPath)
             self.fromPath = fromPath
             stringValidator(pattern: "/(.|[\\r\\n])*")(value: toPath)
             self.toPath = toPath
         }
-        open var description: String {
+        public var description: String {
             return "\\(SerializeUtil.prepareJSONForSerialization(
                 CopyArgSerializer().serialize(self)))"
         }
@@ -71,11 +97,11 @@ class SwiftTypesBackend(SwiftBaseBackend):
     Endpoint error (union):
 
     ```
-    open enum CopyError: CustomStringConvertible {
+    public enum CopyError: CustomStringConvertible {
         case TooManyFiles
         case Other
 
-        open var description: String {
+        public var description: String {
             return "\\(SerializeUtil.prepareJSONForSerialization(
                 CopyErrorSerializer().serialize(self)))"
         }
@@ -85,16 +111,16 @@ class SwiftTypesBackend(SwiftBaseBackend):
     Argument serializer (error serializer not listed):
 
     ```
-    open class CopyArgSerializer: JSONSerializer {
+    public class CopyArgSerializer: JSONSerializer {
         public init() { }
-        open func serialize(value: CopyArg) -> JSON {
+        public func serialize(value: CopyArg) -> JSON {
             let output = [
             "from_path": Serialization.serialize(value.fromPath),
             "to_path": Serialization.serialize(value.toPath),
             ]
             return .Dictionary(output)
         }
-        open func deserialize(json: JSON) -> CopyArg {
+        public func deserialize(json: JSON) -> CopyArg {
             switch json {
                 case .Dictionary(let dict):
                     let fromPath = Serialization.deserialize(dict["from_path"] ?? .Null)
@@ -111,96 +137,142 @@ class SwiftTypesBackend(SwiftBaseBackend):
     cmdline_parser = _cmdline_parser
     def generate(self, api):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
-        self.logger.info('Copying StoneValidators.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
-                    self.target_folder_path)
-        self.logger.info('Copying StoneSerializers.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
-                    self.target_folder_path)
-        self.logger.info('Copying StoneBase.swift to output folder')
-        shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
-                    self.target_folder_path)
+        if not self.args.objc:
+            self.logger.info('Copying StoneValidators.swift to output folder')
+            shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
+                        self.target_folder_path)
+            self.logger.info('Copying StoneSerializers.swift to output folder')
+            shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
+                        self.target_folder_path)
+            self.logger.info('Copying StoneBase.swift to output folder')
+            shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
+                        self.target_folder_path)
 
+        template_loader = jinja2.FileSystemLoader(searchpath=rsrc_folder)
+        template_env = jinja2.Environment(loader=template_loader,
+                                          trim_blocks=True,
+                                          lstrip_blocks=True,
+                                          autoescape=False)
+
+        template_globals = {}
+        template_globals['fmt_class'] = fmt_class
+        template_globals['is_struct_type'] = is_struct_type
+        template_globals['is_union_type'] = is_union_type
+        template_globals['fmt_var'] = fmt_var
+        template_globals['fmt_type'] = fmt_type
+        template_globals['func_args'] = self._func_args
+        template_globals['struct_init_args'] = self._struct_init_args
+        template_globals['determine_validator_type'] = self._determine_validator_type
+        template_globals['fmt_serial_obj'] = fmt_serial_obj
+        template_globals['fmt_default_value'] = fmt_default_value
+        template_globals['format_tag_type'] = self._format_tag_type
+        template_globals['is_void_type'] = is_void_type
+        template_globals['tag_type'] = self._tag_type
+        template_globals['fmt_func'] = fmt_func
+        template_globals['data_type_doc'] = self._data_type_doc
+        template_globals['struct_field_doc'] = self._struct_field_doc
+        template_globals['union_field_doc'] = self._union_field_doc
+        template_globals['field_name_args'] = self._field_name_args
+        template_globals['route_schema_attrs'] = self._route_schema_attrs
+        template_globals['fmt_route_name'] = fmt_route_name
+        template_globals['data_objc_type_doc'] = self._data_objc_type_doc
+        template_globals['objc_init_args'] = self._objc_init_args
+        template_globals['fmt_objc_type'] = fmt_objc_type
+        oneliner_func_key = 'objc_return_field_value_oneliner'
+        template_globals[oneliner_func_key] = self._objc_return_field_value_oneliner
+        template_globals['field_is_user_defined'] = field_is_user_defined
+        template_globals['field_is_user_defined_optional'] = field_is_user_defined_optional
+        template_globals['field_is_user_defined_list'] = field_is_user_defined_list
+        template_globals['field_is_user_defined_map'] = field_is_user_defined_map
+        in_jinja_key = 'field_datatype_has_subtypes'
+        template_globals[in_jinja_key] = field_datatype_has_subtypes
+        template_globals['objc_datatype_value_type_tuples'] = objc_datatype_value_type_tuples
+        template_globals['objc_init_args_to_swift'] = self._objc_init_args_to_swift
+        template_globals['objc_union_arg'] = self._objc_union_arg
+        template_globals['objc_swift_var_name'] = self._objc_swift_var_name
+        template_globals['swift_union_arg_to_objc'] = self._swift_union_arg_to_objc
+        template_globals['union_swift_arg_guard'] = self._union_swift_arg_guard
+
+        swift_template_file = "SwiftTypes.jinja"
+        swift_template = template_env.get_template(swift_template_file)
+        swift_template.globals = template_globals
+
+        objc_template_file = "ObjcTypes.jinja"
+        objc_template = template_env.get_template(objc_template_file)
+        objc_template.globals = template_globals
+
+        for namespace in api.namespaces.values():
+            ns_class = fmt_class(namespace.name)
+
+            if self.args.objc:
+                objc_output = objc_template.render(namespace=namespace,
+                                                   route_schema=api.route_schema)
+                self._write_output_in_target_folder(objc_output,
+                                                    'DBX{}.swift'.format(ns_class))
+            else:
+                swift_output = swift_template.render(namespace=namespace,
+                                                     route_schema=api.route_schema)
+                self._write_output_in_target_folder(swift_output,
+                                                    '{}.swift'.format(ns_class))
+        if self.args.documentation:
+            self._generate_jazzy_docs(api)
+
+    def _generate_jazzy_docs(self, api):
         jazzy_cfg_path = os.path.join('../Format', 'jazzy.json')
         with open(jazzy_cfg_path, encoding='utf-8') as jazzy_file:
             jazzy_cfg = json.load(jazzy_file)
 
         for namespace in api.namespaces.values():
             ns_class = fmt_class(namespace.name)
-            with self.output_to_relative_path('{}.swift'.format(ns_class)):
-                self._generate_base_namespace_module(api, namespace)
             jazzy_cfg['custom_categories'][1]['children'].append(ns_class)
 
             if namespace.routes:
+                check_route_name_conflict(namespace)
                 jazzy_cfg['custom_categories'][0]['children'].append(ns_class + 'Routes')
 
         with self.output_to_relative_path('../../../../.jazzy.json'):
             self.emit_raw(json.dumps(jazzy_cfg, indent=2) + '\n')
 
-    def _generate_base_namespace_module(self, api, namespace):
-        self.emit_raw(base)
-
-        routes_base = 'Datatypes and serializers for the {} namespace'.format(namespace.name)
-        self.emit_wrapped_text(routes_base, prefix='/// ', width=120)
-
-        with self.block('open class {}'.format(fmt_class(namespace.name))):
-            for data_type in namespace.linearize_data_types():
-                if is_struct_type(data_type):
-                    self._generate_struct_class(namespace, data_type)
-                    self.emit()
-                elif is_union_type(data_type):
-                    self._generate_union_type(namespace, data_type)
-                    self.emit()
-            if namespace.routes:
-                self._generate_route_objects(api.route_schema, namespace)
-
-    def _generate_struct_class(self, namespace, data_type):
+    def _data_type_doc(self, data_type):
         if data_type.doc:
             doc = self.process_doc(data_type.doc, self._docf)
         else:
-            doc = 'The {} struct'.format(fmt_class(data_type.name))
-        self.emit_wrapped_text(doc, prefix='/// ', width=120)
-        protocols = []
-        if not data_type.parent_type:
-            protocols.append('CustomStringConvertible')
+            doc = 'The {} {}'.format(fmt_class(data_type.name),
+                                     'struct' if is_struct_type(data_type) else 'union')
+        return textwrap.fill(doc,
+                             initial_indent='/// ',
+                             subsequent_indent='    /// ',
+                             break_long_words=False,
+                            break_on_hyphens=False,
+                             width=116)
 
-        with self.class_block(data_type, protocols=protocols):
-            for field in data_type.fields:
-                fdoc = self.process_doc(field.doc,
-                    self._docf) if field.doc else undocumented
-                self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('public let {}: {}'.format(
-                    fmt_var(field.name),
-                    fmt_type(field.data_type),
-                ))
-            self._generate_struct_init(namespace, data_type)
+    def _data_objc_type_doc(self, data_type):
+        if data_type.doc:
+            doc = self.process_doc(data_type.doc, self._docf)
+        else:
+            doc = 'Objective-C compatible {} {}'.format(fmt_class(data_type.name),
+                                     'struct' if is_struct_type(data_type) else 'union')
+        return textwrap.fill(doc,
+                             initial_indent='/// ',
+                             subsequent_indent='/// ',
+                             break_long_words=False,
+                            break_on_hyphens=False,
+                             width=116)
 
-            decl = 'open var' if not data_type.parent_type else 'open override var'
+    def _struct_field_doc(self, field, subsequent_indent='        '):
+        return self._field_doc(field, undocumented, subsequent_indent)
 
-            with self.block('{} description: String'.format(decl)):
-                cls = fmt_class(data_type.name) + 'Serializer'
-                self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
-                          '({}().serialize(self)))"'.format(cls))
+    def _union_field_doc(self, field, subsequent_indent='        '):
+        return self._field_doc(field, 'An unspecified error.', subsequent_indent)
 
-        self._generate_struct_class_serializer(namespace, data_type)
-
-    def _generate_struct_init(self, namespace, data_type):  # pylint: disable=unused-argument
-        # init method
-        args = self._struct_init_args(data_type)
-        if data_type.parent_type and not data_type.fields:
-            return
-        with self.function_block('public init', self._func_args(args)):
-            for field in data_type.fields:
-                v = fmt_var(field.name)
-                validator = self._determine_validator_type(field.data_type, v)
-                if validator:
-                    self.emit('{}({})'.format(validator, v))
-                self.emit('self.{0} = {0}'.format(v))
-            if data_type.parent_type:
-                func_args = [(fmt_var(f.name),
-                              fmt_var(f.name))
-                             for f in data_type.parent_type.all_fields]
-                self.emit('super.init({})'.format(self._func_args(func_args)))
+    def _field_doc(self, field, error_text, subsequent_indent='        '):
+        fdoc = self.process_doc(field.doc, self._docf) if field.doc else error_text
+        return textwrap.fill(fdoc,
+                             initial_indent='/// ',
+                             subsequent_indent='{}/// '.format(subsequent_indent),
+                             break_long_words=False,
+                             break_on_hyphens=False,
+                             width=112)
 
     def _determine_validator_type(self, data_type, value):
         data_type, nullable = unwrap_nullable(data_type)
@@ -241,123 +313,11 @@ class SwiftTypesBackend(SwiftBaseBackend):
             v = "nullableValidator({})".format(v)
         return v
 
-    def _generate_enumerated_subtype_serializer(self, namespace,  # pylint: disable=unused-argument
-            data_type):
-        with self.block('switch value'):
-            for tags, subtype in data_type.get_all_subtypes_with_tags():
-                assert len(tags) == 1, tags
-                tag = tags[0]
-                tagvar = fmt_var(tag)
-                self.emit('case let {} as {}:'.format(
-                    tagvar,
-                    fmt_type(subtype)
-                ))
-
-                with self.indent():
-                    block_txt = 'for (k, v) in Serialization.getFields({}.serialize({}))'.format(
-                        fmt_serial_obj(subtype),
-                        tagvar,
-                    )
-                    with self.block(block_txt):
-                        self.emit('output[k] = v')
-                    self.emit('output[".tag"] = .str("{}")'.format(tag))
-            self.emit('default: fatalError("Tried to serialize unexpected subtype")')
-
-    def _generate_struct_base_class_deserializer(self, namespace, data_type):
-        args = []
-        for field in data_type.all_fields:
-            var = fmt_var(field.name)
-            value = 'dict["{}"]'.format(field.name)
-            self.emit('let {} = {}.deserialize({} ?? {})'.format(
-                var,
-                fmt_serial_obj(field.data_type),
-                value,
-                fmt_default_value(namespace, field) if field.has_default else '.null'
-            ))
-
-            args.append((var, var))
-        self.emit('return {}({})'.format(
-            fmt_class(data_type.name),
-            self._func_args(args)
-        ))
-
-    def _generate_enumerated_subtype_deserializer(self, namespace, data_type):
-        self.emit('let tag = Serialization.getTag(dict)')
-        with self.block('switch tag'):
-            for tags, subtype in data_type.get_all_subtypes_with_tags():
-                assert len(tags) == 1, tags
-                tag = tags[0]
-                self.emit('case "{}":'.format(tag))
-                with self.indent():
-                    self.emit('return {}.deserialize(json)'.format(fmt_serial_obj(subtype)))
-            self.emit('default:')
-            with self.indent():
-                if data_type.is_catch_all():
-                    self._generate_struct_base_class_deserializer(namespace, data_type)
-                else:
-                    self.emit('fatalError("Unknown tag \\(tag)")')
-
-    def _generate_struct_class_serializer(self, namespace, data_type):
-        with self.serializer_block(data_type):
-            with self.serializer_func(data_type):
-                if not data_type.all_fields:
-                    self.emit('let output = [String: JSON]()')
-                else:
-                    intro = 'var' if data_type.has_enumerated_subtypes() else 'let'
-                    self.emit("{} output = [ ".format(intro))
-                    for field in data_type.all_fields:
-                        self.emit('"{}": {}.serialize(value.{}),'.format(
-                            field.name,
-                            fmt_serial_obj(field.data_type),
-                            fmt_var(field.name)
-                        ))
-                    self.emit(']')
-
-                    if data_type.has_enumerated_subtypes():
-                        self._generate_enumerated_subtype_serializer(namespace, data_type)
-                self.emit('return .dictionary(output)')
-            with self.deserializer_func(data_type):
-                with self.block("switch json"):
-                    dict_name = "let dict" if data_type.all_fields else "_"
-                    self.emit("case .dictionary({}):".format(dict_name))
-                    with self.indent():
-                        if data_type.has_enumerated_subtypes():
-                            self._generate_enumerated_subtype_deserializer(namespace, data_type)
-                        else:
-                            self._generate_struct_base_class_deserializer(namespace, data_type)
-                    self.emit("default:")
-                    with self.indent():
-                        self.emit('fatalError("Type error deserializing")')
-
-    def _format_tag_type(self, namespace, data_type):  # pylint: disable=unused-argument
+    def _format_tag_type(self, data_type):
         if is_void_type(data_type):
             return ''
         else:
             return '({})'.format(fmt_type(data_type))
-
-    def _generate_union_type(self, namespace, data_type):
-        if data_type.doc:
-            doc = self.process_doc(data_type.doc, self._docf)
-        else:
-            doc = 'The {} union'.format(fmt_class(data_type.name))
-        self.emit_wrapped_text(doc, prefix='/// ', width=120)
-
-        class_type = fmt_class(data_type.name)
-        with self.block('public enum {}: CustomStringConvertible'.format(class_type)):
-            for field in data_type.all_fields:
-                typ = self._format_tag_type(namespace, field.data_type)
-
-                fdoc = self.process_doc(field.doc,
-                    self._docf) if field.doc else 'An unspecified error.'
-                self.emit_wrapped_text(fdoc, prefix='/// ', width=120)
-                self.emit('case {}{}'.format(fmt_var(field.name), typ))
-            self.emit()
-            with self.block('public var description: String'):
-                cls = class_type + 'Serializer'
-                self.emit('return "\\(SerializeUtil.prepareJSONForSerialization' +
-                          '({}().serialize(self)))"'.format(cls))
-
-        self._generate_union_serializer(data_type)
 
     def _tag_type(self, data_type, field):
         return "{}.{}".format(
@@ -365,111 +325,166 @@ class SwiftTypesBackend(SwiftBaseBackend):
             fmt_var(field.name)
         )
 
-    def _generate_union_serializer(self, data_type):
-        with self.serializer_block(data_type):
-            with self.serializer_func(data_type), self.block('switch value'):
-                for field in data_type.all_fields:
-                    field_type = field.data_type
-                    case = '.{}{}'.format(fmt_var(field.name),
-                                         '' if is_void_type(field_type) else '(let arg)')
-                    self.emit('case {}:'.format(case))
+    def _field_name_args(self, data_type):
+        args = []
+        for field in data_type.all_fields:
+            name = fmt_var(field.name)
+            arg = (name, name)
+            args.append(arg)
 
-                    with self.indent():
-                        if is_void_type(field_type):
-                            self.emit('var d = [String: JSON]()')
-                        elif (is_struct_type(field_type) and
-                                not field_type.has_enumerated_subtypes()):
-                            self.emit('var d = Serialization.getFields({}.serialize(arg))'.format(
-                                fmt_serial_obj(field_type)))
-                        else:
-                            self.emit('var d = ["{}": {}.serialize(arg)]'.format(
-                                field.name,
-                                fmt_serial_obj(field_type)))
-                        self.emit('d[".tag"] = .str("{}")'.format(field.name))
-                        self.emit('return .dictionary(d)')
-            with self.deserializer_func(data_type):
-                with self.block("switch json"):
-                    self.emit("case .dictionary(let d):")
-                    with self.indent():
-                        self.emit('let tag = Serialization.getTag(d)')
-                        with self.block('switch tag'):
-                            for field in data_type.all_fields:
-                                field_type = field.data_type
-                                self.emit('case "{}":'.format(field.name))
+        return self._func_args(args)
 
-                                tag_type = self._tag_type(data_type, field)
-                                with self.indent():
-                                    if is_void_type(field_type):
-                                        self.emit('return {}'.format(tag_type))
-                                    else:
-                                        if (is_struct_type(field_type) and
-                                                not field_type.has_enumerated_subtypes()):
-                                            subdict = 'json'
-                                        else:
-                                            subdict = 'd["{}"] ?? .null'.format(field.name)
+    def _route_schema_attrs(self, route_schema, route):
+        attrs = []
+        for field in route_schema.fields:
+            attr_key = field.name
+            if route.attrs.get(attr_key):
+                attr_val = route.attrs.get(attr_key)
+                if attr_key == 'auth':
+                    auths = attr_val.split(', ')
+                    auths = ['.{}'.format(auth) for auth in auths]
+                    attr_val = ', '.join(auths)
+                    attrs.append('{}: [{}]'.format(attr_key, attr_val))
+                else:
+                    attrs.append('{}: .{}'.format(attr_key, attr_val))
 
-                                        self.emit('let v = {}.deserialize({})'.format(
-                                            fmt_serial_obj(field_type), subdict
-                                        ))
-                                        self.emit('return {}(v)'.format(tag_type))
-                            self.emit('default:')
-                            with self.indent():
-                                if data_type.catch_all_field:
-                                    self.emit('return {}'.format(
-                                        self._tag_type(data_type, data_type.catch_all_field)
-                                    ))
-                                else:
-                                    self.emit('fatalError("Unknown tag \\(tag)")')
-                    self.emit("default:")
-                    with self.indent():
+        result = ',\n                                    '.join(attrs)
+        return result
 
-                        self.emit('fatalError("Failed to deserialize")')
+    def _objc_return_field_value_oneliner(self, parent_type, field):
+        data_type, nullable = unwrap_nullable(field.data_type)
+        swift_var_name = self._objc_swift_var_name(parent_type)
 
-    @contextmanager
-    def serializer_block(self, data_type):
-        with self.class_block(fmt_class(data_type.name) + 'Serializer',
-                              protocols=['JSONSerializer']):
-            self.emit("public init() { }")
-            yield
+        if is_list_type(data_type):
+            _, prefix, suffix, list_data_type, list_nullable = mapped_list_info(data_type)
 
-    @contextmanager
-    def serializer_func(self, data_type):
-        with self.function_block('open func serialize',
-                                 args=self._func_args([('_ value', fmt_class(data_type.name))]),
-                                 return_type='JSON'):
-            yield
+            value = '{}.{}'.format(swift_var_name,
+                                   fmt_var(field.name))
 
-    @contextmanager
-    def deserializer_func(self, data_type):
-        with self.function_block('open func deserialize',
-                                 args=self._func_args([('_ json', 'JSON')]),
-                                 return_type=fmt_class(data_type.name)):
-            yield
+            if not is_numeric_type(list_data_type) and not is_user_defined_type(list_data_type):
+                return value
 
-    def _generate_route_objects(self, route_schema, namespace):
-        check_route_name_conflict(namespace)
+            if is_user_defined_type(list_data_type):
+                objc_type = fmt_objc_type(list_data_type, False)
+                value = '{}{}.map {}{{ {}(swift: $0) }}'.format(value,
+                                                                '?' if nullable else '',
+                                                                prefix,
+                                                                objc_type)
+            elif is_numeric_type(list_data_type):
+                map_func = 'compactMap' if list_nullable else 'map'
+                value = '{}{}.{} {}{{ $0 as NSNumber{} }}'.format(value,
+                                                                  '?' if nullable else '',
+                                                                  map_func,
+                                                                  prefix,
+                                                                  '?' if list_nullable else '')
 
-        self.emit()
-        self.emit('/// Stone Route Objects')
-        self.emit()
-        for route in namespace.routes:
-            var_name = fmt_func(route.name, route.version)
-            with self.block('static let {} = Route('.format(var_name),
-                            delim=(None, None), after=')'):
-                self.emit('name: \"{}\",'.format(route.name))
-                self.emit('version: {},'.format(route.version))
-                self.emit('namespace: \"{}\",'.format(namespace.name))
-                self.emit('deprecated: {},'.format('true' if route.deprecated
-                                                   is not None else 'false'))
-                self.emit('argSerializer: {},'.format(fmt_serial_obj(route.arg_data_type)))
-                self.emit('responseSerializer: {},'.format(fmt_serial_obj(route.result_data_type)))
-                self.emit('errorSerializer: {},'.format(fmt_serial_obj(route.error_data_type)))
-                attrs = []
-                for field in route_schema.fields:
-                    attr_key = field.name
-                    attr_val = ("\"{}\"".format(route.attrs.get(attr_key))
-                            if route.attrs.get(attr_key) else 'nil')
-                    attrs.append('\"{}\": {}'.format(attr_key, attr_val))
+            value = '{}{}'.format(value, suffix)
+            return value
+        elif is_map_type(data_type) and is_user_defined_type(data_type.value_data_type):
+            objc_type = fmt_objc_type(data_type.value_data_type)
+            value = '{}.{}'.format(swift_var_name,
+                                   fmt_var(field.name))
+            value = '{}{}.mapValues {{ {}(swift: $0) }}'.format(value,
+                                                                '?' if nullable else '',
+                                                                objc_type)
+            return value
+        elif is_user_defined_type(data_type):
+            value = ''
+            swift_arg_name = '{}.{}'.format(swift_var_name,
+                                            fmt_var(field.name))
+            if nullable:
+                value = 'guard let swift = {}.{} else {{ return nil }}; return '.format(
+                    swift_var_name,
+                    fmt_var(field.name))
+                swift_arg_name = 'swift'
+            return '{}{}(swift: {})'.format(value,
+                                            fmt_objc_type(field.data_type, False),
+                                            swift_arg_name)
+        elif is_numeric_type(data_type) or is_boolean_type(data_type):
+            return '{}.{} as NSNumber{}'.format(swift_var_name,
+                                                fmt_var(field.name),
+                                                '?' if nullable else '')
+        else:
+            return '{}.{}'.format(swift_var_name,
+                                  fmt_var(field.name))
 
-                self.generate_multiline_list(
-                    attrs, delim=('attrs: [', ']'), compact=True)
+    def _objc_union_arg(self, field):
+        field_data_type, field_nullable = unwrap_nullable(field.data_type)
+        nsnumber_type = _nsnumber_type_table.get(field_data_type.__class__)
+
+        if is_list_type(field_data_type):
+            _, prefix, suffix, list_data_type, _ = mapped_list_info(field_data_type)
+
+            value = '(arg{}'.format('?' if field_nullable else '')
+            list_nsnumber_type = _nsnumber_type_table.get(list_data_type.__class__)
+
+            if not is_user_defined_type(list_data_type) and not list_nsnumber_type:
+                value = '(arg'
+            else:
+                value = '{}.map {}'.format(value,
+                                           prefix)
+
+                if is_user_defined_type(list_data_type):
+                    value = '{}{{ $0.{} }}'.format(value,
+                                                   self._objc_swift_var_name(list_data_type))
+                else:
+                    value = '{}{{ $0{} }}'.format(value,
+                                                  list_nsnumber_type)
+
+            value = '{}{})'.format(value,
+                                   suffix)
+            return value
+        elif is_user_defined_type(field_data_type):
+            return '(arg{}.{})'.format('?' if field_nullable else '',
+                                       self._objc_swift_var_name(field_data_type))
+        elif is_void_type(field_data_type):
+            return ''
+        elif nsnumber_type:
+            return '(arg{}{})'.format('?' if field_nullable else '',
+                                      nsnumber_type)
+        else:
+            return '(arg)'
+
+    def _swift_union_arg_to_objc(self, field):
+        field_data_type, field_nullable = unwrap_nullable(field.data_type)
+        nsnumber_type = _nsnumber_type_table.get(field_data_type.__class__)
+
+        if is_list_type(field_data_type):
+            _, prefix, suffix, list_data_type, _ = mapped_list_info(field_data_type)
+
+            value = 'swiftArg{}'.format('?' if field_nullable else '')
+            list_nsnumber_type = _nsnumber_type_table.get(list_data_type.__class__)
+
+            if not is_user_defined_type(list_data_type) and not list_nsnumber_type:
+                return 'swiftArg'
+            else:
+                value = '{}.map {}'.format(value,
+                                           prefix)
+
+                if is_user_defined_type(list_data_type):
+                    factory_func = '.factory' if is_union_type(list_data_type) else ''
+                    value = '{}{{ {}{}(swift: $0) }}'.format(value,
+                                                           fmt_objc_type(list_data_type),
+                                                           factory_func)
+                else:
+                    value = '{}{{ NSNumber(value: $0) }}'.format(value)
+
+            value = '{}{}'.format(value,
+                                  suffix)
+            return value
+        elif is_user_defined_type(field_data_type):
+            return '{}(swift: swiftArg)'.format(fmt_objc_type(field_data_type))
+        elif is_void_type(field_data_type):
+            return ''
+        elif nsnumber_type:
+            return 'NSNumber(value: swiftArg)'
+        else:
+            return 'swiftArg'
+
+    def _union_swift_arg_guard(self, field, class_name):
+        field_data_type, field_nullable = unwrap_nullable(field.data_type)
+
+        if field_nullable and is_user_defined_type(field_data_type):
+            return 'guard let swiftArg = swiftArg else {{ return {}(nil) }}'.format(class_name)
+        else:
+            return ''

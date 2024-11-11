@@ -1,6 +1,6 @@
 from collections import OrderedDict
 # See <https://github.com/PyCQA/pylint/issues/73>
-from distutils.version import StrictVersion  # pylint: disable=deprecated-module
+from packaging.version import Version
 
 from .data_types import (
     doc_unwrap,
@@ -34,7 +34,7 @@ class Api:
     """
     def __init__(self, version):
         # type: (str) -> None
-        self.version = StrictVersion(version)
+        self.version = Version(version)
         self.namespaces = OrderedDict()  # type: NamespaceDict
         self.route_schema = None  # type: typing.Optional[Struct]
 
@@ -328,9 +328,9 @@ class ApiNamespace:
     def normalize(self):
         # type: () -> None
         """
-        Alphabetizes routes to make route declaration order irrelevant.
+        Sorts routes to make route declaration order irrelevant.
         """
-        self.routes.sort(key=lambda route: route.name)
+        self.routes.sort()
         self.data_types.sort(key=lambda data_type: data_type.name)
         self.aliases.sort(key=lambda alias: alias.name)
         self.annotations.sort(key=lambda annotation: annotation.name)
@@ -411,9 +411,9 @@ class ApiRoute:
         if not isinstance(rhs, ApiRoute):
             raise TypeError("Expected ApiRoute for object: {}".format(rhs))
 
-        if lhs.name < rhs.name or lhs.version < rhs.version:
+        if (lhs.name, lhs.version) < (rhs.name, rhs.version):
             return -1
-        elif lhs.name > rhs.name or lhs.version > rhs.version:
+        elif (lhs.name, lhs.version) > (rhs.name, rhs.version):
             return 1
         else:
             return 0

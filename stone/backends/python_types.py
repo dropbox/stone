@@ -640,15 +640,26 @@ class PythonTypesBackend(CodeBackend):
         dt, _, _ = unwrap(data_type)
         if is_struct_type(dt) or is_union_type(dt):
             annotation_types_seen = set()
-            for _, annotation in dt.recursive_custom_annotations:
-                if annotation.annotation_type not in annotation_types_seen:
-                    yield (annotation.annotation_type,
-                           generate_func_call(
-                               'bb.make_struct_annotation_processor',
-                               args=[class_name_for_annotation_type(annotation.annotation_type, ns),
-                                     'processor']
-                           ))
-                    annotation_types_seen.add(annotation.annotation_type)
+            # If data type enumerates subtypes, recurse to subtypes instead which in turn collect
+            # parents' custom annotations
+            if is_struct_type(dt) and dt.has_enumerated_subtypes():
+                for subtype in dt.get_enumerated_subtypes():
+                    processors = self._generate_custom_annotation_processors(ns, subtype.data_type)
+                    for annotation_type, recursive_processor in processors:
+                        if annotation_type not in annotation_types_seen:
+                            yield (annotation_type, recursive_processor)
+                            annotation_types_seen.add(annotation_type)
+            else:
+                for _, annotation in dt.recursive_custom_annotations:
+                    if annotation.annotation_type not in annotation_types_seen:
+                        yield (annotation.annotation_type,
+                               generate_func_call(
+                                   'bb.make_struct_annotation_processor',
+                                   args=[class_name_for_annotation_type(annotation.annotation_type,
+                                    ns),
+                                         'processor']
+                               ))
+                        annotation_types_seen.add(annotation.annotation_type)
         elif is_list_type(dt):
             for annotation_type, recursive_processor in self._generate_custom_annotation_processors(
                     ns, dt.data_type):
@@ -701,8 +712,10 @@ class PythonTypesBackend(CodeBackend):
 
             for field in data_type.fields:
                 field_name = fmt_var(field.name, check_reserved=True)
-                for annotation_type, processor in self._generate_custom_annotation_processors(
-                        ns, field.data_type, field.custom_annotations):
+                recursive_processors = list(self._generate_custom_annotation_processors(
+                    ns, field.data_type, field.custom_annotations))
+                recursive_processors = sorted(recursive_processors, key=lambda x: x[0].name)
+                for annotation_type, processor in recursive_processors:
                     annotation_class = class_name_for_annotation_type(annotation_type, ns)
                     self.emit('if annotation_type is {}:'.format(annotation_class))
                     with self.indent():
@@ -990,6 +1003,8 @@ class PythonTypesBackend(CodeBackend):
                 # check if we have any annotations that apply to this field at all
                 if len(recursive_processors) == 0:
                     continue
+
+                recursive_processors = sorted(recursive_processors, key=lambda x: x[0].name)
 
                 field_name = fmt_func(field.name)
                 self.emit('if self.is_{}():'.format(field_name))

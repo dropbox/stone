@@ -282,7 +282,7 @@ int sq(int x) <
         self.assertIsInstance(string_type, String)
 
     def test_preserve_aliases_from_api(self):
-        api = Api(version=None)
+        api = Api(version="0.1b1")
         # Ensure imports come after 'preserve_alias' lexiographicaly
         # to catch namespace ordering bugs
         api.ensure_namespace('preserve_alias')
@@ -390,7 +390,7 @@ int sq(int x) <
         self.assertIsInstance(field.data_type, Alias)
 
     def test_no_preserve_aliases_from_api(self):
-        api = Api(version=None)
+        api = Api(version="0.1b1")
         # Ensure imports come after 'preserve_alias' lexiographicaly
         # to catch namespace ordering bugs
         api.ensure_namespace('preserve_alias')
