@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-20.04]
-        python-version: [3.6, 3.8, 3.11, pypy-3.7]
+        python-version: [3.8, 3.11, pypy-3.8, pypy-3.10]
     steps:
       - uses: actions/checkout@v2
       - name: Setup Python environment
@@ -35,5 +35,5 @@ jobs:
       - name: Run MyPy
         if: matrix.python-version != 'pypy-3.7' 
         run: |
-          pip install enum34 mypy typed-ast types-six
+          pip install enum34 mypy types-six
           ./mypy-run.sh
