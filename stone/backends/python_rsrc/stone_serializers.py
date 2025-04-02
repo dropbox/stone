@@ -20,8 +20,6 @@ import json
 import re
 import time
 
-import six
-
 from stone.backends.python_rsrc import (
     stone_base as bb,
     stone_validators as bv,
@@ -658,7 +656,7 @@ class PythonPrimitiveToStoneDecoder:
         else:
             raise bv.ValidationError("expected string or object, got %s" %
                                      bv.generic_type_name(obj))
-        return data_type.definition(six.ensure_str(tag), val)
+        return data_type.definition(str(tag), val)
 
     def decode_union_dict(self, data_type, obj):
         if '.tag' not in obj:
@@ -785,7 +783,7 @@ class PythonPrimitiveToStoneDecoder:
         else:
             raise bv.ValidationError("expected string or object, got %s" %
                                      bv.generic_type_name(obj))
-        return data_type.definition(six.ensure_str(tag), val)
+        return data_type.definition(str(tag), val)
 
     def decode_struct_tree(self, data_type, obj):
         """
@@ -1003,45 +1001,7 @@ def _findall(text, substr):
 # Every 28 years the calendar repeats, except through century leap years
 # where it's 6 years. But only if you're using the Gregorian calendar. ;)
 def _strftime(dt, fmt):
-    try:
-        return dt.strftime(fmt)
-    except ValueError:
-        if not six.PY2 or dt.year > 1900:
-            raise
-
-    if _ILLEGAL_S.search(fmt):
-        raise TypeError("This strftime implementation does not handle %s")
-
-    year = dt.year
-
-    # For every non-leap year century, advance by 6 years to get into the
-    # 28-year repeat cycle
-    delta = 2000 - year
-    off = 6 * (delta // 100 + delta // 400)
-    year = year + off
-
-    # Move to around the year 2000
-    year = year + ((2000 - year) // 28) * 28
-    timetuple = dt.timetuple()
-    s1 = time.strftime(fmt, (year,) + timetuple[1:])
-    sites1 = _findall(s1, str(year))
-
-    s2 = time.strftime(fmt, (year + 28,) + timetuple[1:])
-    sites2 = _findall(s2, str(year + 28))
-
-    sites = []
-
-    for site in sites1:
-        if site in sites2:
-            sites.append(site)
-
-    s = s1
-    syear = '%4d' % (dt.year,)
-
-    for site in sites:
-        s = s[:site] + syear + s[site + 4:]
-
-    return s
+    return dt.strftime(fmt)
 
 
 try:
