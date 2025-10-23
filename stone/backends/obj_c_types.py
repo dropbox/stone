@@ -83,7 +83,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
 
     cmdline_parser = _cmdline_parser
     obj_name_to_namespace = {}  # type: typing.Dict[str, str]
-    namespace_to_has_route_auth_list = {}  # type: typing.Dict[typing.Any, typing.Set]
+    namespace_to_has_route_auth_list = {}  # type: typing.Dict[typing.Any, typing.List]
 
     def generate(self, api):
         """
@@ -134,17 +134,21 @@ class ObjCTypesBackend(ObjCBaseBackend):
                 ns_dict = {"name": ns_name, "children": [], }
                 jazzy_cfg['custom_categories'].insert(idx, ns_dict)
 
+        namespace_to_has_route_auth_list = {}
+
         for namespace in api.namespaces.values():
-            self.namespace_to_has_route_auth_list[namespace] = set()
+            namespace_to_has_route_auth_list[namespace] = set()
             if namespace.routes:
                 for route in namespace.routes:
                     auth_types = set(map(lambda x: x.strip(), route.attrs.get('auth').split(',')))
                     if 'noauth' not in auth_types:
-                        self.namespace_to_has_route_auth_list[namespace].add(
+                        namespace_to_has_route_auth_list.setdefault(namespace, set()).add(
                             route.attrs.get('auth'))
                     else:
-                        self.namespace_to_has_route_auth_list[namespace].add(
+                        namespace_to_has_route_auth_list.setdefault(namespace, set()).add(
                             'user')
+
+        self.namespace_to_has_route_auth_list = {k: sorted(v) for k, v in namespace_to_has_route_auth_list.items()}
 
         with self.output_to_relative_path('DBSDKImportsGenerated.h'):
             self._generate_all_imports(api)
