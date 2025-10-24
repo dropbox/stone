@@ -148,7 +148,10 @@ class ObjCTypesBackend(ObjCBaseBackend):
                         namespace_to_has_route_auth_list.setdefault(namespace, set()).add(
                             'user')
 
-        self.namespace_to_has_route_auth_list = {k: sorted(v) for k, v in namespace_to_has_route_auth_list.items()}
+        self.namespace_to_has_route_auth_list = {
+            k: sorted(v)
+            for k, v in namespace_to_has_route_auth_list.items()
+        }
 
         with self.output_to_relative_path('DBSDKImportsGenerated.h'):
             self._generate_all_imports(api)
