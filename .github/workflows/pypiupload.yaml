@@ -10,12 +10,28 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:  # required for OIDC authentication
+      id-token: write
+      contents: read
     strategy:
       matrix:
         python-version: [3.x]
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Configure AWS credentials (OIDC)
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::082972943155:role/oidc-github-dropbox-stone-branch-main
+        aws-region: us-west-2
+    - name: Get PyPI token from AWS Secrets Manager
+      id: get-secret
+      uses: aws-actions/aws-secretsmanager-get-secrets@v2
+      with:
+        secret-ids: |
+          PYPI_SECRET,arn:aws:secretsmanager:us-west-2:082972943155:secret:pypi-api-token-vbs5JD
+        parse-json-secrets: false
     - name: Publish to PyPi
       uses: actions/setup-python@v2.1.4
       with:
@@ -34,7 +50,7 @@ jobs:
     - name: Publish
       env:
         TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.pypi_secret }}
+        TWINE_PASSWORD: ${{ env.PYPI_SECRET }}
       run: |
         twine check dist/*
         twine upload dist/*
