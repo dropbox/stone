@@ -14,8 +14,6 @@ import numbers
 import re
 from abc import ABCMeta, abstractmethod
 
-import six
-
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
@@ -328,17 +326,10 @@ class String(Primitive):
     def validate(self, val):
         """
         A unicode string of the correct length and pattern will pass validation.
-        In PY2, we enforce that a str type must be valid utf-8, and a unicode
-        string will be returned.
         """
         if not isinstance(val, str):
             raise ValidationError("'%s' expected to be a string, got %s"
                                   % (get_value_string(val), generic_type_name(val)))
-        if not six.PY3 and isinstance(val, str):
-            try:
-                val = val.decode('utf-8')
-            except UnicodeDecodeError:
-                raise ValidationError("'%s' was not valid utf-8")
 
         if self.max_length is not None and len(val) > self.max_length:
             raise ValidationError("'%s' must be at most %d characters, got %d"
