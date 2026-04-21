@@ -20,17 +20,6 @@ install_reqs = []
 with open('requirements.txt') as f:  # pylint: disable=W1514
     install_reqs += f.read().splitlines()
 
-setup_requires = [
-    'pytest-runner == 5.3.2',
-]
-
-# WARNING: This imposes limitations on test/requirements.txt such that the
-# full Pip syntax is not supported. See also
-# <http://stackoverflow.com/questions/14399534/>.
-test_reqs = []
-with open('test/requirements.txt') as f:  # pylint: disable=W1514
-    test_reqs += f.read().splitlines()
-
 with open('README.rst') as f:  # pylint: disable=W1514
     README = f.read()
 
@@ -38,8 +27,6 @@ dist = setup(
     name='stone',
     version='3.3.9',
     install_requires=install_reqs,
-    setup_requires=setup_requires,
-    tests_require=test_reqs,
     entry_points={
         'console_scripts': ['stone=stone.cli:main'],
     },
