@@ -11,6 +11,10 @@ import os
 import sys
 import traceback
 
+if __package__ in (None, ''):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    __package__ = 'stone'  # pylint: disable=redefined-builtin
+
 from .cli_helpers import parse_route_attr_filter
 from .compiler import (
     BackendException,
