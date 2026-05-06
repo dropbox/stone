@@ -86,6 +86,11 @@ _cmdline_parser.add_argument(
           'generated source file contents.'),
 )
 _cmdline_parser.add_argument(
+    '--expected-output-manifest',
+    type=str,
+    help='JSON file containing the exact relative output paths Stone must produce.',
+)
+_cmdline_parser.add_argument(
     '--clean-build',
     action='store_true',
     help='The path to the template SDK for the target language.',
@@ -139,6 +144,42 @@ _filter_ns_group.add_argument(
     default=[],
     help='If set, backends will not see any routes for the specified namespaces.',
 )
+
+def _actual_outputs(output_root):
+    # type: (str) -> typing.List[str]
+    outputs = []
+    for root, _, file_names in os.walk(output_root):
+        for file_name in file_names:
+            output_path = os.path.join(root, file_name)
+            relpath = os.path.relpath(output_path, output_root).replace(os.sep, '/')
+            outputs.append(relpath)
+    return sorted(outputs)
+
+
+def _load_expected_output_manifest(path):
+    # type: (str) -> typing.List[str]
+    with open(path, encoding='utf-8') as manifest_file:
+        data = json.load(manifest_file)
+    if not isinstance(data, list) or not all(isinstance(item, str) for item in data):
+        _cmdline_parser.error(
+            '--expected-output-manifest must be a JSON list of strings: {}'.format(path))
+    return sorted(data)
+
+
+def _validate_expected_output_manifest(expected, actual):
+    # type: (typing.List[str], typing.List[str]) -> None
+    if actual == expected:
+        return
+
+    missing = sorted(set(expected) - set(actual))
+    extra = sorted(set(actual) - set(expected))
+    print(
+        'error: Stone output manifest mismatch.\nMissing: {}\nExtra: {}'.format(
+            missing,
+            extra),
+        file=sys.stderr)
+    sys.exit(1)
+
 
 def main():
     """The entry point for the program."""
@@ -361,8 +402,20 @@ def main():
               file=sys.stderr)
         sys.exit(1)
 
+    if args.output_manifest or args.expected_output_manifest:
+        if args.output_manifest:
+            actual_manifest = c.output_manifest()
+        else:
+            actual_manifest = _actual_outputs(args.output)
+    else:
+        actual_manifest = None
+
+    if args.expected_output_manifest:
+        expected_manifest = _load_expected_output_manifest(args.expected_output_manifest)
+        _validate_expected_output_manifest(expected_manifest, actual_manifest)
+
     if args.output_manifest:
-        print(json.dumps(c.output_manifest(), indent=2))
+        print(json.dumps(actual_manifest, indent=2))
 
     if not sys.argv[0].endswith('stone'):
         # If we aren't running from an entry_point, then return api to make it
