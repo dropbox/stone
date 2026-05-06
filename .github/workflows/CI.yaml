@@ -10,12 +10,12 @@ jobs:
     # https://github.com/actions/python-versions/blob/main/versions-manifest.json
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-20.04]
-        python-version: [3.8, 3.11, pypy-3.8, pypy-3.10]
+        os: [macos-latest, ubuntu-latest]
+        python-version: ['3.11', 'pypy-3.8', 'pypy-3.10']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Setup Python environment
-        uses: actions/setup-python@v2.2.1
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Requirements
@@ -33,7 +33,7 @@ jobs:
         run: |
           pytest
       - name: Run MyPy
-        if: matrix.python-version != 'pypy-3.7' 
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
         run: |
           pip install enum34 mypy types-six
           ./mypy-run.sh
