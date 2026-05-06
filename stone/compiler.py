@@ -6,6 +6,7 @@ import traceback
 
 from stone.backend import (
     Backend,
+    OutputManifest,
     remove_aliases_from_api,
 )
 
@@ -36,7 +37,8 @@ class Compiler:
                  backend_module,
                  backend_args,
                  build_path,
-                 clean_build=False):
+                 clean_build=False,
+                 output_manifest=False):
         """
         Creates a Compiler.
 
@@ -50,6 +52,8 @@ class Compiler:
             source files are compiled into the same directories.
         :param bool clean_build: If True, the build_path is removed before
             source files are compiled into them.
+        :param bool output_manifest: If True, record generated output paths
+            without writing generated file contents.
         """
         self._logger = logging.getLogger('stone.compiler')
 
@@ -57,6 +61,7 @@ class Compiler:
         self.backend_module = backend_module
         self.backend_args = backend_args
         self.build_path = build_path
+        self._output_manifest = OutputManifest() if output_manifest else None
 
         # Remove existing build directory if it's a clean build
         if clean_build and os.path.exists(self.build_path):
@@ -71,6 +76,12 @@ class Compiler:
             return
         Compiler._mkdir(self.build_path)
         self._execute_backend_on_spec()
+
+    def output_manifest(self):
+        """Returns generated output paths recorded during a manifest build."""
+        if self._output_manifest is None:
+            return []
+        return self._output_manifest.outputs()
 
     @staticmethod
     def _mkdir(path):
@@ -106,6 +117,7 @@ class Compiler:
                     not inspect.isabstract(attr_value)):
                 self._logger.info('Running backend: %s', attr_value.__name__)
                 backend = attr_value(self.build_path, self.backend_args)
+                backend.output_manifest = self._output_manifest
 
                 if backend.preserve_aliases:
                     api = self.api
