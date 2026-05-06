@@ -91,6 +91,11 @@ _cmdline_parser.add_argument(
     help='JSON file containing the exact relative output paths Stone must produce.',
 )
 _cmdline_parser.add_argument(
+    '--recursive',
+    action='store_true',
+    help='Recursively expand directory specification arguments into .stone files.',
+)
+_cmdline_parser.add_argument(
     '--clean-build',
     action='store_true',
     help='The path to the template SDK for the target language.',
@@ -144,6 +149,16 @@ _filter_ns_group.add_argument(
     default=[],
     help='If set, backends will not see any routes for the specified namespaces.',
 )
+
+def _recursive_stone_specs(spec_root):
+    # type: (str) -> typing.List[str]
+    spec_paths = []
+    for root, _, file_names in os.walk(spec_root):
+        for file_name in file_names:
+            if file_name.endswith('.stone'):
+                spec_paths.append(os.path.join(root, file_name))
+    return sorted(spec_paths)
+
 
 def _actual_outputs(output_root):
     # type: (str) -> typing.List[str]
@@ -224,6 +239,10 @@ def main():
             for spec_path in args.spec:
                 if spec_path == '-':
                     read_from_stdin = True
+                elif os.path.isdir(spec_path) and args.recursive:
+                    for recursive_spec_path in _recursive_stone_specs(spec_path):
+                        with open(recursive_spec_path, encoding='utf-8') as f:
+                            specs.append((recursive_spec_path, f.read()))
                 elif not spec_path.endswith('.stone'):
                     print("error: Specification '%s' must have a .stone extension."
                           % spec_path,
