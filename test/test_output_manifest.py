@@ -74,5 +74,53 @@ class TestOutputManifest(unittest.TestCase):
         self.assertEqual(existing_files, [])
 
 
+class TestOutputRootValidation(unittest.TestCase):
+
+    def test_output_to_relative_path_rejects_parent_paths(self):
+        class ValidatingBackend(CodeBackend):
+            preserve_aliases = True
+
+            def generate(self, api):
+                pass
+
+        with tempfile.TemporaryDirectory() as output_root:
+            backend = ValidatingBackend(output_root, [])
+
+            with self.assertRaises(AssertionError):
+                with backend.output_to_relative_path('../Generated.py'):
+                    backend.emit('generated = True')
+
+    def test_copy_to_path_rejects_parent_paths(self):
+        class ValidatingBackend(Backend):
+            preserve_aliases = True
+
+            def generate(self, api):
+                pass
+
+        with tempfile.NamedTemporaryFile() as source_file:
+            with tempfile.TemporaryDirectory() as output_root:
+                backend = ValidatingBackend(output_root, [])
+
+                with self.assertRaises(AssertionError):
+                    backend.copy_to_path(
+                        source_file.name,
+                        os.path.join(output_root, '..', 'Copied.py'))
+
+    def test_swift_output_rejects_parent_paths(self):
+        class ValidatingBackend(SwiftBaseBackend):
+            preserve_aliases = True
+
+            def generate(self, api):
+                pass
+
+        with tempfile.TemporaryDirectory() as output_root:
+            backend = ValidatingBackend(output_root, [])
+
+            with self.assertRaises(AssertionError):
+                backend._write_output_in_target_folder(
+                    'final class Generated {}',
+                    '../Generated.swift')
+
+
 if __name__ == '__main__':
     unittest.main()
