@@ -80,6 +80,12 @@ _cmdline_parser.add_argument(
           'specs together.'),
 )
 _cmdline_parser.add_argument(
+    '--output-manifest',
+    action='store_true',
+    help=('Print a JSON manifest of generated output paths instead of writing '
+          'generated source file contents.'),
+)
+_cmdline_parser.add_argument(
     '--clean-build',
     action='store_true',
     help='The path to the template SDK for the target language.',
@@ -345,6 +351,7 @@ def main():
         backend_args,
         args.output,
         clean_build=args.clean_build,
+        output_manifest=args.output_manifest,
     )
     try:
         c.build()
@@ -353,6 +360,9 @@ def main():
               (args.backend, e.backend_name, e.traceback),
               file=sys.stderr)
         sys.exit(1)
+
+    if args.output_manifest:
+        print(json.dumps(c.output_manifest(), indent=2))
 
     if not sys.argv[0].endswith('stone'):
         # If we aren't running from an entry_point, then return api to make it
