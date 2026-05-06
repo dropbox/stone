@@ -178,6 +178,10 @@ class Backend(metaclass=ABCMeta):
         self.output_manifest.add_output(self.target_folder_path, output_path)
         return True
 
+    def _validate_output_path(self, output_path):
+        # type: (str) -> None
+        _relative_output_path(self.target_folder_path, output_path)
+
     @contextmanager
     def output_to_relative_path(self, relative_path, mode='wb'):
         # type: (typing.Text, typing.Text) -> typing.Iterator[None]
@@ -188,6 +192,7 @@ class Backend(metaclass=ABCMeta):
         Clears the output buffer on enter and exit.
         """
         full_path = os.path.join(self.target_folder_path, relative_path)
+        self._validate_output_path(full_path)
         if self._record_output_path(full_path):
             self.clear_output_buffer()
             yield
@@ -208,6 +213,7 @@ class Backend(metaclass=ABCMeta):
 
     def copy_to_path(self, src, dst, *copy_args, **copy_kwargs):
         output_path = os.path.join(dst, os.path.basename(src)) if os.path.isdir(dst) else dst
+        self._validate_output_path(output_path)
         if self._record_output_path(output_path):
             return output_path
         return shutil.copy(src, dst, *copy_args, **copy_kwargs)
