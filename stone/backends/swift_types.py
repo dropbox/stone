@@ -1,6 +1,5 @@
 import json
 import os
-import shutil
 
 import six
 import jinja2
@@ -140,14 +139,14 @@ class SwiftTypesBackend(SwiftBaseBackend):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
         if not self.args.objc:
             self.logger.info('Copying StoneValidators.swift to output folder')
-            shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
-                        self.target_folder_path)
+            self.copy_to_path(os.path.join(rsrc_folder, 'StoneValidators.swift'),
+                              self.target_folder_path)
             self.logger.info('Copying StoneSerializers.swift to output folder')
-            shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
-                        self.target_folder_path)
+            self.copy_to_path(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
+                              self.target_folder_path)
             self.logger.info('Copying StoneBase.swift to output folder')
-            shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
-                        self.target_folder_path)
+            self.copy_to_path(os.path.join(rsrc_folder, 'StoneBase.swift'),
+                              self.target_folder_path)
 
         template_loader = jinja2.FileSystemLoader(searchpath=rsrc_folder)
         template_env = jinja2.Environment(loader=template_loader,

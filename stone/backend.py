@@ -2,6 +2,7 @@ import argparse
 import io
 import logging
 import os
+import shutil
 import textwrap
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
@@ -22,6 +23,35 @@ if _MYPY:
     DelimTuple = typing.Tuple[str, str]
     K = typing.TypeVar('K')
     V = typing.TypeVar('V')
+
+
+def _relative_output_path(output_root, output_path):
+    # type: (str, str) -> str
+    root_path = os.path.abspath(output_root)
+    full_path = os.path.abspath(output_path)
+    relative_path = os.path.relpath(full_path, root_path)
+    if (relative_path == os.pardir or
+            relative_path.startswith(os.pardir + os.sep) or
+            os.path.isabs(relative_path)):
+        raise AssertionError(
+            'Stone attempted to write outside its output root: {}'.format(full_path))
+    return relative_path.replace(os.sep, '/')
+
+
+class OutputManifest:
+    """Collects generated output paths without writing their contents."""
+
+    def __init__(self):
+        # type: () -> None
+        self._outputs = set()  # type: typing.Set[str]
+
+    def add_output(self, output_root, output_path):
+        # type: (str, str) -> None
+        self._outputs.add(_relative_output_path(output_root, output_path))
+
+    def outputs(self):
+        # type: () -> typing.List[str]
+        return sorted(self._outputs)
 
 
 def remove_aliases_from_api(api):
@@ -97,8 +127,8 @@ class Backend(metaclass=ABCMeta):
     # For backwards compatibility with existing backends defaults to false.
     preserve_aliases = False
 
-    def __init__(self, target_folder_path, args):
-        # type: (str, typing.Optional[typing.Sequence[str]]) -> None
+    def __init__(self, target_folder_path, args, output_manifest=None):
+        # type: (str, typing.Optional[typing.Sequence[str]], typing.Optional[OutputManifest]) -> None  # noqa: E501
         """
         Args:
             target_folder_path (str): Path to the folder where all generated
@@ -116,6 +146,7 @@ class Backend(metaclass=ABCMeta):
         self.named_placeholders = {}  # type: typing.Dict[typing.Text, typing.Text]
 
         self.args = None  # type: typing.Optional[argparse.Namespace]
+        self.output_manifest = output_manifest
 
         if self.cmdline_parser:
             assert isinstance(self.cmdline_parser, argparse.ArgumentParser), (
@@ -140,6 +171,13 @@ class Backend(metaclass=ABCMeta):
         """
         raise NotImplementedError
 
+    def _record_output_path(self, output_path):
+        # type: (str) -> bool
+        if self.output_manifest is None:
+            return False
+        self.output_manifest.add_output(self.target_folder_path, output_path)
+        return True
+
     @contextmanager
     def output_to_relative_path(self, relative_path, mode='wb'):
         # type: (typing.Text, typing.Text) -> typing.Iterator[None]
@@ -150,6 +188,12 @@ class Backend(metaclass=ABCMeta):
         Clears the output buffer on enter and exit.
         """
         full_path = os.path.join(self.target_folder_path, relative_path)
+        if self._record_output_path(full_path):
+            self.clear_output_buffer()
+            yield
+            self.clear_output_buffer()
+            return
+
         directory = os.path.dirname(full_path)
         if not os.path.exists(directory):
             self.logger.info('Creating %s', directory)
@@ -161,6 +205,12 @@ class Backend(metaclass=ABCMeta):
         with open(full_path, mode) as f:  # pylint: disable=unspecified-encoding
             f.write(self.output_buffer_to_string().encode('utf-8'))
         self.clear_output_buffer()
+
+    def copy_to_path(self, src, dst, *copy_args, **copy_kwargs):
+        output_path = os.path.join(dst, os.path.basename(src)) if os.path.isdir(dst) else dst
+        if self._record_output_path(output_path):
+            return output_path
+        return shutil.copy(src, dst, *copy_args, **copy_kwargs)
 
     def output_buffer_to_string(self):
         # type: () -> typing.Text
