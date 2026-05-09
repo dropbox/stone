@@ -10,8 +10,6 @@ import subprocess
 import sys
 import unittest
 
-import six
-
 import stone.backends.python_rsrc.stone_base as bb
 import stone.backends.python_rsrc.stone_serializers as ss
 import stone.backends.python_rsrc.stone_validators as bv
@@ -655,7 +653,7 @@ class TestDropInModules(unittest.TestCase):
                 pass
 
         assert bv.type_name_with_module(Foo) == "test.test_python_gen.Foo"
-        assert bv.type_name_with_module(int) == "builtins.int" if six.PY3 else "__builtin__.int"
+        assert bv.type_name_with_module(int) == "builtins.int"
 
 
 test_spec = """\
