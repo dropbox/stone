@@ -1,10 +1,12 @@
 import json
 import os
 
-import six
 import jinja2
 import textwrap
 
+from stone.backends.helpers import (
+    ensure_str,
+)
 from stone.backends.swift import (
     fmt_serial_obj,
     SwiftBaseBackend,
@@ -303,7 +305,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(six.ensure_str(pat)) if pat else None),
+                    ("pattern", '"{}"'.format(ensure_str(pat)) if pat else None),
                 ])
             )
         else:
