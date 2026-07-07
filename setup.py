@@ -25,7 +25,7 @@ with open('README.rst') as f:  # pylint: disable=W1514
 
 dist = setup(
     name='stone',
-    version='3.3.9',
+    version='3.4.0',
     python_requires='>=3.11',
     install_requires=install_reqs,
     entry_points={
