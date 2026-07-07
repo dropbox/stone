@@ -18,6 +18,7 @@ import datetime
 import functools
 import json
 
+from stone.backends.helpers import ensure_str
 from stone.backends.python_rsrc import (
     stone_base as bb,
     stone_validators as bv,
@@ -26,15 +27,6 @@ from stone.backends.python_rsrc import (
 _MYPY = False
 if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
-
-
-def _ensure_str(value):
-    # Decode bytes to a native (utf-8) str, leaving str values untouched.
-    if isinstance(value, bytes):
-        return value.decode('utf-8')
-    if isinstance(value, str):
-        return value
-    raise TypeError('not expecting type %s' % type(value))
 
 
 # ------------------------------------------------------------------------
@@ -663,7 +655,7 @@ class PythonPrimitiveToStoneDecoder:
         else:
             raise bv.ValidationError("expected string or object, got %s" %
                                      bv.generic_type_name(obj))
-        return data_type.definition(_ensure_str(tag), val)
+        return data_type.definition(ensure_str(tag), val)
 
     def decode_union_dict(self, data_type, obj):
         if '.tag' not in obj:
@@ -790,7 +782,7 @@ class PythonPrimitiveToStoneDecoder:
         else:
             raise bv.ValidationError("expected string or object, got %s" %
                                      bv.generic_type_name(obj))
-        return data_type.definition(_ensure_str(tag), val)
+        return data_type.definition(ensure_str(tag), val)
 
     def decode_struct_tree(self, data_type, obj):
         """
