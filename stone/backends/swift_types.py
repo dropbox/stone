@@ -1,11 +1,12 @@
 import json
 import os
-import shutil
 
-import six
 import jinja2
 import textwrap
 
+from stone.backends.helpers import (
+    ensure_str,
+)
 from stone.backends.swift import (
     fmt_serial_obj,
     SwiftBaseBackend,
@@ -140,14 +141,14 @@ class SwiftTypesBackend(SwiftBaseBackend):
         rsrc_folder = os.path.join(os.path.dirname(__file__), 'swift_rsrc')
         if not self.args.objc:
             self.logger.info('Copying StoneValidators.swift to output folder')
-            shutil.copy(os.path.join(rsrc_folder, 'StoneValidators.swift'),
-                        self.target_folder_path)
+            self.copy_to_path(os.path.join(rsrc_folder, 'StoneValidators.swift'),
+                              self.target_folder_path)
             self.logger.info('Copying StoneSerializers.swift to output folder')
-            shutil.copy(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
-                        self.target_folder_path)
+            self.copy_to_path(os.path.join(rsrc_folder, 'StoneSerializers.swift'),
+                              self.target_folder_path)
             self.logger.info('Copying StoneBase.swift to output folder')
-            shutil.copy(os.path.join(rsrc_folder, 'StoneBase.swift'),
-                        self.target_folder_path)
+            self.copy_to_path(os.path.join(rsrc_folder, 'StoneBase.swift'),
+                              self.target_folder_path)
 
         template_loader = jinja2.FileSystemLoader(searchpath=rsrc_folder)
         template_env = jinja2.Environment(loader=template_loader,
@@ -304,7 +305,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(six.ensure_str(pat)) if pat else None),
+                    ("pattern", '"{}"'.format(ensure_str(pat)) if pat else None),
                 ])
             )
         else:

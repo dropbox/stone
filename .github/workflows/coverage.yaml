@@ -11,11 +11,11 @@ jobs:
   Coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
       - name: Setup virtual environment
         run: |
           python -m venv venv
@@ -31,6 +31,6 @@ jobs:
           coverage run --rcfile=.coveragerc -m pytest
           coverage xml
       - name: Publish Coverage
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           flags: unit

@@ -55,3 +55,14 @@ def fmt_underscores(name):
     capitalization, dashes, and underscores.
     """
     return '_'.join([word.lower() for word in split_words(name)])
+
+
+def ensure_str(value):
+    """
+    Decodes bytes to a native (utf-8) str, leaving str values untouched.
+    """
+    if isinstance(value, bytes):
+        return value.decode('utf-8')
+    if isinstance(value, str):
+        return value
+    raise TypeError('not expecting type %s' % type(value))

@@ -1,8 +1,17 @@
 #!/usr/bin/env python
 
 
+import json
+import os
+import tempfile
 import unittest
 
+from stone.cli import (
+    _actual_outputs,
+    _load_expected_output_manifest,
+    _recursive_stone_specs,
+    _validate_expected_output_manifest,
+)
 from stone.cli_helpers import parse_route_attr_filter
 
 
@@ -125,6 +134,51 @@ class TestCLI(unittest.TestCase):
         self.assertTrue(expr.eval(MockRoute({'a': 2, 'b': 3, 'c': 4})))
         self.assertFalse(expr.eval(MockRoute({'a': 1})))
         self.assertFalse(expr.eval(MockRoute({'a': 1, 'b': 3})))
+
+    def test_actual_outputs(self):
+        with tempfile.TemporaryDirectory() as output_root:
+            os.makedirs(os.path.join(output_root, 'nested'))
+            with open(os.path.join(output_root, 'Generated.py'), 'w', encoding='utf-8'):
+                pass
+            with open(
+                    os.path.join(output_root, 'nested', 'Generated.swift'),
+                    'w',
+                    encoding='utf-8'):
+                pass
+
+            self.assertEqual(
+                _actual_outputs(output_root),
+                ['Generated.py', 'nested/Generated.swift'])
+
+    def test_recursive_stone_specs(self):
+        with tempfile.TemporaryDirectory() as spec_root:
+            os.makedirs(os.path.join(spec_root, 'nested'))
+            with open(os.path.join(spec_root, 'top.stone'), 'w', encoding='utf-8'):
+                pass
+            with open(os.path.join(spec_root, 'nested', 'child.stone'), 'w', encoding='utf-8'):
+                pass
+            with open(os.path.join(spec_root, 'nested', 'ignored.txt'), 'w', encoding='utf-8'):
+                pass
+
+            self.assertEqual(
+                _recursive_stone_specs(spec_root),
+                [
+                    os.path.join(spec_root, 'nested', 'child.stone'),
+                    os.path.join(spec_root, 'top.stone'),
+                ])
+
+    def test_load_expected_output_manifest(self):
+        with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8') as manifest_file:
+            json.dump(['b.py', 'a.py'], manifest_file)
+            manifest_file.flush()
+
+            self.assertEqual(_load_expected_output_manifest(manifest_file.name), ['a.py', 'b.py'])
+
+    def test_validate_expected_output_manifest(self):
+        _validate_expected_output_manifest(['a.py'], ['a.py'])
+
+        with self.assertRaises(SystemExit):
+            _validate_expected_output_manifest(['a.py'], ['b.py'])
 
 
 if __name__ == '__main__':

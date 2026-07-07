@@ -23,7 +23,7 @@ We are more than happy to receive pull requests helping us improve the state of 
 Tests live under the `test/` folder. They can be run by running the following command:
 
 ```
-$ python setup.py test
+$ pytest
 ```
 
 They can also be run as a part of `tox` and they should be ran in a virtual environment to ensure isolation of the testing environment.

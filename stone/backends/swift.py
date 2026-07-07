@@ -270,6 +270,9 @@ class SwiftBaseBackend(CodeBackend):
         if not os.path.exists(full_path):
             os.mkdir(full_path)
         full_path = os.path.join(full_path, file_name)
+        self._validate_output_path(full_path)
+        if self._record_output_path(full_path):
+            return
         with open(full_path, "w", encoding='utf-8') as fh:
             fh.write(output)
 

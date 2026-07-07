@@ -1,9 +1,8 @@
 import json
 import os
-import shutil
 
-import six
-
+from stone.backends.helpers import (
+    ensure_str, )
 from stone.backends.obj_c import (
     base_file_comment,
     comment_prefix,
@@ -99,26 +98,26 @@ class ObjCTypesBackend(ObjCBaseBackend):
             os.makedirs(rsrc_output_folder)
 
         self.logger.info('Copying DBStoneValidators.{h,m} to output folder')
-        shutil.copy(
+        self.copy_to_path(
             os.path.join(rsrc_folder, 'DBStoneValidators.h'),
             rsrc_output_folder)
-        shutil.copy(
+        self.copy_to_path(
             os.path.join(rsrc_folder, 'DBStoneValidators.m'),
             rsrc_output_folder)
         self.logger.info('Copying DBStoneSerializers.{h,m} to output folder')
-        shutil.copy(
+        self.copy_to_path(
             os.path.join(rsrc_folder, 'DBStoneSerializers.h'),
             rsrc_output_folder)
-        shutil.copy(
+        self.copy_to_path(
             os.path.join(rsrc_folder, 'DBStoneSerializers.m'),
             rsrc_output_folder)
         self.logger.info('Copying DBStoneBase.{h,m} to output folder')
-        shutil.copy(
+        self.copy_to_path(
             os.path.join(rsrc_folder, 'DBStoneBase.h'), rsrc_output_folder)
-        shutil.copy(
+        self.copy_to_path(
             os.path.join(rsrc_folder, 'DBStoneBase.m'), rsrc_output_folder)
         self.logger.info('Copying DBSerializableProtocol.h to output folder')
-        shutil.copy(
+        self.copy_to_path(
             os.path.join(rsrc_folder, 'DBSerializableProtocol.h'),
             rsrc_output_folder)
 
@@ -922,7 +921,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(six.ensure_str(pattern))
+                        ('pattern', '@"{}"'.format(ensure_str(pattern))
                          if pattern else 'nil'),
                     ]))
 

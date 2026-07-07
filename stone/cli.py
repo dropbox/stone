@@ -11,6 +11,10 @@ import os
 import sys
 import traceback
 
+if __package__ in (None, ''):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    __package__ = 'stone'  # pylint: disable=redefined-builtin
+
 from .cli_helpers import parse_route_attr_filter
 from .compiler import (
     BackendException,
@@ -80,6 +84,22 @@ _cmdline_parser.add_argument(
           'specs together.'),
 )
 _cmdline_parser.add_argument(
+    '--output-manifest',
+    action='store_true',
+    help=('Print a JSON manifest of generated output paths instead of writing '
+          'generated source file contents.'),
+)
+_cmdline_parser.add_argument(
+    '--expected-output-manifest',
+    type=str,
+    help='JSON file containing the exact relative output paths Stone must produce.',
+)
+_cmdline_parser.add_argument(
+    '--recursive',
+    action='store_true',
+    help='Recursively expand directory specification arguments into .stone files.',
+)
+_cmdline_parser.add_argument(
     '--clean-build',
     action='store_true',
     help='The path to the template SDK for the target language.',
@@ -134,6 +154,52 @@ _filter_ns_group.add_argument(
     help='If set, backends will not see any routes for the specified namespaces.',
 )
 
+def _recursive_stone_specs(spec_root):
+    # type: (str) -> typing.List[str]
+    spec_paths = []
+    for root, _, file_names in os.walk(spec_root):
+        for file_name in file_names:
+            if file_name.endswith('.stone'):
+                spec_paths.append(os.path.join(root, file_name))
+    return sorted(spec_paths)
+
+
+def _actual_outputs(output_root):
+    # type: (str) -> typing.List[str]
+    outputs = []
+    for root, _, file_names in os.walk(output_root):
+        for file_name in file_names:
+            output_path = os.path.join(root, file_name)
+            relpath = os.path.relpath(output_path, output_root).replace(os.sep, '/')
+            outputs.append(relpath)
+    return sorted(outputs)
+
+
+def _load_expected_output_manifest(path):
+    # type: (str) -> typing.List[str]
+    with open(path, encoding='utf-8') as manifest_file:
+        data = json.load(manifest_file)
+    if not isinstance(data, list) or not all(isinstance(item, str) for item in data):
+        _cmdline_parser.error(
+            '--expected-output-manifest must be a JSON list of strings: {}'.format(path))
+    return sorted(data)
+
+
+def _validate_expected_output_manifest(expected, actual):
+    # type: (typing.List[str], typing.List[str]) -> None
+    if actual == expected:
+        return
+
+    missing = sorted(set(expected) - set(actual))
+    extra = sorted(set(actual) - set(expected))
+    print(
+        'error: Stone output manifest mismatch.\nMissing: {}\nExtra: {}'.format(
+            missing,
+            extra),
+        file=sys.stderr)
+    sys.exit(1)
+
+
 def main():
     """The entry point for the program."""
     if '--' in sys.argv:
@@ -177,6 +243,10 @@ def main():
             for spec_path in args.spec:
                 if spec_path == '-':
                     read_from_stdin = True
+                elif os.path.isdir(spec_path) and args.recursive:
+                    for recursive_spec_path in _recursive_stone_specs(spec_path):
+                        with open(recursive_spec_path, encoding='utf-8') as f:
+                            specs.append((recursive_spec_path, f.read()))
                 elif not spec_path.endswith('.stone'):
                     print("error: Specification '%s' must have a .stone extension."
                           % spec_path,
@@ -345,6 +415,7 @@ def main():
         backend_args,
         args.output,
         clean_build=args.clean_build,
+        output_manifest=args.output_manifest,
     )
     try:
         c.build()
@@ -353,6 +424,21 @@ def main():
               (args.backend, e.backend_name, e.traceback),
               file=sys.stderr)
         sys.exit(1)
+
+    if args.output_manifest or args.expected_output_manifest:
+        if args.output_manifest:
+            actual_manifest = c.output_manifest()
+        else:
+            actual_manifest = _actual_outputs(args.output)
+    else:
+        actual_manifest = None
+
+    if args.expected_output_manifest:
+        expected_manifest = _load_expected_output_manifest(args.expected_output_manifest)
+        _validate_expected_output_manifest(expected_manifest, actual_manifest)
+
+    if args.output_manifest:
+        print(json.dumps(actual_manifest, indent=2))
 
     if not sys.argv[0].endswith('stone'):
         # If we aren't running from an entry_point, then return api to make it
