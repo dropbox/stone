@@ -1,7 +1,6 @@
 import json
 import os
 
-import six
 import jinja2
 import textwrap
 
@@ -303,7 +302,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(six.ensure_str(pat)) if pat else None),
+                    ("pattern", '"{}"'.format(str(pat)) if pat else None),
                 ])
             )
         else:

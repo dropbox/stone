@@ -26,6 +26,7 @@ with open('README.rst') as f:  # pylint: disable=W1514
 dist = setup(
     name='stone',
     version='3.3.9',
+    python_requires='>=3.11',
     install_requires=install_reqs,
     entry_points={
         'console_scripts': ['stone=stone.cli:main'],
@@ -55,9 +56,11 @@ dist = setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
+        'Programming Language :: Python :: 3.14',
         'Topic :: Software Development :: Code Generators',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
