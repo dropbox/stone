@@ -55,6 +55,15 @@ if _MYPY:
 
 import argparse
 
+
+def _ensure_str(value):
+    # Decode bytes to a native (utf-8) str, leaving str values untouched.
+    if isinstance(value, bytes):
+        return value.decode('utf-8')
+    if isinstance(value, str):
+        return value
+    raise TypeError('not expecting type %s' % type(value))
+
 _cmdline_parser = argparse.ArgumentParser(prog='obj-c-types-backend')
 _cmdline_parser.add_argument(
     '-r',
@@ -919,7 +928,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(str(pattern))
+                        ('pattern', '@"{}"'.format(_ensure_str(pattern))
                          if pattern else 'nil'),
                     ]))
 
