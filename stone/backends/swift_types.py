@@ -4,6 +4,9 @@ import os
 import jinja2
 import textwrap
 
+from stone.backends.helpers import (
+    ensure_str,
+)
 from stone.backends.swift import (
     fmt_serial_obj,
     SwiftBaseBackend,
@@ -47,15 +50,6 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 import argparse
-
-
-def _ensure_str(value):
-    # Decode bytes to a native (utf-8) str, leaving str values untouched.
-    if isinstance(value, bytes):
-        return value.decode('utf-8')
-    if isinstance(value, str):
-        return value
-    raise TypeError('not expecting type %s' % type(value))
 
 _cmdline_parser = argparse.ArgumentParser(prog='swift-types-backend')
 _cmdline_parser.add_argument(
@@ -311,7 +305,7 @@ class SwiftTypesBackend(SwiftBaseBackend):
                 self._func_args([
                     ("minLength", data_type.min_length),
                     ("maxLength", data_type.max_length),
-                    ("pattern", '"{}"'.format(_ensure_str(pat)) if pat else None),
+                    ("pattern", '"{}"'.format(ensure_str(pat)) if pat else None),
                 ])
             )
         else:

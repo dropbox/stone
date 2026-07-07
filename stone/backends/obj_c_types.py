@@ -1,6 +1,8 @@
 import json
 import os
 
+from stone.backends.helpers import (
+    ensure_str, )
 from stone.backends.obj_c import (
     base_file_comment,
     comment_prefix,
@@ -54,15 +56,6 @@ if _MYPY:
     import typing  # noqa: F401 # pylint: disable=import-error,unused-import,useless-suppression
 
 import argparse
-
-
-def _ensure_str(value):
-    # Decode bytes to a native (utf-8) str, leaving str values untouched.
-    if isinstance(value, bytes):
-        return value.decode('utf-8')
-    if isinstance(value, str):
-        return value
-    raise TypeError('not expecting type %s' % type(value))
 
 _cmdline_parser = argparse.ArgumentParser(prog='obj-c-types-backend')
 _cmdline_parser.add_argument(
@@ -928,7 +921,7 @@ class ObjCTypesBackend(ObjCBaseBackend):
                          if data_type.min_length else 'nil'),
                         ('maxLength', '@({})'.format(data_type.max_length)
                          if data_type.max_length else 'nil'),
-                        ('pattern', '@"{}"'.format(_ensure_str(pattern))
+                        ('pattern', '@"{}"'.format(ensure_str(pattern))
                          if pattern else 'nil'),
                     ]))
 
