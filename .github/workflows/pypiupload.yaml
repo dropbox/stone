@@ -24,7 +24,7 @@ jobs:
     - name: Configure AWS credentials (OIDC)
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        role-to-assume: arn:aws:iam::082972943155:role/oidc-github-dropbox-stone-branch-main
+        role-to-assume: arn:aws:iam::082972943155:role/oidc-github-dropbox-stone-repo
         aws-region: us-west-2
     - name: Get PyPI token from AWS Secrets Manager
       id: get-secret
