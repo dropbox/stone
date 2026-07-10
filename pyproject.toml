@@ -1,0 +1,5 @@
+[build-system]
+# setuptools>=77 is required for the SPDX ``license`` expression used in
+# setup.py (see PEP 639).
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
