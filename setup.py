@@ -1,16 +1,3 @@
-# Don't import unicode_literals because of a bug in py2 setuptools
-# where package_data is expected to be str and not unicode.
-
-import sys
-
-try:
-    from ez_setup import use_setuptools
-    use_setuptools()
-except ImportError:
-    # Try to use ez_setup, but if not, continue anyway. The import is known
-    # to fail when installing from a tar.gz.
-    print('Could not import ez_setup', file=sys.stderr)
-
 from setuptools import setup
 
 # WARNING: This imposes limitations on requirements.txt such that the
@@ -45,7 +32,7 @@ dist = setup(
     author_email='kelkabany@dropbox.com',
     author='Ken Elkabany',
     description='Stone is an interface description language (IDL) for APIs.',
-    license='MIT License',
+    license_expression='MIT',
     long_description=README,
     long_description_content_type='text/x-rst',
     maintainer_email='api-platform@dropbox.com',
@@ -54,7 +41,6 @@ dist = setup(
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.11',
