@@ -15,6 +15,7 @@ if __package__ in (None, ''):
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     __package__ = 'stone'  # pylint: disable=redefined-builtin
 
+from . import __version__
 from .cli_helpers import parse_route_attr_filter
 from .compiler import (
     BackendException,
@@ -54,6 +55,12 @@ _cmdline_description = (
     'example.spec -- -h".'
 )
 _cmdline_parser = argparse.ArgumentParser(description=_cmdline_description)
+_cmdline_parser.add_argument(
+    '--version',
+    action='version',
+    version='%(prog)s ' + __version__,
+    help="Show the Stone version and exit.",
+)
 _cmdline_parser.add_argument(
     '-v',
     '--verbose',

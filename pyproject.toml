@@ -1,7 +1,8 @@
 [build-system]
 # setuptools>=77 is required for the SPDX ``license`` expression used in
 # setup.py (see PEP 639). setuptools-scm derives the version from the latest
-# git tag (e.g. ``v3.5.0`` -> ``3.5.0``), so releases only require tagging.
+# git tag (e.g. ``v3.5.0`` -> ``3.5.0``), so releases only require tagging,
+# and writes it to stone/_version.py for runtime access.
 requires = ["setuptools>=77", "setuptools-scm>=8,<9"]
 build-backend = "setuptools.build_meta"
 
@@ -10,3 +11,4 @@ build-backend = "setuptools.build_meta"
 # by default (``v3.5.0`` -> ``3.5.0``); an untagged build gets a dev version
 # from the last tag plus commit distance.
 parentdir_prefix_version = "stone-"
+version_file = "stone/_version.py"
