@@ -6,6 +6,7 @@ coverage.xml
 /.tox/
 /build/
 /dist/
+/stone/_version.py
 __pycache__/
 .DS_Store
 parser.out

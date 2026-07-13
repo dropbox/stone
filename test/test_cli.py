@@ -1,13 +1,17 @@
 #!/usr/bin/env python
 
 
+import contextlib
+import io
 import json
 import os
 import tempfile
 import unittest
 
+from stone import __version__
 from stone.cli import (
     _actual_outputs,
+    _cmdline_parser,
     _load_expected_output_manifest,
     _recursive_stone_specs,
     _validate_expected_output_manifest,
@@ -179,6 +183,15 @@ class TestCLI(unittest.TestCase):
 
         with self.assertRaises(SystemExit):
             _validate_expected_output_manifest(['a.py'], ['b.py'])
+
+    def test_version_flag(self):
+        # --version prints the version and exits 0, without requiring the
+        # otherwise-mandatory positional arguments.
+        out = io.StringIO()
+        with self.assertRaises(SystemExit) as cm, contextlib.redirect_stdout(out):
+            _cmdline_parser.parse_args(['--version'])
+        self.assertEqual(cm.exception.code, 0)
+        self.assertIn(__version__, out.getvalue())
 
 
 if __name__ == '__main__':
