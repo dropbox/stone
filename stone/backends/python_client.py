@@ -425,25 +425,19 @@ class PythonClientBackend(CodeBackend):
             if is_struct_type(arg_data_type):
                 for field in fields:
                     if field.doc:
-                        if is_user_defined_type(field.data_type):
-                            field_doc = ':param {}: {}'.format(
-                                field.name, self.process_doc(field.doc, self._docf))
-                        else:
-                            field_doc = ':param {} {}: {}'.format(
-                                self._format_type_in_doc(namespace, field.data_type),
-                                field.name,
-                                self.process_doc(field.doc, self._docf),
-                            )
+                        field_doc = ':param {}: {}'.format(
+                            field.name, self.process_doc(field.doc, self._docf))
                         self.emit_wrapped_text(
                             field_doc, subsequent_prefix='    ')
-                        if is_user_defined_type(field.data_type):
-                            # It's clearer to declare the type of a composite on
-                            # a separate line since it references a class in
-                            # another module
-                            self.emit(':type {}: {}'.format(
-                                field.name,
-                                self._format_type_in_doc(namespace, field.data_type),
-                            ))
+                        # Keeping the type out of the ``:param`` field name is
+                        # required for types that contain Sphinx roles. For
+                        # example, ``Nullable[:class:`package.Type`]`` would
+                        # otherwise terminate the field name early and produce
+                        # malformed reStructuredText.
+                        self.emit(':type {}: {}'.format(
+                            field.name,
+                            self._format_type_in_doc(namespace, field.data_type),
+                        ))
                     else:
                         # If the field has no docstring, then just document its
                         # type.
@@ -451,7 +445,10 @@ class PythonClientBackend(CodeBackend):
                             field.name,
                             self._format_type_in_doc(namespace, field.data_type),
                         )
-                        self.emit_wrapped_text(field_doc)
+                        # A Sphinx field marker must remain on one physical
+                        # line. If its value wraps without indentation,
+                        # docutils interprets the continuation as a new block.
+                        self.emit(field_doc)
 
             elif is_union_type(arg_data_type):
                 if arg_data_type.doc:
@@ -548,7 +545,10 @@ class PythonClientBackend(CodeBackend):
             return 'None'
         elif is_user_defined_type(data_type):
             return ':class:`{}.{}.{}`'.format(
-                self.args.types_package, namespace.name, fmt_type(data_type))
+                self.args.types_package,
+                fmt_namespace(data_type.namespace.name),
+                fmt_type(data_type),
+            )
         elif is_nullable_type(data_type):
             return 'Nullable[{}]'.format(
                 self._format_type_in_doc(namespace, data_type.data_type),
