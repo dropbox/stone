@@ -12,7 +12,7 @@ with open('README.rst') as f:  # pylint: disable=W1514
 
 dist = setup(
     name='stone',
-    version='3.5.0',
+    # version is derived from git tags by setuptools-scm (see pyproject.toml).
     python_requires='>=3.11',
     install_requires=install_reqs,
     entry_points={
