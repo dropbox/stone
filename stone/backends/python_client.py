@@ -140,7 +140,8 @@ class PythonClientBackend(CodeBackend):
                 self.emit()
                 self.emit('@abstractmethod')
                 self.emit(
-                    'def request(self, route, namespace, arg, arg_binary=None):')
+                    'def request(self, route, namespace, request_arg, '
+                    'request_binary, timeout=None):')
                 with self.indent():
                     self.emit('pass')
                 self.emit()
