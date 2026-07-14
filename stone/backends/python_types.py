@@ -46,7 +46,6 @@ from stone.backends.python_helpers import (
     fmt_class,
     fmt_func,
     fmt_namespace,
-    fmt_namespaced_var,
     fmt_obj,
     fmt_var,
     generate_imports_for_referenced_namespaces,
@@ -342,10 +341,14 @@ class PythonTypesBackend(CodeBackend):
                 for field in data_type.fields:
                     if not field.doc:
                         continue
-                    self.emit_wrapped_text(':ivar {}: {}'.format(
-                        fmt_namespaced_var(ns.name, data_type.name, field.name),
-                        self.process_doc(field.doc, self._docf)),
-                        subsequent_prefix='    ')
+                    formatted_var = '{}.{}'.format(
+                        fmt_class(data_type.name), fmt_var(field.name))
+                    # Keep the complete field marker on one line. Wrapping a
+                    # long ``:ivar Class.field:`` marker before its closing
+                    # colon produces invalid reStructuredText.
+                    self.emit(':ivar {}:'.format(formatted_var))
+                    self.emit_wrapped_text(
+                        self.process_doc(field.doc, self._docf), prefix='    ')
                 self.emit('"""')
             self.emit()
 
@@ -801,24 +804,16 @@ class PythonTypesBackend(CodeBackend):
             for field in data_type.fields:
                 if not field.doc:
                     continue
-                if is_void_type(field.data_type):
-                    ivar_doc = ':ivar {}: {}'.format(
-                        fmt_namespaced_var(ns.name, data_type.name, field.name),
-                        self.process_doc(field.doc, self._docf))
-                elif is_user_defined_type(field.data_type):
-                    if data_type.namespace.name != ns.name:
-                        formatted_var = fmt_namespaced_var(ns.name, data_type.name, field.name)
-                    else:
-                        formatted_var = '{}.{}'.format(data_type.name, fmt_var(field.name))
-                    ivar_doc = ':ivar {} {}: {}'.format(
-                        fmt_class(field.data_type.name),
+                formatted_var = '{}.{}'.format(
+                    fmt_class(data_type.name), fmt_var(field.name))
+                self.emit(':ivar {}:'.format(formatted_var))
+                self.emit_wrapped_text(
+                    self.process_doc(field.doc, self._docf), prefix='    ')
+                if not is_void_type(field.data_type):
+                    self.emit(':vartype {}: {}'.format(
                         formatted_var,
-                        self.process_doc(field.doc, self._docf))
-                else:
-                    ivar_doc = ':ivar {} {}: {}'.format(
                         self._python_type_mapping(ns, field.data_type),
-                        fmt_namespaced_var(ns.name, data_type.name, field.name), field.doc)
-                self.emit_wrapped_text(ivar_doc, subsequent_prefix='    ')
+                    ))
             self.emit('"""')
             self.emit()
 

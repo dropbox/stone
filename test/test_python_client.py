@@ -263,6 +263,57 @@ class TestGeneratedPythonClient(unittest.TestCase):
         self.assertEqual(backend._format_type_in_doc(ns, Map(String(), Int32())),
                          'Map[str, int]')
 
+    def test_route_argument_doc_uses_foreign_type_namespace(self):
+        team_common = ApiNamespace('team_common')
+        time_range = Struct('TimeRange', team_common, None)
+        time_range.set_attributes(None, [])
+
+        team_log = ApiNamespace('team_log')
+        args = Struct('GetTeamEventsArg', team_log, None)
+        args.set_attributes(None, [
+            StructField(
+                'time',
+                Nullable(time_range),
+                'Filter by time range.',
+                None,
+            ),
+            StructField(
+                'revoke_linked_app',
+                List(time_range),
+                None,
+                None,
+            ),
+        ])
+        route = ApiRoute('get_events', 1, None)
+        route.set_attributes(None, None, args, Void(), Void(), {})
+        team_log.add_route(route)
+
+        result = self._evaluate_namespace(team_log)
+
+        self.assertIn(
+            ':param time: Filter by time range.\n'
+            '    :type time: Nullable[:class:`dropbox.team_common.TimeRange`]',
+            result,
+        )
+        self.assertNotIn(':param Nullable[:class:', result)
+        self.assertIn(
+            ':type revoke_linked_app: '
+            'List[:class:`dropbox.team_common.TimeRange`]',
+            result,
+        )
+
+        async_ns = ApiNamespace('async')
+        poll_error = Struct('PollError', async_ns, None)
+        poll_error.set_attributes(None, [])
+        backend = PythonClientBackend(
+            target_folder_path='output',
+            args=['-m', 'files', '-c', 'DropboxBase', '-t', 'dropbox'],
+        )
+        self.assertEqual(
+            backend._format_type_in_doc(team_log, poll_error),
+            ':class:`dropbox.async_.PollError`',
+        )
+
     def test_route_with_attributes_in_docstring(self):
         # type: () -> None
 

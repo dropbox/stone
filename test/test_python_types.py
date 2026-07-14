@@ -9,8 +9,11 @@ from stone.ir import (
     ApiRoute,
     CustomAnnotation,
     Int32,
+    String,
     Struct,
     StructField,
+    Union,
+    UnionField,
     Void,
 )
 
@@ -52,6 +55,12 @@ class TestGeneratedPythonTypes(unittest.TestCase):
         # type: (ApiNamespace, Struct) -> typing.Text
         backend = self._mock_backend()
         backend._generate_struct_class(ns, struct)
+        return backend.output_buffer_to_string()
+
+    def _evaluate_union(self, ns, union):
+        # type: (ApiNamespace, Union) -> typing.Text
+        backend = self._mock_backend()
+        backend._generate_union_class(ns, union)
         return backend.output_buffer_to_string()
 
     def _evaluate_annotation_type(self, ns, annotation_type):
@@ -273,5 +282,30 @@ class TestGeneratedPythonTypes(unittest.TestCase):
 
         ''')
         self.assertEqual(result, expected)
+
+    def test_union_docs_use_valid_sphinx_fields_and_convert_refs(self):
+        ns = ApiNamespace('team_log')
+        union = Union('EventType', ns, None, closed=True)
+        union.set_attributes(None, [
+            UnionField(
+                'team_folder_space_limits_change_notification_target',
+                String(),
+                'See :field:`EventType.other`.',
+                None,
+            ),
+        ])
+
+        result = self._evaluate_union(ns, union)
+
+        field_name = (
+            'EventType.team_folder_space_limits_change_notification_target'
+        )
+        self.assertIn(
+            ':ivar {name}:\n'
+            '        See ``EventType.other``.\n'
+            '    :vartype {name}: str'.format(name=field_name),
+            result,
+        )
+        self.assertNotIn(':field:', result)
 
     # TODO: add more unit tests for client code generation
