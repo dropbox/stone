@@ -1,6 +1,6 @@
 import abc
 
-from ply import lex, yacc
+from stone._vendor.ply import lex, yacc
 
 _MYPY = False
 if _MYPY:

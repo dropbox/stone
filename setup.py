@@ -20,6 +20,8 @@ dist = setup(
     },
     packages=[
         'stone',
+        'stone._vendor',
+        'stone._vendor.ply',
         'stone.backends',
         'stone.backends.python_rsrc',
         'stone.frontend',
@@ -27,6 +29,7 @@ dist = setup(
     ],
     package_data={
         'stone': ['py.typed'],
+        'stone._vendor.ply': ['LICENSE', 'README.md'],
     },
     zip_safe=False,
     author_email='kelkabany@dropbox.com',

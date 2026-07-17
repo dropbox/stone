@@ -1,7 +1,7 @@
 import logging
 import os
 
-import ply.lex as lex
+from stone._vendor.ply import lex
 
 _MYPY = False
 if _MYPY:
