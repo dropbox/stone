@@ -1,7 +1,7 @@
 import logging
 from collections import OrderedDict
 
-import ply.yacc as yacc
+from stone._vendor.ply import yacc
 
 from .ast import (
     AstAlias,

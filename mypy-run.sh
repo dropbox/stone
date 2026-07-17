@@ -1,6 +1,6 @@
 #!/bin/bash -eux
 
-EXCLUDE='(^example/|^setup\.py$)'
+EXCLUDE='(^example/|^setup\.py$|^stone/_vendor/)'
 
 # Include all Python files registered in Git, that don't occur in $EXCLUDE.
 INCLUDE=$(git ls-files "$@" | grep '\.py$' | grep -Ev "$EXCLUDE" | tr '\n' '\0' | xargs -0 | cat)
