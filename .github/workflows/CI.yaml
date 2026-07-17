@@ -28,7 +28,7 @@ jobs:
       - name: Run Linter
         run: |
           flake8 setup.py example stone test
-          pylint --rcfile=.pylintrc setup.py example stone test
+          pylint --rcfile=.pylintrc --ignore=_vendor setup.py example stone test
       - name: Run Unit Tests
         run: |
           pytest
