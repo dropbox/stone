@@ -36,7 +36,7 @@ jobs:
         aws-region: us-west-2
     - name: Get PyPI token from AWS Secrets Manager
       id: get-secret
-      uses: aws-actions/aws-secretsmanager-get-secrets@v2
+      uses: aws-actions/aws-secretsmanager-get-secrets@v3
       with:
         secret-ids: |
           PYPI_SECRET,arn:aws:secretsmanager:us-west-2:082972943155:secret:pypi-api-token-vbs5JD
