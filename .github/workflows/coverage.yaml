@@ -31,6 +31,6 @@ jobs:
           coverage run --rcfile=.coveragerc -m pytest
           coverage xml
       - name: Publish Coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           flags: unit
