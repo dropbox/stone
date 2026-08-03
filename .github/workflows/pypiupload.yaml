@@ -24,25 +24,25 @@ jobs:
         python-version: [3.x]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
       with:
         ref: ${{ github.event.release.tag_name || inputs.tag }}
         fetch-depth: 0
 
     - name: Configure AWS credentials (OIDC)
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v6
       with:
         role-to-assume: arn:aws:iam::082972943155:role/oidc-github-dropbox-stone-repo
         aws-region: us-west-2
     - name: Get PyPI token from AWS Secrets Manager
       id: get-secret
-      uses: aws-actions/aws-secretsmanager-get-secrets@v2
+      uses: aws-actions/aws-secretsmanager-get-secrets@v3
       with:
         secret-ids: |
           PYPI_SECRET,arn:aws:secretsmanager:us-west-2:082972943155:secret:pypi-api-token-vbs5JD
         parse-json-secrets: false
     - name: Setup Python environment
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
