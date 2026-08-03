@@ -48,6 +48,15 @@ _cmdline_parser.add_argument(
 )
 
 _cmdline_parser.add_argument(
+    '--request-options',
+    action='store_true',
+    help=(
+        'Adds an optional request options parameter to generated client '
+        'methods and forwards it to the request method.'
+    ),
+)
+
+_cmdline_parser.add_argument(
     '-a',
     '--attribute-comment',
     action='append',
@@ -119,15 +128,26 @@ class JavascriptClientBackend(CodeBackend):
         if route.arg_data_type.__class__ != Void:
             self.emit(' * @arg {%s} arg - The request parameters.' %
                     fmt_type(route.arg_data_type))
+        if self.args.request_options:
+            self.emit(' * @arg {Object} [options] - The request options.')
         self.emit(' * @returns {Promise.<%s, %s>}' %
                 (return_type,
                  fmt_error_type(route.error_data_type, self.args.wrap_error_in)))
         self.emit(' */')
 
         if route.arg_data_type.__class__ != Void:
-            self.emit('routes.%s = function (arg) {' % (function_name))
+            if self.args.request_options:
+                self.emit('routes.%s = function (arg, options) {' % function_name)
+            else:
+                self.emit('routes.%s = function (arg) {' % function_name)
         else:
-            self.emit('routes.%s = function () {' % (function_name))
+            if self.args.request_options:
+                self.emit('routes.%s = function (options) {' % function_name)
+            else:
+                self.emit('routes.%s = function () {' % function_name)
+
+        request_options_arg = ', options' if self.args.request_options else ''
+
         with self.indent(dent=2):
             url = fmt_url(namespace.name, route.name, route.version)
             if route_schema.fields:
@@ -136,19 +156,35 @@ class JavascriptClientBackend(CodeBackend):
                     additional_args.append(fmt_obj(route.attrs[field.name]))
                 if route.arg_data_type.__class__ != Void:
                     self.emit(
-                        "return this.request('{}', arg, {});".format(
-                            url, ', '.join(additional_args)))
+                        "return this.request('{}', arg, {}{});".format(
+                            url,
+                            ', '.join(additional_args),
+                            request_options_arg,
+                        )
+                    )
                 else:
                     self.emit(
-                        "return this.request('{}', null, {});".format(
-                            url, ', '.join(additional_args)))
+                        "return this.request('{}', null, {}{});".format(
+                            url,
+                            ', '.join(additional_args),
+                            request_options_arg,
+                        )
+                    )
             else:
                 if route.arg_data_type.__class__ != Void:
                     self.emit(
-                        'return this.request("%s", arg);' % url)
+                        'return this.request("{}", arg{});'.format(
+                            url,
+                            request_options_arg,
+                        )
+                    )
                 else:
                     self.emit(
-                        'return this.request("%s", null);' % url)
+                        'return this.request("{}", null{});'.format(
+                            url,
+                            request_options_arg,
+                        )
+                    )
         self.emit('};')
 
     def _docf(self, tag, val):
