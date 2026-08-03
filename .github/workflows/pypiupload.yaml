@@ -42,7 +42,7 @@ jobs:
           PYPI_SECRET,arn:aws:secretsmanager:us-west-2:082972943155:secret:pypi-api-token-vbs5JD
         parse-json-secrets: false
     - name: Setup Python environment
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
