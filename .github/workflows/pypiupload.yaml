@@ -29,18 +29,6 @@ jobs:
         ref: ${{ github.event.release.tag_name || inputs.tag }}
         fetch-depth: 0
 
-    - name: Configure AWS credentials (OIDC)
-      uses: aws-actions/configure-aws-credentials@v6
-      with:
-        role-to-assume: arn:aws:iam::082972943155:role/oidc-github-dropbox-stone-repo
-        aws-region: us-west-2
-    - name: Get PyPI token from AWS Secrets Manager
-      id: get-secret
-      uses: aws-actions/aws-secretsmanager-get-secrets@v3
-      with:
-        secret-ids: |
-          PYPI_SECRET,arn:aws:secretsmanager:us-west-2:082972943155:secret:pypi-api-token-vbs5JD
-        parse-json-secrets: false
     - name: Setup Python environment
       uses: actions/setup-python@v7
       with:
@@ -52,10 +40,8 @@ jobs:
     - name: Build
       run: |
         python -m build
-    - name: Publish
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ env.PYPI_SECRET }}
+    - name: Check distributions
       run: |
         twine check dist/*
-        twine upload dist/*
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
