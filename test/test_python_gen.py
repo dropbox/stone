@@ -117,6 +117,16 @@ class TestDropInModules(unittest.TestCase):
         # Passes
         b.validate(b'\x00')
 
+    def test_bytes_validator_memoryview_length(self):
+        value = memoryview(b'abcdefgh').cast('I')
+        self.assertIs(bv.Bytes(min_length=8, max_length=8).validate(value), value)
+        with self.assertRaisesRegex(bv.ValidationError, 'at most 7 bytes, got 8'):
+            bv.Bytes(max_length=7).validate(value)
+
+    def test_bytes_validator_multidimensional_memoryview(self):
+        value = memoryview(b'abcdefgh').cast('B', shape=[2, 4])
+        self.assertIs(bv.Bytes(min_length=8, max_length=8).validate(value), value)
+
     def test_timestamp_validator(self):
         class UTC(datetime.tzinfo):
             def utcoffset(self, dt):  # pylint: disable=unused-argument,useless-suppression

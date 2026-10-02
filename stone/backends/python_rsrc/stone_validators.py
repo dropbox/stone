@@ -370,12 +370,13 @@ class Bytes(Primitive):
         if not isinstance(val, _binary_types):
             raise ValidationError("expected bytes type, got %s"
                                   % generic_type_name(val))
-        elif self.max_length is not None and len(val) > self.max_length:
+        length = val.nbytes if isinstance(val, memoryview) else len(val)
+        if self.max_length is not None and length > self.max_length:
             raise ValidationError("'%s' must have at most %d bytes, got %d"
-                                  % (get_value_string(val), self.max_length, len(val)))
-        elif self.min_length is not None and len(val) < self.min_length:
+                                  % (get_value_string(val), self.max_length, length))
+        elif self.min_length is not None and length < self.min_length:
             raise ValidationError("'%s' has fewer than %d bytes, got %d"
-                                  % (get_value_string(val), self.min_length, len(val)))
+                                  % (get_value_string(val), self.min_length, length))
         return val
 
 
