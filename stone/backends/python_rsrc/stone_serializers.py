@@ -878,7 +878,7 @@ class PythonPrimitiveToStoneDecoder:
         elif isinstance(data_type, bv.Bytes):
             if self.for_msgpack:
                 if isinstance(val, str):
-                    ret = val.encode('utf-8')
+                    ret = val.encode('utf-8', errors='surrogateescape')
                 else:
                     ret = val
             else:
@@ -987,18 +987,17 @@ else:
 
     def msgpack_encode(data_type, obj):
         return msgpack.dumps(
-            msgpack_compat_obj_encode(data_type, obj), encoding='utf-8')
+            msgpack_compat_obj_encode(data_type, obj), use_bin_type=True)
 
     msgpack_compat_obj_decode = functools.partial(json_compat_obj_decode,
                                                   for_msgpack=True)
 
     def msgpack_decode(
             data_type, serialized_obj, alias_validators=None, strict=True):
-        # We decode everything as utf-8 because we want all object keys to be
-        # unicode. Otherwise, we need to do a lot more refactoring to make
-        # json/msgpack share the same code. We expect byte arrays to fail
-        # decoding, but when they don't, we have to convert them to bytes.
+        # Decode string keys as unicode while keeping bin values as bytes.
+        # Older encoders used raw strings for bytes; surrogateescape preserves
+        # those bytes until the Bytes validator converts them back.
         deserialized_obj = msgpack.loads(
-            serialized_obj, encoding='utf-8', unicode_errors='ignore')
+            serialized_obj, raw=False, unicode_errors='surrogateescape')
         return msgpack_compat_obj_decode(
-            data_type, deserialized_obj, alias_validators, strict)
+            data_type, deserialized_obj, alias_validators=alias_validators, strict=strict)

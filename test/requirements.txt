@@ -1,2 +1,3 @@
 coverage>=7.16.0
 pytest>=9.1.1
+msgpack>=1.0.0
