@@ -31,7 +31,7 @@ An example request::
        "account_id": "id-48sa2f0"
     }
 
-An example sucessful response::
+An example successful response::
 
     200 OK
     Content-Type: application/json
