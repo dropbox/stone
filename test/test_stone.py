@@ -6,6 +6,7 @@
 import datetime
 import textwrap
 import unittest
+from unittest import mock
 
 from stone.frontend.ast import (
     AstNamespace,
@@ -3942,6 +3943,17 @@ class TestStone(unittest.TestCase):
             route r(Void, S, Void)
             """)
         specs_to_ir([('ns1.stone', text)])
+
+    def test_whitespace_only_line_with_crlf_linesep(self):
+        # Spec text is always '\n'-separated, even on platforms where
+        # os.linesep is '\r\n'. A whitespace-only line must not be mistaken
+        # for the start of the following indented line.
+        text = 'namespace test\n\nstruct S\n    f String\n    \n    g Int64\n\n' \
+               'route r(Void, S, Void)\n'
+        with mock.patch('os.linesep', '\r\n'):
+            api = specs_to_ir([('ns1.stone', text)])
+        struct = api.namespaces['test'].data_type_by_name['S']
+        self.assertEqual([f.name for f in struct.fields], ['f', 'g'])
 
     def test_route_attrs_schema(self):
 

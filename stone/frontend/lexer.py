@@ -1,5 +1,4 @@
 import logging
-import os
 
 from stone._vendor.ply import lex
 
@@ -394,7 +393,9 @@ class Lexer:
             # Reached end of file
             return None
 
-        line = newline_token.lexer.lexdata[next_line_pos:].split(os.linesep, 1)[0]
+        # The lexer input is always newline-normalized (specs are read in text
+        # mode), so lines end with '\n' regardless of the platform's os.linesep.
+        line = newline_token.lexer.lexdata[next_line_pos:].split('\n', 1)[0]
         if not line:
             return None
         lstripped_line = line.lstrip()
